@@ -1,0 +1,280 @@
+<!-- Main entry point of the game (e.g. Splash screen that loads to the captains quarters) --> 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aqua Nova DSV - Splash Screen</title>
+    <style>;
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Arial', sans-serif;
+        }
+        
+        body {
+            overflow: hidden;
+            background: #0a192f;
+            height: 100vh;
+            position: relative;
+        }
+
+        h1 {
+            color: #fff;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 0 0 10px rgba(100, 255, 218, 0.5);
+        }
+
+        h2 {
+            color: #8892b0;
+            font-size: 1.5em;
+            margin-bottom: 20px;
+        }
+
+        .background-splash {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: url('assets/images/BackgroundSplash.png') center center / cover no-repeat;
+            z-index: -2;
+        }
+        
+        .ocean-bg {
+            z-index: -1;
+            opacity: 0.6;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(ellipse at center bottom, 
+                #001a1a 0%, 
+                #003333 30%, 
+                #004040 60%, 
+                #002222 100%);
+            animation: waterFlow 20s ease-in-out infinite;
+        }
+        
+        .water-particles {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+        
+        .bubble {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            animation: bubbleFloat 15s linear infinite;
+            box-shadow: inset 0 0 10px rgba(200, 255, 200, 0.2);
+        }
+        
+
+        
+        .title-container {
+            position: absolute;
+            top: 20%;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            z-index: 10;
+        }
+        
+        .main-title {
+            font-size: 4rem;
+            font-weight: 900;
+            color: #00ff99;
+            text-shadow: 
+                0 0 20px #00ff99,
+                0 0 40px #00cc77,
+                0 0 60px #009955;
+            margin-bottom: 10px;
+            animation: titlePulse 3s ease-in-out infinite;
+            letter-spacing: 0.2em;
+        }
+        
+        .subtitle {
+            font-size: 1.8rem;
+            font-weight: 400;
+            color: #66ffaa;
+            text-shadow: 0 0 15px #66ffaa;
+            margin-bottom: 30px;
+            animation: subtitleGlow 4s ease-in-out infinite;
+            letter-spacing: 0.15em;
+        }
+        
+        .start-prompt {
+            font-size: 1.2rem;
+            color: #ffffff;
+            opacity: 0.8;
+            animation: blink 2s ease-in-out infinite;
+            margin-top: 40px;
+        }
+        
+
+        
+        .depth-indicator {
+            position: absolute;
+            right: 30px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #00ff99;
+            font-size: 0.9rem;
+            text-align: right;
+            opacity: 0.8;
+        }
+        
+        .coordinate-display {
+            position: absolute;
+            left: 30px;
+            bottom: 30px;
+            color: #00ff99;
+            font-size: 0.9rem;
+            opacity: 0.8;
+            font-family: 'Courier New', monospace;
+        }
+        
+        @keyframes waterFlow {
+            0%, 100% { background-position: 0% 0%; }
+            50% { background-position: 100% 100%; }
+        }
+        
+        @keyframes bubbleFloat {
+            0% {
+                transform: translateY(100vh) scale(0);
+                opacity: 0;
+            }
+            10% {
+                opacity: 1;
+            }
+            90% {
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(-100px) scale(1);
+                opacity: 0;
+            }
+        }
+        
+
+        
+        @keyframes titlePulse {
+            0%, 100% { 
+                text-shadow: 
+                    0 0 20px #00ff99,
+                    0 0 40px #00cc77,
+                    0 0 60px #009955;
+            }
+            50% { 
+                text-shadow: 
+                    0 0 30px #00ff99,
+                    0 0 60px #00cc77,
+                    0 0 90px #009955;
+            }
+        }
+        
+        @keyframes subtitleGlow {
+            0%, 100% { text-shadow: 0 0 15px #66ffaa; }
+            50% { text-shadow: 0 0 25px #66ffaa, 0 0 35px #44dd88; }
+        }
+        
+        @keyframes blink {
+            0%, 50% { opacity: 0.8; }
+            25%, 75% { opacity: 0.3; }
+        }
+        
+
+        
+        @media (max-width: 768px) {
+            .main-title {
+                font-size: 2.5rem;
+            }
+            .subtitle {
+                font-size: 1.2rem;
+            }
+            .submarine-silhouette {
+                width: 250px;
+                height: 50px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="background-splash"></div>
+
+    <div class="ocean-bg"></div>
+    
+    <div class="water-particles" id="particles"></div>
+    
+    <div class="title-container">
+        <h1 class="main-title">Aqua Nova</h1>
+        <h2 class="subtitle">Deep Sea Vehicle</h2>
+        <div class="start-prompt">Press ENTER to Dive</div>
+    </div>
+    
+    <div class="depth-indicator">
+        STATUS: OPERATIONAL<br>
+        DEPTH: 2,847 M<br>
+        OXYGEN: 98%
+    </div>
+    
+    <div class="coordinate-display">
+        Location: Pacific Ocean<br>
+        LAT: 35°42'N<br>
+        LON: 139°46'E<br>
+        COURSE: 240°
+    </div>
+
+    <script>
+        // Create floating bubbles
+        function createBubble() {
+            const bubble = document.createElement('div');
+            bubble.className = 'bubble';
+            
+            const size = Math.random() * 15 + 5;
+            bubble.style.width = size + 'px';
+            bubble.style.height = size + 'px';
+            bubble.style.left = Math.random() * 100 + '%';
+            bubble.style.animationDuration = (Math.random() * 10 + 10) + 's';
+            bubble.style.animationDelay = Math.random() * 5 + 's';
+            
+            document.getElementById('particles').appendChild(bubble);
+            
+            setTimeout(() => {
+                bubble.remove();
+            }, 20000);
+        }
+        
+        // Generate bubbles
+        setInterval(createBubble, 800);
+        
+        // Initial bubbles
+        for(let i = 0; i < 10; i++) {
+            setTimeout(createBubble, i * 200);
+        }
+        
+        // Interactive elements
+        document.addEventListener('keydown', function(e) {
+            if(e.key === 'Enter') {
+                document.querySelector('.start-prompt').textContent = 'DIVING... SYSTEMS ENGAGED';
+                document.querySelector('.start-prompt').style.color = '#00ff88';
+            }
+        });
+        
+        // Add click interaction
+        document.addEventListener('click', function() {
+            // Simple click feedback
+            document.querySelector('.start-prompt').style.transform = 'scale(1.1)';
+            setTimeout(() => {
+                document.querySelector('.start-prompt').style.transform = 'scale(1)';
+            }, 200);
+        });
+    </script>
+</body>
+</html>

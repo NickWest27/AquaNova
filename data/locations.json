@@ -1,0 +1,89 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-70.6709, 41.5223]
+      },
+      "properties": {
+        "name": "Woods Hole Oceanographic Institute",
+        "type": "dock",
+        "description": "Primary research dock and submarine base."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-70.6841, 41.5050]
+      },
+      "properties": {
+        "name": "Mystic Reef",
+        "type": "reef",
+        "description": "A colorful reef known for unique coral formations."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-70.6500, 41.5300]
+      },
+      "properties": {
+        "name": "Deep Trench Alpha",
+        "type": "trench",
+        "description": "A deep ocean trench with strong currents and strange readings."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [142.1992, 11.35]
+      },
+      "properties": {
+        "name": "Mariana Trench (Challenger Deep)",
+        "type": "trench",
+        "description": "Deepest known part of the world's oceans."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-49.9469, 41.7325]
+      },
+      "properties": {
+        "name": "Titanic Wreck Site",
+        "type": "wreck",
+        "description": "The RMS Titanic resting site in the North Atlantic Ocean."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-157.8570, 21.3069]
+      },
+      "properties": {
+        "name": "Pearl Harbor Naval Base",
+        "type": "dock",
+        "description": "United States Navy deep-water naval base near Honolulu, Hawaii."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-157.9995, 21.2766]
+      },
+      "properties": {
+        "name": "Hanauma Bay Reef",
+        "type": "reef",
+        "description": "Famous marine embayment formed within a tuff ring on the island of Oahu, Hawaii."
+      }
+    }
+  ]
+}

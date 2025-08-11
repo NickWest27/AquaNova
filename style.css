@@ -1,0 +1,194 @@
+/* Global styles for AquaNova2 */
+/* Reset and base styles - matching logbook palette */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Arial', sans-serif;
+}
+
+body {
+    overflow: hidden;
+    background: #0a192f;
+    height: 100vh;
+    position: relative;
+    color: #64ffda;
+}
+
+.background-splash {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: url('assets/images/BackgroundSplash.png') center center / cover no-repeat;
+    z-index: -2;
+}
+
+.ocean-bg {
+    z-index: -1;
+    opacity: 0.6;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(ellipse at center bottom, 
+        #001a1a 0%, 
+        #003333 30%, 
+        #004040 60%, 
+        #002222 100%);
+    animation: waterFlow 20s ease-in-out infinite;
+}
+
+.water-particles {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
+.bubble {
+    position: absolute;
+    background: rgba(100, 255, 218, 0.1);
+    border: 1px solid rgba(100, 255, 218, 0.2);
+    border-radius: 50%;
+    animation: bubbleFloat 15s linear infinite;
+    box-shadow: 0 0 10px rgba(100, 255, 218, 0.2);
+}
+
+.title-container {
+    position: absolute;
+    top: 20%;
+    left: 50%;
+    transform: translateX(-50%);
+    text-align: center;
+    z-index: 10;
+}
+
+.main-title {
+    font-size: 4rem;
+    font-weight: 900;
+    color: #fff;
+    text-shadow: 0 0 20px rgba(100, 255, 218, 0.8);
+    margin-bottom: 10px;
+    animation: titlePulse 3s ease-in-out infinite;
+    letter-spacing: 0.2em;
+}
+
+.subtitle {
+    font-size: 1.8rem;
+    font-weight: 400;
+    color: #8892b0;
+    text-shadow: 0 0 15px rgba(100, 255, 218, 0.3);
+    margin-bottom: 30px;
+    animation: subtitleGlow 4s ease-in-out infinite;
+    letter-spacing: 0.15em;
+}
+
+.start-prompt {
+    font-size: 1.2rem;
+    color: #64ffda;
+    opacity: 0.8;
+    animation: blink 2s ease-in-out infinite;
+    margin-top: 40px;
+    transition: all 0.3s ease;
+}
+
+.start-prompt.diving {
+    color: #fff;
+    text-shadow: 0 0 20px rgba(100, 255, 218, 0.8);
+    transform: scale(1.1);
+}
+
+.helm-info {
+    position: absolute;
+    right: 30px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #64ffda;
+    font-size: 0.9rem;
+    text-align: right;
+    opacity: 0.8;
+    background-color: rgba(100, 255, 218, 0.1);
+    padding: 15px;
+    border-radius: 5px;
+    border-left: 4px solid #64ffda;
+}
+
+.coordinate-info {
+    position: absolute;
+    left: 30px;
+    bottom: 30px;
+    color: #64ffda;
+    font-size: 0.9rem;
+    opacity: 0.8;
+    font-family: 'Courier New', monospace;
+    background-color: rgba(100, 255, 218, 0.1);
+    padding: 15px;
+    border-radius: 5px;
+    border-left: 4px solid #64ffda;
+}
+
+/* Animations */
+@keyframes waterFlow {
+    0%, 100% { background-position: 0% 0%; }
+    50% { background-position: 100% 100%; }
+}
+
+@keyframes bubbleFloat {
+    0% {
+        transform: translateY(100vh) scale(0);
+        opacity: 0;
+    }
+    10% {
+        opacity: 1;
+    }
+    90% {
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(-100px) scale(1);
+        opacity: 0;
+    }
+}
+
+@keyframes titlePulse {
+    0%, 100% { 
+        text-shadow: 0 0 20px rgba(100, 255, 218, 0.8);
+    }
+    50% { 
+        text-shadow: 0 0 30px rgba(100, 255, 218, 1),
+                     0 0 40px rgba(100, 255, 218, 0.6);
+    }
+}
+
+@keyframes subtitleGlow {
+    0%, 100% { 
+        text-shadow: 0 0 15px rgba(100, 255, 218, 0.3); 
+    }
+    50% { 
+        text-shadow: 0 0 25px rgba(100, 255, 218, 0.5),
+                     0 0 35px rgba(100, 255, 218, 0.2); 
+    }
+}
+
+@keyframes blink {
+    0%, 50% { opacity: 0.8; }
+    25%, 75% { opacity: 0.3; }
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .main-title {
+        font-size: 2.5rem;
+    }
+    .subtitle {
+        font-size: 1.2rem;
+    }
+    .helm-info,
+    .coordinate-info {
+        font-size: 0.8rem;
+        padding: 10px;
+    }
+}
