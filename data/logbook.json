@@ -1,0 +1,119 @@
+{
+  "version": "1.0.0",
+  "ship": {
+    "name": "Aqua Nova DSV",
+    "registry": "DSV-2074-DSRV",
+    "class": "Deep Sea Research Vessel",
+    "homePort": "Woods Hole Oceanographic Institute"
+  },
+  "crew": {
+    "captain": {
+      "name": "Commander",
+      "rank": "Captain",
+      "certification": "Deep Sea Operations",
+      "experience": "15 years"
+    }
+  },
+  "entries": [
+    {
+      "id": "LOG-0001",
+      "timestamp": "2074-08-09T14:30:00.000Z",
+      "type": "system_log",
+      "classification": "routine",
+      "author": "System",
+      "content": "Aqua Nova DSV systems initialization complete. All systems nominal. Ship currently in dry dock at Woods Hole Oceanographic Institute for final systems integration and crew familiarization.",
+      "gameSnapshot": {
+        "navigation": {
+          "location": "Woods Hole Oceanographic Institute",
+          "coordinates": {
+            "latitude": 41.5265,
+            "longitude": -70.6714
+          },
+          "depth": 0,
+          "course": 0,
+          "speed": 0,
+          "destination": null
+        },
+        "shipSystems": {
+          "hull": {
+            "integrity": 100,
+            "pressure": 1.0
+          },
+          "power": {
+            "mainReactor": 100,
+            "batteries": 100,
+            "consumption": 15
+          },
+          "propulsion": {
+            "engine": 100,
+            "thrust": 0,
+            "ballast": 50,
+            "trim": 0
+          },
+          "lifeSupport": {
+            "oxygen": 98,
+            "co2Scrubbers": 100,
+            "temperature": 22,
+            "humidity": 45
+          },
+          "sensors": {
+            "sonar": 100,
+            "radar": 100,
+            "communications": 100,
+            "navigation": 100
+          }
+        },
+        "crew": {
+          "captain": {
+            "name": "Commander",
+            "rank": "Captain",
+            "experience": 100,
+            "status": "active"
+          },
+          "totalCrew": 12,
+          "crewStatus": "all_systems_normal"
+        },
+        "mission": {
+          "currentMission": null,
+          "objectives": [],
+          "discoveries": [],
+          "samples": [],
+          "researchData": []
+        },
+        "environment": {
+          "weather": "clear",
+          "seaState": 0,
+          "visibility": "excellent",
+          "temperature": 15,
+          "currentDirection": 180,
+          "currentStrength": 0.1
+        },
+        "progress": {
+          "stationsUnlocked": ["bridge", "captains-quarters"],
+          "areasExplored": ["woods_hole"],
+          "achievementsUnlocked": ["first_boot"],
+          "totalDistanceTraveled": 0
+        }
+      },
+      "metadata": {
+        "importance": "high",
+        "tags": ["initialization", "systems_check", "dry_dock"],
+        "canRevert": true
+      }
+    }
+  ],
+  "statistics": {
+    "totalEntries": 1,
+    "totalMissions": 0,
+    "totalDepthAchieved": 0,
+    "totalDistanceTraveled": 0,
+    "firstEntry": "2074-08-09T14:30:00.000Z",
+    "lastEntry": "2074-08-09T14:30:00.000Z"
+  },
+  "settings": {
+    "autoSave": true,
+    "autoSaveInterval": 5,
+    "maxEntries": 1000,
+    "compressionEnabled": false
+  }
+}

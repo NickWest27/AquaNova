@@ -1,0 +1,2 @@
+1.  Change info displays (splashscreens) do that title is one font, and data is another. 
+    This might help show the diference between static and dynamic data.

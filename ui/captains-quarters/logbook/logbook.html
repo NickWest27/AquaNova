@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aqua Nova DSV - Digital Logbook</title>
+  <link rel="stylesheet" href="logbook.css">
+</head>
+<body>
+  <header>
+    <h1>Aqua Nova DSV</h1>
+    <h2>Captains Logbook</h2>
+    <div class="log-info">
+      <p>Location: Woods Hole Oceanographic Institute</p>
+      <p>Status: Dry Dock - Systems Integration Phase</p>
+      <p>Date: <span id="current-date"></span></p>
+    </div>
+    <div class="logbook-controls">
+      <button id="exit-logbook" class="control-btn">Exit Logbook</button>
+      <button id="new-entry" class="control-btn">New Entry</button>
+    </div>
+  </header>
+
+  <main id="log-entries">
+    <!-- Saved log entries will appear here -->
+  </main>
+
+  <footer>
+    <p>Confidential - Authorized Access Only</p>
+    <p>&copy; 2074 O.E.R.A - Oceanic Exploration and Research Alliance. All rights reserved.</p>
+  </footer>
+
+  <script src="logbook.js"></script>
+</body>
+</html>

@@ -1,0 +1,79 @@
+AquaNova2/
+│
+├── index.html               # Main entry point (e.g. loads the Bridge)
+├── main.js                  # Bootstraps the game
+├── style.css                # Global styles (can be split later per module)
+├── assets/                  # Images, audio, fonts
+│   ├── images/
+│   ├── audio/
+│   ├── video/
+│   └── fonts/
+│
+├── data/                    # Static game data
+│   ├── ship-config.json     # Ship system layout, component specs, etc.
+│   ├── crew.json            # Character profiles, ranks, etc.
+│   ├── locations.json       # Stores known geographic points of interest such as docks, reefs, and trenches.
+│   └── logbook.json         # Saved log entries and game states
+│
+├── game/                    # Core game logic and state
+│   ├── state.js             # Tracks ship status, location, player state, etc.
+│   ├── saveManager.js       # Handles saving/loading from logbook entries
+│   ├── router.js            # Navigates between stations (bridge, sensors, etc.)
+│   ├── missionManager.js    # Handles loading/triggering missions
+│   ├── procedural/
+│   │   ├── generator.js     # Map generation, seafloor, anomalies
+│   │   ├── creatureSpawner.js
+│   │   └── nameGenerator.js
+│   └── systems/             # Modular ship systems
+│       ├── propulsion.js
+│       ├── lifeSupport.js
+│       ├── power.js
+│       ├── sensors.js
+│       └── repairManager.js
+│
+├── ui/                      # UI Components and station screens
+│   ├── bridge/              # Bridge station
+│   │   ├── bridge.html
+│   │   ├── bridge.js
+│   │   └── bridge.css
+│   │
+│   ├── helm/               # Helm station for ship control such as ballast, trim, thrust, etc ...
+│   │   ├── helm.html
+│   │   ├── helm.js
+│   │   └── helm.css
+│   │
+│   ├── sensors/            # Sensors station such as sonar etc ...
+│   │   ├── sensors.html
+│   │   ├── sensors.js
+│   │   └── sensors.css
+│   │
+│   ├── communications/     # Communications for radio, data, satellite etc...
+│   │   ├── comms.html
+│   │   ├── comms.js
+│   │   └── comms.css
+|   |
+│   ├── science/           # Science station for research
+│   │   ├── science.html
+│   │   ├── science.js
+│   │   └── science.css
+|   |
+│   ├── engineering/        # Engineering for ship systems like life support, electrical, fuel, hydraulics, propulsion,...
+│   │   ├── engineering.html
+│   │   ├── engineering.js
+│   │   └── engineering.css
+│   │
+│   └── captains-quarters/  # Handles game settings
+│       ├── quarters.html   # Captains room UI
+│       ├── quarters.js
+│       ├── quarters.css
+│       └── logbook/        # Handles the ships logbook for taking notes and save/revert function
+│           ├── logbook.html     # The digital logbook UI
+│           ├── logbook.js
+│           └── logbook.css
+│
+└── utils/                  # Reusable helpers, Utility functions (time, date, formatting)
+    ├── time.js
+    ├── idGenerator.js
+    ├── fileHelpers.js
+    └── formatters.js
+    
