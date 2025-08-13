@@ -1,2 +1,5 @@
 1.  Change info displays (splashscreens) do that title is one font, and data is another. 
-    This might help show the diference between static and dynamic data.
+    This might help show the difference between static and dynamic data.
+2. Change aspect ratio of bridgeFrame.png to fit displays.
+3. Load bridgeFrame.png in the .css to avoid browser incompatibility.
+4. Edit bridge.css to ensure bridgeFrame aspect is maintained, keep background-size: contain and put elements inside a positioned overlay locked to the same size as the scaled frame, not to the screen. Center the overlay and background in the screen so they match. I could temporarily place corner frames to ensure placement.

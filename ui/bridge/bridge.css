@@ -1,0 +1,108 @@
+:root {
+    color-scheme: dark;
+}
+
+html, body {
+    height: 100%;
+    margin: 0;
+    background: rgba(100, 255,218, 0.1);
+    font-family: 'Courier New', monospace;
+    color: #9aa0a6;
+}
+
+body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+.bridge-container {
+    position: relative;
+    width: min(96vw, 600px);
+    height: min(96vh, 600px);
+    background: url("../../assets/images/bridgeFrame.png") no-repeat center/cover;
+    background-size: cover;
+    border-radius: 18px;
+    box-shadow: 0 10px 30px rgba(80, 242, 55, 0.6), inset 0 0 0 2px #333;
+    overflow: hidden;
+}
+
+/* Cutout positions */
+.top-display,
+.main-screen,
+.left-console,
+.right-console,
+.right-side-panel,
+.center-display {
+    position: absolute;
+    box-sizing: border-box;
+}
+
+/* Example placeholder colors — remove or adjust when you add real UI */
+.top-display,
+.main-screen,
+.left-console,
+.right-console,
+.right-side-panel,
+.center-display {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 6px;
+}
+
+/* Mapping positions (percentages from original image) */
+.top-display {
+    top: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 70%;
+    height: 8%;
+}
+
+.main-screen {
+    top: 22%;
+    left: 10%;
+    width: 80%;
+    height: 50%;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: center;
+}
+
+.left-console {
+    bottom: 12%;
+    left: 6%;
+    width: 20%;
+    height: 25%;
+}
+
+.right-console {
+    bottom: 12%;
+    right: 6%;
+    width: 20%;
+    height: 25%;
+}
+
+.right-side-panel {
+    top: 12%;
+    right: 6%;
+    width: 15%;
+    height: 40%;
+}
+
+.center-display {
+    bottom: 6%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 40%;
+    height: 15%;
+}
+
+.main-screen canvas {
+    width: 100%;
+    height: 100%;
+    border-radius: 12px;
+    background: #000;
+    display: block;
+}

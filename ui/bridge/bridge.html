@@ -1,1 +1,25 @@
 <!-- UI of the bridge -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AquaNova Submarine Navigation Display</title>
+    <link rel="stylesheet" href="bridge.css" />
+</head>
+<body>
+    <div class="bridge-frame"></div>
+    <div class="bridge-overlay">
+        <div class="top-display">top-display... OFFLINE</div>
+        <div class="main-screen">main-screen...<br>OFFLINE</div>
+        <div class="left-console">left-console...<br>OFFLINE</div>
+        <div class="right-console">right-console...<br>OFFLINE</div>
+        <div class="right-side-panel">right-side-panel...<br>OFFLINE</div>
+        <div class="center-display">
+            <canvas id="nd"></canvas>
+        </div>
+    </div>
+
+    <script src="bridge.js"></script>
+</body>
+</html>
