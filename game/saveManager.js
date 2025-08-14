@@ -275,6 +275,100 @@ class SaveManager {
             logEntries: gameState.logbook.totalEntries
         };
     }
+
+    /**
+     * Adds a new entry to the logbook.
+     * Handles prefixes "M.LOG-" and "LOG-" for the entry type.
+     * @param {string} type - The type of log entry (e.g., "M.LOG" for mission logs or "LOG" for personal logs).
+     * @param {string} content - The textual content of the log entry.
+     * @param {object} snapshot - The game state snapshot associated with this entry.
+     * @param {Array<string>} tags - Optional tags for filtering and categorization.
+     * @returns {object} The created log entry object.
+     */
+    addEntry(type, content, snapshot, tags = []) {
+        const logbookData = this.getLogbookData();
+
+        // Normalize type prefix
+        let normalizedType = type;
+        if (type.startsWith("M.LOG-")) {
+            normalizedType = type.substring(6);
+        } else if (type.startsWith("LOG-")) {
+            normalizedType = type.substring(4);
+        }
+
+        const newEntry = {
+            id: `entry_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+            type: normalizedType,
+            content,
+            timestamp: new Date().toISOString(),
+            gameSnapshot: snapshot,
+            tags
+        };
+
+        logbookData.entries.push(newEntry);
+        this.saveLogbookData(logbookData);
+
+        return newEntry;
+    }
+
+    /**
+     * Retrieves logbook entries, optionally filtered by type and/or tags.
+     * @param {object} filter - Optional filter object with keys 'type' and/or 'tags'.
+     * @returns {Array<object>} Array of log entries matching the filter.
+     */
+    getEntries(filter = {}) {
+        const { type, tags } = filter;
+        const logbookData = this.getLogbookData();
+        let entries = logbookData.entries.slice();
+
+        if (type) {
+            // Handle prefix normalization for filtering
+            let filterType = type;
+            if (type.startsWith("M.LOG-")) {
+                filterType = type.substring(6);
+            } else if (type.startsWith("LOG-")) {
+                filterType = type.substring(4);
+            }
+            entries = entries.filter(e => e.type === filterType);
+        }
+
+        if (tags && Array.isArray(tags) && tags.length > 0) {
+            entries = entries.filter(e => {
+                if (!e.tags || !Array.isArray(e.tags)) return false;
+                return tags.every(tag => e.tags.includes(tag));
+            });
+        }
+
+        return entries;
+    }
+
+    /**
+     * Reverts the game state to the snapshot stored in the specified logbook entry.
+     * Loads the snapshot into the main game state.
+     * @param {string} entryId - The ID of the logbook entry to revert to.
+     * @returns {boolean} True if revert successful, false if entry not found.
+     */
+    revertToEntry(entryId) {
+        const logbookData = this.getLogbookData();
+        const entry = logbookData.entries.find(e => e.id === entryId);
+        if (!entry) {
+            console.warn(`Logbook entry with ID ${entryId} not found for revert.`);
+            return false;
+        }
+        if (!entry.gameSnapshot) {
+            console.warn(`Logbook entry with ID ${entryId} does not contain a game snapshot.`);
+            return false;
+        }
+
+        // Load the snapshot into the game state
+        this.gameState.setState(entry.gameSnapshot);
+
+        // Optionally save the reverted state as current save
+        this.saveGame(entry);
+
+        console.log(`Reverted game state to logbook entry ID: ${entryId}`);
+        return true;
+    }
 }
 
 // Export for use in other modules

@@ -10,7 +10,7 @@ AquaNova2/
 │   └── fonts/
 │
 ├── data/                    # Static game data
-│   ├── ship-config.json     # Ship system layout, component specs, etc.
+│   ├── bootState.json       # Ship system, component and setup for initialization.
 │   ├── crew.json            # Character profiles, ranks, etc.
 │   ├── locations.json       # Stores known geographic points of interest such as docks, reefs, and trenches.
 │   └── logbook.json         # Saved log entries and game states

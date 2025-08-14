@@ -11,18 +11,40 @@
     <h1>Aqua Nova DSV</h1>
     <h2>Captains Logbook</h2>
     <div class="log-info">
-      <p>Location: Woods Hole Oceanographic Institute</p>
-      <p>Status: Dry Dock - Systems Integration Phase</p>
-      <p>Date: <span id="current-date"></span></p>
+      <p>Location: Woods Hole Oceanographic Institute</p> <!-- Hardcoded for now, will be dynamic later -->
+      <p>Status: Dry Dock - Systems Integration Phase</p> <!-- Hardcoded for now, will be dynamic later -->
+      <p>Date: <span id="current-date"></span></p> <!-- addvance year by 50 years -->
     </div>
     <div class="logbook-controls">
       <button id="exit-logbook" class="control-btn">Exit Logbook</button>
       <button id="new-entry" class="control-btn">New Entry</button>
     </div>
   </header>
-
+<!-- I want to keep the header always in view, even if you scroll down in the logbook -->
   <main id="log-entries">
-    <!-- Saved log entries will appear here -->
+    <!-- If no log entry, this one should be pushed from /data/bootState.json and look like this -->
+      <h3>Mission Log</h3> <!-- type -->
+      <div class="log-info">
+        <p>From: Admiral Elena Vasquez</p> <!-- name-->
+        <p>Director of Operations</p> <!-- role -->
+        <p>O.E.R.A - Oceanic Exploration and Research Alliance</p> <!-- organization -->
+      </div>
+      <div class="entry-content"> <!-- content -->
+        <p>Welcome onboard Captain. I trust you have settling in well. This is your digital logbook where you can record your mission progress, discoveries, and any important notes. Please ensure to keep it updated regularly. I must apologize for the haste, but it is of utmost importance that you get Aqua Nova out of dry dock and underway for sea trials. You and the crew need to get yourselves familiarized with the ships operation and systems under various conditions.</p>
+      </div>
+      <div class="task-list"> <!-- tasks -->
+        <h4>Tasks:</h4>
+        <ul>
+          <li>Familiarize yourself with the Aqua Nova</li>
+          <li>Unpack and look around your personal quarters</li>
+          <li>Meet 'AREA' the Executive Officer</li>
+          <li>Find yourway to the Bridge</li>
+        </ul>
+      <div class="entry-metadata">
+        <span class="timestamp">time and date + 50 years</span> <!-- timestamp made pritty-->
+        <span class="entry-id">M.LOG-0001</span> <!-- ids -->
+      </div>
+      <button class="control-btn revert-btn">Revert</button> <!-- revert button to revert back to ship state at this time stamp -->
   </main>
 
   <footer>
