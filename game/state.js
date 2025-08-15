@@ -35,7 +35,7 @@ class GameState {
                 },
                 depth: 0, // meters, 0 = surface/dry dock
                 heading: 0, // degrees magnetic
-                course: 0, // degrees
+                course: 0, // degrees magnetic
                 speed: 0, // knots
                 destination: null
             },
@@ -49,40 +49,29 @@ class GameState {
                     wskrsBay: "Closed", // WSKRS docking bay status
                 },
                 power: {
-                    leftReactorHealth: 100, // health percentage
-                    leftReactorOutput: 10, // Output Megawatts
-                    leftReactorElectricalDraw: 0.5, // current power draw Megawatts
-                    rightReactorHealth: 100, // health percentage
-                    rightReactorOutput: 10, // Output Megawatts
-                    rightReactorElectricalDraw: 0.5 // current power draw Megawatts
+                    reactorHealth: 100, // health percentage
+                    reactorOutputPercent: 10, // Output Megawatts
+                    electricalDraw: 2.5 // current power draw Megawatts
                 },
                 helm: {
-                    leftDrivetrainHealth: 100, // health percentage of drivetrain
-                    rightDrivetrainHealth: 100, // health percentage of drivetrain
+                    drivetrainHealth: 100, // health percentage of drivetrain
                     ballastSystemHealth: 100, // health percentage of ballast system
                     trimSystemHealth: 100, // health percentage of trim system
-                    leftThrust: 0, // current thrust percentage
-                    rightThrust: 0, // current thrust percentage
-                    fwdBallast: 0, // Forward ballast tank fill percentage
-                    aftBallast: 0, // Aft ballast tank fill percentage
-                    portBallast: 0, // Port ballast tank fill percentage
-                    starboardBallast: 0, // Starboard ballast tank fill percentage
+                    thrust: 0, // current thrust percentage
+                    fwdBallast: 50, // Forward ballast tank fill percentage
+                    aftBallast: 50, // Aft ballast tank fill percentage
+                    portBallast: 50, // Port ballast tank fill percentage
+                    starboardBallast: 50, // Starboard ballast tank fill percentage
                     rollTrim: 0, // roll trim angle in degrees
                     pitchTrim: 0, // pitch trim angle in degrees
-                    bowPlane: 45, // bow plane angle in degrees
-                    sternPlane: 45, // stern plane angle in degrees
+                    bowPlane: 0, // bow plane angle in degrees
+                    sternPlane: 0, // stern plane angle in degrees
                     rudder: 0, // rudder angle in degrees
                     bowThrusters: 0, // bow thruster percentage
                     sternThrusters: 0 // stern thruster percentage
                 },
                 lifeSupport: {
-                    oxygenTankQuantity: 98, // percentage
-                    nitrogenTankQuantity: 100, // percentage
-                    waterTankQantity: 50, // percentag
-                    nitrogenLevels: 78.08, // percentage
-                    oxygenLevels: 20.95, // percentage
-                    co2Levels: 0.04, // percentage
-                    co2: 400, // parts per million (<249 = yellow, 250-600 = normal, 601-1000 = yellow, >1001 = amber, >2000 = red)
+                    oxygen: 98, // percentage
                     co2ScrubbersEfficency: 100, // efficiency
                     airTemperature: 22, // celsius
                     humidity: 45 // percentage
@@ -94,7 +83,7 @@ class GameState {
                             bearing: null, // degrees from ship
                             distance: null, // meters from ship
                             depth: null, // relative to ship
-                            heading: null, // degrees
+                            heading: null, // degrees magnetic
                             speed: null, // knots
                             status: "docked", // docked, deployed.
                             linkQuality: 100, // signal quality percentage
@@ -104,7 +93,7 @@ class GameState {
                             bearing: null, // degrees from ship
                             distance: null, // meters from ship
                             depth: null, // relative to ship
-                            heading: null, // degrees
+                            heading: null, // degrees magnetic
                             speed: null, // knots
                             status: "docked", // docked, deployed.
                             linkQuality: 100, // signal quality percentage
@@ -114,18 +103,14 @@ class GameState {
                             bearing: null, // degrees from ship
                             distance: null, // meters from ship 
                             depth: null, // relative to ship
-                            heading: null, // degrees
+                            heading: null, // degrees magnetic
                             speed: null, // knots
                             status: "docked", // docked, deployed.
                             linkQuality: 100, // signal quality percentage
                             health: 100 // health percentage
                         }
                     },
-                    radar: 100, // operational percentage
-                    gravimeter: 100, // operational percentage
-                    magnetometer: 100, // operational percentage
-                    passiveAccoustics: 100, // operational percentage
-                    cameras: 100 // operational percentage`
+                    radar: 100 // operational percentage
                 },
                 communications: {
                     commHealth: 100, // operational percentage
@@ -160,46 +145,13 @@ class GameState {
             // Crew and personnel
             crew: {
                 captain: {
-                    experience: 100, // experience percentage
-                    rest: "alert", // alert, tired, fatigued
-                    status: "active" // Active, Inactive, Away.
-                },
-                executiveOfficer: {
+                    name: "Commander",
+                    rank: "Captain",
                     experience: 100,
-                    rest: "alert",
                     status: "active"
                 },
-                medical: {
-                    experience: 85,
-                    rest: "alert",
-                    status: "active"
-                },
-                engineer: {
-                    experience: 80,
-                    rest: "tired",
-                    status: "active"
-                },
-                security: {
-                    experience: 75,
-                    rest: "alert",
-                    status: "active"
-                },
-                communications: {
-                    experience: 70,
-                    rest: "alert",
-                    status: "active"
-                },
-                science: {
-                    experience: 90,
-                    rest: "alert",
-                    status: "active"
-                },
-                sensors: {
-                    experience: 60,
-                    rest: "alert",
-                    status: "active"
-                },
-                totalCrew: 8, // Total crew count
+                totalCrew: 12,
+                crewStatus: "all_systems_normal"
             },
 
             // Mission and exploration data
@@ -216,8 +168,7 @@ class GameState {
                 weather: "calm",
                 seaState: 1, // 0-9 scale
                 visibility: "excellent",
-                waterTemperature: 20, // water temp in celsius
-                airTemperature: 20, // surface air temp in celsius
+                temperature: 15, // water temp in celsius
                 currentDirection: 180, // degrees
                 currentStrength: 0.5 // knots
             },
@@ -233,7 +184,8 @@ class GameState {
             progress: {
                 stationsUnlocked: ["bridge", "captains-quarters"],
                 areasExplored: ["woods_hole"],
-                achievementsUnlocked: []
+                achievementsUnlocked: [],
+                totalDistanceTraveled: 0
             }
         }
     }

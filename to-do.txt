@@ -3,9 +3,3 @@
 2. Change aspect ratio of bridgeFrame.png to fit displays.
 3. Load bridgeFrame.png in the .css to avoid browser incompatibility.
 4. Edit bridge.css to ensure bridgeFrame aspect is maintained, keep background-size: contain and put elements inside a positioned overlay locked to the same size as the scaled frame, not to the screen. Center the overlay and background in the screen so they match. I could temporarily place corner frames to ensure placement.
-5. Prompt for 2. :
-It sounds like I need to edit my bridgeFrame.png to a different aspect ratio to help with compatibility of the average computer display. Do you agree? I will upload my original image for your reference. Please recreate this image with the following changes. It needs to be 16:9 aspect ratio, increase the brightness, it's very dark. Update the color palette to a more sea green, maybe a rgba(100, 255, 218, 0.2)? Ensure there are cutouts for the various displays, or make the displays a solid green color for me to edit out. please also cut out five buttons to the left and right of the display at the bottom center.
-6. Make a contacts list.
-
-7. Write first log entry.
-Welcome onboard Captain. I trust you have settling in well. This is your digital logbook where you can record your mission progress, discoveries, and any important notes. Please ensure to keep it updated regularly. I must apologize for the haste, but it is of utmost importance that you get Aqua Nova out of dry dock and underway for sea trials. You and the crew need to get yourselves familiarized with the ships operation and systems under various conditions.

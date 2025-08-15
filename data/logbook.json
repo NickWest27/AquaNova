@@ -1,23 +1,30 @@
 {
+  "version": "1.0.0",
+  "ship": {
+    "name": "Aqua Nova DSV",
+    "registry": "DSV-2074-DSRV",
+    "class": "Deep Sea Research Vessel",
+    "homePort": "Woods Hole Oceanographic Institute"
+  },
+  "crew": {
+    "captain": {
+      "name": "Commander",
+      "rank": "Captain",
+      "certification": "Deep Sea Operations",
+      "experience": "15 years"
+    }
+  },
   "entries": [
     {
-      "logbook": {
-        "id": "M.LOG-0001",
-        "timestamp": "2074-08-09T14:30:00.000Z",
-        "type": "mission_log",
-        "tags": ["OERA", "dry_dock", "mission", "tasks"],
-        "author": {
-          "company": "O.E.R.A - Oceanic Exploration and Research Alliance.",
-          "department": "Operations Command",
-          "name": "Admiral Elena Vasquez",
-          "role": "Director of Operations"
-        },
-        "content": "Welcome onboard Captain. I trust you have settling in well. This is your digital logbook where you can record your mission progress, discoveries, and any important notes. Please ensure to keep it updated regularly. I must apologize for the haste, but it is of utmost importance that you get Aqua Nova out of dry dock and underway for sea trials. You and the crew need to get yourselves familiarized with the ships operation and systems under various conditions.",
-        "tasks": ["Familiarize yourself with the Aqua Nova", "Unpack and look around your personal quarters", "Meet 'AREA' the Executive Officer", "Find yourway to the Bridge"],
-        "completedTasks": []
-      },
+      "id": "LOG-0001",
+      "timestamp": "2074-08-09T14:30:00.000Z",
+      "type": "system_log",
+      "classification": "routine",
+      "author": "System",
+      "content": "Aqua Nova DSV systems initialization complete. All systems nominal. Ship currently in dry dock at Woods Hole Oceanographic Institute for final systems integration and crew familiarization.",
       "gameSnapshot": {
         "navigation": {
+          "location": "Woods Hole Oceanographic Institute",
           "coordinates": {
             "latitude": 41.5265,
             "longitude": -70.6714
@@ -33,8 +40,7 @@
             "pressure": 1.0
           },
           "power": {
-            "leftReactor": 100,
-            "rightReactor": 100,
+            "mainReactor": 100,
             "batteries": 100,
             "consumption": 15
           },
@@ -83,9 +89,10 @@
           "currentStrength": 0.1
         },
         "progress": {
-          "stationsUnlocked": ["captains-quarters"],
+          "stationsUnlocked": ["bridge", "captains-quarters"],
           "areasExplored": ["woods_hole"],
-          "achievementsUnlocked": ["first_boot"]
+          "achievementsUnlocked": ["first_boot"],
+          "totalDistanceTraveled": 0
         }
       },
       "metadata": {
@@ -96,7 +103,7 @@
     }
   ],
   "statistics": {
-    "totalEntries": 0,
+    "totalEntries": 1,
     "totalMissions": 0,
     "totalDepthAchieved": 0,
     "totalDistanceTraveled": 0,

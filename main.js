@@ -49,7 +49,7 @@ class SplashScreen {
         // Keyboard controls
         document.addEventListener('keydown', (e) => {
             if(e.key === 'Enter') {
-                this.startBoarding();
+                this.startDiving();
             }
         });
         
@@ -63,27 +63,14 @@ class SplashScreen {
         });
     }
 
-    startBoarding() {
+    startDiving() {
         const prompt = document.getElementById('start-prompt');
-        prompt.textContent = '... boarding Aqua Nova ...';
-        prompt.classList.add('bording');
+        prompt.textContent = 'DIVING... SYSTEMS ENGAGED';
+        prompt.classList.add('diving');
         
-        // Add boading sound effect or animation here if desired
-        console.log('Initiating boarding sound...');
-
-        // check if /data/logbook.json has any logbook entries. (total entries > 0), pause for 2 seconds to simulate loading.
-        prompt.textContent = '... reviewing logbook ...';
-        console.log('checking last logbook entry...');
-        // If not, use data/bootState.json to initialize logbook with first entry and the game state. pause for 2 seconds to simulate loading.
-        prompt.textContent = '... boarding for the first time ...';
-        console.log('loading first boot state...');
-        // Brief delay for feedback, then navigate to logbook
-        setTimeout(() => {
-            this.navigateToLogbook();
-        }, 2000);
-        // if yes, use the latest data/logbook.json to initialize the game to the most recent entry. pause for 2 seconds to simulate loading.
-        prompt.textContent = '... reverting to last known position ...';
-        console.log('loading last known state...');
+        // Add diving sound effect or animation here if desired
+        console.log('Initiating dive sequence...');
+        
         // Brief delay for feedback, then navigate to logbook
         setTimeout(() => {
             this.navigateToLogbook();
@@ -100,3 +87,18 @@ class SplashScreen {
 document.addEventListener('DOMContentLoaded', () => {
     new SplashScreen();
 });
+
+// Additional utility functions for future use
+const AquaNova = {
+    // Game state will be managed here later
+    gameState: {
+        initialized: false,
+        currentLocation: 'splash'
+    },
+    
+    // Navigation helper for future stations
+    navigateTo: function(station) {
+        console.log(`Navigating to: ${station}`);
+        // This will be expanded when we add the router
+    }
+};
