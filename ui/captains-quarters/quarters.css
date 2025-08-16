@@ -1,1 +1,200 @@
-/* Styles the Captains quarters UI */
+/* styles the captain's quarters interface */
+/* Reset and base styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background-color: #1a1a1a;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    overflow: hidden;
+}
+
+/* Main container that fills the viewport */
+.quarters-container {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* The background frame image */
+.quarters-frame {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url('/assets/images/captainsQuarters.png');
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    z-index: 1;
+    /* Debug: add a fallback color to see if the div is there */
+    background-color: #1a1a1a;
+}
+
+/* Overlay that matches the scaled image dimensions */
+.quarters-overlay {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    /* Calculate dimensions to match the scaled image with contain */
+    width: min(100vw, calc(100vh * (16/9))); /* Adjust aspect ratio to match your image */
+    height: min(100vh, calc(100vw * (9/16))); /* Adjust aspect ratio to match your image */
+    z-index: 2;
+    pointer-events: none;
+    /* Debug border to see overlay bounds */
+    /* border: 2px solid red; */
+}
+
+/* Enable pointer events for actual content */
+.quarters-overlay > * {
+    pointer-events: auto;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .content-area {
+        top: 10%;
+        left: 10%;
+        right: 10%;
+        max-width: none;
+        font-size: 14px;
+        padding: 15px;
+    }
+}
+
+/* Interactive logbook hotspot positioned over the logbook on the bed */
+.logbook-hotspot {
+    position: absolute;
+    /* Position coordinates relative to the scaled image */
+    right: 1%;
+    bottom: 12%;
+    /* Use percentage-based sizing so it scales with the image */
+    width: 20%;
+    height: 16%;
+    cursor: pointer;
+    border: 2px solid transparent;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    background: rgba(100, 255, 218, 0.1);
+    opacity: 1;
+}
+
+/* Exit to the bridge hotspot positioned over the door */
+.bridge-hotspot {
+    position: absolute;
+    left: 0%;
+    top: 0%;
+    width: 8%;
+    height: 100%;
+    cursor: pointer;
+    border: 2px solid transparent;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    background: rgba(100, 255, 218, 0.1);
+    opacity: 1;
+}
+
+.logbook-hotspot:hover {
+    opacity: 1;
+    border-color: #64ffda;
+    box-shadow: 0 0 20px rgba(100, 255, 218, 0.5);
+    background: rgba(100, 255, 218, 0.2);
+}
+
+.bridge-hotspot:hover {
+    opacity: 1;
+    border-color: #64ffda;
+    box-shadow: 0 0 20px rgba(100, 255, 218, 0.5);
+    background: rgba(100, 255, 218, 0.2);
+}
+
+/* Debug mode - uncomment to see hotspot boundaries */
+/*
+.logbook-hotspot {
+    opacity: 0.5 !important;
+    background: rgba(255, 0, 0, 0.3) !important;
+    border: 2px solid red !important;
+}
+*/
+
+/* Tooltips for hotspots */
+.tooltip {
+    position: absolute;
+    bottom: -35px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.9);
+    color: #64ffda;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+    border: 1px solid #64ffda;
+}
+
+.logbook-hotspot:hover .tooltip {
+    opacity: 1;
+}
+
+.bridge-hotspot:hover .tooltip {
+    opacity: 1;
+}
+
+/* Add a subtle pulsing animation to hint at interactivity */
+@keyframes pulse {
+    0%, 100% { 
+        box-shadow: 0 0 5px rgba(100, 255, 218, 0.3); 
+    }
+    50% { 
+        box-shadow: 0 0 15px rgba(100, 255, 218, 0.6); 
+    }
+}
+
+.logbook-hotspot {
+    animation: pulse 3s infinite;
+}
+.bridge-hotspot {
+    animation: pulse 3s infinite;
+}
+
+.top-left {
+    position: absolute;
+    top: 10%;
+    left: 10%;
+}
+
+.top-right {
+    position: absolute;
+    top: 10%;
+    right: 10%;
+}
+
+.bottom-left {
+    position: absolute;
+    bottom: 10%;
+    left: 10%;
+}
+
+.bottom-right {
+    position: absolute;
+    bottom: 10%;
+    right: 10%;
+}
+
+.center {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}

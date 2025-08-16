@@ -149,3 +149,43 @@ footer {
   border-color: #64ffda;
   box-shadow: 0 0 10px rgba(100, 255, 218, 0.2);
 }
+
+.task-list {
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid rgba(100, 255, 218, 0.2);
+}
+
+.task-list h4 {
+  color: #fff;
+  margin-bottom: 10px;
+}
+
+.task-list ul {
+  list-style-type: none;
+  padding-left: 0;
+}
+
+.task-list li {
+  padding: 5px 0;
+  padding-left: 20px;
+  position: relative;
+}
+
+.task-list li::before {
+  content: "▶";
+  position: absolute;
+  left: 0;
+  color: #64ffda;
+}
+
+.task-list li.completed-task {
+  color: #8892b0;
+  text-decoration: line-through;
+}
+
+.task-list li.completed-task::before {
+  content: "✓";
+  color: #64ffda;
+  font-weight: bold;
+}

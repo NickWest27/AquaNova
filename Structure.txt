@@ -17,7 +17,6 @@ AquaNova2/
 │
 ├── game/                    # Core game logic and state
 │   ├── state.js             # Tracks ship status, location, player state, etc.
-│   ├── saveManager.js       # Handles saving/loading from logbook entries
 │   ├── router.js            # Navigates between stations (bridge, sensors, etc.)
 │   ├── missionManager.js    # Handles loading/triggering missions
 │   ├── procedural/
