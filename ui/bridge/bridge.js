@@ -1,4 +1,10 @@
 // Handles the bridge system for Aqua Nova
+
+// Functions to go elsewhere on the ship
+function exitToQuarters() {
+    window.location.href = '../captains-quarters/quarters.html';
+}
+
 const CONFIG = {
     ringCount: 4,
     shipYFraction: 2/3,
@@ -7,7 +13,7 @@ const CONFIG = {
     fontPx: 12,
 };
 
-const canvas = document.getElementById('nd');
+const canvas = document.getElementById('navDisplay');
 const ctx = canvas.getContext('2d');
 
 function resize() {

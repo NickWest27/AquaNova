@@ -8,15 +8,28 @@
     <link rel="stylesheet" href="bridge.css" />
 </head>
 <body>
-    <div class="bridge-frame"></div>
-    <div class="bridge-overlay">
-        <div class="top-display">top-display... OFFLINE</div>
-        <div class="main-screen">main-screen...<br>OFFLINE</div>
-        <div class="left-console">left-console...<br>OFFLINE</div>
-        <div class="right-console">right-console...<br>OFFLINE</div>
-        <div class="right-side-panel">right-side-panel...<br>OFFLINE</div>
-        <div class="center-display">
-            <canvas id="nd"></canvas>
+    <div class="bridge-container">
+        <div class="bridge-frame"></div>
+        <div class="bridge-overlay">
+            <div class="upper-display">upper-display... OFFLINE</div>
+            <div class="main-display">main-screen...<br>OFFLINE</div>
+            <div class="left-display">left-display...<br>OFFLINE</div>
+            <div class="right-display">right-display...<br>OFFLINE</div>
+            <div class="left-console">left-console...<br>OFFLINE</div>
+            <div class="right-console">right-console...<br>OFFLINE</div>
+            <div class="left-buttons">OFFLINE
+                <!-- left buttons (icons) go here (Engineering, Science Lab, Helm)-->
+                <div class="quarters-button" onclick="exitToQuarters()">
+                    <div class="tooltip">Exit to Captains Quarters</div>
+                </div>
+            </div>
+            <div class="right-buttons">OFFLINE
+                <!-- right buttons go here -->
+            </div>
+            <div class="center-console">OFFLINE
+                <canvas id="navDisplay">navDisplay...<br>OFFLINE</canvas></div>
+            <div class="keyboard-unit">keyboard-unit...<br>OFFLINE</div>
+            </div>
         </div>
     </div>
 

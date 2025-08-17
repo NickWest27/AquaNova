@@ -54,8 +54,13 @@ class LogbookSystem {
     }
   }
 
-  // Save all data to localStorage
-  saveAllData() {
+  // Save all data to localStorage, handle concurrent saves and fail gracfully
+  async saveAllData() {
+    if (this.saving) {
+      console.log('Save operation already in progress');
+      return false;
+    }
+    this.saving = true;
     try {
       if (this.gameState) {
         localStorage.setItem('aquaNova_gameState', JSON.stringify(this.gameState));
@@ -68,9 +73,18 @@ class LogbookSystem {
     } catch (error) {
       console.error('Failed to save data:', error);
       return false;
+    } finally {
+      this.saving = false;
     }
   }
+  // Add a utility to modify dates for displays to keep story
+  getFutureDate(yearsOffset = 50) {
+    const date = new Date();
+    date.setFullYear(date.getFullYear() + yearsOffset);
+    return date;
+  }
 
+  // Update the current date display, didn't I just make a getFutureDate
   updateCurrentDate() {
     const el = document.getElementById('current-date');
     if (!el) return;
@@ -94,7 +108,7 @@ class LogbookSystem {
       locationElements[0].textContent = `Location: ${location.properties.name}`;
     }
 
-    // Update status - this need to be docked if location is a known dock, or underway.
+    // Update status - this need to be modified so it shows docked if location is a known dock, or underway.
     if (locationElements[1] && this.gameState.shipSystems) {
       let status = 'Unknown';
       
@@ -123,19 +137,22 @@ class LogbookSystem {
       }
     });
     
+    // Don't create duplicates if entries already exist
     if (this.logbookData?.entries && this.logbookData.entries.length > 0) {
-      // Start from entry 2 since hardcoded M.LOG-0001 is already there
-      this.logbookData.entries.forEach((entry, index) => {
-        if (index > 0) { // Skip the first entry as it's hardcoded
-          this.renderLogEntry(entry.logbook);
-        }
-      });
-      
-      this.currentEntryId = this.logbookData.entries.length + 1;
+      // Find the highest existing ID number
+      const maxId = Math.max(...this.logbookData.entries.map(entry => {
+        const match = entry.logbook.id.match(/(\d+)$/);
+        return match ? parseInt(match[1]) : 0;
+      }));
+      this.currentEntryId = maxId + 1;
     }
   }
 
   renderLogEntry(logEntry) {
+    if (!logEntry || !logEntry.timestamp) {
+      console.error('Invalid log entry data:', logEntry);
+      return;
+    }
     const main = document.getElementById('log-entries');
     if (!main) return;
     
@@ -193,6 +210,7 @@ class LogbookSystem {
   }
 
   bindControls() {
+    // I need to add cleanup to prevent memory leaks from listners.
     // New entry button
     const newEntryBtn = document.getElementById('new-entry');
     if (newEntryBtn) {

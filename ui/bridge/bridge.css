@@ -1,3 +1,13 @@
+/* Aqua Nova Bridge UI Styles
+   This CSS file styles the bridge interface of the Aqua Nova game.
+   It includes layout, colors, and basic interactivity for the bridge elements.
+*/
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
 :root {
     color-scheme: dark;
 }
@@ -17,92 +27,235 @@ body {
     height: 100vh;
 }
 
+/* Main container that fills the viewport */
 .bridge-container {
     position: relative;
-    width: min(96vw, 600px);
-    height: min(96vh, 600px);
-    background: url("../../assets/images/bridgeFrame.png") no-repeat center/cover;
-    background-size: cover;
-    border-radius: 18px;
-    box-shadow: 0 10px 30px rgba(80, 242, 55, 0.6), inset 0 0 0 2px #333;
-    overflow: hidden;
-}
-
-/* Cutout positions */
-.top-display,
-.main-screen,
-.left-console,
-.right-console,
-.right-side-panel,
-.center-display {
-    position: absolute;
-    box-sizing: border-box;
-}
-
-/* Example placeholder colors — remove or adjust when you add real UI */
-.top-display,
-.main-screen,
-.left-console,
-.right-console,
-.right-side-panel,
-.center-display {
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 6px;
-}
-
-/* Mapping positions (percentages from original image) */
-.top-display {
-    top: 12px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 70%;
-    height: 8%;
-}
-
-.main-screen {
-    top: 22%;
-    left: 10%;
-    width: 80%;
-    height: 50%;
+    width: 100vw;
+    height: 100vh;
     display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
     align-items: center;
+    justify-content: center;
+}
+
+/* The background frame image */
+.bridge-frame {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url('../../assets/images/bridgeFrame.png');
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    z-index: 1;
+    /* Debug: add a fallback color to see if the div is there */
+    background-color: #1a1a1a;
+}
+
+/* Overlay that matches the scaled image dimensions */
+.bridge-overlay {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    /* Calculate dimensions to match the scaled image with contain */
+    width: min(100vw, calc(100vh * (16/9))); /* Adjust aspect ratio to match your image */
+    height: min(100vh, calc(100vw * (9/16))); /* Adjust aspect ratio to match your image */
+    z-index: 2;
+    pointer-events: none;
+    /* Debug border to see overlay bounds */
+    /* border: 2px solid red; */
+}
+
+/* Enable pointer events for actual content */
+.bridge-overlay > * {
+    pointer-events: auto;
+}
+
+/* Displays and consoles*/
+.upper-display {
+    position: absolute;
+    top: 2%;
+    left: 30%;
+    width: 30%;
+    height: 8%;
+    border: 2px solid transparent;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    background: rgba(100, 255, 218, 0.1);
+    opacity: 1;
+}
+
+.main-display {
+    position: absolute;
+    top: 12%;
+    left: 13%;
+    width: 70%;
+    height: 58%;
+    border: 2px solid transparent;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    background: rgba(100, 255, 218, 0.1);
+    opacity: 1;
+}
+
+.left-display {
+    position: absolute;
+    top: 22%;
+    left: 0%;
+    width: 10%;
+    height: 30%;
+    border: 2px solid transparent;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    background: rgba(100, 255, 218, 0.1);
+    opacity: 1;
+}
+
+.right-display {
+    position: absolute;
+    top: 22%;
+    right: 0%;
+    width: 10%;
+    height: 30%;
+    border: 2px solid transparent;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    background: rgba(100, 255, 218, 0.1);
+    opacity: 1;
 }
 
 .left-console {
+    position: absolute;
+    top: 60%;
+    left: 1%;
+    width: 10%;
+    height: 10%;
+    cursor: pointer;
+    border: 2px solid transparent;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    background: rgba(100, 255, 218, 0.1);
+    opacity: 1;
+}
+.right-console {
+    position: absolute;
+    top: 60%;
+    right: 1%;
+    width: 10%;
+    height: 10%;
+    cursor: pointer;
+    border: 2px solid transparent;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    background: rgba(100, 255, 218, 0.1);
+    opacity: 1;
+}
+.left-buttons {
+    position: absolute;
+    bottom: 7%;
+    left: 11%;
+    width: 4%;
+    height: 12%;
+    border: 2px solid transparent;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    background: rgba(100, 255, 218, 0.1);
+    opacity: 1;
+}
+.right-buttons {
+    position: absolute;
+    bottom: 7%;
+    left: 16%;
+    width: 4%;
+    height: 15%;
+    border: 2px solid transparent;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    background: rgba(100, 255, 218, 0.1);
+    opacity: 1;
+}
+
+.center-console {
+    position: absolute;
+    bottom: 4%;
+    left: 25%;
+    width: 37%;
+    height: 22%;
+    cursor: pointer;
+    border: 2px solid transparent;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    background: rgba(100, 255, 218, 0.1);
+    opacity: 1;
+}
+.keyboard-unit {
+    position: absolute;
+    bottom: 7%;
+    right: 21%;
+    width: 7%;
+    height: 17%;
+    cursor: pointer;
+    border: 2px solid transparent;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    background: rgba(100, 255, 218, 0.1);
+    opacity: 1;
+}
+
+.center-console canvas {
+    width: 100%;
+    height: 100%;
+    border-radius: 1px;
+    background: #000;
+    display: block;
+}
+
+/* Hotspots for going to different places on the ship */
+.sensor-hotspot {
     bottom: 12%;
     left: 6%;
     width: 20%;
     height: 25%;
+    cursor: pointer;
+    /* for debugging, show the hotspot */
+    opacity: 1;
+    border-color: #64ffda;
+    box-shadow: 0 0 20px rgba(100, 255, 218, 0.5);
+    background: rgba(100, 255, 218, 0.2);
 }
 
-.right-console {
+.communication-hotspot {
     bottom: 12%;
     right: 6%;
     width: 20%;
     height: 25%;
+    cursor: pointer;
+    /* for debugging, show the hotspot */
+    opacity: 1;
+    border-color: #64ffda;
+    box-shadow: 0 0 20px rgba(100, 255, 218, 0.5);
+    background: rgba(100, 255, 218, 0.2);
 }
-
-.right-side-panel {
-    top: 12%;
-    right: 6%;
-    width: 15%;
-    height: 40%;
-}
-
-.center-display {
-    bottom: 6%;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 40%;
-    height: 15%;
-}
-
-.main-screen canvas {
+.quarters-button {
+    position: absolute;
+    left: 1%;
+    bottom: 1%;
     width: 100%;
-    height: 100%;
-    border-radius: 12px;
-    background: #000;
-    display: block;
+    height: 30%;
+    cursor: pointer;
+    /* for debugging, show the hotspot */
+    border: 2px solid transparent;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    background: rgba(100, 255, 218, 0.1);
+    opacity: 1;
+}
+
+.quarters-button:hover {
+    opacity: 1;
+    border-color: #64ffda;
+    box-shadow: 0 0 20px rgba(100, 255, 218, 0.5);
+    background: rgba(100, 255, 218, 0.2);
 }
