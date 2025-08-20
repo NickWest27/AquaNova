@@ -1,5 +1,5 @@
 // Enhanced Bridge System for Aqua Nova
-import { drawNavigationDisplay, animateNavigationDisplay } from "../../utils/navComputer/navComputer.js";
+import { drawNavigationDisplay, animateNavigationDisplay } from "../../game/systems/navComputer/navComputer.js";
 import GameState from "../../game/state.js";
 
 const state = new GameState();

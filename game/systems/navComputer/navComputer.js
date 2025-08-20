@@ -7,30 +7,30 @@ const DISPLAY_CONFIGS = {
     virtualWidth: 900,    // 9:4 ratio for your center display (356x158)
     virtualHeight: 400,
     perspective: { enabled: false },
-    radarScale: 0.8       // Use 80% of display for radar
+    navScale: 0.8       // Use 80% of display for nav
   },
   mainScreen: {
     virtualWidth: 1600,   // Wide main screen
     virtualHeight: 900,
     perspective: { enabled: false },
-    radarScale: 0.6       // Smaller radar on big screen
+    navScale: 0.6       // Smaller nav on big screen
   },
   helmScreen: {
     virtualWidth: 1200,
     virtualHeight: 600,
-    perspective: { 
+    /*perspective: { 
       enabled: true,
       tiltX: 15,          // Degrees of X tilt (pitch)
       tiltY: -3           // Degrees of Y tilt (yaw)
-    },
-    radarScale: 0.7
+    }, */
+    navScale: 0.7
   },
   // Add more configs as you create new displays
   engineeringDisplay: {
     virtualWidth: 800,
     virtualHeight: 600,
     perspective: { enabled: false },
-    radarScale: 0.9
+    navScale: 0.9
   }
 };
 
@@ -63,13 +63,13 @@ export function drawNavigationDisplay(canvas, svg, state, displayType = 'centerD
   ctx.translate(offsetX, offsetY);
   ctx.scale(scale, scale);
   
-  // Calculate display center and radar size
+  // Calculate display center and nav Display size
   const cx = config.virtualWidth / 2;
   const cy = config.virtualHeight / 2;
-  const maxRadius = Math.min(config.virtualWidth, config.virtualHeight) * config.radarScale * 0.4;
+  const maxRadius = Math.min(config.virtualWidth, config.virtualHeight) * config.navScale * 0.4;
   
-  // Draw the radar display
-  drawRadarContent(ctx, cx, cy, maxRadius, state, config);
+  // Draw the nav display
+  drawNavContent(ctx, cx, cy, maxRadius, state, config);
   
   ctx.restore();
   
@@ -77,7 +77,7 @@ export function drawNavigationDisplay(canvas, svg, state, displayType = 'centerD
   setupSVGOverlay(svg, cx, cy, maxRadius, state, config, canvas);
 }
 
-function drawRadarContent(ctx, cx, cy, maxRadius, state, config) {
+function drawNavContent(ctx, cx, cy, maxRadius, state, config) {
   // 1. Range rings
   ctx.strokeStyle = "rgba(0, 255, 200, 0.4)"; // Cyan-ish for submarine feel
   ctx.lineWidth = 1;
