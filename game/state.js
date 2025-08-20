@@ -1,5 +1,7 @@
 // game/state.js
-// Simplified game state management for Aqua Nova DSV
+// Game state management for Aqua Nova DSV
+// This module tracks ship status, location, player state, and more.
+// One source of truth for the game state.
 // Integrated with logbook-based save system
 
 class GameState {

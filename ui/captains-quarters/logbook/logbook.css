@@ -5,12 +5,15 @@
   box-sizing: border-box;
   font-family: 'Arial', sans-serif;
 }
+:root {
+  --scale: 1;
+}
 
 body {
   background-color: #0a192f;
   color: #64ffda;
   line-height: 1.6;
-  padding: 20px;
+  padding: calc(20px * var(--scale));
   min-height: 100vh;
   display: flex;
   flex-direction: column;
@@ -21,29 +24,29 @@ header {
   top: 0;
   background-color: #0a192f;
   z-index: 100;
-  border-bottom: 2px solid #64ffda;
-  padding-bottom: 20px;
-  margin-bottom: 30px;
+  border-bottom: calc(2px * var(--scale)) solid #64ffda;
+  padding-bottom: calc(20px * var(--scale));
+  margin-bottom: calc(30px * var(--scale));
 }
 
 h1 {
   color: #fff;
-  font-size: 2.5em;
-  margin-bottom: 10px;
-  text-shadow: 0 0 10px rgba(100, 255, 218, 0.5);
+  font-size: calc(2.5em * var(--scale));
+  margin-bottom: calc(10px * var(--scale));
+  text-shadow: 0 0 calc(10px * var(--scale)) rgba(100, 255, 218, 0.5);
 }
 
 h2 {
   color: #8892b0;
-  font-size: 1.5em;
-  margin-bottom: 20px;
+  font-size: calc(1.5em * var(--scale));
+  margin-bottom: calc(20px * var(--scale));
 }
 
 .log-info {
   background-color: rgba(100, 255, 218, 0.1);
-  padding: 15px;
-  border-radius: 5px;
-  border-left: 4px solid #64ffda;
+  padding: calc(15px * var(--scale));
+  border-radius: calc(5px * var(--scale));
+  border-left: calc(4px * var(--scale)) solid #64ffda;
 }
 
 main {
@@ -52,65 +55,65 @@ main {
 
 .log-entry {
   background-color: rgba(100, 255, 218, 0.05);
-  padding: 20px;
-  border-radius: 8px;
-  margin-bottom: 20px;
-  border: 1px solid rgba(100, 255, 218, 0.2);
+  padding: calc(20px * var(--scale));
+  border-radius: calc(8px * var(--scale));
+  margin-bottom: calc(20px * var(--scale));
+  border: calc(1px * var(--scale)) solid rgba(100, 255, 218, 0.2);
   position: relative;
 }
 
 .log-entry:hover {
-  box-shadow: 0 0 15px rgba(100, 255, 218, 0.2);
+  box-shadow: 0 0 calc(15px * var(--scale)) rgba(100, 255, 218, 0.2);
   transition: all 0.3s ease;
 }
 
 .log-entry h3 {
   color: #fff;
-  margin-bottom: 15px;
+  margin-bottom: calc(15px * var(--scale));
 }
 
 .entry-content {
-  margin-bottom: 15px;
+  margin-bottom: calc(15px * var(--scale));
 }
 
 .entry-content ul {
   list-style-position: inside;
-  margin-left: 20px;
+  margin-left: calc(20px * var(--scale));
 }
 
 .entry-metadata {
-  font-size: 0.9em;
+  font-size: calc(0.9em * var(--scale));
   color: #8892b0;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-top: 1px solid rgba(100, 255, 218, 0.2);
-  padding-top: 10px;
+  border-top: calc(1px * var(--scale)) solid rgba(100, 255, 218, 0.2);
+  padding-top: calc(10px * var(--scale));
 }
 
 /* Log type specific styling */
 .entry-id {
-  padding: 4px 8px;
-  border-radius: 4px;
+  padding: calc(4px * var(--scale)) calc(8px * var(--scale));
+  border-radius: calc(4px * var(--scale));
   font-weight: bold;
-  font-size: 0.85em;
+  font-size: calc(0.85em * var(--scale));
 }
 
 .entry-id.mission-log {
   background-color: rgba(255, 165, 0, 0.2);
   color: #ffa500;
-  border: 1px solid rgba(255, 165, 0, 0.3);
+  border: calc(1px * var(--scale)) solid rgba(255, 165, 0, 0.3);
 }
 
 .entry-id.personal-log {
   background-color: rgba(100, 255, 218, 0.2);
   color: #64ffda;
-  border: 1px solid rgba(100, 255, 218, 0.3);
+  border: calc(1px * var(--scale)) solid rgba(100, 255, 218, 0.3);
 }
 
 /* Mission log entries have a subtle orange accent */
 .log-entry:has(.mission-log) {
-  border-left: 4px solid #ffa500;
+  border-left: calc(4px * var(--scale)) solid #ffa500;
 }
 
 .log-entry:has(.mission-log) .log-info {
@@ -120,53 +123,53 @@ main {
 
 footer {
   text-align: center;
-  padding-top: 20px;
-  border-top: 2px solid #64ffda;
-  margin-top: 30px;
-  font-size: 0.9em;
+  padding-top: calc(20px * var(--scale));
+  border-top: calc(2px * var(--scale)) solid #64ffda;
+  margin-top: calc(30px * var(--scale));
+  font-size: calc(0.9em * var(--scale));
   color: #8892b0;
 }
 
 @media (max-width: 768px) {
   body {
-    padding: 10px;
+    padding: calc(10px * var(--scale));
   }
 
   h1 {
-    font-size: 2em;
+    font-size: calc(2em * var(--scale));
   }
 
   .log-entry {
-    padding: 15px;
+    padding: calc(15px * var(--scale));
   }
 
   .entry-metadata {
     flex-direction: column;
-    gap: 8px;
+    gap: calc(8px * var(--scale));
     align-items: flex-start;
   }
 }
 
 .logbook-controls {
-  margin-top: 20px;
+  margin-top: calc(20px * var(--scale));
   display: flex;
-  gap: 10px;
+  gap: calc(10px * var(--scale));
   flex-wrap: wrap;
 }
 
 .control-btn {
   background-color: rgba(100, 255, 218, 0.1);
-  border: 1px solid #64ffda;
+  border: calc(1px * var(--scale)) solid #64ffda;
   color: #64ffda;
-  padding: 8px 16px;
-  border-radius: 4px;
+  padding: calc(8px * var(--scale)) calc(16px * var(--scale));
+  border-radius: calc(4px * var(--scale));
   cursor: pointer;
   transition: all 0.3s ease;
 }
 
 .control-btn:hover {
   background-color: rgba(100, 255, 218, 0.2);
-  box-shadow: 0 0 10px rgba(100, 255, 218, 0.3);
+  box-shadow: 0 0 calc(10px * var(--scale)) rgba(100, 255, 218, 0.3);
 }
 
 .control-btn:disabled {
@@ -176,13 +179,13 @@ footer {
 
 .log-textarea {
   width: 100%;
-  min-height: 100px;
+  min-height: calc(100px * var(--scale));
   background-color: rgba(10, 25, 47, 0.7);
-  border: 1px solid rgba(100, 255, 218, 0.2);
-  border-radius: 4px;
+  border: calc(1px * var(--scale)) solid rgba(100, 255, 218, 0.2);
+  border-radius: calc(4px * var(--scale));
   color: #64ffda;
-  padding: 10px;
-  margin-bottom: 10px;
+  padding: calc(10px * var(--scale));
+  margin-bottom: calc(10px * var(--scale));
   resize: vertical;
   font-family: inherit;
 }
@@ -190,7 +193,7 @@ footer {
 .log-textarea:focus {
   outline: none;
   border-color: #64ffda;
-  box-shadow: 0 0 10px rgba(100, 255, 218, 0.2);
+  box-shadow: 0 0 calc(10px * var(--scale)) rgba(100, 255, 218, 0.2);
 }
 
 .log-textarea::placeholder {
@@ -198,14 +201,14 @@ footer {
 }
 
 .task-list {
-  margin-top: 15px;
-  padding-top: 15px;
-  border-top: 1px solid rgba(100, 255, 218, 0.2);
+  margin-top: calc(15px * var(--scale));
+  padding-top: calc(15px * var(--scale));
+  border-top: calc(1px * var(--scale)) solid rgba(100, 255, 218, 0.2);
 }
 
 .task-list h4 {
   color: #fff;
-  margin-bottom: 10px;
+  margin-bottom: calc(10px * var(--scale));
 }
 
 .task-list ul {
@@ -214,8 +217,8 @@ footer {
 }
 
 .task-list li {
-  padding: 5px 0;
-  padding-left: 20px;
+  padding: calc(5px * var(--scale)) 0;
+  padding-left: calc(20px * var(--scale));
   position: relative;
 }
 
@@ -240,10 +243,10 @@ footer {
 /* Revert button positioning */
 .revert-btn {
   position: absolute;
-  top: 15px;
-  right: 15px;
-  padding: 6px 12px;
-  font-size: 0.8em;
+  top: calc(15px * var(--scale));
+  right: calc(15px * var(--scale));
+  padding: calc(6px * var(--scale)) calc(12px * var(--scale));
+  font-size: calc(0.8em * var(--scale));
   background-color: rgba(255, 165, 0, 0.1);
   border-color: #ffa500;
   color: #ffa500;
@@ -251,7 +254,7 @@ footer {
 
 .revert-btn:hover {
   background-color: rgba(255, 165, 0, 0.2);
-  box-shadow: 0 0 10px rgba(255, 165, 0, 0.3);
+  box-shadow: 0 0 calc(10px * var(--scale)) rgba(255, 165, 0, 0.3);
 }
 
 /* Save button styling */
@@ -263,7 +266,7 @@ footer {
 
 .save-btn:hover {
   background-color: rgba(0, 255, 0, 0.2);
-  box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+  box-shadow: 0 0 calc(10px * var(--scale)) rgba(0, 255, 0, 0.3);
 }
 
 .save-btn:disabled {
@@ -283,11 +286,11 @@ footer {
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 20px;
-  height: 20px;
-  margin: -10px 0 0 -10px;
-  border: 2px solid transparent;
-  border-top: 2px solid #64ffda;
+  width: calc(20px * var(--scale));
+  height: calc(20px * var(--scale));
+  margin: calc(-10px * var(--scale)) 0 0 calc(-10px * var(--scale));
+  border: calc(2px * var(--scale) ) solid transparent;
+  border-top: calc(2px * var(--scale)) solid #64ffda;
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
@@ -300,12 +303,12 @@ footer {
 /* Error message styling */
 .error-message {
   background-color: rgba(255, 68, 68, 0.1);
-  border: 1px solid #ff4444;
-  border-left: 4px solid #ff4444;
+  border: calc(1px * var(--scale)) solid #ff4444;
+  border-left: calc(4px * var(--scale)) solid #ff4444;
   color: #ff4444;
-  padding: 15px;
-  border-radius: 5px;
-  margin: 10px 0;
+  padding: calc(15px * var(--scale));
+  border-radius: calc(5px * var(--scale));
+  margin: calc(10px * var(--scale)) 0;
   display: none;
 }
 
@@ -315,10 +318,10 @@ footer {
 
 /* Character counter styling */
 .char-count {
-  font-size: 0.8em;
+  font-size: calc(0.8em * var(--scale));
   color: #8892b0;
   text-align: right;
-  margin-top: 5px;
+  margin-top: calc(5px * var(--scale));
 }
 
 /* Cancel button styling */
@@ -326,12 +329,12 @@ footer {
   background-color: rgba(255, 68, 68, 0.1);
   border-color: #ff4444;
   color: #ff4444;
-  margin-left: 10px;
+  margin-left: calc(10px * var(--scale));
 }
 
 .cancel-btn:hover {
   background-color: rgba(255, 68, 68, 0.2);
-  box-shadow: 0 0 10px rgba(255, 68, 68, 0.3);
+  box-shadow: 0 0 calc(10px * var(--scale)) rgba(255, 68, 68, 0.3);
 }
 
 /* Enhanced entry creation UI */
@@ -340,23 +343,23 @@ footer {
 }
 
 .log-entry .entry-metadata {
-  margin-top: 15px;
+  margin-top: calc(15px * var(--scale));
 }
 
 /* Improved responsive behavior for entry creation */
 @media (max-width: 480px) {
   .entry-content .char-count {
     text-align: left;
-    margin-top: 8px;
+    margin-top: calc(8px * var(--scale));
   }
   
   .save-btn, .cancel-btn {
-    width: calc(50% - 5px);
-    margin: 5px 0;
+    width: calc(50% - calc(5px * var(--scale)));
+    margin: calc(5px * var(--scale)) 0;
   }
   
   .save-btn {
-    margin-right: 10px;
+    margin-right: calc(10px * var(--scale));
   }
 }
 
@@ -374,21 +377,21 @@ footer {
   transform: translate(-50%, -50%);
   background-color: rgba(10, 25, 47, 0.9);
   color: #64ffda;
-  padding: 10px 20px;
-  border-radius: 5px;
-  border: 1px solid #64ffda;
+  padding: calc(10px * var(--scale)) calc(20px * var(--scale));
+  border-radius: calc(5px * var(--scale));
+  border: calc(1px * var(--scale)) solid #64ffda;
   z-index: 10;
 }
 
 /* Better visual feedback for validation errors */
 .log-textarea.error {
   border-color: #ff4444;
-  box-shadow: 0 0 10px rgba(255, 68, 68, 0.3);
+  box-shadow: 0 0 calc(10px * var(--scale)) rgba(255, 68, 68, 0.3);
 }
 
 .log-textarea.error:focus {
   border-color: #ff4444;
-  box-shadow: 0 0 15px rgba(255, 68, 68, 0.4);
+  box-shadow: 0 0 calc(15px * var(--scale)) rgba(255, 68, 68, 0.4);
 }
 
 /* Improved button states */
@@ -402,11 +405,11 @@ footer {
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 16px;
-  height: 16px;
-  margin: -8px 0 0 -8px;
-  border: 2px solid transparent;
-  border-top: 2px solid currentColor;
+  width: calc(16px * var(--scale));
+  height: calc(16px * var(--scale));
+  margin: calc(-8px * var(--scale)) 0 0 calc(-8px * var(--scale));
+  border: calc(2px * var(--scale)) solid transparent;
+  border-top: calc(2px * var(--scale)) solid currentColor;
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }

@@ -9,9 +9,20 @@ class SplashScreen {
     }
 
     initialize() {
+        this.setGlobalScale();
         this.createBubbles();
         this.bindControls();
         this.startBubbleGeneration();
+    }
+
+    setGlobalScale() {
+        const baseWidth = 1920;
+        const baseHeight = 1080;
+        const scaleX = window.innerWidth / baseWidth;
+        const scaleY = window.innerHeight / baseHeight;
+        const scale = Math.min(scaleX, scaleY); // maintain aspect ratio
+        document.documentElement.style.setProperty('--scale', scale);
+        console.log(`Global scale set to: ${scale}`);
     }
 
     createBubble() {
