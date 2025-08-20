@@ -1,120 +1,185 @@
-// Handles the bridge system for Aqua Nova
+// Enhanced Bridge System for Aqua Nova
+import { drawNavigationDisplay, animateNavigationDisplay } from "../../utils/navComputer/navComputer.js";
+import GameState from "../../game/state.js";
 
-// Functions to go elsewhere on the ship
-function exitToQuarters() {
-    window.location.href = '../captains-quarters/quarters.html';
+const state = new GameState();
+let animationId;
+const canvas = document.getElementById("navigation-canvas");
+const svg = document.getElementById("navigation-overlay");
+
+const rangeSelect = document.getElementById("range-select");
+const trackInput = document.getElementById("track-input");
+const headingInput = document.getElementById("heading-input");
+const displayTypeSelect = document.getElementById("display-type-select");
+
+function initializeBridge() {
+  
+  // Set up event listeners
+  setupEventListeners();
+  
+  // Initialize display
+  initializeDisplay();
+  
+  // Start animation loop for radar sweep
+  startAnimation();
 }
 
-const CONFIG = {
-    ringCount: 4,
-    shipYFraction: 2/3,
-    strokeColor: '#ffffff',
-    textColor: '#ffffff',
-    fontPx: 12,
+function setupEventListeners() {
+  rangeSelect.addEventListener("change", (e) => {
+    const newRange = Number(e.target.value);
+    gameState.updateProperty("displaySettings.navDisplayRange", newRange);
+  });
+
+  headingInput.addEventListener("input", (e) => {
+    const newHeading = Number(e.target.value);
+    gameState.updateProperty("navigation.heading", newHeading);
+  });
+
+  // Display type selector (if you add one)
+  if (displayTypeSelect) {
+    displayTypeSelect.addEventListener("change", (e) => {
+      const displayType = e.target.value;
+      // Store the display preference
+      localStorage.setItem('aquaNova_displayType', displayType);
+      resizeCanvas();
+    });
+  }
+
+  // Handle window resize
+  window.addEventListener("resize", resizeCanvas);
+
+  // Track input is display-only: disable it
+  trackInput.disabled = true;
+
+  // Redraw whenever state changes
+  gameState.addObserver(() => {
+    // Don't need to redraw here since animation loop handles it
+  });
+
+  // Keyboard shortcuts for quick range changes
+  document.addEventListener("keydown", (e) => {
+    if (e.target.tagName === 'INPUT') return; // Don't interfere with input fields
+    
+    switch(e.key) {
+      case '1': setRange(5); break;
+      case '2': setRange(10); break;
+      case '3': setRange(20); break;
+      case '4': setRange(40); break;
+      case '5': setRange(80); break;
+    }
+  });
+}
+
+function setRange(range) {
+  gameState.updateProperty("displaySettings.navDisplayRange", range);
+  rangeSelect.value = range;
+}
+
+// Function to properly size the canvas
+function resizeCanvas() {
+  const container = document.getElementById("navigation-container");
+  const rect = container.getBoundingClientRect();
+  
+  console.log("Container dimensions:", rect.width, rect.height);
+  
+  // Set canvas size to match container's actual rendered size
+  canvas.width = rect.width;
+  canvas.height = rect.height;
+  
+  console.log("Canvas dimensions after:", canvas.width, canvas.height);
+  
+  // Update SVG dimensions to match
+  svg.setAttribute("width", canvas.width);
+  svg.setAttribute("height", canvas.height);
+}
+
+// Initial setup
+function initializeDisplay() {
+  requestAnimationFrame(() => {
+    resizeCanvas();
+  });
+}
+
+function getCurrentDisplayType() {
+  // You can determine display type based on:
+  // 1. URL parameter: ?display=mainScreen
+  // 2. Container size
+  // 3. User preference stored in localStorage
+  // 4. Current page/context
+  
+  const urlParams = new URLSearchParams(window.location.search);
+  const urlDisplayType = urlParams.get('display');
+  if (urlDisplayType) return urlDisplayType;
+  
+  const storedType = localStorage.getItem('aquaNova_displayType');
+  if (storedType) return storedType;
+  
+  // Auto-detect based on container size
+  const container = document.getElementById("navigation-container");
+  const rect = container.getBoundingClientRect();
+  const ratio = rect.width / rect.height;
+  
+  if (ratio > 2.5) return 'mainScreen';      // Very wide
+  if (ratio > 2.0) return 'helmScreen';      // Wide
+  return 'centerDisplay';                     // Default
+}
+
+function startAnimation() {
+  function animate() {
+    if (canvas.width > 0 && canvas.height > 0 && gameState) {
+      const displayType = getCurrentDisplayType();
+      
+      const state = {
+        range: gameState.getProperty("displaySettings.navDisplayRange"),
+        ownshipTrack: gameState.getProperty("navigation.course"),
+        selectedHeading: gameState.getProperty("navigation.heading"),
+      };
+      
+      drawNavigationDisplay(canvas, svg, state, displayType);
+      
+      // Keep UI in sync
+      rangeSelect.value = state.range;
+      headingInput.value = state.selectedHeading;
+      trackInput.value = state.ownshipTrack;
+    }
+    
+    animationId = requestAnimationFrame(animate);
+  }
+  
+  animate();
+}
+
+function stopAnimation() {
+  if (animationId) {
+    cancelAnimationFrame(animationId);
+    animationId = null;
+  }
+}
+
+// Page visibility handling to pause animation when tab is not active
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    stopAnimation();
+  } else {
+    startAnimation();
+  }
+});
+
+// Exit button
+window.exitToQuarters = function exitToQuarters() {
+  stopAnimation();
+  window.location.href = "../captains-quarters/quarters.html";
 };
 
-const canvas = document.getElementById('navDisplay');
-const ctx = canvas.getContext('2d');
+// Utility functions for other parts of the game
+window.switchToMainDisplay = function() {
+  window.location.href = window.location.pathname + "?display=mainScreen";
+};
 
-function resize() {
-    const dpr = Math.max(1, window.devicePixelRatio || 1);
-    const { clientWidth: w, clientHeight: h } = canvas;
-    canvas.width = Math.round(w * dpr);
-    canvas.height = Math.round(h * dpr);
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    draw();
-}
+window.switchToHelmDisplay = function() {
+  window.location.href = window.location.pathname + "?display=helmScreen";
+};
 
-window.addEventListener('resize', resize, { passive: true });
-
-function draw() {
-    const W = canvas.clientWidth;
-    const H = canvas.clientHeight;
-
-    // Clear background
-    ctx.clearRect(0, 0, W, H);
-    ctx.fillStyle = '#000';
-    ctx.fillRect(0, 0, W, H);
-
-    const cx = W / 2;
-    const cy = H * CONFIG.shipYFraction;
-    const baseRadius = Math.min(W, H) * 0.15;
-
-    drawRangeRings(cx, cy, baseRadius);
-    drawCompassRose(cx, cy, baseRadius * 4);
-    drawOwnShip(cx, cy);
-}
-
-function drawRangeRings(cx, cy, baseRadius) {
-    ctx.save();
-    ctx.lineWidth = 1;
-    ctx.strokeStyle = CONFIG.strokeColor;
-
-    for (let i = 1; i <= CONFIG.ringCount; i++) {
-        const r = i * baseRadius;
-
-        if (i < CONFIG.ringCount) {
-            ctx.setLineDash([4, 4]);
-        } else {
-            ctx.setLineDash([]);
-            ctx.lineWidth = 2;
-        }
-
-        ctx.beginPath();
-        ctx.arc(cx, cy, r, 0, Math.PI * 2);
-        ctx.stroke();
-    }
-
-    ctx.restore();
-}
-
-function drawCompassRose(cx, cy, outerRadius) {
-    ctx.save();
-    ctx.strokeStyle = CONFIG.strokeColor;
-    ctx.fillStyle = CONFIG.textColor;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.font = `${CONFIG.fontPx}px monospace`;
-
-    for (let deg = 0; deg < 360; deg += 5) {
-        const isMajor = deg % 10 === 0;
-        const tickLength = isMajor ? 15 : 8;
-
-        const rad = (deg * Math.PI) / 180;
-        const x1 = cx + Math.sin(rad) * (outerRadius - tickLength);
-        const y1 = cy - Math.cos(rad) * (outerRadius - tickLength);
-        const x2 = cx + Math.sin(rad) * outerRadius;
-        const y2 = cy - Math.cos(rad) * outerRadius;
-
-        ctx.lineWidth = isMajor ? 2 : 1;
-        ctx.beginPath();
-        ctx.moveTo(x1, y1);
-        ctx.lineTo(x2, y2);
-        ctx.stroke();
-
-        if (deg % 10 === 0) {
-            const textRadius = outerRadius + 20;
-            const textX = cx + Math.sin(rad) * textRadius;
-            const textY = cy - Math.cos(rad) * textRadius;
-            const label = (deg / 10).toString().padStart(2, '0');
-            ctx.fillText(label, textX, textY);
-        }
-    }
-
-    ctx.restore();
-}
-
-function drawOwnShip(cx, cy) {
-    const size = 12;
-    ctx.save();
-    ctx.fillStyle = CONFIG.strokeColor;
-    ctx.beginPath();
-    ctx.moveTo(cx, cy - size);
-    ctx.lineTo(cx - size * 0.6, cy + size * 0.7);
-    ctx.lineTo(cx + size * 0.6, cy + size * 0.7);
-    ctx.closePath();
-    ctx.fill();
-    ctx.restore();
-}
-
-requestAnimationFrame(resize);
+window.switchToCenterDisplay = function() {
+  window.location.href = window.location.pathname + "?display=centerDisplay";
+};

@@ -74,10 +74,10 @@ body {
 .logbook-hotspot {
     position: absolute;
     /* Position coordinates relative to the scaled image */
-    right: 1%;
-    bottom: 12%;
+    left: 12%;
+    bottom: 37%;
     /* Use percentage-based sizing so it scales with the image */
-    width: 20%;
+    width: 11%;
     height: 16%;
     cursor: pointer;
     border: 2px solid transparent;
@@ -90,10 +90,10 @@ body {
 /* Exit to the bridge hotspot positioned over the door */
 .bridge-hotspot {
     position: absolute;
-    left: 0%;
-    top: 0%;
-    width: 8%;
-    height: 100%;
+    right: 10%;
+    top: 15%;
+    width: 21%;
+    height: 45%;
     cursor: pointer;
     border: 2px solid transparent;
     border-radius: 8px;

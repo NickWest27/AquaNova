@@ -34,8 +34,8 @@ class GameState {
                     }
                 },
                 depth: 0, // meters, 0 = surface/dry dock
-                heading: 0, // degrees magnetic
-                course: 0, // degrees
+                heading: 240, // degrees magnetic
+                course: 240, // degrees
                 speed: 0, // knots
                 destination: null
             },
@@ -156,6 +156,12 @@ class GameState {
                         linkLoadPercentage: 0
                     }
                 }
+            },
+
+            // Display & UI settings
+            displaySettings: {
+                navDisplayRange: 10,  // NM
+                // later: brightness, overlays toggled on/off, etc.
             },
 
             // Crew and personnel
@@ -564,8 +570,4 @@ class GameState {
 }
 
 // Export for use in other modules or make globally available
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = GameState;
-} else {
-    window.GameState = GameState;
-}
+export default GameState;

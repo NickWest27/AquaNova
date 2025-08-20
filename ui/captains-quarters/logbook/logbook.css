@@ -83,8 +83,39 @@ main {
   color: #8892b0;
   display: flex;
   justify-content: space-between;
+  align-items: center;
   border-top: 1px solid rgba(100, 255, 218, 0.2);
   padding-top: 10px;
+}
+
+/* Log type specific styling */
+.entry-id {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-weight: bold;
+  font-size: 0.85em;
+}
+
+.entry-id.mission-log {
+  background-color: rgba(255, 165, 0, 0.2);
+  color: #ffa500;
+  border: 1px solid rgba(255, 165, 0, 0.3);
+}
+
+.entry-id.personal-log {
+  background-color: rgba(100, 255, 218, 0.2);
+  color: #64ffda;
+  border: 1px solid rgba(100, 255, 218, 0.3);
+}
+
+/* Mission log entries have a subtle orange accent */
+.log-entry:has(.mission-log) {
+  border-left: 4px solid #ffa500;
+}
+
+.log-entry:has(.mission-log) .log-info {
+  border-left-color: #ffa500;
+  background-color: rgba(255, 165, 0, 0.05);
 }
 
 footer {
@@ -108,12 +139,19 @@ footer {
   .log-entry {
     padding: 15px;
   }
+
+  .entry-metadata {
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-start;
+  }
 }
 
 .logbook-controls {
   margin-top: 20px;
   display: flex;
   gap: 10px;
+  flex-wrap: wrap;
 }
 
 .control-btn {
@@ -146,12 +184,17 @@ footer {
   padding: 10px;
   margin-bottom: 10px;
   resize: vertical;
+  font-family: inherit;
 }
 
 .log-textarea:focus {
   outline: none;
   border-color: #64ffda;
   box-shadow: 0 0 10px rgba(100, 255, 218, 0.2);
+}
+
+.log-textarea::placeholder {
+  color: #8892b0;
 }
 
 .task-list {
@@ -192,4 +235,178 @@ footer {
   content: "✓";
   color: #64ffda;
   font-weight: bold;
+}
+
+/* Revert button positioning */
+.revert-btn {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  padding: 6px 12px;
+  font-size: 0.8em;
+  background-color: rgba(255, 165, 0, 0.1);
+  border-color: #ffa500;
+  color: #ffa500;
+}
+
+.revert-btn:hover {
+  background-color: rgba(255, 165, 0, 0.2);
+  box-shadow: 0 0 10px rgba(255, 165, 0, 0.3);
+}
+
+/* Save button styling */
+.save-btn {
+  background-color: rgba(0, 255, 0, 0.1);
+  border-color: #00ff00;
+  color: #00ff00;
+}
+
+.save-btn:hover {
+  background-color: rgba(0, 255, 0, 0.2);
+  box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+}
+
+.save-btn:disabled {
+  background-color: rgba(128, 128, 128, 0.1);
+  border-color: #808080;
+  color: #808080;
+}
+
+/* Loading state for entries */
+.log-entry.loading {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.log-entry.loading::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  margin: -10px 0 0 -10px;
+  border: 2px solid transparent;
+  border-top: 2px solid #64ffda;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Error message styling */
+.error-message {
+  background-color: rgba(255, 68, 68, 0.1);
+  border: 1px solid #ff4444;
+  border-left: 4px solid #ff4444;
+  color: #ff4444;
+  padding: 15px;
+  border-radius: 5px;
+  margin: 10px 0;
+  display: none;
+}
+
+.error-message.show {
+  display: block;
+}
+
+/* Character counter styling */
+.char-count {
+  font-size: 0.8em;
+  color: #8892b0;
+  text-align: right;
+  margin-top: 5px;
+}
+
+/* Cancel button styling */
+.cancel-btn {
+  background-color: rgba(255, 68, 68, 0.1);
+  border-color: #ff4444;
+  color: #ff4444;
+  margin-left: 10px;
+}
+
+.cancel-btn:hover {
+  background-color: rgba(255, 68, 68, 0.2);
+  box-shadow: 0 0 10px rgba(255, 68, 68, 0.3);
+}
+
+/* Enhanced entry creation UI */
+.log-entry .entry-content {
+  position: relative;
+}
+
+.log-entry .entry-metadata {
+  margin-top: 15px;
+}
+
+/* Improved responsive behavior for entry creation */
+@media (max-width: 480px) {
+  .entry-content .char-count {
+    text-align: left;
+    margin-top: 8px;
+  }
+  
+  .save-btn, .cancel-btn {
+    width: calc(50% - 5px);
+    margin: 5px 0;
+  }
+  
+  .save-btn {
+    margin-right: 10px;
+  }
+}
+
+/* Loading state improvements */
+.log-entry.saving {
+  opacity: 0.8;
+  pointer-events: none;
+}
+
+.log-entry.saving::after {
+  content: "Saving...";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: rgba(10, 25, 47, 0.9);
+  color: #64ffda;
+  padding: 10px 20px;
+  border-radius: 5px;
+  border: 1px solid #64ffda;
+  z-index: 10;
+}
+
+/* Better visual feedback for validation errors */
+.log-textarea.error {
+  border-color: #ff4444;
+  box-shadow: 0 0 10px rgba(255, 68, 68, 0.3);
+}
+
+.log-textarea.error:focus {
+  border-color: #ff4444;
+  box-shadow: 0 0 15px rgba(255, 68, 68, 0.4);
+}
+
+/* Improved button states */
+.control-btn.loading {
+  position: relative;
+  color: transparent;
+}
+
+.control-btn.loading::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 16px;
+  height: 16px;
+  margin: -8px 0 0 -8px;
+  border: 2px solid transparent;
+  border-top: 2px solid currentColor;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
 }

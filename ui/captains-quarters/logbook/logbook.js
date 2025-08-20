@@ -77,14 +77,14 @@ class LogbookSystem {
       this.saving = false;
     }
   }
-  // Add a utility to modify dates for displays to keep story
+  // Add a utility to modify dates for displays to keep story, make it a pretty date.
   getFutureDate(yearsOffset = 50) {
     const date = new Date();
     date.setFullYear(date.getFullYear() + yearsOffset);
     return date;
   }
 
-  // Update the current date display, didn't I just make a getFutureDate
+  // Update the current date display, Isn't this handled by getFutureDate?
   updateCurrentDate() {
     const el = document.getElementById('current-date');
     if (!el) return;
@@ -261,6 +261,7 @@ class LogbookSystem {
         <span class="entry-id">${entryId}</span>
       </div>
       <button class="control-btn save-btn">Save Entry</button>
+      <button class="control-btn cancel-btn">Cancel Entry</button>
     `;
 
     main.appendChild(section);
@@ -281,7 +282,8 @@ class LogbookSystem {
     saveBtn.addEventListener('click', () => {
       const content = textarea.value.trim();
       if (!content) {
-        alert('Log entry cannot be empty.');
+        alert('Log entry cannot be empty.'); // Change this to flash the cancel button instead
+        console.log('Logbook entry cannot be empty');
         return;
       }
 
@@ -405,7 +407,7 @@ class LogbookSystem {
     // Handle the hardcoded first entry
     if (entryId === 'M.LOG-0001') {
       console.log('Reverting to initial mission state');
-      // You could implement a reset to initial state here
+      // Implement a reset to initial state here
       alert('Reverted to mission start state (functionality to be implemented)');
       return;
     }
@@ -415,7 +417,7 @@ class LogbookSystem {
     
     if (!entry) {
       console.warn(`Entry ${entryId} not found`);
-      alert('Entry not found for revert operation');
+      alert('Entry not found for revert operation'); 
       return;
     }
     
@@ -430,6 +432,8 @@ class LogbookSystem {
     
     // Update display
     this.updateLocationInfo();
+
+    // Remove all entries and game state made after this entry. Including browser cache and all storage.
     
     // Save reverted state
     this.saveAllData();

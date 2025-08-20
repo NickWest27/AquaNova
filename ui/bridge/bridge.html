@@ -4,8 +4,9 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>AquaNova Submarine Navigation Display</title>
+    <title>AquaNova Bridge</title>
     <link rel="stylesheet" href="bridge.css" />
+    <link rel="stylesheet" href="../../utils/navComputer/navComputer.css" />
 </head>
 <body>
     <div class="bridge-container">
@@ -18,21 +19,48 @@
             <div class="left-console">left-console...<br>OFFLINE</div>
             <div class="right-console">right-console...<br>OFFLINE</div>
             <div class="left-buttons">OFFLINE
-                <!-- left buttons (icons) go here (Engineering, Science Lab, Helm)-->
+                <!-- left buttons (icons) go here to move to different ship locations
+                (Engineering, Science Lab, Helm)-->
                 <div class="quarters-button" onclick="exitToQuarters()">
                     <div class="tooltip">Exit to Captains Quarters</div>
                 </div>
             </div>
             <div class="right-buttons">OFFLINE
-                <!-- right buttons go here -->
+                <!-- right buttons go here to issue orders to different stations
+                 eg. selecting helm here, brings up possible orders on center-console -->
             </div>
-            <div class="center-console">OFFLINE
-                <canvas id="navDisplay">navDisplay...<br>OFFLINE</canvas></div>
-            <div class="keyboard-unit">keyboard-unit...<br>OFFLINE</div>
+            <div class="center-display">
+                <div id="navigation-container">
+                    <canvas id="navigation-canvas"></canvas>
+                    <svg id="navigation-overlay"></svg>
+                </div>
             </div>
+            <div class="center-console">
+            <!-- Control Panel -->
+                <label>
+                Range (NM)
+                <select id="range-select">
+                    <option value="5">5</option>
+                    <option value="10" selected>10</option>
+                    <option value="20">20</option>
+                    <option value="40">40</option>
+                    <option value="80">80</option>
+                </select>
+                </label>
+                <label>
+                Track (°)
+                <input type="number" id="track-input" value="26" min="0" max="359">
+                </label>
+
+                <label>
+                Selected Heading (°)
+                <input type="number" id="heading-input" value="350" min="0" max="359">
+                </label>
+            </div>
+            <div class="keyboard-unit">keyboard-unit<br>OFFLINE</div>
         </div>
     </div>
 
-    <script src="bridge.js"></script>
+<script type="module" src="bridge.js"></script>
 </body>
 </html>
