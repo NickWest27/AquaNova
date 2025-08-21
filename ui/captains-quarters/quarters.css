@@ -1,3 +1,4 @@
+/* All numeric values should scale using var(--scale) */
 /* styles the captain's quarters interface */
 /* Reset and base styles */
 * {
@@ -65,8 +66,8 @@ body {
         left: 10%;
         right: 10%;
         max-width: none;
-        font-size: 14px;
-        padding: 15px;
+        font-size: calc(14px * var(--scale));
+        padding: calc(15px * var(--scale));
     }
 }
 
@@ -80,8 +81,8 @@ body {
     width: 11%;
     height: 16%;
     cursor: pointer;
-    border: 2px solid transparent;
-    border-radius: 8px;
+    border: calc(2px * var(--scale)) solid transparent;
+    border-radius: calc(8px * var(--scale));
     transition: all 0.3s ease;
     background: rgba(100, 255, 218, 0.1);
     opacity: 1;
@@ -95,8 +96,8 @@ body {
     width: 21%;
     height: 45%;
     cursor: pointer;
-    border: 2px solid transparent;
-    border-radius: 8px;
+    border: calc(2px * var(--scale)) solid transparent;
+    border-radius: calc(8px * var(--scale));
     transition: all 0.3s ease;
     background: rgba(100, 255, 218, 0.1);
     opacity: 1;
@@ -105,14 +106,14 @@ body {
 .logbook-hotspot:hover {
     opacity: 1;
     border-color: #64ffda;
-    box-shadow: 0 0 20px rgba(100, 255, 218, 0.5);
+    box-shadow: 0 0 calc(20px * var(--scale)) rgba(100, 255, 218, 0.5);
     background: rgba(100, 255, 218, 0.2);
 }
 
 .bridge-hotspot:hover {
     opacity: 1;
     border-color: #64ffda;
-    box-shadow: 0 0 20px rgba(100, 255, 218, 0.5);
+    box-shadow: 0 0 calc(20px * var(--scale)) rgba(100, 255, 218, 0.5);
     background: rgba(100, 255, 218, 0.2);
 }
 
@@ -121,7 +122,7 @@ body {
 .logbook-hotspot {
     opacity: 0.5 !important;
     background: rgba(255, 0, 0, 0.3) !important;
-    border: 2px solid red !important;
+    border: calc(2px * var(--scale)) solid red !important;
 }
 */
 
@@ -133,14 +134,14 @@ body {
     transform: translateX(-50%);
     background: rgba(0, 0, 0, 0.9);
     color: #64ffda;
-    padding: 5px 10px;
-    border-radius: 4px;
-    font-size: 12px;
+    padding: calc(5px * var(--scale)) calc(10px * var(--scale));
+    border-radius: calc(4px * var(--scale));
+    font-size: calc(12px * var(--scale));
     white-space: nowrap;
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.3s ease;
-    border: 1px solid #64ffda;
+    border: calc(1px * var(--scale)) solid #64ffda;
 }
 
 .logbook-hotspot:hover .tooltip {
@@ -154,10 +155,10 @@ body {
 /* Add a subtle pulsing animation to hint at interactivity */
 @keyframes pulse {
     0%, 100% { 
-        box-shadow: 0 0 5px rgba(100, 255, 218, 0.3); 
+        box-shadow: 0 0 calc(5px * var(--scale)) rgba(100, 255, 218, 0.3); 
     }
     50% { 
-        box-shadow: 0 0 15px rgba(100, 255, 218, 0.6); 
+        box-shadow: 0 0 calc(15px * var(--scale)) rgba(100, 255, 218, 0.6); 
     }
 }
 

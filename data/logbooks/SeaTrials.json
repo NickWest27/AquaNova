@@ -1,9 +1,17 @@
 {
+  "Metadata": {
+    "logbookId": "LB-SEA-TRIALS-0001",
+    "campaignTitle": "Sea Trials",
+    "version": "1.0.0",
+    "createdAt": "2075-08-16T00:00:00Z",
+    "description": "Initial sea trials and system familiarization mission",
+    "lastPlayed": null
+  },
   "entries": [
     {
       "logbook": {
         "id": "M.LOG-0001",
-        "timestamp": "2074-08-09T14:30:00.000Z",
+        "timestamp": "2074-08-16T14:30:00.000Z",
         "type": "mission_log",
         "tags": ["OERA", "dry_dock", "mission", "tasks"],
         "author": {
@@ -215,8 +223,8 @@
   "statistics": {
     "totalEntries": 0,
     "totalMissions": 0,
-    "firstEntry": "2074-08-09T14:30:00.000Z",
-    "lastEntry": "2074-08-09T14:30:00.000Z"
+    "firstEntry": "2074-08-16T14:30:00.000Z",
+    "lastEntry": "2074-08-16T14:30:00.000Z"
   },
   "settings": {
     "autoSave": true,

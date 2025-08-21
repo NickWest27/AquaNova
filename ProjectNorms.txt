@@ -1,0 +1,78 @@
+🔹 AquaNova Project Norms
+
+1. JavaScript / Code Style
+	•	ES6 modules:
+	•	export default for classes (e.g., GameState).
+	•	import ... from syntax instead of legacy <script> global exports.
+	•	Class-based systems: Encapsulation with constructors and methods (e.g., LogbookSystem).
+	•	Observer pattern: Used for UI to update automatically when GameState changes.
+	•	Snapshots for saves: Game state is stored with logbook entries, supports revert-to-past states.
+	•	Asynchronous operations: async/await used for loading/saving.
+	•	Defensive coding: Guards for missing elements (if (!el) return;) and graceful error handling (try/catch).
+	•	Global state management: Central GameState updated on tick, UI stations read from it.
+	•	Deep merge utilities: Planned for merging nested state objects without overwriting entire branches.
+
+⸻
+
+2. Data Persistence
+	•	localStorage:
+	•	Keys: aquaNova_gameState, aquaNova_logbook.
+	•	JSON serialization for saves.
+	•	Snapshots in logbook entries: Each entry includes a gameSnapshot bookmark.
+	•	Revert behavior:
+	•	Can go back in time, but not forward.
+	•	Future log entries are wiped on revert.
+
+⸻
+
+3. File Structure
+	•	Separation of concerns:
+	•	/game → core state & save management.
+	•	/ui → station-specific UIs (bridge, helm, logbook, quarters, etc.).
+	•	/utils → helper functions (e.g., idGenerator, time).
+	•	/data → JSON static data (crew, locations, etc.).
+	•	/assets → images, audio, fonts.
+	•	Station subfolders: Each has its own html, js, and css.
+	•	Index bootstraps global state and routes to stations.
+
+⸻
+
+4. HTML / UI Norms
+	•	Semantic HTML: <header>, <main>, <footer>.
+	•	Sticky headers: Used in logbook for persistent navigation.
+	•	Revert buttons: Always bound via JS, never inline onclick (except temporary hotspots in quarters).
+	•	Dynamic placeholders: e.g., date advanced by 50 years, updated via JS.
+
+⸻
+
+5. CSS / Styling
+	•	Global scale factor:
+	•	Virtual resolution = 1920x1080.
+	•	setGlobalScale() computes --scale (based on current window).
+	•	Sizes use calc(Xpx * var(--scale)) for responsive scaling.
+	•	Color scheme:
+	•	Dark navy background (#0a192f).
+	•	Neon teal (#64ffda) for highlights.
+	•	Orange (#ffa500) for mission logs.
+	•	Flexbox for layout.
+	•	Hover effects & transitions: For interactive buttons, log entries, tooltips.
+	•	Consistent button classes: .control-btn, .save-btn, .cancel-btn, .revert-btn.
+	•	Accessibility cues: Focus/hover states are visually distinct.
+
+⸻
+
+6. UX Norms
+	•	Smooth scrolling when adding new log entries.
+	•	Immediate feedback:
+	•	“Saving…” → “Done!” button states.
+	•	Error states styled in red (.error-message, .log-textarea.error).
+	•	Prevent memory leaks: Event listeners marked with dataset.bound to avoid duplicates.
+	•	Exit navigation: Stations exit back to Quarters (and Quarters exits to Bridge).
+
+⸻
+
+7. Narrative / Worldbuilding Norms
+	•	Time offset: All in-game dates are +50 years from real-world.
+	•	Hardcoded starter log: From Admiral Vasquez (M.LOG-0001).
+	•	Organization: O.E.R.A (Oceanic Exploration and Research Alliance).
+	•	Revert-to-start: M.LOG-0001 reverts to mission start state.

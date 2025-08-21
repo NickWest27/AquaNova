@@ -7,7 +7,16 @@
     font-family: 'Arial', sans-serif;
 }
 :root {
-  --scale: 1; /* global scale factor for virtual 1920x1080 */
+  --scale: 1;
+  --primary-cyan: #64ffda;
+  --primary-blue: #0a192f;
+  --secondary-blue: #112240;
+  --accent-orange: #ffa500;
+  --text-gray: #8892b0;
+  --text-white: #fff;
+  --success-green: #00ff00;
+  --error-red: #ff4444;
+  --shadow-glow: rgba(100, 255, 218, 0.2);
 }
 
 body {

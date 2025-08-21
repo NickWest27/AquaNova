@@ -1,121 +1,156 @@
 // ui/captains-quarters/logbook/logbook.js
-// Complete logbook system with integrated save functionality and navigation
+// Complete logbook system with SaveManager integration
+
+import SaveManager from '../../../game/saveManager.js';
+import GameState from '../../../game/state.js';
 
 class LogbookSystem {
   constructor() {
     this.currentEntryId = 1;
-    this.gameState = null;
     this.logbookData = null;
-    this.initialize();
+    this.saveManager = null;
+    this.eventListeners = new Map(); // Track listeners for cleanup
+    this.saving = false;
+    this.initialized = false;
   }
 
   async initialize() {
-    await this.loadGameData();
-    this.updateCurrentDate();
-    this.updateLocationInfo();
-    this.renderExistingEntries();
-    this.bindControls();
-  }
-
-  // Load data from localStorage
-  async loadGameData() {
     try {
-      // Load logbook data
-      const storedLogbook = localStorage.getItem('aquaNova_logbook');
-      if (storedLogbook) {
-        this.logbookData = JSON.parse(storedLogbook);
-        console.log(`Logbook loaded with ${this.logbookData.entries.length} entries`);
-      } else {
-        console.log('No logbook data found, creating empty logbook');
-        this.logbookData = {
-          entries: [],
-          statistics: {
-            totalEntries: 0,
-            totalMissions: 0,
-            firstEntry: new Date().toISOString(),
-            lastEntry: new Date().toISOString()
-          },
-          settings: {
-            autoSave: true,
-            maxEntries: 1000
-          }
-        };
+      // Initialize SaveManager - this handles loading localStorage + JSON files
+      this.saveManager = new SaveManager();
+      await this.saveManager.init();
+
+      // Check if we have any logbooks available
+      const hasLogbooks = this.saveManager.bookshelf.length > 0;
+      const currentBook = this.saveManager.getCurrentBook();
+      const hasMountedLogbook = currentBook && currentBook.mounted;
+
+      if (!hasLogbooks) {
+        this.showNoLogbooksError();
+        return;
       }
 
-      // Load current game state
-      const storedGameState = localStorage.getItem('aquaNova_gameState');
-      if (storedGameState) {
-        this.gameState = JSON.parse(storedGameState);
-        console.log('Game state loaded');
+      if (!hasMountedLogbook) {
+        this.showNoActiveLogbookError();
+        return;
       }
+
+      // Load the active logbook
+      this.logbookData = currentBook;
+      console.log(`Loaded active logbook: ${this.logbookData.name} with ${this.logbookData.entries.length} entries`);
+
+      // Update current entry ID based on existing entries
+      this.updateCurrentEntryId();
+      
+      // Update UI
+      this.updateCurrentDate();
+      this.updateLocationInfo();
+      this.renderExistingEntries();
+      this.bindControls();
+      this.updateBookshelfUI();
+
+      this.initialized = true;
+      console.log('LogbookSystem initialized successfully');
       
     } catch (error) {
-      console.error('Error loading game data:', error);
+      console.error('Failed to initialize LogbookSystem:', error);
+      this.showError('Failed to initialize logbook system');
     }
   }
 
-  // Save all data to localStorage, handle concurrent saves and fail gracfully
-  async saveAllData() {
-    if (this.saving) {
-      console.log('Save operation already in progress');
-      return false;
-    }
-    this.saving = true;
-    try {
-      if (this.gameState) {
-        localStorage.setItem('aquaNova_gameState', JSON.stringify(this.gameState));
-      }
-      if (this.logbookData) {
-        localStorage.setItem('aquaNova_logbook', JSON.stringify(this.logbookData));
-      }
-      console.log('All data saved to localStorage');
-      return true;
-    } catch (error) {
-      console.error('Failed to save data:', error);
-      return false;
-    } finally {
-      this.saving = false;
+  updateCurrentEntryId() {
+    if (this.logbookData?.entries && this.logbookData.entries.length > 0) {
+      const maxId = Math.max(...this.logbookData.entries.map(entry => {
+        const match = entry.logbook.id.match(/LOG-(\d+)$/);
+        return match ? parseInt(match[1]) : 0;
+      }));
+      this.currentEntryId = maxId + 1;
     }
   }
-  // Add a utility to modify dates for displays to keep story, make it a pretty date.
+
+  showNoLogbooksError() {
+    const main = document.getElementById('log-entries');
+    if (!main) return;
+
+    main.innerHTML = `
+      <div class="error-state">
+        <h3>ERROR: No logbooks found</h3>
+        <p>No logbooks were found in localStorage or the /data/ folder.</p>
+        <p>Please import a logbook file to get started.</p>
+        <button id="import-first-logbook" class="control-btn">Import Logbook</button>
+      </div>
+    `;
+
+    // Bind import button
+    const importBtn = document.getElementById('import-first-logbook');
+    if (importBtn) {
+      this.addEventListenerWithCleanup(importBtn, 'click', () => {
+        document.getElementById('logbook-import').click();
+      });
+    }
+
+    // Still bind basic controls for import functionality
+    this.bindImportControls();
+  }
+
+  showNoActiveLogbookError() {
+    const main = document.getElementById('log-entries');
+    if (!main) return;
+
+    main.innerHTML = `
+      <div class="error-state">
+        <h3>ERROR: No logbook loaded</h3>
+        <p>Found archived logbooks but no active logbook is currently loaded.</p>
+        <p>Please select a logbook from the bookshelf to load.</p>
+        <button id="load-first-logbook" class="control-btn">Browse Logbooks</button>
+      </div>
+    `;
+
+    // Update the bookshelf UI so user can see available options
+    this.updateBookshelfUI();
+    
+    // Bind basic controls
+    this.bindBookshelfControls();
+  }
+
+  // Add a utility to modify dates for displays to keep story immersive
   getFutureDate(yearsOffset = 50) {
     const date = new Date();
     date.setFullYear(date.getFullYear() + yearsOffset);
     return date;
   }
 
-  // Update the current date display, Isn't this handled by getFutureDate?
+  // Update the current date display
   updateCurrentDate() {
     const el = document.getElementById('current-date');
     if (!el) return;
     
-    const currentDate = new Date();
-    currentDate.setFullYear(currentDate.getFullYear() + 50);
-    
+    const currentDate = this.getFutureDate();
     el.textContent = currentDate.toLocaleDateString('en-US', {
       year: 'numeric', month: 'long', day: 'numeric'
     });
   }
 
   updateLocationInfo() {
-    if (!this.gameState) return;
+    const gameState = GameState.getSnapshot();
+    if (!gameState) return;
 
     const locationElements = document.querySelectorAll('.log-info p');
     
     // Update location
-    if (this.gameState.navigation?.location && locationElements[0]) {
-      const location = this.gameState.navigation.location;
-      locationElements[0].textContent = `Location: ${location.properties.name}`;
+    if (gameState.navigation?.location && locationElements[0]) {
+      const location = gameState.navigation.location;
+      locationElements[0].textContent = `Location: ${location.properties?.name || 'Unknown'}`;
     }
 
-    // Update status - this need to be modified so it shows docked if location is a known dock, or underway.
-    if (locationElements[1] && this.gameState.shipSystems) {
+    // Update status - shows docked if location is a known dock, or underway
+    if (locationElements[1] && gameState.shipSystems) {
       let status = 'Unknown';
       
-      if (this.gameState.shipSystems.hull?.dockingBay === 'Open') {
+      if (gameState.shipSystems.hull?.dockingBay === 'Open') {
         status = 'Dry Dock - Systems Integration Phase';
-      } else if (this.gameState.navigation.depth > 0) {
-        status = `Submerged - Depth ${this.gameState.navigation.depth}M`;
+      } else if (gameState.navigation?.depth > 0) {
+        status = `Submerged - Depth ${gameState.navigation.depth}M`;
       } else {
         status = 'Surface Operations';
       }
@@ -128,7 +163,7 @@ class LogbookSystem {
     const main = document.getElementById('log-entries');
     if (!main) return;
     
-    // Clear existing entries (except the hardcoded first one if present)
+    // Clear existing dynamic entries (keep the hardcoded first one)
     const existingEntries = main.querySelectorAll('.log-entry');
     existingEntries.forEach(entry => {
       // Keep the first hardcoded entry, remove others
@@ -137,14 +172,13 @@ class LogbookSystem {
       }
     });
     
-    // Don't create duplicates if entries already exist
+    // Render saved entries
     if (this.logbookData?.entries && this.logbookData.entries.length > 0) {
-      // Find the highest existing ID number
-      const maxId = Math.max(...this.logbookData.entries.map(entry => {
-        const match = entry.logbook.id.match(/(\d+)$/);
-        return match ? parseInt(match[1]) : 0;
-      }));
-      this.currentEntryId = maxId + 1;
+      this.logbookData.entries.forEach(entry => {
+        if (entry.logbook) {
+          this.renderLogEntry(entry.logbook);
+        }
+      });
     }
   }
 
@@ -153,6 +187,7 @@ class LogbookSystem {
       console.error('Invalid log entry data:', logEntry);
       return;
     }
+    
     const main = document.getElementById('log-entries');
     if (!main) return;
     
@@ -202,7 +237,7 @@ class LogbookSystem {
     `;
     
     const revertBtn = section.querySelector('.revert-btn');
-    revertBtn.addEventListener('click', () => {
+    this.addEventListenerWithCleanup(revertBtn, 'click', () => {
       this.revertToEntry(logEntry.id);
     });
     
@@ -210,28 +245,74 @@ class LogbookSystem {
   }
 
   bindControls() {
-    // I need to add cleanup to prevent memory leaks from listners.
+    // Only bind full controls if properly initialized
+    if (!this.initialized) return;
+
     // New entry button
     const newEntryBtn = document.getElementById('new-entry');
     if (newEntryBtn) {
-      newEntryBtn.addEventListener('click', () => this.createEntry());
+      this.addEventListenerWithCleanup(newEntryBtn, 'click', () => this.createEntry());
     }
 
-    // Exit logbook button - updated to navigate back to quarters
+    // Exit logbook button
     const exitBtn = document.getElementById('exit-logbook');
     if (exitBtn) {
-      exitBtn.addEventListener('click', () => {
+      this.addEventListenerWithCleanup(exitBtn, 'click', () => {
         console.log('Exiting logbook, returning to quarters...');
-        // Navigate back to the quarters
         window.location.href = '../quarters.html';
       });
     }
 
-    // Bind revert buttons for existing entries (like the hardcoded first entry)
+    // Bookshelf controls
+    this.bindBookshelfControls();
+    this.bindImportControls();
+
+    // Bind revert buttons for existing entries
+    this.bindExistingRevertButtons();
+  }
+
+  bindBookshelfControls() {
+    const nextBtn = document.getElementById('logbook-next');
+    if (nextBtn) {
+      this.addEventListenerWithCleanup(nextBtn, 'click', () => {
+        this.saveManager.nextBook();
+        this.updateBookshelfUI();
+      });
+    }
+
+    const prevBtn = document.getElementById('logbook-prev');
+    if (prevBtn) {
+      this.addEventListenerWithCleanup(prevBtn, 'click', () => {
+        this.saveManager.prevBook();
+        this.updateBookshelfUI();
+      });
+    }
+
+    const actionBtn = document.getElementById('logbook-action');
+    if (actionBtn) {
+      this.addEventListenerWithCleanup(actionBtn, 'click', () => this.handleLogbookAction());
+    }
+  }
+
+  bindImportControls() {
+    const importInput = document.getElementById('logbook-import');
+    if (importInput) {
+      this.addEventListenerWithCleanup(importInput, 'change', (event) => this.handleImport(event));
+    }
+
+    const importBtn = document.getElementById('logbook-import-btn');
+    if (importBtn) {
+      this.addEventListenerWithCleanup(importBtn, 'click', () => {
+        document.getElementById('logbook-import').click();
+      });
+    }
+  }
+
+  bindExistingRevertButtons() {
     const existingRevertBtns = document.querySelectorAll('.revert-btn');
     existingRevertBtns.forEach(btn => {
       if (!btn.dataset.bound) {
-        btn.addEventListener('click', (e) => {
+        this.addEventListenerWithCleanup(btn, 'click', (e) => {
           const entrySection = e.target.closest('.log-entry');
           const entryId = entrySection?.querySelector('.entry-id')?.textContent;
           if (entryId) {
@@ -242,78 +323,237 @@ class LogbookSystem {
       }
     });
   }
+
+  // Event listener management to prevent memory leaks
+  addEventListenerWithCleanup(element, event, handler) {
+    if (!element) return;
+    
+    const key = `${element.id || 'anonymous'}-${event}`;
+    
+    // Remove existing listener if present
+    if (this.eventListeners.has(key)) {
+      const oldHandler = this.eventListeners.get(key);
+      element.removeEventListener(event, oldHandler);
+    }
+    
+    // Add new listener
+    element.addEventListener(event, handler);
+    this.eventListeners.set(key, handler);
+  }
+
+  cleanup() {
+    // Remove all event listeners
+    this.eventListeners.forEach((handler, key) => {
+      const [elementId, event] = key.split('-');
+      const element = document.getElementById(elementId);
+      if (element) {
+        element.removeEventListener(event, handler);
+      }
+    });
+    this.eventListeners.clear();
+  }
+
+  updateBookshelfUI() {
+    const display = document.getElementById('logbook-display');
+    const actionBtn = document.getElementById('logbook-action');
+    
+    if (!display || !this.saveManager) return;
+
+    const currentBook = this.saveManager.getCurrentBook();
+    
+    if (!currentBook) {
+      display.innerHTML = '<div class="logbook-box"><p class="logbook-name">No logbooks found</p></div>';
+      if (actionBtn) actionBtn.textContent = 'N/A';
+      return;
+    }
+
+    const lastEntry = currentBook.lastModified || currentBook.created || new Date().toISOString();
+    const entryCount = currentBook.entries ? currentBook.entries.length : 0;
+    
+    display.innerHTML = `
+      <div class="logbook-box ${currentBook.mounted ? 'mounted' : 'archived'}">
+        <p class="logbook-name"><strong>${currentBook.name || 'Untitled Logbook'}</strong></p>
+        <p class="logbook-date">Last Entry: ${new Date(lastEntry).toLocaleString()}</p>
+        <p class="logbook-count">Entries: ${entryCount}</p>
+        <p class="logbook-status">${currentBook.mounted ? '<strong>Loaded</strong>' : 'Archived'}</p>
+      </div>
+    `;
+
+    if (actionBtn) {
+      actionBtn.textContent = currentBook.mounted ? 'Export' : 'Load';
+    }
+  }
+
+  handleLogbookAction() {
+    const currentBook = this.saveManager.getCurrentBook();
+    if (!currentBook) return;
+
+    if (currentBook.mounted) {
+      // Export current logbook
+      this.saveManager.exportLogbook(currentBook);
+      this.showMessage('Logbook exported successfully');
+    } else {
+      // Load archived logbook
+      const confirmLoad = confirm(
+        'Loading this logbook will replace your current progress. Continue?'
+      );
+      if (confirmLoad) {
+        const success = this.saveManager.mountLogbook(this.saveManager.currentIndex);
+        if (success) {
+          this.showMessage('Logbook loaded successfully');
+          // Reload the page to refresh the UI with new data
+          window.location.reload();
+        } else {
+          this.showError('Failed to load logbook');
+        }
+      }
+    }
+  }
+
+  async handleImport(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    try {
+      const logbook = await this.saveManager.importLogbook(file);
+      if (logbook) {
+        this.updateBookshelfUI();
+        this.showMessage('Logbook imported successfully');
+        
+        // If this was our first logbook, reload to initialize properly
+        if (this.saveManager.bookshelf.length === 1) {
+          setTimeout(() => window.location.reload(), 1500);
+        }
+      } else {
+        this.showError('Failed to import logbook');
+      }
+    } catch (error) {
+      console.error('Import error:', error);
+      this.showError('Failed to import logbook file');
+    }
+
+    // Clear the file input
+    event.target.value = '';
+  }
+
   // Create a new log entry
   createEntry() {
+    if (!this.initialized || !this.logbookData) {
+      this.showError('No active logbook to add entries to');
+      return;
+    }
+
     const main = document.getElementById('log-entries');
     if (!main) return;
     
     const entryId = `LOG-${String(this.currentEntryId).padStart(4, '0')}`;
+    const currentDate = this.getFutureDate();
 
     const section = document.createElement('section');
     section.className = 'log-entry';
     section.innerHTML = `
       <h3>Personal Log Entry (Pending)</h3>
       <div class="entry-content">
-        <textarea class="log-textarea" placeholder="Enter your log entry..."></textarea>
+        <textarea class="log-textarea" placeholder="Enter your log entry..." maxlength="2000"></textarea>
+        <div class="char-count">0 / 2000</div>
       </div>
       <div class="entry-metadata">
-        <span class="timestamp"></span>
+        <span class="timestamp">${currentDate.toLocaleDateString('en-US')} ${currentDate.toLocaleTimeString('en-US', { hour12: false })}</span>
         <span class="entry-id">${entryId}</span>
       </div>
       <button class="control-btn save-btn">Save Entry</button>
-      <button class="control-btn cancel-btn">Cancel Entry</button>
+      <button class="control-btn cancel-btn">Cancel</button>
     `;
 
     main.appendChild(section);
     section.scrollIntoView({ behavior: 'smooth' });
 
-    // Set timestamp
-    const timestampSpan = section.querySelector('.timestamp');
-    const currentDate = new Date();
-    currentDate.setFullYear(currentDate.getFullYear() + 50);
-    timestampSpan.textContent = `${currentDate.toLocaleDateString('en-US')} ${currentDate.toLocaleTimeString('en-US', { hour12: false })}`;
-
     // Focus on textarea
     const textarea = section.querySelector('textarea');
+    const charCount = section.querySelector('.char-count');
     textarea.focus();
 
-    // Bind save button
+    // Character counter
+    textarea.addEventListener('input', () => {
+      const count = textarea.value.length;
+      charCount.textContent = `${count} / 2000`;
+      
+      if (count > 1900) {
+        charCount.style.color = 'var(--error-red)';
+      } else if (count > 1500) {
+        charCount.style.color = 'var(--accent-orange)';
+      } else {
+        charCount.style.color = 'var(--text-gray)';
+      }
+    });
+
+    // Bind buttons
     const saveBtn = section.querySelector('.save-btn');
+    const cancelBtn = section.querySelector('.cancel-btn');
+
     saveBtn.addEventListener('click', () => {
       const content = textarea.value.trim();
       if (!content) {
-        alert('Log entry cannot be empty.'); // Change this to flash the cancel button instead
-        console.log('Logbook entry cannot be empty');
+        this.flashButton(cancelBtn, 'Entry cannot be empty');
+        textarea.classList.add('error');
+        setTimeout(() => textarea.classList.remove('error'), 2000);
         return;
       }
 
       this.saveEntryAndUpdateFiles(content, entryId, currentDate, section, main);
     });
+
+    cancelBtn.addEventListener('click', () => {
+      section.remove();
+    });
+  }
+
+  flashButton(button, message) {
+    const originalText = button.textContent;
+    button.textContent = message;
+    button.style.animation = 'pulse 0.5s ease-in-out';
+    
+    setTimeout(() => {
+      button.textContent = originalText;
+      button.style.animation = '';
+    }, 1500);
   }
 
   async saveEntryAndUpdateFiles(content, entryId, timestamp, section, main) {
     const saveBtn = section.querySelector('.save-btn');
     saveBtn.textContent = 'Saving...';
     saveBtn.disabled = true;
+    section.classList.add('saving');
 
-    // Create and save the new entry
-    this.saveNewEntry(content, entryId, timestamp);
+    try {
+      // Create the new entry and add via SaveManager
+      const newEntry = this.saveNewEntry(content, entryId, timestamp);
+      this.saveManager.addEntry(newEntry);
 
-    // Save to localStorage
-    this.saveAllData();
+      saveBtn.textContent = 'Saved!';
 
-    saveBtn.textContent = 'Done!';
+      setTimeout(() => {
+        // Remove the editing section
+        if (section.parentNode) {
+          section.remove();
+        }
+        
+        // Add the completed entry
+        this.appendSavedEntry(content, entryId, timestamp);
+        this.currentEntryId++;
+      }, 800);
 
-    setTimeout(() => {
-      // Remove the editing section
-      if (section.parentNode) {
-        main.removeChild(section);
-      }
+    } catch (error) {
+      console.error('Failed to save entry:', error);
+      saveBtn.textContent = 'Error!';
+      this.showError('Failed to save entry');
       
-      // Add the completed entry
-      this.appendSavedEntry(content, entryId, timestamp);
-      this.currentEntryId++;
-    }, 800);
+      setTimeout(() => {
+        saveBtn.textContent = 'Save Entry';
+        saveBtn.disabled = false;
+        section.classList.remove('saving');
+      }, 2000);
+    }
   }
 
   saveNewEntry(content, entryId, timestamp) {
@@ -340,25 +580,28 @@ class LogbookSystem {
         canRevert: true
       }
     };
-
     this.logbookData.entries.push(newEntry);
     this.logbookData.statistics.totalEntries++;
     this.logbookData.statistics.lastEntry = timestamp.toISOString();
+    this.logbookData.lastModified = timestamp.toISOString();
+    return newEntry;
   }
 
   createGameSnapshot() {
-    if (!this.gameState) return null;
+    // Get current game state from game/state.js
+    const gameState = GameState.getSnapshot();
+    if (!gameState) return null;
 
     return {
-      navigation: { ...this.gameState.navigation },
-      shipSystems: JSON.parse(JSON.stringify(this.gameState.shipSystems || {})),
-      crew: { ...this.gameState.crew },
-      mission: { ...this.gameState.mission },
-      environment: { ...this.gameState.environment },
+      navigation: { ...gameState.navigation },
+      shipSystems: JSON.parse(JSON.stringify(gameState.shipSystems || {})),
+      crew: { ...gameState.crew },
+      mission: { ...gameState.mission },
+      environment: { ...gameState.environment },
       progress: {
-        stationsUnlocked: ["captains-quarters"],
-        areasExplored: ["woods_hole"],
-        achievementsUnlocked: ["first_boot"]
+        stationsUnlocked: gameState.progress?.stationsUnlocked || ["captains-quarters"],
+        areasExplored: gameState.progress?.areasExplored || ["woods_hole"],
+        achievementsUnlocked: gameState.progress?.achievementsUnlocked || ["first_boot"]
       }
     };
   }
@@ -383,7 +626,7 @@ class LogbookSystem {
         <p>Aqua Nova DSV</p>
       </div>
       <div class="entry-content">
-        <p>${content}</p>
+        <p>${this.escapeHtml(content)}</p>
       </div>
       <div class="entry-metadata">
         <span class="timestamp">${formattedDate} ${formattedTime}</span>
@@ -393,12 +636,18 @@ class LogbookSystem {
     `;
     
     const revertBtn = section.querySelector('.revert-btn');
-    revertBtn.addEventListener('click', () => {
+    this.addEventListenerWithCleanup(revertBtn, 'click', () => {
       this.revertToEntry(entryId);
     });
     
     main.appendChild(section);
     section.scrollIntoView({ behavior: 'smooth' });
+  }
+
+  escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
   }
 
   revertToEntry(entryId) {
@@ -407,100 +656,60 @@ class LogbookSystem {
     // Handle the hardcoded first entry
     if (entryId === 'M.LOG-0001') {
       console.log('Reverting to initial mission state');
-      // Implement a reset to initial state here
-      alert('Reverted to mission start state (functionality to be implemented)');
-      return;
-    }
-    
-    // Find the entry in the logbook data
-    const entry = this.logbookData.entries.find(e => e.logbook.id === entryId);
-    
-    if (!entry) {
-      console.warn(`Entry ${entryId} not found`);
-      alert('Entry not found for revert operation'); 
-      return;
-    }
-    
-    if (!entry.gameSnapshot) {
-      console.warn(`Entry ${entryId} has no game snapshot`);
-      alert('This entry has no saved game state');
-      return;
-    }
-    
-    // Revert the game state
-    this.gameState = { ...entry.gameSnapshot };
-    
-    // Update display
-    this.updateLocationInfo();
-
-    // Remove all entries and game state made after this entry. Including browser cache and all storage.
-    
-    // Save reverted state
-    this.saveAllData();
-    
-    console.log(`Reverted to entry ${entryId} from ${entry.logbook.timestamp}`);
-    alert(`Game state reverted to: ${new Date(entry.logbook.timestamp).toLocaleDateString()}`);
-  }
-
-  // Future: Export/Import functionality
-  exportLogbook() {
-    const exportData = {
-      type: "AquaNova_Logbook",
-      version: "1.0.0",
-      exported: new Date().toISOString(),
-      campaignName: "Custom Campaign",
-      logbook: this.logbookData,
-      currentGameState: this.gameState
-    };
-    
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], {
-      type: 'application/json'
-    });
-    
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `aquanova_logbook_${new Date().toISOString().split('T')[0]}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }
-
-  importLogbook(file) {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const importData = JSON.parse(e.target.result);
-        
-        if (importData.type !== "AquaNova_Logbook") {
-          alert('Invalid logbook file');
-          return;
-        }
-        
-        // Load the imported data
-        this.logbookData = importData.logbook;
-        this.gameState = importData.currentGameState;
-        
-        // Save and refresh display
-        this.saveAllData();
-        this.updateLocationInfo();
-        this.renderExistingEntries();
-        
-        console.log('Logbook imported successfully');
-        alert('Logbook imported successfully');
-        
-      } catch (error) {
-        console.error('Failed to import logbook:', error);
-        alert('Failed to import logbook file');
+      const confirmRevert = confirm('This will reset the game to the initial mission state. Continue?');
+      if (confirmRevert) {
+        // Use GameState to reset to initial state
+        GameState.reset();
+        this.showMessage('Game reset to initial mission state');
+        // Reload to reflect changes
+        setTimeout(() => window.location.reload(), 1000);
       }
-    };
+      return;
+    }
     
-    reader.readAsText(file);
+    try {
+      this.saveManager.revertToEntry(entryId);
+      this.updateLocationInfo();
+      this.renderExistingEntries();
+      this.updateCurrentEntryId();
+    } catch (error) {
+      console.error('Failed to revert:', error);
+      this.showError('Failed to revert game state');
+    }
+  }
+
+  showMessage(message) {
+    console.log('INFO:', message);
+    // Temporary alert - replace with better UI later
+    setTimeout(() => alert(message), 100);
+  }
+
+  showError(message) {
+    console.error('ERROR:', message);
+    // Temporary alert - replace with better UI later  
+    setTimeout(() => alert(`Error: ${message}`), 100);
+  }
+
+  // Cleanup when page unloads
+  destroy() {
+    this.cleanup();
   }
 }
 
 // Initialize the logbook system when the page loads
-document.addEventListener('DOMContentLoaded', () => {
-  new LogbookSystem();
+let logbookSystem = null;
+
+document.addEventListener('DOMContentLoaded', async () => {
+  logbookSystem = new LogbookSystem();
+  await logbookSystem.initialize();
 });
+
+// Cleanup on page unload
+window.addEventListener('beforeunload', () => {
+  if (logbookSystem) {
+    logbookSystem.destroy();
+  }
+});
+
+// Export for potential external access
+export default LogbookSystem;
