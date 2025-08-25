@@ -1,18 +1,168 @@
 // main.js - Bootstrap and splash screen functionality for Aqua Nova
-// Simplified version using only localStorage and logbook-based saves
+// Updated version using SaveManager and proper logbook-based saves
+import SaveManager from '../../../game/saveManager.js';
+import GameState from '../../../game/state.js';
+import { initPDAOverlay } from '../../../utils/pdaOverlay.js';
+initPDAOverlay();
+
 
 class SplashScreen {
     constructor() {
-        this.gameState = null;
+        this.saveManager = null;
         this.logbookData = null;
-        this.initialize();
+        this.gameState = null;
+        this.eventListeners = new Map();
+        this.initialized = false;
+        this.currentMenu = 'main'; // Track current menu state
+        this.bookshelfIndex = 0; // Track current logbook in browser
     }
 
-    initialize() {
+    async initialize() {
+        console.log('SplashScreen: Starting initialization');
+        this.updateConsole('System initializing...');
+        
         this.setGlobalScale();
         this.createBubbles();
-        this.bindControls();
         this.startBubbleGeneration();
+        
+        await this.initializeSaveManager();
+        this.bindControls();
+        
+        console.log('SplashScreen: Initialization complete');
+    }
+
+    async initializeSaveManager() {
+        try {
+            this.updateConsole('Initializing save system...');
+            
+            // Initialize SaveManager - this handles loading localStorage + JSON files
+            this.saveManager = new SaveManager();
+            await this.saveManager.init();
+
+            this.updateConsole('Searching for previous sessions...');
+            
+            // Check what we found and update the console and menu accordingly
+            await this.analyzeSaveState();
+            
+        } catch (error) {
+            console.error('Failed to initialize SaveManager:', error);
+            this.updateConsole('Error: Failed to initialize save system');
+            this.showError('Failed to initialize save system');
+        }
+    }
+
+    async analyzeSaveState() {
+        if (this.saveManager.requiresImport()) {
+            this.updateConsole('No logbooks found - import required');
+            this.updateMenuForNoLogbooks();
+            return;
+        }
+
+        const bookshelf = this.saveManager.bookshelf || [];
+        
+        if (bookshelf.length === 0) {
+            this.updateConsole('No logbooks available - import required');
+            this.updateMenuForNoLogbooks();
+            return;
+        }
+
+        const currentBook = this.saveManager.getCurrentBook();
+        this.updateConsole(`${bookshelf.length} logbook(s) found`);
+
+        if (!currentBook) {
+            this.updateConsole('No active logbook selected');
+            this.updateMenuForLogbookSelection();
+            return;
+        }
+
+        // We have an active logbook
+        this.logbookData = currentBook;
+        const entryCount = this.logbookData.entries ? this.logbookData.entries.length : 0;
+        
+        this.updateConsole(`Loaded logbook: "${this.logbookData.name}" (${entryCount} entries)`);
+        
+        // Load the game state from the latest entry
+        if (entryCount > 0) {
+            const latestEntry = this.logbookData.entries[entryCount - 1];
+            this.gameState = latestEntry.gameSnapshot;
+            console.log('Using game state from latest logbook entry');
+        } else {
+            this.updateConsole('Warning: Active logbook has no entries');
+        }
+
+        this.updateDisplayWithGameState();
+        this.updateMenuForActiveSession();
+        
+        this.initialized = true;
+        
+        // Auto-start after a moment, or show menu if user interaction is needed
+        setTimeout(() => {
+            this.updateConsole('Press ENTER to board or select menu option');
+        }, 1000);
+    }
+
+    updateConsole(message) {
+        const consoleElement = document.getElementById('console-text');
+        if (consoleElement) {
+            consoleElement.textContent = message;
+            console.log('Console:', message);
+        }
+    }
+
+    updateMenuForNoLogbooks() {
+        const resumeBtn = document.getElementById('resume-campaign');
+        const loadBtn = document.getElementById('load-campaign');
+        const newBtn = document.getElementById('new-campaign');
+        const statusEl = document.getElementById('logbook-status');
+
+        if (resumeBtn) resumeBtn.disabled = true;
+        if (loadBtn) loadBtn.disabled = true;
+        if (newBtn) newBtn.disabled = true;
+        
+        if (statusEl) {
+            statusEl.textContent = 'No logbooks found. Import a logbook file to begin.';
+        }
+    }
+
+    updateMenuForLogbookSelection() {
+        const resumeBtn = document.getElementById('resume-campaign');
+        const loadBtn = document.getElementById('load-campaign');
+        const newBtn = document.getElementById('new-campaign');
+        const statusEl = document.getElementById('logbook-status');
+
+        if (resumeBtn) resumeBtn.disabled = true;
+        if (loadBtn) loadBtn.disabled = false;
+        if (newBtn) newBtn.disabled = false;
+        
+        const bookCount = this.saveManager.bookshelf.length;
+        if (statusEl) {
+            statusEl.textContent = `Found ${bookCount} logbook(s). Select an option to continue.`;
+        }
+    }
+
+    updateMenuForActiveSession() {
+        const resumeBtn = document.getElementById('resume-campaign');
+        const loadBtn = document.getElementById('load-campaign');
+        const newBtn = document.getElementById('new-campaign');
+        const statusEl = document.getElementById('logbook-status');
+
+        if (resumeBtn) resumeBtn.disabled = false;
+        if (loadBtn) loadBtn.disabled = false;
+        if (newBtn) newBtn.disabled = false;
+        
+        if (statusEl && this.logbookData) {
+            const entryCount = this.logbookData.entries ? this.logbookData.entries.length : 0;
+            statusEl.textContent = `Active: "${this.logbookData.name}" - ${entryCount} entries`;
+        }
+    }
+
+    showMenu() {
+        // Menu is always visible now, no need to show/hide
+        this.updateConsole('Menu ready for selection');
+    }
+
+    hideMenu() {
+        // Menu is always visible now, no need to show/hide
     }
 
     setGlobalScale() {
@@ -20,7 +170,7 @@ class SplashScreen {
         const baseHeight = 1080;
         const scaleX = window.innerWidth / baseWidth;
         const scaleY = window.innerHeight / baseHeight;
-        const scale = Math.min(scaleX, scaleY); // maintain aspect ratio
+        const scale = Math.min(scaleX, scaleY);
         document.documentElement.style.setProperty('--scale', scale);
         console.log(`Global scale set to: ${scale}`);
     }
@@ -56,168 +206,406 @@ class SplashScreen {
     }
 
     bindControls() {
+        // Main menu button handlers - initial bind
+        this.bindMainMenuControls();
+        
+        // Import input handler
+        const importInput = document.getElementById('logbook-import-input');
+        if (importInput) {
+            this.addEventListenerWithCleanup(importInput, 'change', (e) => this.handleImport(e));
+        }
+
+        // Keyboard controls
         document.addEventListener('keydown', (e) => {
-            if(e.key === 'Enter') {
-                this.startBoarding();
-            }
-        });
-        
-        document.addEventListener('click', () => {
-            const prompt = document.getElementById('start-prompt');
-            prompt.style.transform = 'scale(1.1)';
-            setTimeout(() => {
-                prompt.style.transform = 'scale(1)';
-            }, 200);
-        });
-    }
-
-    // Get the default boot state
-    getDefaultBootState() {
-        return {
-            "navigation": {
-                "location": {
-                    "type": "Feature",
-                    "geometry": {
-                        "type": "Point",
-                        "coordinates": [-70.6709, 41.5223]
-                    },
-                    "properties": {
-                        "name": "Woods Hole Oceanographic Institute",
-                        "type": "dock",
-                        "description": "Primary research dock and submarine base."
+            if (e.key === 'Enter') {
+                // Check if resume is available and use it
+                if (this.currentMenu === 'main') {
+                    const resumeBtn = document.getElementById('resume-campaign');
+                    if (resumeBtn && !resumeBtn.disabled) {
+                        this.resumeCampaign();
                     }
-                },
-                "depth": 0,
-                "heading": 0,
-                "course": 0,
-                "speed": 0,
-                "destination": null
-            },
-            "shipSystems": {
-                "hull": { "integrity": 100, "dockingBay": "Open" },
-                "power": { "leftReactorHealth": 100, "rightReactorHealth": 100 },
-                "lifeSupport": { "oxygenTankQuantity": 98, "airTemperature": 22 },
-                "helm": { "leftThrust": 0, "rightThrust": 0 },
-                "sensors": { "shipSonar": 100 },
-                "communications": { "commHealth": 100 }
-            },
-            "crew": { "totalCrew": 8 },
-            "mission": { "currentMission": null, "objectives": [] },
-            "environment": { "weather": "calm", "seaState": 1 }
-        };
-    }
-
-    // Get the default first logbook entry
-    getDefaultLogbookEntry() {
-        return {
-            "id": "M.LOG-0001",
-            "timestamp": "2074-08-09T14:30:00.000Z",
-            "type": "mission_log",
-            "tags": ["OERA", "dry_dock", "mission", "tasks"],
-            "author": {
-                "organization": "O.E.R.A - Oceanic Exploration and Research Alliance",
-                "department": "Operations Command",
-                "name": "Admiral Elena Vasquez",
-                "role": "Director of Operations"
-            },
-            "content": "Welcome onboard Captain. I trust you have settling in well. This is your digital logbook where you can record your mission progress, discoveries, and any important notes. Please ensure to keep it updated regularly. I must apologize for the haste, but it is of utmost importance that you get Aqua Nova out of dry dock and underway for sea trials. You and the crew need to get yourselves familiarized with the ships operation and systems under various conditions.",
-            "tasks": [
-                "Familiarize yourself with the Aqua Nova", 
-                "Unpack and look around your personal quarters", 
-                "Meet 'AREA' the Executive Officer", 
-                "Find yourway to the Bridge"
-            ],
-            "completedTasks": []
-        };
-    }
-
-    // Initialize logbook data structure
-    getDefaultLogbook() {
-        const firstEntry = this.getDefaultLogbookEntry();
-        const defaultState = this.getDefaultBootState();
+                }
+            } else if (e.key === 'Escape') {
+                // Return to main menu from any submenu
+                if (this.currentMenu !== 'main') {
+                    this.showMainMenu();
+                }
+            }
+        });
         
-        return {
-            "entries": [{
-                "logbook": firstEntry,
-                "gameSnapshot": defaultState,
-                "metadata": {
-                    "importance": "high",
-                    "tags": ["mission", "startup"],
-                    "canRevert": true
-                }
-            }],
-            "statistics": {
-                "totalEntries": 1,
-                "totalMissions": 1,
-                "firstEntry": firstEntry.timestamp,
-                "lastEntry": firstEntry.timestamp
-            },
-            "settings": {
-                "autoSave": true,
-                "maxEntries": 1000
-            }
-        };
-    }
-
-    // Load data from localStorage or use defaults
-    async loadGameData() {
-        try {
-            // Check for cached logbook data
-            const cachedLogbook = localStorage.getItem('aquaNova_logbook');
-            const cachedGameState = localStorage.getItem('aquaNova_gameState');
-
-            if (cachedLogbook) {
-                this.logbookData = JSON.parse(cachedLogbook);
-                console.log(`Loaded logbook with ${this.logbookData.entries.length} entries`);
-                
-                // Use the latest logbook entry's game state
-                if (this.logbookData.entries.length > 0) {
-                    const latestEntry = this.logbookData.entries[this.logbookData.entries.length - 1];
-                    this.gameState = latestEntry.gameSnapshot;
-                    console.log('Using game state from latest logbook entry');
-                    return { hasExistingData: true, source: 'logbook' };
-                }
-            }
-
-            if (cachedGameState) {
-                this.gameState = JSON.parse(cachedGameState);
-                console.log('Loaded cached game state');
-            }
-
-            // If we have some data, return it
-            if (this.gameState || this.logbookData) {
-                return { hasExistingData: true, source: 'cache' };
-            }
-
-            // No cached data found, use defaults
-            console.log('No cached data found, using defaults');
-            this.logbookData = this.getDefaultLogbook();
-            this.gameState = this.getDefaultBootState();
+        // Click anywhere for visual feedback
+        document.addEventListener('click', (e) => {
+            // Don't trigger on menu clicks
+            if (e.target.closest('#main-menu')) return;
             
-            return { hasExistingData: false, source: 'default' };
+            // Visual feedback for console prompt
+            const prompt = document.getElementById('console-info');
+            if (prompt) {
+                prompt.style.transform = 'scale(1.1)';
+                setTimeout(() => {
+                    prompt.style.transform = 'scale(1)';
+                }, 200);
+            }
+        });
+    }
 
-        } catch (error) {
-            console.error('Error loading cached data:', error);
-            // Fall back to defaults on any error
-            this.logbookData = this.getDefaultLogbook();
-            this.gameState = this.getDefaultBootState();
-            return { hasExistingData: false, source: 'error_fallback' };
+    resumeCampaign() {
+        if (!this.initialized) {
+            this.showError('No session to resume');
+            return;
+        }
+        
+        this.updateConsole('Resuming from last known position...');
+        this.startBoarding();
+    }
+
+    loadCampaign() {
+        this.updateConsole('Opening logbook browser...');
+        this.showLogbookBrowser();
+    }
+
+    showLogbookBrowser() {
+        this.currentMenu = 'load';
+        this.bookshelfIndex = 0;
+        
+        // Update menu title
+        const menuTitle = document.querySelector('.menu-title');
+        if (menuTitle) {
+            menuTitle.innerHTML = 'Mission Control<br><span style="font-size: 0.8em; color: var(--text-gray);">Load Campaign</span>';
+        }
+        
+        // Update menu content
+        const menuButtons = document.querySelector('.menu-buttons');
+        const menuInfo = document.querySelector('.menu-info');
+        
+        if (menuButtons) {
+            menuButtons.innerHTML = `
+                <div class="logbook-browser">
+                    <div class="logbook-display-box" id="logbook-display-box">
+                        <div class="logbook-metadata" id="logbook-metadata">
+                            Loading...
+                        </div>
+                    </div>
+                    <div class="logbook-controls">
+                        <button id="logbook-prev" class="menu-btn browser-btn">◀ Previous</button>
+                        <button id="logbook-load" class="menu-btn browser-btn">Load Campaign</button>
+                        <button id="logbook-next" class="menu-btn browser-btn">Next ▶</button>
+                    </div>
+                    <button id="back-to-main" class="menu-btn browser-btn">◀ Back to Main Menu</button>
+                </div>
+            `;
+        }
+        
+        // Bind new controls
+        this.bindLogbookBrowserControls();
+        this.updateLogbookDisplay();
+    }
+
+    bindLogbookBrowserControls() {
+        const prevBtn = document.getElementById('logbook-prev');
+        const nextBtn = document.getElementById('logbook-next');
+        const loadBtn = document.getElementById('logbook-load');
+        const backBtn = document.getElementById('back-to-main');
+
+        if (prevBtn) {
+            this.addEventListenerWithCleanup(prevBtn, 'click', () => {
+                if (this.bookshelfIndex > 0) {
+                    this.bookshelfIndex--;
+                    this.updateLogbookDisplay();
+                }
+            });
+        }
+
+        if (nextBtn) {
+            this.addEventListenerWithCleanup(nextBtn, 'click', () => {
+                if (this.bookshelfIndex < this.saveManager.bookshelf.length - 1) {
+                    this.bookshelfIndex++;
+                    this.updateLogbookDisplay();
+                }
+            });
+        }
+
+        if (loadBtn) {
+            this.addEventListenerWithCleanup(loadBtn, 'click', () => {
+                this.loadSelectedLogbook();
+            });
+        }
+
+        if (backBtn) {
+            this.addEventListenerWithCleanup(backBtn, 'click', () => {
+                this.showMainMenu();
+            });
         }
     }
 
-    // Save current state to localStorage
-    saveToCache() {
-        try {
-            if (this.gameState) {
-                localStorage.setItem('aquaNova_gameState', JSON.stringify(this.gameState));
+    updateLogbookDisplay() {
+        const metadataEl = document.getElementById('logbook-metadata');
+        const prevBtn = document.getElementById('logbook-prev');
+        const nextBtn = document.getElementById('logbook-next');
+        const loadBtn = document.getElementById('logbook-load');
+
+        if (!this.saveManager.bookshelf || this.saveManager.bookshelf.length === 0) {
+            if (metadataEl) {
+                metadataEl.innerHTML = '<p style="color: var(--error-red);">No logbooks available</p>';
             }
-            if (this.logbookData) {
-                localStorage.setItem('aquaNova_logbook', JSON.stringify(this.logbookData));
-            }
-            console.log('Data cached successfully');
-        } catch (error) {
-            console.error('Failed to cache data:', error);
+            if (loadBtn) loadBtn.disabled = true;
+            if (prevBtn) prevBtn.disabled = true;
+            if (nextBtn) nextBtn.disabled = true;
+            return;
         }
+
+        const currentLogbook = this.saveManager.bookshelf[this.bookshelfIndex];
+        const isActive = currentLogbook && currentLogbook.mounted;
+        const entryCount = currentLogbook.entries ? currentLogbook.entries.length : 0;
+        
+        if (metadataEl && currentLogbook) {
+            const lastPlayed = currentLogbook.lastModified ? 
+                new Date(currentLogbook.lastModified).toLocaleString() : 
+                'Never';
+                
+            metadataEl.innerHTML = `
+                <div class="logbook-info">
+                    <p><strong>Campaign:</strong> ${currentLogbook.name || 'Untitled'}</p>
+                    <p><strong>Description:</strong> ${currentLogbook.description || `Mission log with ${entryCount} entries`}</p>
+                    <p><strong>Last Played:</strong> ${lastPlayed}</p>
+                    <p><strong>Status:</strong> <span style="color: ${isActive ? 'var(--success-green)' : 'var(--text-gray)'};">${isActive ? 'Active' : 'Inactive'}</span></p>
+                    <p><strong>Entries:</strong> ${entryCount}</p>
+                </div>
+            `;
+        }
+
+        // Update button states
+        if (prevBtn) prevBtn.disabled = this.bookshelfIndex <= 0;
+        if (nextBtn) nextBtn.disabled = this.bookshelfIndex >= this.saveManager.bookshelf.length - 1;
+        if (loadBtn) loadBtn.disabled = isActive;
+
+        // Update status text
+        this.updateConsole(`Browsing logbook ${this.bookshelfIndex + 1} of ${this.saveManager.bookshelf.length}`);
+    }
+
+    loadSelectedLogbook() {
+        const selectedLogbook = this.saveManager.bookshelf[this.bookshelfIndex];
+        if (!selectedLogbook) return;
+
+        const confirmLoad = confirm(
+            `Load "${selectedLogbook.name}"? This will replace your current session.`
+        );
+        
+        if (confirmLoad) {
+            this.updateConsole('Loading selected campaign...');
+            
+            try {
+                const success = this.saveManager.mountLogbook(this.bookshelfIndex);
+                if (success) {
+                    this.updateConsole('Campaign loaded successfully');
+                    // Reload to refresh with new data
+                    setTimeout(() => window.location.reload(), 1000);
+                } else {
+                    this.showError('Failed to load campaign');
+                }
+            } catch (error) {
+                console.error('Failed to load logbook:', error);
+                this.showError('Failed to load campaign');
+            }
+        }
+    }
+
+    showMainMenu() {
+        this.currentMenu = 'main';
+        
+        // Reset menu title
+        const menuTitle = document.querySelector('.menu-title');
+        if (menuTitle) {
+            menuTitle.textContent = 'Mission Control';
+        }
+        
+        // Restore main menu buttons
+        const menuButtons = document.querySelector('.menu-buttons');
+        if (menuButtons) {
+            menuButtons.innerHTML = `
+                <button id="resume-campaign" class="menu-btn" disabled>
+                    <span class="btn-text">Resume Last Session</span>
+                    <span class="btn-subtitle">Continue from last known position</span>
+                </button>
+                <button id="load-campaign" class="menu-btn" disabled>
+                    <span class="btn-text">Load Campaign</span>
+                    <span class="btn-subtitle">Select from available logbooks</span>
+                </button>
+                <button id="new-campaign" class="menu-btn" disabled>
+                    <span class="btn-text">New Mission</span>
+                    <span class="btn-subtitle">Start from mission briefing</span>
+                </button>
+                <button id="import-logbook" class="menu-btn">
+                    <span class="btn-text">Import Logbook</span>
+                    <span class="btn-subtitle">Load logbook from file</span>
+                </button>
+                <button id="settings" class="menu-btn">
+                    <span class="btn-text">Settings</span>
+                    <span class="btn-subtitle">Configure system preferences</span>
+                </button>
+            `;
+        }
+        
+        // Re-bind main menu controls
+        this.bindMainMenuControls();
+        
+        // Update menu state based on current save state
+        if (this.initialized) {
+            this.updateMenuForActiveSession();
+        } else if (this.saveManager && this.saveManager.bookshelf.length > 0) {
+            this.updateMenuForLogbookSelection();
+        } else {
+            this.updateMenuForNoLogbooks();
+        }
+        
+        this.updateConsole('Returned to main menu');
+    }
+
+    bindMainMenuControls() {
+        const resumeBtn = document.getElementById('resume-campaign');
+        const loadBtn = document.getElementById('load-campaign');
+        const newBtn = document.getElementById('new-campaign');
+        const importBtn = document.getElementById('import-logbook');
+        const settingsBtn = document.getElementById('settings');
+
+        if (resumeBtn) {
+            this.addEventListenerWithCleanup(resumeBtn, 'click', () => this.resumeCampaign());
+        }
+
+        if (loadBtn) {
+            this.addEventListenerWithCleanup(loadBtn, 'click', () => this.loadCampaign());
+        }
+
+        if (newBtn) {
+            this.addEventListenerWithCleanup(newBtn, 'click', () => this.newCampaign());
+        }
+
+        if (importBtn) {
+            this.addEventListenerWithCleanup(importBtn, 'click', () => {
+                const importInput = document.getElementById('logbook-import-input');
+                if (importInput) importInput.click();
+            });
+        }
+
+        if (settingsBtn) {
+            this.addEventListenerWithCleanup(settingsBtn, 'click', () => this.showSettings());
+        }
+    }
+
+    newCampaign() {
+        // Remove the default logbook creation - require user to import
+        this.showError('New mission creation not yet implemented. Please import a logbook to begin.');
+    }
+
+    createNewCampaign() {
+        this.updateConsole('Initializing new mission...');
+        
+        // Reset to default state
+        this.gameState = this.getDefaultBootState();
+        this.logbookData = this.getDefaultLogbook();
+        
+        // Save the new state
+        if (this.saveManager) {
+            try {
+                // Create a new logbook with default entry
+                const newLogbook = {
+                    name: `Mission Log - ${new Date().toLocaleDateString()}`,
+                    created: new Date().toISOString(),
+                    lastModified: new Date().toISOString(),
+                    entries: [{
+                        logbook: this.getDefaultLogbookEntry(),
+                        gameSnapshot: this.gameState,
+                        metadata: {
+                            importance: "high",
+                            tags: ["mission", "startup"],
+                            canRevert: true
+                        }
+                    }],
+                    mounted: true
+                };
+                
+                // Add to saveManager
+                this.saveManager.addLogbook(newLogbook);
+                this.saveManager.mountLogbook(this.saveManager.bookshelf.length - 1);
+                
+                this.updateConsole('New mission initialized');
+                this.initialized = true;
+                
+                setTimeout(() => this.startBoarding(), 1000);
+                
+            } catch (error) {
+                console.error('Failed to create new campaign:', error);
+                this.showError('Failed to create new mission');
+            }
+        }
+    }
+
+    async handleImport(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        this.updateConsole('Importing logbook...');
+
+        try {
+            const logbook = await this.saveManager.importLogbook(file);
+            if (logbook) {
+                this.updateConsole(`Imported: "${logbook.name}"`);
+                
+                // Refresh the save state analysis
+                await this.analyzeSaveState();
+                
+                // If we're in the load browser, refresh it
+                if (this.currentMenu === 'load') {
+                    this.updateLogbookDisplay();
+                } else {
+                    // Return to main menu and refresh
+                    this.showMainMenu();
+                }
+                
+                this.showMessage('Logbook imported successfully');
+            } else {
+                this.updateConsole('Import failed');
+                this.showError('Failed to import logbook');
+            }
+        } catch (error) {
+            console.error('Import error:', error);
+            this.updateConsole('Import error occurred');
+            this.showError('Failed to import logbook file');
+        }
+
+        // Clear the file input
+        event.target.value = '';
+    }
+
+    showSettings() {
+        this.currentMenu = 'settings';
+        
+        // Update menu title
+        const menuTitle = document.querySelector('.menu-title');
+        if (menuTitle) {
+            menuTitle.innerHTML = 'Mission Control<br><span style="font-size: 0.8em; color: var(--text-gray);">Settings</span>';
+        }
+        
+        // Update menu content
+        const menuButtons = document.querySelector('.menu-buttons');
+        if (menuButtons) {
+            menuButtons.innerHTML = `
+                <div class="settings-menu">
+                    <p style="color: var(--text-gray); margin-bottom: 15px;">Settings menu not yet implemented.</p>
+                    <button id="back-to-main" class="menu-btn browser-btn">◀ Back to Main Menu</button>
+                </div>
+            `;
+        }
+        
+        // Bind back button
+        const backBtn = document.getElementById('back-to-main');
+        if (backBtn) {
+            this.addEventListenerWithCleanup(backBtn, 'click', () => {
+                this.showMainMenu();
+            });
+        }
+        
+        this.updateConsole('Settings menu opened');
     }
 
     // Update display with current game state
@@ -276,48 +664,104 @@ class SplashScreen {
     }
 
     async startBoarding() {
-        const prompt = document.getElementById('start-prompt');
+        if (!this.initialized) {
+            this.showError('No active campaign to board. Please load a campaign first.');
+            return;
+        }
+
+        if (!this.gameState) {
+            this.showError('No valid game state found. Campaign may be corrupted.');
+            return;
+        }
+
+        const prompt = document.getElementById('console-info');
         
-        prompt.textContent = '... boarding Aqua Nova ...';
-        prompt.classList.add('boarding');
-        
-        console.log('Initiating boarding sequence...');
-        
-        // Load game data
-        const loadResult = await this.loadGameData();
-        
-        if (loadResult.hasExistingData) {
-            if (loadResult.source === 'logbook') {
-                prompt.textContent = '... reverting to last known position ...';
-                console.log('Loading from existing logbook entries');
-            } else {
-                prompt.textContent = '... loading cached data ...';
-                console.log('Loading from cached game state');
-            }
-        } else {
-            prompt.textContent = '... boarding for the first time ...';
-            console.log('First boot - using default state');
+        if (prompt) {
+            prompt.textContent = '... boarding Aqua Nova ...';
+            prompt.classList.add('boarding');
         }
         
-        // Save current state to cache
-        this.saveToCache();
+        this.updateConsole('Initiating boarding sequence...');
+        console.log('Initiating boarding sequence...');
         
-        // Update display
-        this.updateDisplayWithGameState();
+        // Update GameState with current state
+        GameState.setState(this.gameState);
+        
+        // Show boarding progress
+        setTimeout(() => {
+            this.updateConsole('Accessing ship systems...');
+        }, 1000);
+        
+        setTimeout(() => {
+            this.updateConsole('Loading captain\'s quarters...');
+        }, 2000);
         
         // Navigate to logbook
         setTimeout(() => {
             this.navigateToLogbook();
-        }, 2000);
+        }, 3000);
     }
 
     navigateToLogbook() {
-        // Data is already cached in localStorage, logbook will pick it up
+        // Data is already managed by SaveManager, logbook will pick it up
         window.location.href = 'ui/captains-quarters/logbook/logbook.html';
+    }
+
+    // Event listener management to prevent memory leaks
+    addEventListenerWithCleanup(element, event, handler) {
+        if (!element) return;
+        
+        const key = `${element.id || 'anonymous'}-${event}`;
+        
+        // Remove existing listener if present
+        if (this.eventListeners.has(key)) {
+            const oldHandler = this.eventListeners.get(key);
+            element.removeEventListener(event, oldHandler);
+        }
+        
+        // Add new listener
+        element.addEventListener(event, handler);
+        this.eventListeners.set(key, handler);
+    }
+
+    showMessage(message) {
+        console.log('INFO:', message);
+        // You could implement a better toast notification here
+        setTimeout(() => alert(message), 100);
+    }
+
+    showError(message) {
+        console.error('ERROR:', message);
+        // You could implement a better error notification here
+        setTimeout(() => alert(`Error: ${message}`), 100);
+    }
+
+    // Cleanup when page unloads
+    cleanup() {
+        this.eventListeners.forEach((handler, key) => {
+            const [elementId, event] = key.split('-');
+            const element = document.getElementById(elementId);
+            if (element) {
+                element.removeEventListener(event, handler);
+            }
+        });
+        this.eventListeners.clear();
     }
 }
 
 // Initialize the splash screen when the page loads
-document.addEventListener('DOMContentLoaded', () => {
-    new SplashScreen();
+let splashScreen = null;
+
+document.addEventListener('DOMContentLoaded', async () => {
+    splashScreen = new SplashScreen();
+    await splashScreen.initialize();
 });
+
+// Cleanup on page unload
+window.addEventListener('beforeunload', () => {
+    if (splashScreen) {
+        splashScreen.cleanup();
+    }
+});
+
+export default SplashScreen;

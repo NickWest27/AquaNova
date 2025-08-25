@@ -20,17 +20,16 @@ class LogbookSystem {
       this.saveManager = new SaveManager();
       await this.saveManager.init();
 
-      // Check if we have any logbooks available
-      const hasLogbooks = this.saveManager.bookshelf.length > 0;
-      const currentBook = this.saveManager.getCurrentBook();
-      const hasMountedLogbook = currentBook && currentBook.mounted;
-
-      if (!hasLogbooks) {
+      // New logic for logbook and import checks
+      if (this.saveManager.requiresImport()) {
         this.showNoLogbooksError();
         return;
       }
 
-      if (!hasMountedLogbook) {
+      const currentBook = this.saveManager.getCurrentBook();
+      const hasMountedLogbook = currentBook && currentBook.mounted;
+
+      if (!currentBook) {
         this.showNoActiveLogbookError();
         return;
       }
@@ -75,8 +74,8 @@ class LogbookSystem {
     main.innerHTML = `
       <div class="error-state">
         <h3>ERROR: No logbooks found</h3>
-        <p>No logbooks were found in localStorage or the /data/ folder.</p>
-        <p>Please import a logbook file to get started.</p>
+        <p>No logbooks were found in memory or the /data/logbooks folder.</p>
+        <p>Please import a valid logbook file.</p>
         <button id="import-first-logbook" class="control-btn">Import Logbook</button>
       </div>
     `;
@@ -101,7 +100,7 @@ class LogbookSystem {
       <div class="error-state">
         <h3>ERROR: No logbook loaded</h3>
         <p>Found archived logbooks but no active logbook is currently loaded.</p>
-        <p>Please select a logbook from the bookshelf to load.</p>
+        <p>Please select a logbook to load.</p>
         <button id="load-first-logbook" class="control-btn">Browse Logbooks</button>
       </div>
     `;

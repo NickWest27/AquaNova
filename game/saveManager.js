@@ -4,7 +4,7 @@
 const STORAGE_KEY = 'aquaNovaLogbook';
 const STATE_KEY = 'aquaNova_gameState';
 const SCHEMA_VERSION = 1;
-const INITIAL_LOGBOOK_PATH = './data/logbooks/SeaTrials.json';
+const INITIAL_LOGBOOK_PATH = '/data/logbooks/SeaTrials.json';
 
 export default class SaveManager {
   constructor(gameStateInstance) {
@@ -17,23 +17,24 @@ export default class SaveManager {
   /** --------- Initialization --------- */
   async init() {
     console.log('SaveManager initializing...');
-    
     try {
       // First, try to load existing localStorage logbook
       const localLogbook = this.loadFromLocal();
-      
       if (localLogbook) {
         console.log('Found existing localStorage logbook');
         localLogbook.mounted = true;
         this.bookshelf.push(localLogbook);
         this.activeLogbook = localLogbook;
         this.currentIndex = 0;
-        
-        // Load the most recent game state from the logbook
+        // Load the most recent game state from the logbook (last entry)
         if (localLogbook.entries && localLogbook.entries.length > 0) {
           const lastEntry = localLogbook.entries[localLogbook.entries.length - 1];
           if (lastEntry.gameSnapshot) {
-            this.gameState.loadFromSnapshot(lastEntry.gameSnapshot);
+            if (this.gameState && typeof this.gameState.loadFromSnapshot === 'function') {
+              this.gameState.loadFromSnapshot(lastEntry.gameSnapshot);
+            } else {
+              console.error('SaveManager: gameState instance not defined or missing loadFromSnapshot().');
+            }
           }
         }
       } else {
@@ -41,10 +42,8 @@ export default class SaveManager {
         console.log('No existing save found, initializing from bootstrap...');
         await this.initializeFromBootstrap();
       }
-      
       console.log(`SaveManager initialized with ${this.bookshelf.length} logbook(s)`);
       return true;
-      
     } catch (error) {
       console.error('Failed to initialize SaveManager:', error);
       return false;
@@ -55,94 +54,45 @@ export default class SaveManager {
     try {
       // Try to load the initial logbook JSON
       const response = await fetch(INITIAL_LOGBOOK_PATH);
-      
       if (!response.ok) {
         throw new Error(`Failed to load initial logbook: ${response.status}`);
       }
-      
       const campaignData = await response.json();
-      
       // Convert campaign format to logbook format
       const initialData = this.convertCampaignToLogbook(campaignData);
-      
       // Validate the structure
       if (!this.validateLogbookStructure(initialData)) {
         throw new Error('Invalid initial logbook structure');
       }
-      
       // Set up as the first logbook
       initialData.mounted = true;
       initialData.schemaVersion = SCHEMA_VERSION;
       initialData.lastModified = new Date().toISOString();
-      
       this.bookshelf.push(initialData);
       this.activeLogbook = initialData;
       this.currentIndex = 0;
-      
-      // Initialize game state from the logbook's initial state
+      // Initialize game state from the logbook's last entry (if available)
       if (initialData.entries && initialData.entries.length > 0) {
-        const initialEntry = initialData.entries[0];
-        if (initialEntry.gameSnapshot) {
-          this.gameState.loadFromSnapshot(initialEntry.gameSnapshot);
+        const lastEntry = initialData.entries[initialData.entries.length - 1];
+        if (lastEntry.gameSnapshot) {
+          if (this.gameState && typeof this.gameState.loadFromSnapshot === 'function') {
+            this.gameState.loadFromSnapshot(lastEntry.gameSnapshot);
+          } else {
+            console.error('SaveManager: gameState instance not defined or missing loadFromSnapshot().');
+          }
         }
       }
-      
       // Save to localStorage for future loads
       this.saveToLocal(initialData);
-      
       console.log('Successfully initialized from bootstrap JSON');
-      
     } catch (error) {
       console.error('Failed to initialize from bootstrap:', error);
-      
-      // Fallback: create a minimal empty logbook
-      console.log('Creating fallback empty logbook...');
-      this.createFallbackLogbook();
+      // Mark that import is required instead of creating fallback logbook
+      this.needsImport = true;
+      console.warn('No initial logbook could be loaded. User import required.');
     }
   }
 
-  createFallbackLogbook() {
-    const fallbackLogbook = {
-      name: "Aqua Nova Mission Log",
-      created: new Date().toISOString(),
-      lastModified: new Date().toISOString(),
-      schemaVersion: SCHEMA_VERSION,
-      mounted: true,
-      entries: [{
-        logbook: {
-          id: "INIT-0001",
-          timestamp: new Date().toISOString(),
-          type: "mission_start",
-          tags: ["initialization", "mission"],
-          author: {
-            organization: "Aqua Nova DSV",
-            department: "Command",
-            name: "System",
-            role: "Initialization"
-          },
-          content: "Mission log initialized. All systems nominal. Ready for operations.",
-          tasks: [],
-          completedTasks: []
-        },
-        gameSnapshot: this.gameState.createSnapshot(),
-        metadata: {
-          importance: "critical",
-          tags: ["initialization"],
-          canRevert: true
-        }
-      }],
-      statistics: {
-        totalEntries: 1,
-        firstEntry: new Date().toISOString(),
-        lastEntry: new Date().toISOString()
-      }
-    };
-
-    this.bookshelf.push(fallbackLogbook);
-    this.activeLogbook = fallbackLogbook;
-    this.currentIndex = 0;
-    this.saveToLocal(fallbackLogbook);
-  }
 
   /** --------- Local Storage Operations --------- */
   loadFromLocal() {
@@ -454,6 +404,11 @@ export default class SaveManager {
   }
 
   /** --------- Utility Methods --------- */
+
+  requiresImport() {
+    return this.needsImport === true || this.bookshelf.length === 0;
+  }
+
   validateLogbookStructure(logbook) {
     if (!logbook || typeof logbook !== 'object') {
       return false;

@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aqua Nova PDA</title>
+  <style>
+/* =============== Page Background =============== */
+body, html {
+  margin: 0;
+  height: 100%;
+  background: radial-gradient(circle at center, #203040, #101820);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* =============== PDA Wrapper =============== */
+.pda {
+  position: relative;
+  width: 360px;
+  height: 580px;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+/* =============== Glass Panel =============== */
+.glass-screen {
+  position: absolute;
+  inset: 0;
+  background: rgba(200, 230, 255, 0.05);
+  backdrop-filter: blur(8px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow:
+    inset 0 0 30px rgba(255, 255, 255, 0.06),
+    0 4px 12px rgba(0, 0, 0, 0.4);
+  z-index: 1;
+}
+
+/* =============== Gun-metal Frame =============== */
+.frame {
+  position: absolute;
+  background: #2d313a;
+  z-index: 2;
+}
+
+/* Left vertical border */
+.frame-left {
+  top: 0;
+  left: 0;
+  width: 48px;
+  height: 100%;
+}
+
+/* Bottom horizontal border */
+.frame-bottom {
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 48px;
+}
+
+/* =============== Trapezoid Accents =============== */
+.trapezoid {
+  position: absolute;
+  background: #1f2228;
+  border: 2px solid #d4af37; /* gold outline */
+  box-shadow: 0 0 6px rgba(212, 175, 55, 0.4);
+}
+
+/* Left-side trapezoid */
+.trapezoid-left {
+  top: 24px;
+  left: 4px;
+  width: 64px;
+  height: 100px;
+  clip-path: polygon(0 0, 100% 12%, 100% 88%, 0% 100%);
+}
+
+/* Bottom-right trapezoid */
+.trapezoid-right {
+  bottom: 12px;
+  right: 16px;
+  width: 80px;
+  height: 40px;
+  clip-path: polygon(0 0, 100% 0, 88% 100%, 12% 100%);
+}
+
+  </style>
+</head>
+<body>
+  <div class="pda-container">
+    <div class="pda">
+      <div class="frame frame-left">
+        <div class="trapezoid trapezoid-left"></div>
+      </div>
+      <div class="frame frame-bottom">
+        <div class="trapezoid trapezoid-right"></div>
+      </div>
+      <div class="glass-screen"></div>
+    </div>
+  </div>
+</body>
+</html>

@@ -15,9 +15,14 @@ class GameState {
         return {
             // Game meta information
             gameInfo: {
+                logbookId: null,
+                campaignTitle: null,
                 version: "1.0.0",
+                createdAt: new Date().toISOString(),
+                description: "",
                 lastSaved: new Date().toISOString(),
-                playTime: 0, // in minutes
+                lastPlayed: null,
+                playTime: 0,
                 difficulty: "normal"
             },
 
@@ -36,8 +41,8 @@ class GameState {
                     }
                 },
                 depth: 0, // meters, 0 = surface/dry dock
-                heading: 240, // degrees magnetic
-                course: 240, // degrees
+                heading: 0, // degrees magnetic
+                course: 0, // degrees
                 speed: 0, // knots
                 destination: null
             },
@@ -80,12 +85,12 @@ class GameState {
                 lifeSupport: {
                     oxygenTankQuantity: 98, // percentage
                     nitrogenTankQuantity: 100, // percentage
-                    waterTankQuantity: 50, // percentage
+                    waterTankQantity: 50, // percentage
                     nitrogenLevels: 78.08, // percentage
                     oxygenLevels: 20.95, // percentage
                     co2Levels: 0.04, // percentage
                     co2: 400, // parts per million
-                    co2ScrubbersEfficiency: 100, // efficiency
+                    co2ScrubbersEfficency: 100, // efficiency
                     airTemperature: 22, // celsius
                     humidity: 45 // percentage
                 },
@@ -126,7 +131,7 @@ class GameState {
                     radar: 100,
                     gravimeter: 100,
                     magnetometer: 100,
-                    passiveAcoustics: 100,
+                    passiveAccoustics: 100,
                     cameras: 100
                 },
                 communications: {
@@ -229,6 +234,22 @@ class GameState {
                 airTemperature: 20, // celsius
                 currentDirection: 180, // degrees
                 currentStrength: 0.5 // knots
+            },
+
+            // Logbook statistics
+            statistics: {
+                totalEntries: 0,
+                totalMissions: 0,
+                firstEntry: null,
+                lastEntry: null
+            },
+
+            // Logbook settings
+            settings: {
+                autoSave: true,
+                autoSaveInterval: 5,
+                maxEntries: 1000,
+                compressionEnabled: false
             },
 
             // Game progression and unlocks
