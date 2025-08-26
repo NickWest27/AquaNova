@@ -312,21 +312,342 @@ body {
     border-radius: calc(5px * var(--scale));
     border-left: calc(4px * var(--scale)) solid #64ffda;
 }
-#pda-overlay img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
+
+/* PDA Frame Structure Fix - Remove double scaling */
+#pda-overlay {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(var(--scale)); 
+  width: 480px; /* Remove calc() since scaling happens at parent level */
+  height: 854px;
+  z-index: 9000;
   pointer-events: none;
+  display: none;
 }
 
-.pda-ui {
+.pda-frame {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  /* Add UI elements here */
+  background-image: url('assets/images/PDAframe.png');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  z-index: 3; /* Frame should be on top */
+  pointer-events: none;
 }
+
+.pda-glass {
+  position: absolute;
+  top: 15px;    /* Distance from top of frame */
+  left: 47px;   /* Distance from left of frame */
+  right: 13px;  /* Distance from right of frame */
+  bottom: 43px; /* Distance from bottom of frame */
+  z-index: 2; /* Glass should be behind frame */
+  backdrop-filter: blur(12px) brightness(1.1);
+  background: rgba(200, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 12px;
+  box-sizing: border-box;
+  pointer-events: auto;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+/* PDA Content Styles */
+.pda-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: calc(10px * var(--scale));
+  border-bottom: calc(1px * var(--scale)) solid rgba(100, 255, 218, 0.3);
+  margin-bottom: calc(15px * var(--scale));
+}
+
+.pda-title {
+  color: var(--primary-cyan);
+  font-size: calc(1rem * var(--scale));
+  font-weight: bold;
+}
+
+.pda-status {
+  color: var(--success-green);
+  font-size: calc(0.8rem * var(--scale));
+  font-family: 'Courier New', monospace;
+}
+
+.pda-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: calc(5px * var(--scale));
+}
+
+.pda-footer {
+  padding: calc(8px * var(--scale));
+  border-top: calc(1px * var(--scale)) solid rgba(100, 255, 218, 0.3);
+  margin-top: calc(15px * var(--scale));
+}
+
+.pda-help {
+  color: var(--text-gray);
+  font-size: calc(0.7rem * var(--scale));
+  text-align: center;
+  font-family: 'Courier New', monospace;
+}
+
+/* Menu Styles */
+.pda-menu-header {
+  color: var(--primary-cyan);
+  font-size: calc(1.1rem * var(--scale));
+  font-weight: bold;
+  text-align: center;
+  margin-bottom: calc(15px * var(--scale));
+}
+
+.pda-menu-items {
+  display: flex;
+  flex-direction: column;
+  gap: calc(8px * var(--scale));
+}
+
+.pda-menu-item {
+  display: flex;
+  align-items: center;
+  gap: calc(10px * var(--scale));
+  padding: calc(8px * var(--scale));
+  border-radius: calc(4px * var(--scale));
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: var(--text-gray);
+}
+
+.pda-menu-item:hover,
+.pda-menu-item.selected {
+  background: rgba(100, 255, 218, 0.1);
+  color: var(--primary-cyan);
+  transform: translateX(calc(3px * var(--scale)));
+}
+
+.pda-menu-icon {
+  font-size: calc(1.2rem * var(--scale));
+  width: calc(20px * var(--scale));
+  text-align: center;
+}
+
+.pda-menu-text {
+  font-size: calc(0.9rem * var(--scale));
+}
+
+/* Page Styles */
+.pda-page {
+  animation: pageSlideIn 0.3s ease-out;
+}
+
+.pda-page-header {
+  color: var(--primary-cyan);
+  font-size: calc(1.1rem * var(--scale));
+  font-weight: bold;
+  text-align: center;
+  margin-bottom: calc(20px * var(--scale));
+  padding-bottom: calc(10px * var(--scale));
+  border-bottom: calc(1px * var(--scale)) solid rgba(100, 255, 218, 0.3);
+}
+
+/* Status Page Styles */
+.pda-status-grid {
+  display: flex;
+  flex-direction: column;
+  gap: calc(10px * var(--scale));
+}
+
+.pda-status-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: calc(8px * var(--scale));
+  background: rgba(17, 34, 64, 0.3);
+  border-radius: calc(4px * var(--scale));
+  border-left: calc(3px * var(--scale)) solid var(--primary-cyan);
+}
+
+.pda-status-label {
+  color: var(--text-gray);
+  font-size: calc(0.8rem * var(--scale));
+}
+
+.pda-status-value {
+  color: var(--primary-cyan);
+  font-size: calc(0.8rem * var(--scale));
+  font-weight: bold;
+  text-align: right;
+}
+
+/* Navigation Page Styles */
+.pda-nav-display {
+  display: flex;
+  flex-direction: column;
+  gap: calc(8px * var(--scale));
+  margin-bottom: calc(20px * var(--scale));
+}
+
+.pda-nav-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: calc(6px * var(--scale)) calc(10px * var(--scale));
+  background: rgba(17, 34, 64, 0.2);
+  border-radius: calc(3px * var(--scale));
+}
+
+.pda-nav-label {
+  color: var(--text-gray);
+  font-size: calc(0.8rem * var(--scale));
+  font-family: 'Courier New', monospace;
+}
+
+.pda-nav-value {
+  color: var(--primary-cyan);
+  font-size: calc(0.8rem * var(--scale));
+  font-weight: bold;
+  font-family: 'Courier New', monospace;
+}
+
+/* Quick Actions */
+.pda-quick-nav {
+  border-top: calc(1px * var(--scale)) solid rgba(100, 255, 218, 0.3);
+  padding-top: calc(15px * var(--scale));
+}
+
+.pda-quick-nav-title {
+  color: var(--text-gray);
+  font-size: calc(0.9rem * var(--scale));
+  margin-bottom: calc(10px * var(--scale));
+}
+
+.pda-quick-actions {
+  display: flex;
+  flex-direction: column;
+  gap: calc(5px * var(--scale));
+}
+
+.pda-action-btn {
+  background: transparent;
+  border: calc(1px * var(--scale)) solid var(--primary-cyan);
+  color: var(--primary-cyan);
+  padding: calc(6px * var(--scale)) calc(10px * var(--scale));
+  border-radius: calc(3px * var(--scale));
+  cursor: pointer;
+  font-size: calc(0.8rem * var(--scale));
+  transition: all 0.3s ease;
+}
+
+.pda-action-btn:hover {
+  background: rgba(100, 255, 218, 0.1);
+  transform: scale(1.02);
+}
+
+/* Logbook Info */
+.pda-logbook-info {
+  display: flex;
+  flex-direction: column;
+  gap: calc(15px * var(--scale));
+}
+
+.pda-info-item {
+  display: flex;
+  flex-direction: column;
+  gap: calc(5px * var(--scale));
+  padding: calc(10px * var(--scale));
+  background: rgba(17, 34, 64, 0.3);
+  border-radius: calc(4px * var(--scale));
+}
+
+.pda-info-label {
+  color: var(--text-gray);
+  font-size: calc(0.8rem * var(--scale));
+}
+
+.pda-info-value {
+  color: var(--primary-cyan);
+  font-size: calc(0.9rem * var(--scale));
+  font-weight: bold;
+}
+
+.pda-logbook-actions {
+  display: flex;
+  flex-direction: column;
+  gap: calc(8px * var(--scale));
+}
+
+/* Systems Page */
+.pda-systems-grid {
+  display: flex;
+  flex-direction: column;
+  gap: calc(10px * var(--scale));
+}
+
+.pda-system-item {
+  padding: calc(10px * var(--scale));
+  background: rgba(17, 34, 64, 0.3);
+  border-radius: calc(4px * var(--scale));
+  border-left: calc(3px * var(--scale)) solid var(--text-gray);
+}
+
+.pda-system-item:has(.online) {
+  border-left-color: var(--success-green);
+}
+
+.pda-system-item:has(.offline) {
+  border-left-color: var(--error-red);
+}
+
+.pda-system-name {
+  color: var(--primary-cyan);
+  font-size: calc(0.9rem * var(--scale));
+  font-weight: bold;
+  margin-bottom: calc(5px * var(--scale));
+}
+
+.pda-system-status {
+  font-size: calc(0.8rem * var(--scale));
+  font-weight: bold;
+  margin-bottom: calc(5px * var(--scale));
+}
+
+.pda-system-status.online {
+  color: var(--success-green);
+}
+
+.pda-system-status.offline {
+  color: var(--error-red);
+}
+
+.pda-system-status.unknown {
+  color: var(--text-gray);
+}
+
+.pda-system-details {
+  color: var(--text-gray);
+  font-size: calc(0.7rem * var(--scale));
+  font-family: 'Courier New', monospace;
+}
+
+/* Animations */
+@keyframes pageSlideIn {
+  0% {
+    opacity: 0;
+    transform: translateY(calc(-10px * var(--scale)));
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 
 /* Animations */
 @keyframes waterFlow {

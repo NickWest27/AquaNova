@@ -77,7 +77,6 @@ AquaNova2/
 │
 └── utils/                  # Reusable helpers, Utility functions (time, date, formatting)
     ├── time.js
-    ├── idGenerator.js
-    ├── fileHelpers.js
+    ├── pdaOverlay.js       # Generates the global PDA
     └── formatters.js
     

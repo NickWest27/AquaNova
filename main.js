@@ -2,7 +2,7 @@
 // Updated version using SaveManager and proper logbook-based saves
 import SaveManager from '../../../game/saveManager.js';
 import GameState from '../../../game/state.js';
-import { initPDAOverlay } from '../../../utils/pdaOverlay.js';
+import { initPDAOverlay } from '../utils/pdaOverlay.js';
 initPDAOverlay();
 
 
