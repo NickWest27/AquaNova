@@ -318,10 +318,10 @@ body {
   position: fixed;
   top: 50%;
   left: 50%;
-  transform: translate(-50%, -50%) scale(var(--scale)); 
-  width: 480px; /* Remove calc() since scaling happens at parent level */
-  height: 854px;
-  z-index: 9000;
+  transform: translate(-50%, -50%) scale(var(--scale));
+  width: 360px; /* Remove calc() since scaling happens at parent level */
+  height: 640px;
+  z-index: 9999;
   pointer-events: none;
   display: none;
 }
@@ -342,10 +342,11 @@ body {
 
 .pda-glass {
   position: absolute;
-  top: 15px;    /* Distance from top of frame */
-  left: 47px;   /* Distance from left of frame */
-  right: 13px;  /* Distance from right of frame */
-  bottom: 43px; /* Distance from bottom of frame */
+  /* No scaling here since parent is already scaled */
+  top: 10px;    /* Distance from top of frame */
+  left: 35px;   /* Distance from left of frame */
+  right: 10px;  /* Distance from right of frame */
+  bottom: 35px; /* Distance from bottom of frame */
   z-index: 2; /* Glass should be behind frame */
   backdrop-filter: blur(12px) brightness(1.1);
   background: rgba(200, 255, 255, 0.05);
@@ -438,8 +439,183 @@ body {
   text-align: center;
 }
 
+.pda-menu-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
 .pda-menu-text {
   font-size: calc(0.9rem * var(--scale));
+  font-weight: bold;
+}
+
+.pda-menu-desc {
+  font-size: calc(0.75rem * var(--scale));
+  color: var(--text-gray);
+  opacity: 0.8;
+}
+
+/* Scanner Page Styles */
+.pda-scanner-section {
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid rgba(100, 255, 218, 0.2);
+}
+
+.pda-scanner-section:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+}
+
+.pda-section-title {
+  color: var(--primary-cyan);
+  font-size: calc(1rem * var(--scale));
+  font-weight: bold;
+  margin-bottom: 12px;
+  text-align: center;
+}
+
+.pda-ambient-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 15px;
+}
+
+.pda-ambient-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 10px;
+  background: rgba(17, 34, 64, 0.3);
+  border-radius: 4px;
+  border-left: 2px solid var(--primary-cyan);
+}
+
+.pda-ambient-label {
+  color: var(--text-gray);
+  font-size: calc(0.75rem * var(--scale));
+  font-family: 'Courier New', monospace;
+}
+
+.pda-ambient-value {
+  color: var(--primary-cyan);
+  font-size: calc(0.75rem * var(--scale));
+  font-weight: bold;
+  font-family: 'Courier New', monospace;
+}
+
+.pda-systems-status {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.pda-system-status-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 10px;
+  background: rgba(17, 34, 64, 0.2);
+  border-radius: 3px;
+}
+
+.pda-system-name {
+  color: var(--text-gray);
+  font-size: calc(0.8rem * var(--scale));
+  font-family: 'Courier New', monospace;
+}
+
+.pda-system-state {
+  font-size: calc(0.8rem * var(--scale));
+  font-weight: bold;
+  font-family: 'Courier New', monospace;
+}
+
+.pda-system-state.online {
+  color: var(--success-green);
+}
+
+.pda-system-state.offline {
+  color: var(--error-red);
+}
+
+.pda-system-state.unknown {
+  color: var(--text-gray);
+}
+
+.pda-system-state.maintenance {
+  color: var(--accent-orange);
+}
+
+.pda-system-state.error {
+  color: var(--error-red);
+}
+
+.pda-console-display {
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid var(--primary-cyan);
+  border-radius: 4px;
+  padding: 8px;
+  height: 160px;
+  overflow-y: auto;
+  font-family: 'Courier New', monospace;
+  font-size: calc(0.7rem * var(--scale));
+}
+
+.pda-console-entry {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 2px;
+  line-height: 1.2;
+}
+
+.pda-console-time {
+  color: var(--text-gray);
+  flex-shrink: 0;
+}
+
+.pda-console-type {
+  flex-shrink: 0;
+  font-weight: bold;
+}
+
+.pda-console-log .pda-console-type {
+  color: var(--primary-cyan);
+}
+
+.pda-console-warn .pda-console-type {
+  color: var(--accent-orange);
+}
+
+.pda-console-error .pda-console-type {
+  color: var(--error-red);
+}
+
+.pda-console-message {
+  color: var(--text-white);
+  flex: 1;
+  word-wrap: break-word;
+}
+
+.pda-console-empty {
+  color: var(--text-gray);
+  text-align: center;
+  font-style: italic;
+  padding: 20px;
+}
+
+/* Placeholder styles */
+.pda-placeholder {
+  text-align: center;
+  color: var(--text-gray);
+  font-style: italic;
+  padding: 40px 20px;
+  background: rgba(17, 34, 64, 0.2);
+  border-radius: 8px;
+  margin: 20px 0;
 }
 
 /* Page Styles */
@@ -647,7 +823,6 @@ body {
     transform: translateY(0);
   }
 }
-
 
 /* Animations */
 @keyframes waterFlow {
