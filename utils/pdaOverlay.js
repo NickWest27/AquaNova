@@ -2,6 +2,8 @@ let pdaVisible = false;
 let pdaElement = null;
 let currentPDAPage = 'main';
 let selectedMenuItem = 0;
+let logbookBrowserIndex = 0;
+let saveManagerInstance = null;
 let pdaData = {
   gameState: null,
   logbookStatus: 'Unknown',
@@ -36,10 +38,26 @@ export function initPDAOverlay() {
   
   // Initialize console logging
   initConsoleLogging();
+  
+  // Initialize SaveManager reference
+  initSaveManagerReference();
+}
+
+function initSaveManagerReference() {
+  if (window.saveManager) {
+    saveManagerInstance = window.saveManager;
+  } else if (window.SaveManager) {
+    saveManagerInstance = window.SaveManager;
+  } else {
+    setTimeout(() => {
+      if (window.splashScreen && window.splashScreen.saveManager) {
+        saveManagerInstance = window.splashScreen.saveManager;
+      }
+    }, 1000);
+  }
 }
 
 function initConsoleLogging() {
-  // Capture console.log messages
   const originalLog = console.log;
   const originalWarn = console.warn;
   const originalError = console.error;
@@ -65,15 +83,13 @@ function addToConsoleLog(type, message) {
   pdaData.consoleLog.push({
     timestamp,
     type,
-    message: message.substring(0, 100) // Limit message length
+    message: message.substring(0, 100)
   });
   
-  // Keep only last 20 entries
   if (pdaData.consoleLog.length > 20) {
     pdaData.consoleLog = pdaData.consoleLog.slice(-20);
   }
   
-  // Update console display if currently viewing scanner
   if (currentPDAPage === 'scanner') {
     updateConsoleDisplay();
   }
@@ -136,30 +152,53 @@ function createPDA() {
   `;
   document.body.appendChild(pdaElement);
   
-  // Add click event listeners
+  // Add click event listeners with proper event delegation
   pdaElement.addEventListener('click', handlePDAClick);
+  
+  // Create hidden file input for logbook import
+  const importInput = document.createElement('input');
+  importInput.type = 'file';
+  importInput.id = 'pda-logbook-import';
+  importInput.accept = '.json';
+  importInput.style.display = 'none';
+  importInput.addEventListener('change', handlePDAImport);
+  pdaElement.appendChild(importInput);
 }
 
 function handlePDAClick(e) {
   e.preventDefault();
   e.stopPropagation();
   
-  const menuItem = e.target.closest('.pda-menu-item');
-  if (menuItem) {
-    const page = menuItem.getAttribute('data-page');
+  // Handle menu buttons (main menu navigation)
+  const menuButton = e.target.closest('.pda-menu-button');
+  if (menuButton) {
+    const page = menuButton.getAttribute('data-page');
     if (page) {
       currentPDAPage = page;
+      selectedMenuItem = 0; // Reset selection
       renderCurrentPage();
     }
     return;
   }
   
+  // Handle action buttons
   const actionBtn = e.target.closest('.pda-action-btn');
   if (actionBtn) {
     const action = actionBtn.getAttribute('data-action');
     if (action) {
       handlePDAAction(action);
     }
+    return;
+  }
+  
+  // Handle logbook browser buttons
+  const logbookBtn = e.target.closest('.pda-logbook-btn');
+  if (logbookBtn) {
+    const action = logbookBtn.getAttribute('data-action');
+    if (action) {
+      handleLogbookAction(action);
+    }
+    return;
   }
 }
 
@@ -181,25 +220,180 @@ function handlePDAAction(action) {
   }
 }
 
+function handleLogbookAction(action) {
+  if (!saveManagerInstance) {
+    showPDAMessage('Error: SaveManager not available');
+    return;
+  }
+
+  switch(action) {
+    case 'prev':
+      if (logbookBrowserIndex > 0) {
+        logbookBrowserIndex--;
+        updateLogbookDisplay();
+      }
+      break;
+    case 'next':
+      const bookshelf = saveManagerInstance.getBookshelf();
+      if (logbookBrowserIndex < bookshelf.length - 1) {
+        logbookBrowserIndex++;
+        updateLogbookDisplay();
+      }
+      break;
+    case 'load':
+      loadSelectedLogbook();
+      break;
+    case 'export':
+      exportCurrentLogbook();
+      break;
+    case 'import':
+      document.getElementById('pda-logbook-import').click();
+      break;
+    case 'back':
+      currentPDAPage = 'main';
+      selectedMenuItem = 0;
+      renderCurrentPage();
+      break;
+  }
+}
+
+function loadSelectedLogbook() {
+  if (!saveManagerInstance) {
+    showPDAMessage('Error: SaveManager not available');
+    return;
+  }
+
+  const bookshelf = saveManagerInstance.getBookshelf();
+  const selectedLogbook = bookshelf[logbookBrowserIndex];
+  
+  if (!selectedLogbook) {
+    showPDAMessage('No logbook selected');
+    return;
+  }
+
+  if (selectedLogbook.mounted) {
+    showPDAMessage('Logbook already loaded');
+    return;
+  }
+
+  const confirmLoad = confirm(
+    `Load "${selectedLogbook.name}"? This will replace your current session.`
+  );
+  
+  if (confirmLoad) {
+    try {
+      const success = saveManagerInstance.mountLogbook(logbookBrowserIndex);
+      if (success) {
+        showPDAMessage('Logbook loaded successfully');
+        setTimeout(() => window.location.reload(), 1500);
+      } else {
+        showPDAMessage('Failed to load logbook');
+      }
+    } catch (error) {
+      console.error('Failed to load logbook:', error);
+      showPDAMessage('Failed to load logbook');
+    }
+  }
+}
+
+function exportCurrentLogbook() {
+  if (!saveManagerInstance) {
+    showPDAMessage('Error: SaveManager not available');
+    return;
+  }
+
+  try {
+    const success = saveManagerInstance.exportLogbook();
+    if (success) {
+      showPDAMessage('Logbook exported successfully');
+    } else {
+      showPDAMessage('Failed to export logbook');
+    }
+  } catch (error) {
+    console.error('Export error:', error);
+    showPDAMessage('Failed to export logbook');
+  }
+}
+
+async function handlePDAImport(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  if (!saveManagerInstance) {
+    showPDAMessage('Error: SaveManager not available');
+    return;
+  }
+
+  try {
+    const logbook = await saveManagerInstance.importLogbook(file);
+    if (logbook) {
+      showPDAMessage('Logbook imported successfully');
+      const bookshelf = saveManagerInstance.getBookshelf();
+      logbookBrowserIndex = bookshelf.length - 1;
+      updateLogbookDisplay();
+    } else {
+      showPDAMessage('Failed to import logbook');
+    }
+  } catch (error) {
+    console.error('Import error:', error);
+    showPDAMessage('Failed to import logbook file');
+  }
+
+  event.target.value = '';
+}
+
+function showPDAMessage(message) {
+  console.log('PDA Message:', message);
+  const messageEl = document.createElement('div');
+  messageEl.className = 'pda-message';
+  messageEl.textContent = message;
+  messageEl.style.cssText = `
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(100, 255, 218, 0.9);
+    color: var(--primary-blue);
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    z-index: 1000;
+    animation: pdaMessageFade 3s ease-out forwards;
+  `;
+  
+  if (!document.getElementById('pda-message-styles')) {
+    const style = document.createElement('style');
+    style.id = 'pda-message-styles';
+    style.textContent = `
+      @keyframes pdaMessageFade {
+        0% { opacity: 1; transform: translateX(-50%) translateY(0); }
+        70% { opacity: 1; transform: translateX(-50%) translateY(0); }
+        100% { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+  
+  pdaElement.appendChild(messageEl);
+  setTimeout(() => {
+    if (messageEl.parentNode) {
+      messageEl.remove();
+    }
+  }, 3000);
+}
+
 function updatePDAData() {
-  // Try to get current game state from various sources
   if (window.GameState && window.GameState.getState) {
     pdaData.gameState = window.GameState.getState();
   }
   
-  // Try to get save manager data
-  if (window.SaveManager || window.saveManager) {
-    const sm = window.SaveManager || window.saveManager;
-    if (sm.getCurrentBook) {
-      const book = sm.getCurrentBook();
-      pdaData.logbookStatus = book ? `Active: ${book.name}` : 'No Active Logbook';
-    }
+  if (saveManagerInstance) {
+    const currentBook = saveManagerInstance.getActiveLogbook();
+    pdaData.logbookStatus = currentBook ? `Active: ${currentBook.name}` : 'No Active Logbook';
   }
   
-  // Get location from various possible sources
   pdaData.currentLocation = getCurrentLocation();
   
-  // Update system status
   pdaData.systemStatus = {
     hull: getSystemStatus('hull'),
     navigation: getSystemStatus('navigation'), 
@@ -209,34 +403,29 @@ function updatePDAData() {
     power: getSystemStatus('power')
   };
   
-  // Update ambient data with some variation
   updateAmbientData();
 }
 
 function updateAmbientData() {
-  // Add slight variations to simulate live readings
   pdaData.ambientData = {
-    temperature: 20 + Math.random() * 4, // 20-24°C
-    pressure: 1010 + Math.random() * 10, // 1010-1020 hPa
-    humidity: 40 + Math.random() * 20, // 40-60%
-    oxygen: 20.5 + Math.random() * 1, // 20.5-21.5%
-    nitrogen: 77.5 + Math.random() * 1, // 77.5-78.5%
-    carbonDioxide: 0.03 + Math.random() * 0.02 // 0.03-0.05%
+    temperature: 20 + Math.random() * 4,
+    pressure: 1010 + Math.random() * 10,
+    humidity: 40 + Math.random() * 20,
+    oxygen: 20.5 + Math.random() * 1,
+    nitrogen: 77.5 + Math.random() * 1,
+    carbonDioxide: 0.03 + Math.random() * 0.02
   };
 }
 
 function getCurrentLocation() {
-  // Try different ways to get location
   if (pdaData.gameState?.navigation?.location?.properties?.name) {
     return pdaData.gameState.navigation.location.properties.name;
   }
   
-  // Check if we're on splash screen
   if (window.location.pathname.includes('index.html') || window.location.pathname === '/') {
     return 'Splash Screen';
   }
   
-  // Parse from URL or page title
   const pathParts = window.location.pathname.split('/');
   const lastPart = pathParts[pathParts.length - 1].replace('.html', '');
   return lastPart.charAt(0).toUpperCase() + lastPart.slice(1).replace('-', ' ');
@@ -251,7 +440,6 @@ function getSystemStatus(systemName) {
       efficiency: system.efficiency || 0
     };
   }
-  // Return mock data if no game state available
   const mockStatuses = ['Online', 'Offline', 'Maintenance', 'Error'];
   return { 
     status: mockStatuses[Math.floor(Math.random() * mockStatuses.length)], 
@@ -293,31 +481,124 @@ function renderCurrentPage() {
 
 function renderMainPage(contentEl) {
   const menuItems = [
-    { id: 'ship-status', icon: '🚢', text: 'Ship Status', desc: 'View live ship systems' },
-    { id: 'tasks', icon: '📋', text: 'Tasks', desc: 'Mission objectives' },
-    { id: 'contacts', icon: '👥', text: 'Contacts', desc: 'Known personnel' },
-    { id: 'scanner', icon: '📡', text: 'Scanner', desc: 'Environmental readings' },
-    { id: 'logbook-manager', icon: '📚', text: 'Logbook Manager', desc: 'Campaign management' },
-    { id: 'settings', icon: '⚙️', text: 'Settings', desc: 'System preferences' }
+    { id: 'ship-status', text: 'Ship Status' },
+    { id: 'tasks', text: 'Tasks' },
+    { id: 'contacts', text: 'Contacts' },
+    { id: 'scanner', text: 'Scanner' },
+    { id: 'logbook-manager', text: 'Logbook Manager' },
+    { id: 'settings', text: 'Settings' }
   ];
 
   contentEl.innerHTML = `
-    <div class="pda-menu">
-      <div class="pda-menu-header">Main Menu</div>
-      <div class="pda-menu-items">
+    <div class="pda-page">
+      <div class="pda-page-header">Main Menu</div>
+      <div class="pda-menu-grid">
         ${menuItems.map((item, index) => `
-          <div class="pda-menu-item ${index === selectedMenuItem ? 'selected' : ''}" 
-               data-page="${item.id}">
-            <span class="pda-menu-icon">${item.icon}</span>
-            <div class="pda-menu-content">
-              <span class="pda-menu-text">${item.text}</span>
-              <span class="pda-menu-desc">${item.desc}</span>
-            </div>
-          </div>
+          <button class="pda-menu-button ${index === selectedMenuItem ? 'selected' : ''}"
+                  data-page="${item.id}">
+            ${item.text}
+          </button>
         `).join('')}
       </div>
     </div>
   `;
+}
+
+function renderLogbookManagerPage(contentEl) {
+  if (saveManagerInstance) {
+    const activeLogbook = saveManagerInstance.getActiveLogbook();
+    const bookshelf = saveManagerInstance.getBookshelf();
+    
+    if (activeLogbook) {
+      const activeIndex = bookshelf.findIndex(book => book.mounted);
+      if (activeIndex !== -1) {
+        logbookBrowserIndex = activeIndex;
+      }
+    }
+  }
+
+  contentEl.innerHTML = `
+    <div class="pda-page">
+      <div class="pda-page-header">Logbook Manager<br><span style="font-size: 0.8em; color: var(--text-gray);">Campaign Management</span></div>
+      
+      <div class="pda-logbook-browser">
+        <div class="pda-logbook-display-box logbook-display-box" id="pda-logbook-display-box">
+          <div class="pda-logbook-metadata" id="pda-logbook-metadata">
+            Loading...
+          </div>
+        </div>
+        
+        <div class="pda-logbook-controls" style="display: flex; gap: 8px; justify-content: center; margin: 10px 0;">
+          <button class="pda-logbook-btn pda-action-btn" data-action="prev">◀ Previous</button>
+          <button class="pda-logbook-btn pda-action-btn save-btn" data-action="load" id="pda-logbook-load-btn">Load Campaign</button>
+          <button class="pda-logbook-btn pda-action-btn" data-action="next">Next ▶</button>
+        </div>
+        
+        <div class="pda-logbook-actions" style="display: flex; gap: 8px; justify-content: center; margin: 10px 0;">
+          <button class="pda-logbook-btn pda-action-btn" data-action="export">Export Logbook</button>
+          <button class="pda-logbook-btn pda-action-btn" data-action="import">Import Logbook</button>
+        </div>
+        
+        <div style="text-align: center; margin-top: 20px;">
+          <button class="pda-logbook-btn pda-action-btn revert-btn" data-action="back">◀ Back to Main Menu</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  updateLogbookDisplay();
+}
+
+function updateLogbookDisplay() {
+  const metadataEl = document.getElementById('pda-logbook-metadata');
+  const loadBtn = document.getElementById('pda-logbook-load-btn');
+  
+  if (!metadataEl) return;
+
+  if (!saveManagerInstance) {
+    metadataEl.innerHTML = '<p style="color: var(--error-red);">SaveManager not available</p>';
+    if (loadBtn) loadBtn.disabled = true;
+    return;
+  }
+
+  const bookshelf = saveManagerInstance.getBookshelf();
+  
+  if (!bookshelf || bookshelf.length === 0) {
+    metadataEl.innerHTML = '<p style="color: var(--error-red);">No logbooks available</p>';
+    if (loadBtn) {
+      loadBtn.textContent = 'N/A';
+      loadBtn.disabled = true;
+    }
+    return;
+  }
+
+  const currentLogbook = bookshelf[logbookBrowserIndex];
+  if (!currentLogbook) {
+    metadataEl.innerHTML = '<p style="color: var(--error-red);">Invalid logbook index</p>';
+    return;
+  }
+
+  const isActive = currentLogbook.mounted;
+  const entryCount = currentLogbook.entries ? currentLogbook.entries.length : 0;
+  const lastPlayed = currentLogbook.lastModified ? 
+    new Date(currentLogbook.lastModified).toLocaleString() : 
+    'Never';
+    
+  metadataEl.innerHTML = `
+    <div class="pda-logbook-info" style="padding: 10px; font-size: 0.85em; line-height: 1.4;">
+      <p><strong>Campaign:</strong> ${currentLogbook.name || 'Untitled'}</p>
+      <p><strong>Description:</strong> ${currentLogbook.description || `Mission log with ${entryCount} entries`}</p>
+      <p><strong>Last Played:</strong> ${lastPlayed}</p>
+      <p><strong>Status:</strong> <span style="color: ${isActive ? 'var(--success-green)' : 'var(--text-gray)'};">${isActive ? 'Active' : 'Inactive'}</span></p>
+      <p><strong>Entries:</strong> ${entryCount}</p>
+      <p><strong>Position:</strong> ${logbookBrowserIndex + 1} of ${bookshelf.length}</p>
+    </div>
+  `;
+
+  if (loadBtn) {
+    loadBtn.textContent = isActive ? 'Currently Loaded' : 'Load Campaign';
+    loadBtn.disabled = isActive;
+  }
 }
 
 function renderScannerPage(contentEl) {
@@ -328,9 +609,9 @@ function renderScannerPage(contentEl) {
     <div class="pda-page">
       <div class="pda-page-header">Environmental Scanner</div>
       
-      <div class="pda-scanner-section">
+      <div class="pda-scanner-section" style="margin-bottom: 20px;">
         <div class="pda-section-title">Ambient Conditions</div>
-        <div class="pda-ambient-grid">
+        <div class="pda-ambient-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px; font-size: 0.8em;">
           <div class="pda-ambient-item">
             <span class="pda-ambient-label">Temperature:</span>
             <span class="pda-ambient-value">${ambient.temperature.toFixed(1)}°C</span>
@@ -356,16 +637,18 @@ function renderScannerPage(contentEl) {
             <span class="pda-ambient-value">${ambient.carbonDioxide.toFixed(3)}%</span>
           </div>
         </div>
-        <button class="pda-action-btn" data-action="refresh-scanner">Refresh Readings</button>
+        <div style="text-align: center; margin-top: 10px;">
+          <button class="pda-action-btn" data-action="refresh-scanner">Refresh Readings</button>
+        </div>
       </div>
 
-      <div class="pda-scanner-section">
+      <div class="pda-scanner-section" style="margin-bottom: 20px;">
         <div class="pda-section-title">Local Systems Status</div>
-        <div class="pda-systems-status">
+        <div class="pda-systems-status" style="font-size: 0.85em;">
           ${currentPageSystems.map(system => `
-            <div class="pda-system-status-item">
+            <div class="pda-system-status-item" style="display: flex; justify-content: space-between; padding: 2px 0;">
               <span class="pda-system-name">${system.name}:</span>
-              <span class="pda-system-state ${system.status.toLowerCase()}">${system.status}</span>
+              <span class="pda-system-state ${system.status.toLowerCase()}" style="color: ${system.status === 'Online' ? 'var(--success-green)' : 'var(--error-red)'};">${system.status}</span>
             </div>
           `).join('')}
         </div>
@@ -373,7 +656,7 @@ function renderScannerPage(contentEl) {
 
       <div class="pda-scanner-section">
         <div class="pda-section-title">Console Log</div>
-        <div class="pda-console-display" id="pda-console-display">
+        <div class="pda-console-display" id="pda-console-display" style="max-height: 150px; overflow-y: auto; font-size: 0.75em; font-family: monospace;">
           ${renderConsoleLog()}
         </div>
       </div>
@@ -398,7 +681,6 @@ function getCurrentPageSystems() {
       { name: 'Hull', status: pdaData.systemStatus.hull?.status || 'Unknown' }
     ];
   } else {
-    // Default systems for other locations
     relevantSystems = [
       { name: 'Hull Integrity', status: pdaData.systemStatus.hull?.status || 'Unknown' },
       { name: 'Life Support', status: pdaData.systemStatus.life_support?.status || 'Unknown' },
@@ -415,7 +697,7 @@ function renderConsoleLog() {
   }
   
   return pdaData.consoleLog.map(entry => `
-    <div class="pda-console-entry pda-console-${entry.type.toLowerCase()}">
+    <div class="pda-console-entry pda-console-${entry.type.toLowerCase()}" style="margin: 2px 0; color: ${entry.type === 'ERROR' ? 'var(--error-red)' : entry.type === 'WARN' ? 'var(--accent-orange)' : 'var(--primary-cyan)'};">
       <span class="pda-console-time">[${entry.timestamp}]</span>
       <span class="pda-console-type">${entry.type}:</span>
       <span class="pda-console-message">${entry.message}</span>
@@ -427,7 +709,7 @@ function updateConsoleDisplay() {
   const consoleEl = document.getElementById('pda-console-display');
   if (consoleEl) {
     consoleEl.innerHTML = renderConsoleLog();
-    consoleEl.scrollTop = consoleEl.scrollHeight; // Auto-scroll to bottom
+    consoleEl.scrollTop = consoleEl.scrollHeight;
   }
 }
 
@@ -436,7 +718,12 @@ function renderShipStatusPage(contentEl) {
   contentEl.innerHTML = `
     <div class="pda-page">
       <div class="pda-page-header">Ship Status</div>
-      <div class="pda-placeholder">Ship Status page - Coming Soon</div>
+      <div class="pda-placeholder" style="padding: 20px; text-align: center; color: var(--text-gray);">
+        Ship Status page - Coming Soon
+      </div>
+      <div style="text-align: center; margin-top: 20px;">
+        <button class="pda-action-btn revert-btn" onclick="currentPDAPage='main'; selectedMenuItem=0; renderCurrentPage();">◀ Back to Main Menu</button>
+      </div>
     </div>
   `;
 }
@@ -445,7 +732,12 @@ function renderTasksPage(contentEl) {
   contentEl.innerHTML = `
     <div class="pda-page">
       <div class="pda-page-header">Tasks</div>
-      <div class="pda-placeholder">Tasks page - Coming Soon</div>
+      <div class="pda-placeholder" style="padding: 20px; text-align: center; color: var(--text-gray);">
+        Tasks page - Coming Soon
+      </div>
+      <div style="text-align: center; margin-top: 20px;">
+        <button class="pda-action-btn revert-btn" onclick="currentPDAPage='main'; selectedMenuItem=0; renderCurrentPage();">◀ Back to Main Menu</button>
+      </div>
     </div>
   `;
 }
@@ -454,16 +746,12 @@ function renderContactsPage(contentEl) {
   contentEl.innerHTML = `
     <div class="pda-page">
       <div class="pda-page-header">Contacts</div>
-      <div class="pda-placeholder">Contacts page - Coming Soon</div>
-    </div>
-  `;
-}
-
-function renderLogbookManagerPage(contentEl) {
-  contentEl.innerHTML = `
-    <div class="pda-page">
-      <div class="pda-page-header">Logbook Manager</div>
-      <div class="pda-placeholder">Logbook Manager page - Coming Soon</div>
+      <div class="pda-placeholder" style="padding: 20px; text-align: center; color: var(--text-gray);">
+        Contacts page - Coming Soon
+      </div>
+      <div style="text-align: center; margin-top: 20px;">
+        <button class="pda-action-btn revert-btn" onclick="currentPDAPage='main'; selectedMenuItem=0; renderCurrentPage();">◀ Back to Main Menu</button>
+      </div>
     </div>
   `;
 }
@@ -472,7 +760,12 @@ function renderSettingsPage(contentEl) {
   contentEl.innerHTML = `
     <div class="pda-page">
       <div class="pda-page-header">Settings</div>
-      <div class="pda-placeholder">Settings page - Coming Soon</div>
+      <div class="pda-placeholder" style="padding: 20px; text-align: center; color: var(--text-gray);">
+        Settings page - Coming Soon
+      </div>
+      <div style="text-align: center; margin-top: 20px;">
+        <button class="pda-action-btn revert-btn" onclick="currentPDAPage='main'; selectedMenuItem=0; renderCurrentPage();">◀ Back to Main Menu</button>
+      </div>
     </div>
   `;
 }
@@ -480,33 +773,34 @@ function renderSettingsPage(contentEl) {
 function navigatePDAMenu(direction) {
   if (currentPDAPage !== 'main') return;
   
-  const menuItems = document.querySelectorAll('.pda-menu-item');
-  if (menuItems.length === 0) return;
+  const menuButtons = document.querySelectorAll('.pda-menu-button');
+  if (menuButtons.length === 0) return;
   
   // Remove current selection
-  menuItems[selectedMenuItem].classList.remove('selected');
+  menuButtons[selectedMenuItem]?.classList.remove('selected');
   
   // Update selection based on direction
   switch(direction) {
     case 'ArrowUp':
-      selectedMenuItem = (selectedMenuItem - 1 + menuItems.length) % menuItems.length;
+      selectedMenuItem = (selectedMenuItem - 1 + menuButtons.length) % menuButtons.length;
       break;
     case 'ArrowDown':
-      selectedMenuItem = (selectedMenuItem + 1) % menuItems.length;
+      selectedMenuItem = (selectedMenuItem + 1) % menuButtons.length;
       break;
   }
   
   // Apply new selection
-  menuItems[selectedMenuItem].classList.add('selected');
+  menuButtons[selectedMenuItem]?.classList.add('selected');
 }
 
 function activatePDASelection() {
   if (currentPDAPage === 'main') {
-    const selectedItem = document.querySelector('.pda-menu-item.selected');
-    if (selectedItem) {
-      const page = selectedItem.getAttribute('data-page');
+    const selectedButton = document.querySelector('.pda-menu-button.selected');
+    if (selectedButton) {
+      const page = selectedButton.getAttribute('data-page');
       if (page) {
         currentPDAPage = page;
+        selectedMenuItem = 0; // Reset selection for sub-pages
         renderCurrentPage();
       }
     }
@@ -538,7 +832,6 @@ function convertToDMS(decimal, type) {
     
   return `${direction} ${degrees}°${minutes.toString().padStart(2, '0')}'${seconds.toString().padStart(2, '0')}"`;
 }
-
 
 // Global functions for PDA actions
 window.navigateToPage = function(page) {

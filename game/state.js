@@ -41,7 +41,7 @@ class GameState {
                     }
                 },
                 depth: 0, // meters, 0 = surface/dry dock
-                heading: 0, // degrees magnetic
+                heading: 0, // degrees
                 course: 0, // degrees
                 speed: 0, // knots
                 destination: null
