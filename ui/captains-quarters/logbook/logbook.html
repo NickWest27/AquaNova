@@ -8,21 +8,68 @@
 </head>
 <body>
   <header>
-    <h1>Aqua Nova DSV</h1>
-    <h2>Captains Logbook</h2>
-    <div class="log-info">
-      <p>Location: Woods Hole Oceanographic Institute</p>
-      <p>Status: Dry Dock - Systems Integration Phase</p>
-      <p>Date: <span id="current-date"></span></p>
+    <div class="header-main">
+      <h1>Aqua Nova DSV</h1>
+      <h2>Captain's Logbook</h2>
+      <div class="log-info">
+        <p>Location: UNKNOWN</p>
+        <p>Status: OFFLINE</p>
+        <p>Date: <span id="current-date"></span></p>
+      </div>
+      <div class="logbook-controls">
+        <button id="exit-logbook" class="control-btn">Exit Logbook</button>
+        <button id="new-entry" class="control-btn">New Entry</button>
+      </div>
     </div>
-    <div class="logbook-controls">
-      <button id="exit-logbook" class="control-btn">Exit Logbook</button>
-      <button id="new-entry" class="control-btn">New Entry</button>
+    
+    <div id="logbook-manager">
+      <h3>Logbooks</h3>
+      <div id="logbook-display">
+        <!-- Single logbook shown at a time -->
+        <div class="logbook-box mounted">
+          <p class="logbook-name"><strong>NONE</strong></p>
+          <p class="logbook-date">Last Entry: UNKNOWN</p>
+          <p class="logbook-count">Entries: UNKNOWN</p>
+          <p class="logbook-status"><strong>NONE FOUND</strong></p>
+        </div>
+      </div>
+
+      <div id="logbook-controls">
+        <button id="logbook-prev" class="nav-btn" title="Previous Logbook">←</button>
+        <button id="logbook-action" class="action-btn">Export</button>
+        <input type="file" id="logbook-import" accept=".json" style="display: none;">
+        <button id="logbook-import-btn" class="action-btn" onclick="document.getElementById('logbook-import').click()">Import</button>
+        <button id="logbook-next" class="nav-btn" title="Next Logbook">→</button>
+      </div>
     </div>
   </header>
 
   <main id="log-entries">
-    <!-- Saved log entries will appear here -->
+    <section class="log-entry">
+      <h3>Mission Log</h3>
+      <div class="log-info">
+        <p>From: Admiral Elena Vasquez</p>
+        <p>Director of Operations</p>
+        <p>O.E.R.A - Oceanic Exploration and Research Alliance</p>
+      </div>
+      <div class="entry-content">
+        <p>Welcome onboard Captain. I trust you have been settling in well. This is your digital logbook where you can record your mission progress, discoveries, and any important notes. Please ensure to keep it updated regularly. I must apologize for the haste, but it is of utmost importance that you get Aqua Nova out of dry dock and underway for sea trials. You and the crew need to get yourselves familiarized with the ship's operation and systems under various conditions.</p>
+      </div>
+      <div class="task-list">
+        <h4>Tasks:</h4>
+        <ul>
+          <li>Familiarize yourself with the Aqua Nova</li>
+          <li>Unpack and look around your personal quarters</li>
+          <li>Meet 'AREA' the Executive Officer</li>
+          <li>Find your way to the Bridge</li>
+        </ul>
+      </div>
+      <div class="entry-metadata">
+        <span class="timestamp">Aug 16, 2075</span>
+        <span class="entry-id">M.LOG-0001</span>
+      </div>
+      <button class="control-btn revert-btn">Revert</button>
+    </section>
   </main>
 
   <footer>
@@ -30,6 +77,6 @@
     <p>&copy; 2074 O.E.R.A - Oceanic Exploration and Research Alliance. All rights reserved.</p>
   </footer>
 
-  <script src="logbook.js"></script>
+  <script type="module" src="logbook.js"></script>
 </body>
 </html>

@@ -1,30 +1,34 @@
 AquaNova2/
 │
-├── index.html               # Main entry point (e.g. loads the Bridge)
-├── main.js                  # Bootstraps the game
+├── index.html               # Main entry point (loads to the logbook in the Captains Quarters)
+├── main.js                  # Bootstraps the game and sorts and syncs game saves in cache, json, and state to the latest version
 ├── style.css                # Global styles (can be split later per module)
 ├── assets/                  # Images, audio, fonts
-│   ├── images/
+│   ├── images/              # Images used for frames or other
 │   ├── audio/
 │   ├── video/
 │   └── fonts/
 │
 ├── data/                    # Static game data
-│   ├── ship-config.json     # Ship system layout, component specs, etc.
-│   ├── crew.json            # Character profiles, ranks, etc.
+│   ├── crew.json            # Character profiles, ranks, bios, contacts, etc.
+│   ├── missions.json        # Mission storage, communications, locations, etc. [not implemented yet]
 │   ├── locations.json       # Stores known geographic points of interest such as docks, reefs, and trenches.
 │   └── logbook.json         # Saved log entries and game states
 │
 ├── game/                    # Core game logic and state
 │   ├── state.js             # Tracks ship status, location, player state, etc.
-│   ├── saveManager.js       # Handles saving/loading from logbook entries
-│   ├── router.js            # Navigates between stations (bridge, sensors, etc.)
-│   ├── missionManager.js    # Handles loading/triggering missions
-│   ├── procedural/
+│   ├── router.js            # Navigates between stations (bridge, sensors, etc.) [Not implemented]
+│   ├── missionManager.js    # Handles loading/triggering missions [Not implemented]
+│   ├── procedural/             [Not implemented]
 │   │   ├── generator.js     # Map generation, seafloor, anomalies
 │   │   ├── creatureSpawner.js
 │   │   └── nameGenerator.js
 │   └── systems/             # Modular ship systems
+│       ├── missionComputer/    # similar to FMC/MCDU of modern airliner
+│       │   └── missionComputer.js     # Handles calculation (drift, routing between waypoints, etc.) pulls from ship state, passes to navComputer 
+│       ├── navComputer/        # Navigation display
+│       │   ├── navComputer.js     # Handles calculations on how to draw navigation display (canvas with SVG overlay)
+│       │   └── navComputer.css    # Styling of navigation display
 │       ├── propulsion.js
 │       ├── lifeSupport.js
 │       ├── power.js
@@ -33,9 +37,9 @@ AquaNova2/
 │
 ├── ui/                      # UI Components and station screens
 │   ├── bridge/              # Bridge station
-│   │   ├── bridge.html
-│   │   ├── bridge.js
-│   │   └── bridge.css
+│   │   ├── bridge.html      # bridgeFrame with cutouts for various displays, place orders for ship control and see results on screens 
+│   │   ├── bridge.js        # Control of the buttons, and displays
+│   │   └── bridge.css       # Style and tilt displays to fit in the bridgeFrame giving a 3D perspective.
 │   │
 │   ├── helm/               # Helm station for ship control such as ballast, trim, thrust, etc ...
 │   │   ├── helm.html
@@ -52,7 +56,7 @@ AquaNova2/
 │   │   ├── comms.js
 │   │   └── comms.css
 |   |
-│   ├── science/           # Science station for research
+│   ├── science/           # Science station for research and medical bay
 │   │   ├── science.html
 │   │   ├── science.js
 │   │   └── science.css
@@ -73,7 +77,6 @@ AquaNova2/
 │
 └── utils/                  # Reusable helpers, Utility functions (time, date, formatting)
     ├── time.js
-    ├── idGenerator.js
-    ├── fileHelpers.js
+    ├── pdaOverlay.js       # Generates the global PDA
     └── formatters.js
     

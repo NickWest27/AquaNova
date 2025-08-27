@@ -1,2 +1,11 @@
-1.  Change info displays (splashscreens) do that title is one font, and data is another. 
-    This might help show the diference between static and dynamic data.
+  Change info displays (splashscreens) do that title is one font, and data is another. 
+    This might help show the difference between static and dynamic data.
+
+move logbook loading to splash (main.js) resume, load, export, import
+
+make PDA glass with console view, menus game settings, crew bios....
+
+make communicator, "c" to bring it up.
+ Make a contacts list, with communicator true/false
+
+Make console or bit test screen, viewable on diffrent display.
