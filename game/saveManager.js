@@ -12,6 +12,7 @@ export default class SaveManager {
     this.bookshelf = [];   // All known logbooks (localStorage + imported)
     this.currentIndex = 0; // Index in bookshelf currently displayed in UI
     this.activeLogbook = null; // Currently mounted logbook
+    this.needsImport = false; // Flag to indicate if import is required
   }
 
   /** --------- Initialization --------- */
@@ -26,26 +27,25 @@ export default class SaveManager {
         this.bookshelf.push(localLogbook);
         this.activeLogbook = localLogbook;
         this.currentIndex = 0;
-        // Load the most recent game state from the logbook (last entry)
-        if (localLogbook.entries && localLogbook.entries.length > 0) {
-          const lastEntry = localLogbook.entries[localLogbook.entries.length - 1];
-          if (lastEntry.gameSnapshot) {
-            if (this.gameState && typeof this.gameState.loadFromSnapshot === 'function') {
-              this.gameState.loadFromSnapshot(lastEntry.gameSnapshot);
-            } else {
-              console.error('SaveManager: gameState instance not defined or missing loadFromSnapshot().');
-            }
-          }
-        }
+        
+        // Restore game state from the most recent logbook entry
+        this.restoreGameStateFromLogbook(localLogbook);
       } else {
-        // No existing save - initialize from bootstrap JSON
-        console.log('No existing save found, initializing from bootstrap...');
-        await this.initializeFromBootstrap();
+        // No existing save - try to initialize from bootstrap JSON
+        console.log('No existing save found, attempting bootstrap initialization...');
+        const bootstrapSuccess = await this.initializeFromBootstrap();
+        if (!bootstrapSuccess) {
+          // Bootstrap failed, mark that import is required
+          this.needsImport = true;
+          console.warn('Bootstrap initialization failed. User import required.');
+        }
       }
+      
       console.log(`SaveManager initialized with ${this.bookshelf.length} logbook(s)`);
       return true;
     } catch (error) {
       console.error('Failed to initialize SaveManager:', error);
+      this.needsImport = true;
       return false;
     }
   }
@@ -55,44 +55,84 @@ export default class SaveManager {
       // Try to load the initial logbook JSON
       const response = await fetch(INITIAL_LOGBOOK_PATH);
       if (!response.ok) {
-        throw new Error(`Failed to load initial logbook: ${response.status}`);
+        console.warn(`Bootstrap file not found: ${INITIAL_LOGBOOK_PATH}`);
+        return false;
       }
+      
       const campaignData = await response.json();
       // Convert campaign format to logbook format
       const initialData = this.convertCampaignToLogbook(campaignData);
+      
       // Validate the structure
       if (!this.validateLogbookStructure(initialData)) {
-        throw new Error('Invalid initial logbook structure');
+        throw new Error('Invalid bootstrap logbook structure');
       }
+      
       // Set up as the first logbook
       initialData.mounted = true;
       initialData.schemaVersion = SCHEMA_VERSION;
       initialData.lastModified = new Date().toISOString();
+      
       this.bookshelf.push(initialData);
       this.activeLogbook = initialData;
       this.currentIndex = 0;
-      // Initialize game state from the logbook's last entry (if available)
-      if (initialData.entries && initialData.entries.length > 0) {
-        const lastEntry = initialData.entries[initialData.entries.length - 1];
-        if (lastEntry.gameSnapshot) {
-          if (this.gameState && typeof this.gameState.loadFromSnapshot === 'function') {
-            this.gameState.loadFromSnapshot(lastEntry.gameSnapshot);
-          } else {
-            console.error('SaveManager: gameState instance not defined or missing loadFromSnapshot().');
-          }
-        }
-      }
+      
+      // Restore game state from the bootstrap logbook
+      this.restoreGameStateFromLogbook(initialData);
+      
       // Save to localStorage for future loads
       this.saveToLocal(initialData);
+      
       console.log('Successfully initialized from bootstrap JSON');
+      return true;
     } catch (error) {
       console.error('Failed to initialize from bootstrap:', error);
-      // Mark that import is required instead of creating fallback logbook
-      this.needsImport = true;
-      console.warn('No initial logbook could be loaded. User import required.');
+      return false;
     }
   }
 
+  restoreGameStateFromLogbook(logbook) {
+    if (!this.gameState) {
+      console.error('SaveManager: No GameState instance provided');
+      return false;
+    }
+
+    if (!logbook.entries || logbook.entries.length === 0) {
+      console.log('No logbook entries found, using default game state');
+      return true;
+    }
+
+    try {
+      // Get the most recent entry
+      const lastEntry = logbook.entries[logbook.entries.length - 1];
+      
+      if (lastEntry.gameSnapshot) {
+        // Use loadFromSnapshot if it exists, otherwise fall back to setState
+        if (typeof this.gameState.loadFromSnapshot === 'function') {
+          const success = this.gameState.loadFromSnapshot(lastEntry.gameSnapshot);
+          if (success) {
+            console.log(`Game state restored from logbook entry: ${lastEntry.logbook.id}`);
+          } else {
+            console.warn('Failed to restore from snapshot, using default state');
+          }
+        } else if (typeof this.gameState.setState === 'function') {
+          // Fallback: merge the snapshot into current state
+          this.gameState.setState(lastEntry.gameSnapshot);
+          console.log(`Game state merged from logbook entry: ${lastEntry.logbook.id}`);
+        } else {
+          console.error('GameState instance has no loadFromSnapshot or setState method');
+          return false;
+        }
+      } else {
+        console.warn('Last logbook entry has no game snapshot');
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Failed to restore game state from logbook:', error);
+      return false;
+    }
+  }
 
   /** --------- Local Storage Operations --------- */
   loadFromLocal() {
@@ -135,10 +175,14 @@ export default class SaveManager {
       throw new Error('No active logbook to add entry to');
     }
 
+    if (!this.gameState) {
+      throw new Error('No GameState instance available for snapshot');
+    }
+
     // Create the complete entry with game snapshot
     const newEntry = {
       logbook: {
-        id: entryData.id,
+        id: entryData.id || this.getNextEntryId(),
         timestamp: entryData.timestamp || new Date().toISOString(),
         type: entryData.type || "personal_log",
         tags: entryData.tags || ["captain", "personal"],
@@ -152,7 +196,7 @@ export default class SaveManager {
         tasks: entryData.tasks || [],
         completedTasks: entryData.completedTasks || []
       },
-      gameSnapshot: this.gameState.createSnapshot(),
+      gameSnapshot: this.createGameSnapshot(),
       metadata: {
         importance: entryData.importance || "normal",
         tags: entryData.tags || ["personal"],
@@ -164,6 +208,9 @@ export default class SaveManager {
     this.activeLogbook.entries.push(newEntry);
     
     // Update statistics
+    if (!this.activeLogbook.statistics) {
+      this.activeLogbook.statistics = {};
+    }
     this.activeLogbook.statistics.totalEntries = this.activeLogbook.entries.length;
     this.activeLogbook.statistics.lastEntry = newEntry.logbook.timestamp;
     
@@ -174,10 +221,45 @@ export default class SaveManager {
     return newEntry;
   }
 
+  createGameSnapshot() {
+    if (!this.gameState) {
+      console.error('No GameState instance available for snapshot creation');
+      return null;
+    }
+
+    try {
+      // Use createSnapshot if available, otherwise getState
+      if (typeof this.gameState.createSnapshot === 'function') {
+        return this.gameState.createSnapshot();
+      } else if (typeof this.gameState.getState === 'function') {
+        const state = this.gameState.getState();
+        return {
+          timestamp: new Date().toISOString(),
+          navigation: state.navigation,
+          shipSystems: state.shipSystems,
+          crew: state.crew,
+          mission: state.mission,
+          environment: state.environment,
+          progress: state.progress
+        };
+      } else {
+        console.error('GameState has no createSnapshot or getState method');
+        return null;
+      }
+    } catch (error) {
+      console.error('Failed to create game snapshot:', error);
+      return null;
+    }
+  }
+
   /** --------- Revert Functionality --------- */
   revertToEntry(entryId) {
     if (!this.activeLogbook) {
       throw new Error('No active logbook for revert operation');
+    }
+
+    if (!this.gameState) {
+      throw new Error('No GameState instance available for revert');
     }
 
     // Find the target entry
@@ -199,12 +281,21 @@ export default class SaveManager {
 
     try {
       // Revert game state
-      this.gameState.loadFromSnapshot(targetEntry.gameSnapshot);
+      const success = this.gameState.loadFromSnapshot 
+        ? this.gameState.loadFromSnapshot(targetEntry.gameSnapshot)
+        : this.gameState.setState(targetEntry.gameSnapshot);
+        
+      if (!success && typeof success === 'boolean') {
+        throw new Error('Failed to load snapshot into GameState');
+      }
       
       // Remove all entries after this one
       this.activeLogbook.entries = this.activeLogbook.entries.slice(0, entryIndex + 1);
       
       // Update statistics
+      if (!this.activeLogbook.statistics) {
+        this.activeLogbook.statistics = {};
+      }
       this.activeLogbook.statistics.totalEntries = this.activeLogbook.entries.length;
       this.activeLogbook.statistics.lastEntry = targetEntry.logbook.timestamp;
       
@@ -292,6 +383,9 @@ export default class SaveManager {
       this.bookshelf.push(importedLogbook);
       this.currentIndex = this.bookshelf.length - 1;
 
+      // Clear the needs import flag
+      this.needsImport = false;
+
       console.log(`Successfully imported logbook: ${finalName}`);
       return importedLogbook;
       
@@ -324,13 +418,8 @@ export default class SaveManager {
       this.activeLogbook = targetLogbook;
       this.currentIndex = index;
       
-      // Load the most recent game state from the logbook
-      if (targetLogbook.entries && targetLogbook.entries.length > 0) {
-        const lastEntry = targetLogbook.entries[targetLogbook.entries.length - 1];
-        if (lastEntry.gameSnapshot) {
-          this.gameState.loadFromSnapshot(lastEntry.gameSnapshot);
-        }
-      }
+      // Restore game state from the newly mounted logbook
+      this.restoreGameStateFromLogbook(targetLogbook);
       
       // Save the newly mounted logbook to localStorage
       this.saveToLocal(targetLogbook);
@@ -378,14 +467,19 @@ export default class SaveManager {
       lastModified: meta.lastPlayed || meta.createdAt || new Date().toISOString(),
       schemaVersion: SCHEMA_VERSION,
       // Convert entries format
-      entries: campaignData.entries.map(entry => ({
-        logbook: entry.logbook,
+      entries: (campaignData.entries || []).map(entry => ({
+        logbook: entry.logbook || {
+          id: "LOG-0001",
+          timestamp: new Date().toISOString(),
+          type: "personal_log",
+          content: "Bootstrap entry"
+        },
         gameSnapshot: {
-          navigation: entry.navigation,
-          shipSystems: entry.shipSystems,
-          crew: entry.crew,
-          mission: entry.mission,
-          environment: entry.environment
+          navigation: entry.navigation || {},
+          shipSystems: entry.shipSystems || {},
+          crew: entry.crew || {},
+          mission: entry.mission || {},
+          environment: entry.environment || {}
         },
         metadata: {
           importance: "critical",
@@ -395,9 +489,9 @@ export default class SaveManager {
       })),
       // Generate statistics
       statistics: {
-        totalEntries: campaignData.statistics?.totalEntries || campaignData.entries.length,
-        firstEntry: campaignData.statistics?.firstEntry || campaignData.entries[0]?.logbook?.timestamp || new Date().toISOString(),
-        lastEntry: campaignData.statistics?.lastEntry || campaignData.entries[campaignData.entries.length - 1]?.logbook?.timestamp || new Date().toISOString()
+        totalEntries: campaignData.statistics?.totalEntries || (campaignData.entries ? campaignData.entries.length : 0),
+        firstEntry: campaignData.statistics?.firstEntry || (campaignData.entries && campaignData.entries[0]?.logbook?.timestamp) || new Date().toISOString(),
+        lastEntry: campaignData.statistics?.lastEntry || (campaignData.entries && campaignData.entries[campaignData.entries.length - 1]?.logbook?.timestamp) || new Date().toISOString()
       }
     };
     return logbook;
@@ -415,7 +509,7 @@ export default class SaveManager {
     }
 
     // Check required top-level properties
-    const requiredProps = ['name', 'entries', 'statistics'];
+    const requiredProps = ['name'];
     for (const prop of requiredProps) {
       if (!logbook.hasOwnProperty(prop)) {
         console.error(`Missing required property: ${prop}`);
@@ -423,24 +517,29 @@ export default class SaveManager {
       }
     }
 
-    // Validate entries array
-    if (!Array.isArray(logbook.entries)) {
+    // Validate entries array (can be empty)
+    if (logbook.entries && !Array.isArray(logbook.entries)) {
       console.error('Entries must be an array');
       return false;
     }
 
-    // Validate each entry structure
-    for (const entry of logbook.entries) {
-      if (!entry.logbook || !entry.logbook.id || !entry.logbook.timestamp) {
-        console.error('Invalid entry structure');
-        return false;
+    // Validate each entry structure if entries exist
+    if (logbook.entries) {
+      for (const entry of logbook.entries) {
+        if (!entry.logbook || !entry.logbook.id || !entry.logbook.timestamp) {
+          console.error('Invalid entry structure');
+          return false;
+        }
       }
     }
 
-    // Validate statistics
-    if (!logbook.statistics || typeof logbook.statistics.totalEntries !== 'number') {
-      console.error('Invalid statistics structure');
-      return false;
+    // Validate statistics (create default if missing)
+    if (!logbook.statistics) {
+      logbook.statistics = {
+        totalEntries: logbook.entries ? logbook.entries.length : 0,
+        firstEntry: new Date().toISOString(),
+        lastEntry: new Date().toISOString()
+      };
     }
 
     return true;
@@ -473,7 +572,8 @@ export default class SaveManager {
       activeLogbook: this.activeLogbook?.name || 'None',
       currentIndex: this.currentIndex,
       activeEntries: this.activeLogbook?.entries?.length || 0,
-      schemaVersion: SCHEMA_VERSION
+      schemaVersion: SCHEMA_VERSION,
+      needsImport: this.needsImport
     };
   }
 

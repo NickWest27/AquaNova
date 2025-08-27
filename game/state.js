@@ -85,12 +85,12 @@ class GameState {
                 lifeSupport: {
                     oxygenTankQuantity: 98, // percentage
                     nitrogenTankQuantity: 100, // percentage
-                    waterTankQantity: 50, // percentage
+                    waterTankQuantity: 50, // percentage (fixed typo)
                     nitrogenLevels: 78.08, // percentage
                     oxygenLevels: 20.95, // percentage
                     co2Levels: 0.04, // percentage
                     co2: 400, // parts per million
-                    co2ScrubbersEfficency: 100, // efficiency
+                    co2ScrubbersEfficiency: 100, // efficiency (fixed typo)
                     airTemperature: 22, // celsius
                     humidity: 45 // percentage
                 },
@@ -131,7 +131,7 @@ class GameState {
                     radar: 100,
                     gravimeter: 100,
                     magnetometer: 100,
-                    passiveAccoustics: 100,
+                    passiveAcoustics: 100, // fixed typo
                     cameras: 100
                 },
                 communications: {
@@ -265,23 +265,45 @@ class GameState {
         console.log("GameState initialized");
         this.updateTimestamp();
         
-        // Try to load from localStorage if available
+        // Try to load from localStorage if available (for backwards compatibility)
         this.loadFromCache();
     }
 
-    // Load state from localStorage
+    // Load state from localStorage (backwards compatibility)
     loadFromCache() {
         try {
             const cached = localStorage.getItem('aquaNova_gameState');
             if (cached) {
                 const cachedState = JSON.parse(cached);
-                this.state = { ...this.getDefaultState(), ...cachedState };
+                // Merge with defaults to ensure new properties exist
+                this.state = this.mergeWithDefaults(cachedState);
                 console.log('GameState loaded from cache');
                 this.notifyObservers();
             }
         } catch (error) {
             console.error('Failed to load cached game state:', error);
         }
+    }
+
+    // Merge cached state with default state to handle schema updates
+    mergeWithDefaults(cachedState) {
+        const defaultState = this.getDefaultState();
+        return this.deepMerge(defaultState, cachedState);
+    }
+
+    // Deep merge utility function
+    deepMerge(target, source) {
+        const result = { ...target };
+        
+        for (const key in source) {
+            if (source[key] !== null && typeof source[key] === 'object' && !Array.isArray(source[key])) {
+                result[key] = this.deepMerge(target[key] || {}, source[key]);
+            } else {
+                result[key] = source[key];
+            }
+        }
+        
+        return result;
     }
 
     // Save state to localStorage
@@ -300,10 +322,17 @@ class GameState {
     }
 
     setState(newState) {
-        this.state = { ...this.state, ...newState };
+        if (!newState || typeof newState !== 'object') {
+            console.error('setState: Invalid state provided');
+            return false;
+        }
+
+        // Merge new state with existing state
+        this.state = this.deepMerge(this.state, newState);
         this.updateTimestamp();
         this.saveToCache();
         this.notifyObservers();
+        return true;
     }
 
     updateProperty(path, value) {
@@ -469,7 +498,9 @@ class GameState {
 
     // Observer pattern for UI updates
     addObserver(callback) {
-        this.observers.push(callback);
+        if (typeof callback === 'function') {
+            this.observers.push(callback);
+        }
     }
 
     removeObserver(callback) {
@@ -479,7 +510,7 @@ class GameState {
     notifyObservers() {
         this.observers.forEach(callback => {
             try {
-                callback(this.state);
+                callback(this.getState()); // Pass a copy of the state
             } catch (error) {
                 console.error('Observer callback error:', error);
             }
@@ -526,43 +557,72 @@ class GameState {
         };
     }
 
-    // Create a snapshot for logbook saves
+    // Create a snapshot for logbook saves (SaveManager integration)
     createSnapshot() {
-        return {
-            timestamp: new Date().toISOString(),
-            navigation: { ...this.state.navigation },
-            shipSystems: JSON.parse(JSON.stringify(this.state.shipSystems)),
-            crew: { ...this.state.crew },
-            mission: { ...this.state.mission },
-            environment: { ...this.state.environment },
-            progress: { ...this.state.progress }
-        };
+        try {
+            return {
+                timestamp: new Date().toISOString(),
+                // Include all relevant game state sections
+                navigation: JSON.parse(JSON.stringify(this.state.navigation)),
+                shipSystems: JSON.parse(JSON.stringify(this.state.shipSystems)),
+                crew: JSON.parse(JSON.stringify(this.state.crew)),
+                mission: JSON.parse(JSON.stringify(this.state.mission)),
+                environment: JSON.parse(JSON.stringify(this.state.environment)),
+                progress: JSON.parse(JSON.stringify(this.state.progress)),
+                displaySettings: JSON.parse(JSON.stringify(this.state.displaySettings)),
+                // Include metadata for version tracking
+                gameInfo: {
+                    version: this.state.gameInfo.version,
+                    snapshotCreated: new Date().toISOString()
+                }
+            };
+        } catch (error) {
+            console.error('Failed to create snapshot:', error);
+            return null;
+        }
     }
 
-    // Load from a snapshot (for logbook revert functionality)
+    // Load from a snapshot (SaveManager integration)
     loadFromSnapshot(snapshot) {
-        if (!snapshot || !snapshot.timestamp) {
-            console.error('Invalid snapshot provided');
+        if (!snapshot || typeof snapshot !== 'object') {
+            console.error('Invalid snapshot provided to loadFromSnapshot');
             return false;
         }
         
         try {
-            // Merge snapshot with current state, keeping gameInfo
-            this.state = {
-                ...this.state,
-                navigation: snapshot.navigation || this.state.navigation,
-                shipSystems: snapshot.shipSystems || this.state.shipSystems,
-                crew: snapshot.crew || this.state.crew,
-                mission: snapshot.mission || this.state.mission,
-                environment: snapshot.environment || this.state.environment,
-                progress: snapshot.progress || this.state.progress
-            };
+            // Validate snapshot has required structure
+            const requiredSections = ['navigation', 'shipSystems', 'crew'];
+            for (const section of requiredSections) {
+                if (!snapshot[section]) {
+                    console.warn(`Snapshot missing required section: ${section}`);
+                }
+            }
             
+            // Create a new state by merging snapshot with current defaults
+            const restoredState = this.getDefaultState();
+            
+            // Merge snapshot data, keeping current gameInfo but updating relevant fields
+            if (snapshot.navigation) restoredState.navigation = snapshot.navigation;
+            if (snapshot.shipSystems) restoredState.shipSystems = snapshot.shipSystems;
+            if (snapshot.crew) restoredState.crew = snapshot.crew;
+            if (snapshot.mission) restoredState.mission = snapshot.mission;
+            if (snapshot.environment) restoredState.environment = snapshot.environment;
+            if (snapshot.progress) restoredState.progress = snapshot.progress;
+            if (snapshot.displaySettings) restoredState.displaySettings = snapshot.displaySettings;
+            
+            // Update gameInfo with snapshot metadata but preserve instance info
+            if (snapshot.gameInfo) {
+                restoredState.gameInfo.lastPlayed = new Date().toISOString();
+                restoredState.gameInfo.lastSaved = snapshot.gameInfo.snapshotCreated || snapshot.timestamp;
+            }
+            
+            // Apply the restored state
+            this.state = restoredState;
             this.updateTimestamp();
             this.saveToCache();
             this.notifyObservers();
             
-            console.log(`State loaded from snapshot: ${snapshot.timestamp}`);
+            console.log(`State restored from snapshot: ${snapshot.timestamp || 'unknown time'}`);
             return true;
         } catch (error) {
             console.error('Failed to load from snapshot:', error);
@@ -587,10 +647,41 @@ class GameState {
             location: report.location,
             depth: report.depth,
             status: report.status,
-            stationsUnlocked: this.state.progress.stationsUnlocked.length
+            stationsUnlocked: this.state.progress.stationsUnlocked.length,
+            observers: this.observers.length
         };
+    }
+
+    // Validation method to ensure state integrity
+    validateState() {
+        try {
+            // Check required top-level properties exist
+            const requiredSections = ['gameInfo', 'navigation', 'shipSystems', 'crew', 'mission', 'environment', 'progress'];
+            
+            for (const section of requiredSections) {
+                if (!this.state[section]) {
+                    console.error(`Missing required state section: ${section}`);
+                    return false;
+                }
+            }
+            
+            // Check navigation structure
+            if (!this.state.navigation.location || !this.state.navigation.location.geometry) {
+                console.error('Invalid navigation structure');
+                return false;
+            }
+            
+            return true;
+        } catch (error) {
+            console.error('State validation error:', error);
+            return false;
+        }
     }
 }
 
-// Export for use in other modules or make globally available
-export default GameState;
+// Create a singleton instance
+const gameStateInstance = new GameState();
+
+// Export the class and a singleton instance
+export default gameStateInstance;
+export { GameState };
