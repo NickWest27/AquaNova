@@ -6,9 +6,9 @@ const STATE_KEY = 'aquaNova_gameState';
 const SCHEMA_VERSION = 1;
 const INITIAL_LOGBOOK_PATH = '/data/logbooks/SeaTrials.json';
 
-export default class SaveManager {
-  constructor(gameStateInstance) {
-    this.gameState = gameStateInstance; // Reference to the GameState instance
+class SaveManager {
+  constructor() {
+    this.gameState = null; // Reference to the GameState instance
     this.bookshelf = [];   // All known logbooks (localStorage + imported)
     this.currentIndex = 0; // Index in bookshelf currently displayed in UI
     this.activeLogbook = null; // Currently mounted logbook
@@ -16,8 +16,9 @@ export default class SaveManager {
   }
 
   /** --------- Initialization --------- */
-  async init() {
+  async init(gameStateInstance) {
     console.log('SaveManager initializing...');
+    this.gameState = gameStateInstance;
     try {
       // First, try to load existing localStorage logbook
       const localLogbook = this.loadFromLocal();
@@ -27,7 +28,6 @@ export default class SaveManager {
         this.bookshelf.push(localLogbook);
         this.activeLogbook = localLogbook;
         this.currentIndex = 0;
-        
         // Restore game state from the most recent logbook entry
         this.restoreGameStateFromLogbook(localLogbook);
       } else {
@@ -40,7 +40,6 @@ export default class SaveManager {
           console.warn('Bootstrap initialization failed. User import required.');
         }
       }
-      
       console.log(`SaveManager initialized with ${this.bookshelf.length} logbook(s)`);
       return true;
     } catch (error) {
@@ -585,3 +584,6 @@ export default class SaveManager {
     this.bookshelf = [];
   }
 }
+
+const saveManagerInstance = new SaveManager();
+export default saveManagerInstance;

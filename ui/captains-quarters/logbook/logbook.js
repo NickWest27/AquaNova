@@ -1,14 +1,17 @@
 // ui/captains-quarters/logbook/logbook.js
 // Complete logbook system with SaveManager integration
 
-import SaveManager from '../../../game/saveManager.js';
-import GameState from '../../../game/state.js';
+import gameStateInstance from '/game/state.js';
+import saveManager from '/game/saveManager.js';
+import { initPDAOverlay } from '/utils/pdaOverlay.js';
+
+initPDAOverlay();
 
 class LogbookSystem {
   constructor() {
     this.currentEntryId = 1;
     this.logbookData = null;
-    this.saveManager = null;
+    // Use the singleton SaveManager directly
     this.eventListeners = new Map(); // Track listeners for cleanup
     this.saving = false;
     this.initialized = false;
@@ -16,17 +19,16 @@ class LogbookSystem {
 
   async initialize() {
     try {
-      // Initialize SaveManager - this handles loading localStorage + JSON files
-      this.saveManager = new SaveManager();
-      await this.saveManager.init();
+      // Use the singleton SaveManager - this handles loading localStorage + JSON files
+      await saveManager.init(gameStateInstance);
 
       // New logic for logbook and import checks
-      if (this.saveManager.requiresImport()) {
+      if (saveManager.requiresImport()) {
         this.showNoLogbooksError();
         return;
       }
 
-      const currentBook = this.saveManager.getCurrentBook();
+      const currentBook = saveManager.getCurrentBook();
       const hasMountedLogbook = currentBook && currentBook.mounted;
 
       if (!currentBook) {
@@ -131,7 +133,7 @@ class LogbookSystem {
   }
 
   updateLocationInfo() {
-    const gameState = GameState.getSnapshot();
+    const gameState = gameStateInstance.getState();
     if (!gameState) return;
 
     const locationElements = document.querySelectorAll('.log-info p');
@@ -140,21 +142,18 @@ class LogbookSystem {
     if (gameState.navigation?.location && locationElements[0]) {
       const location = gameState.navigation.location;
       locationElements[0].textContent = `Location: ${location.properties?.name || 'Unknown'}`;
-    }
-
-    // Update status - shows docked if location is a known dock, or underway
-    if (locationElements[1] && gameState.shipSystems) {
-      let status = 'Unknown';
-      
-      if (gameState.shipSystems.hull?.dockingBay === 'Open') {
-        status = 'Dry Dock - Systems Integration Phase';
-      } else if (gameState.navigation?.depth > 0) {
-        status = `Submerged - Depth ${gameState.navigation.depth}M`;
+      // If location properties type is dock show "Status: Docked" or "Status: Underway". 
+      if (location.properties?.type === 'dock') {
+        if (locationElements[1]) locationElements[1].textContent = 'Status: Docked';
       } else {
-        status = 'Surface Operations';
+        if (locationElements[1]) locationElements[1].textContent = 'Status: Underway';
       }
-      
-      locationElements[1].textContent = `Status: ${status}`;
+      // Show location propertys description if available
+      if (location.properties?.description && locationElements[2]) {
+        locationElements[2].textContent = location.properties.description;
+      } else if (locationElements[2]) {
+        locationElements[2].textContent = '';
+      }  
     }
   }
 
@@ -162,10 +161,10 @@ class LogbookSystem {
     const main = document.getElementById('log-entries');
     if (!main) return;
     
-    // Clear existing dynamic entries (keep the hardcoded first one)
+    // Clear existing dynamic entries (keep the first one)
     const existingEntries = main.querySelectorAll('.log-entry');
     existingEntries.forEach(entry => {
-      // Keep the first hardcoded entry, remove others
+      // Keep the first entry, remove others
       if (!entry.querySelector('.entry-id')?.textContent.includes('M.LOG-0001')) {
         entry.remove();
       }
@@ -244,9 +243,7 @@ class LogbookSystem {
   }
 
   bindControls() {
-    // Only bind full controls if properly initialized
-    if (!this.initialized) return;
-
+    // Bind all controls regardless of PDA overlay visibility
     // New entry button
     const newEntryBtn = document.getElementById('new-entry');
     if (newEntryBtn) {
@@ -262,7 +259,7 @@ class LogbookSystem {
       });
     }
 
-    // Bookshelf controls
+    // Bookshelf and import controls always bound
     this.bindBookshelfControls();
     this.bindImportControls();
 
@@ -274,7 +271,7 @@ class LogbookSystem {
     const nextBtn = document.getElementById('logbook-next');
     if (nextBtn) {
       this.addEventListenerWithCleanup(nextBtn, 'click', () => {
-        this.saveManager.nextBook();
+        saveManager.nextBook();
         this.updateBookshelfUI();
       });
     }
@@ -282,7 +279,7 @@ class LogbookSystem {
     const prevBtn = document.getElementById('logbook-prev');
     if (prevBtn) {
       this.addEventListenerWithCleanup(prevBtn, 'click', () => {
-        this.saveManager.prevBook();
+        saveManager.prevBook();
         this.updateBookshelfUI();
       });
     }
@@ -356,9 +353,9 @@ class LogbookSystem {
     const display = document.getElementById('logbook-display');
     const actionBtn = document.getElementById('logbook-action');
     
-    if (!display || !this.saveManager) return;
+    if (!display) return;
 
-    const currentBook = this.saveManager.getCurrentBook();
+    const currentBook = saveManager.getCurrentBook();
     
     if (!currentBook) {
       display.innerHTML = '<div class="logbook-box"><p class="logbook-name">No logbooks found</p></div>';
@@ -384,12 +381,12 @@ class LogbookSystem {
   }
 
   handleLogbookAction() {
-    const currentBook = this.saveManager.getCurrentBook();
+    const currentBook = saveManager.getCurrentBook();
     if (!currentBook) return;
 
     if (currentBook.mounted) {
       // Export current logbook
-      this.saveManager.exportLogbook(currentBook);
+      saveManager.exportLogbook(currentBook);
       this.showMessage('Logbook exported successfully');
     } else {
       // Load archived logbook
@@ -397,7 +394,7 @@ class LogbookSystem {
         'Loading this logbook will replace your current progress. Continue?'
       );
       if (confirmLoad) {
-        const success = this.saveManager.mountLogbook(this.saveManager.currentIndex);
+        const success = saveManager.mountLogbook(saveManager.currentIndex);
         if (success) {
           this.showMessage('Logbook loaded successfully');
           // Reload the page to refresh the UI with new data
@@ -414,18 +411,18 @@ class LogbookSystem {
     if (!file) return;
 
     try {
-      const logbook = await this.saveManager.importLogbook(file);
-      if (logbook) {
-        this.updateBookshelfUI();
-        this.showMessage('Logbook imported successfully');
-        
-        // If this was our first logbook, reload to initialize properly
-        if (this.saveManager.bookshelf.length === 1) {
-          setTimeout(() => window.location.reload(), 1500);
-        }
-      } else {
-        this.showError('Failed to import logbook');
+    const logbook = await saveManager.importLogbook(file);
+    if (logbook) {
+      this.updateBookshelfUI();
+      this.showMessage('Logbook imported successfully');
+      
+      // If this was our first logbook, reload to initialize properly
+      if (saveManager.bookshelf.length === 1) {
+        setTimeout(() => window.location.reload(), 1500);
       }
+    } else {
+      this.showError('Failed to import logbook');
+    }
     } catch (error) {
       console.error('Import error:', error);
       this.showError('Failed to import logbook file');
@@ -525,9 +522,9 @@ class LogbookSystem {
     section.classList.add('saving');
 
     try {
-      // Create the new entry and add via SaveManager
+      // Create the new entry and add via saveManager
       const newEntry = this.saveNewEntry(content, entryId, timestamp);
-      this.saveManager.addEntry(newEntry);
+      saveManager.addEntry(newEntry);
 
       saveBtn.textContent = 'Saved!';
 
@@ -588,7 +585,7 @@ class LogbookSystem {
 
   createGameSnapshot() {
     // Get current game state from game/state.js
-    const gameState = GameState.getSnapshot();
+    const gameState = gameStateInstance.getState();
     if (!gameState) return null;
 
     return {
@@ -657,8 +654,8 @@ class LogbookSystem {
       console.log('Reverting to initial mission state');
       const confirmRevert = confirm('This will reset the game to the initial mission state. Continue?');
       if (confirmRevert) {
-        // Use GameState to reset to initial state
-        GameState.reset();
+        // Use gameStateInstance to reset to initial state
+        gameStateInstance.reset();
         this.showMessage('Game reset to initial mission state');
         // Reload to reflect changes
         setTimeout(() => window.location.reload(), 1000);
@@ -667,7 +664,7 @@ class LogbookSystem {
     }
     
     try {
-      this.saveManager.revertToEntry(entryId);
+      saveManager.revertToEntry(entryId);
       this.updateLocationInfo();
       this.renderExistingEntries();
       this.updateCurrentEntryId();
@@ -701,6 +698,8 @@ let logbookSystem = null;
 document.addEventListener('DOMContentLoaded', async () => {
   logbookSystem = new LogbookSystem();
   await logbookSystem.initialize();
+  // Ensure controls are always bound, even if PDA overlay is hidden
+  logbookSystem.bindControls();
 });
 
 // Cleanup on page unload

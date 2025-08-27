@@ -1,10 +1,8 @@
 // main.js - Bootstrap and splash screen functionality for Aqua Nova
 // Updated version with proper GameState and SaveManager integration
-import gameStateInstance from '../../../game/state.js';
-import SaveManager from '../../../game/saveManager.js';
-import { initPDAOverlay } from '../utils/pdaOverlay.js';
-
-
+import gameStateInstance from '/game/state.js';
+import saveManager from '/game/saveManager.js';
+import { initPDAOverlay } from '/utils/pdaOverlay.js';
 
 initPDAOverlay();
 
@@ -40,9 +38,9 @@ class SplashScreen {
         try {
             this.updateConsole('Initializing save system...');
             
-            // Initialize SaveManager with GameState instance
-            this.saveManager = new SaveManager(this.gameState);
-            const success = await this.saveManager.init();
+            // Initialize SaveManager singleton with GameState instance
+            this.saveManager = saveManager;
+            const success = await this.saveManager.init(this.gameState);
             
             if (!success) {
                 throw new Error('SaveManager initialization failed');

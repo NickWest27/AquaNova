@@ -1,9 +1,12 @@
+import gameStateInstance from '/game/state.js';
+import saveManager from '/game/saveManager.js';
+
 let pdaVisible = false;
 let pdaElement = null;
 let currentPDAPage = 'main';
 let selectedMenuItem = 0;
 let logbookBrowserIndex = 0;
-let saveManagerInstance = null;
+let saveManagerInstance = saveManager;
 let pdaData = {
   gameState: null,
   logbookStatus: 'Unknown',
@@ -39,22 +42,7 @@ export function initPDAOverlay() {
   // Initialize console logging
   initConsoleLogging();
   
-  // Initialize SaveManager reference
-  initSaveManagerReference();
-}
-
-function initSaveManagerReference() {
-  if (window.saveManager) {
-    saveManagerInstance = window.saveManager;
-  } else if (window.SaveManager) {
-    saveManagerInstance = window.SaveManager;
-  } else {
-    setTimeout(() => {
-      if (window.splashScreen && window.splashScreen.saveManager) {
-        saveManagerInstance = window.splashScreen.saveManager;
-      }
-    }, 1000);
-  }
+  // SaveManager singleton is already imported as saveManagerInstance
 }
 
 function initConsoleLogging() {
@@ -383,8 +371,8 @@ function showPDAMessage(message) {
 }
 
 function updatePDAData() {
-  if (window.GameState && window.GameState.getState) {
-    pdaData.gameState = window.GameState.getState();
+  if (gameStateInstance && gameStateInstance.getState) {
+    pdaData.gameState = gameStateInstance.getState();
   }
   
   if (saveManagerInstance) {

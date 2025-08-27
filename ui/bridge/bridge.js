@@ -1,8 +1,8 @@
 // Enhanced Bridge System for Aqua Nova
 import { drawNavigationDisplay, animateNavigationDisplay } from "../../game/systems/navComputer/navComputer.js";
-import GameState from "../../game/state.js";
+import gameStateInstance from "../../game/state.js";
 
-const state = new GameState();
+const gameState = gameStateInstance;
 let animationId;
 const canvas = document.getElementById("navigation-canvas");
 const svg = document.getElementById("navigation-overlay");
