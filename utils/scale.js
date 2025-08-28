@@ -1,14 +1,27 @@
 // utils/scale.js
 // Utility to set a global scale factor for responsive design
 
+// Calculate both "contain" and "cover" scale, and allow up to 10% crop tolerance.
+export function calculateScale(windowWidth, windowHeight, baseWidth, baseHeight) {
+  // "Contain" scale fits the entire base inside the window (no cropping)
+  const containScale = Math.min(windowWidth / baseWidth, windowHeight / baseHeight);
+  // "Cover" scale fills the window, possibly cropping the base
+  const coverScale = Math.max(windowWidth / baseWidth, windowHeight / baseHeight);
+  // Allow up to 10% crop tolerance beyond "contain" scale, but never more than "cover"
+  const cropTolerantScale = Math.min(coverScale, containScale * 1.1);
+  return {
+    containScale,
+    coverScale,
+    cropTolerantScale
+  };
+}
+
 export function setGlobalScale() {
   const baseWidth = 1920;
   const baseHeight = 1080;
-  const scaleX = window.innerWidth / baseWidth;
-  const scaleY = window.innerHeight / baseHeight;
-  const scale = Math.min(scaleX, scaleY);
-  document.documentElement.style.setProperty('--scale', scale);
-  console.log(`Scale script setting Global scale set to: ${scale}`);
+  const { cropTolerantScale } = calculateScale(window.innerWidth, window.innerHeight, baseWidth, baseHeight);
+  document.documentElement.style.setProperty('--scale', cropTolerantScale);
+  console.log(`Scale script setting Global scale set to: ${cropTolerantScale}`);
 }
 
 // Auto-apply on load + resize

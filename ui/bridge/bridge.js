@@ -1,4 +1,5 @@
 // Enhanced Bridge System for Aqua Nova
+import { setGlobalScale } from '/utils/scale.js';
 import { drawNavigationDisplay, animateNavigationDisplay } from "../../game/systems/navComputer/navComputer.js";
 import gameStateInstance from "../../game/state.js";
 
