@@ -1,6 +1,7 @@
 // ui/captains-quarters/logbook/logbook.js
 // Complete logbook system with SaveManager integration
 
+import { setGlobalScale } from '/utils/scale.js';
 import gameStateInstance from '/game/state.js';
 import saveManager from '/game/saveManager.js';
 import { initPDAOverlay } from '/utils/pdaOverlay.js';
@@ -18,6 +19,11 @@ class LogbookSystem {
   }
 
   async initialize() {
+    // Ensure global scale is set
+   // document.addEventListener('DOMContentLoaded', () => {
+    //setGlobalScale();
+    //console.log('Global scale set on Logbook load.');
+    //});
     try {
       // Use the singleton SaveManager - this handles loading localStorage + JSON files
       await saveManager.init(gameStateInstance);

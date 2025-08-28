@@ -39,7 +39,7 @@ body {
     left: 0;
     width: 100%;
     height: 100%;
-    background: url('assets/images/BackgroundSplash.png') center center / cover no-repeat;
+    background: url('/assets/images/BackgroundSplash.png') center center / cover no-repeat;
     z-index: -2;
 }
 
@@ -272,7 +272,7 @@ body {
   left: 0;
   width: 100%;
   height: 100%;
-  background-image: url('assets/images/PDAframe.png');
+  background-image: url('/assets/images/PDAframe.png');
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center;

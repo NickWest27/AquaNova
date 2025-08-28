@@ -1,5 +1,6 @@
 // main.js - Bootstrap and splash screen functionality for Aqua Nova
 // Updated version with proper GameState and SaveManager integration
+import { setGlobalScale } from '/utils/scale.js';
 import gameStateInstance from '/game/state.js';
 import saveManager from '/game/saveManager.js';
 import { initPDAOverlay } from '/utils/pdaOverlay.js';
@@ -19,8 +20,7 @@ class SplashScreen {
     async initialize() {
         console.log('SplashScreen: Starting initialization');
         this.updateConsole('System initializing...');
-        
-        this.setGlobalScale();
+
         this.createBubbles();
         this.startBubbleGeneration();
         
@@ -123,16 +123,6 @@ class SplashScreen {
             const entryCount = activeLogbook.entries ? activeLogbook.entries.length : 0;
             this.updateConsole(`Active: "${activeLogbook.name}" - ${entryCount} entries. Press ENTER to board.`);
         }
-    }
-
-    setGlobalScale() {
-        const baseWidth = 1920;
-        const baseHeight = 1080;
-        const scaleX = window.innerWidth / baseWidth;
-        const scaleY = window.innerHeight / baseHeight;
-        const scale = Math.min(scaleX, scaleY);
-        document.documentElement.style.setProperty('--scale', scale);
-        console.log(`Global scale set to: ${scale}`);
     }
 
     createBubble() {

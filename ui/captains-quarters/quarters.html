@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Captain's Quarters</title>
+    <link rel="stylesheet" href="/style.css">
     <link rel="stylesheet" href="quarters.css">
 </head>
 <body>
@@ -12,15 +13,15 @@
         <div class="quarters-frame"></div>
         <div class="quarters-overlay">
             <!-- Interactive logbook on the bed -->
-            <div class="logbook-hotspot" onclick="openLogbook()">
+            <div class="logbook-hotspot" id="logbook-button">
                 <div class="tooltip">Captain's Logbook</div>
             </div>
             <!-- Other UI goes here-->
-            <div class="bridge-hotspot" onclick="exitToBridge()">
+            <div class="bridge-hotspot" id="exit-button">
                 <div class="tooltip">Exit to bridge</div>
             </div>
         </div>
     </div>
-    <script src="quarters.js"></script>
+  <script type="module" src="quarters.js"></script>
 </body>
 </html>
