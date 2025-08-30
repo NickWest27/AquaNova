@@ -161,6 +161,9 @@ class GameState {
                         status: "operational",
                         linkQuality: 100,
                         linkLoadPercentage: 0
+                    },
+                    communicator: {     
+                        log: [],
                     }
                 }
             },
@@ -171,49 +174,48 @@ class GameState {
                 // later: brightness, overlays toggled on/off, etc.
             },
 
-            // Crew and personnel
-            crew: {
-                captain: {
-                    experience: 100,
-                    rest: "alert",
-                    status: "active"
+            // Contacts, crew and personnel
+            contacts: {
+                crew: {
+                    captain: {
+                        communicator: true,
+                        known: true,
+                        contextual: []
+                    },
+                    executiveOfficer: {
+                        communicator: true,
+                        known: true,
+                        contextual: []
+                    },
+                    science: {
+                        communicator: true,
+                        known: false,
+                        contextual: []
+                    },
+                    engineering: {
+                        communicator: true,
+                        known: false,
+                        contextual: []
+                    },
+                    security: {
+                        communicator: true,
+                        known: false,
+                        contextual: []
+                    },
+                    communications: {
+                        communicator: true,
+                        known: false,
+                        contextual: []
+                    },
+                    sensors: {
+                        communicator: true,
+                        known: false,
+                        contextual: []
+                    },
                 },
-                executiveOfficer: {
-                    experience: 100,
-                    rest: "alert",
-                    status: "active"
-                },
-                medical: {
-                    experience: 85,
-                    rest: "alert",
-                    status: "active"
-                },
-                engineer: {
-                    experience: 80,
-                    rest: "tired",
-                    status: "active"
-                },
-                security: {
-                    experience: 75,
-                    rest: "alert",
-                    status: "active"
-                },
-                communications: {
-                    experience: 70,
-                    rest: "alert",
-                    status: "active"
-                },
-                science: {
-                    experience: 90,
-                    rest: "alert",
-                    status: "active"
-                },
-                sensors: {
-                    experience: 60,
-                    rest: "alert",
-                    status: "active"
-                },
-                totalCrew: 8
+                external: {
+                    known: false
+                }
             },
 
             // Mission and exploration data
@@ -474,6 +476,18 @@ class GameState {
         return count > 0 ? Math.round(totalEfficiency / count) : 0;
     }
 
+    // Meeting a new crew member
+    unlockCrewMember(memberId) {
+        this.updateProperty(`crew.${memberId}.known`, true);
+        console.log(`Crew member unlocked: ${memberId}`);
+    }
+
+    // Gaining a communicator. - This should be unlocked by Task completion, finding communicator
+    givePlayerCommunicator() {
+        this.updateProperty('inventory.communicator', true);
+        console.log('Player obtained communicator');
+    }
+
     // Environment methods
     updateEnvironment(property, value) {
         this.updateProperty(`environment.${property}`, value);
@@ -570,6 +584,7 @@ class GameState {
                 environment: JSON.parse(JSON.stringify(this.state.environment)),
                 progress: JSON.parse(JSON.stringify(this.state.progress)),
                 displaySettings: JSON.parse(JSON.stringify(this.state.displaySettings)),
+                contacts: JSON.parse(JSON.stringify(this.state.contacts)),
                 // Include metadata for version tracking
                 gameInfo: {
                     version: this.state.gameInfo.version,
@@ -609,6 +624,7 @@ class GameState {
             if (snapshot.environment) restoredState.environment = snapshot.environment;
             if (snapshot.progress) restoredState.progress = snapshot.progress;
             if (snapshot.displaySettings) restoredState.displaySettings = snapshot.displaySettings;
+            if (snapshot.contacts) restoredState.contacts = snapshot.contacts;
             
             // Update gameInfo with snapshot metadata but preserve instance info
             if (snapshot.gameInfo) {

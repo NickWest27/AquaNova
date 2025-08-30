@@ -1,10 +1,12 @@
 // game/saveManager.js
 // Handles localStorage persistence, JSON import/export, and digital bookshelf logic
+// FIXED: Proper contact state management for snapshot save/restore functionality
 
 const STORAGE_KEY = 'aquaNovaLogbook';
 const STATE_KEY = 'aquaNova_gameState';
 const SCHEMA_VERSION = 1;
 const INITIAL_LOGBOOK_PATH = '/data/logbooks/SeaTrials.json';
+const CONTACTS_PATH = '/data/contacts.json';
 
 class SaveManager {
   constructor() {
@@ -19,17 +21,24 @@ class SaveManager {
   async init(gameStateInstance) {
     console.log('SaveManager initializing...');
     this.gameState = gameStateInstance;
+    
     try {
-      // First, try to load existing localStorage logbook
+      // Check if we have existing save data first
       const localLogbook = this.loadFromLocal();
+      let needsContactInit = true;
+      
       if (localLogbook) {
         console.log('Found existing localStorage logbook');
         localLogbook.mounted = true;
         this.bookshelf.push(localLogbook);
         this.activeLogbook = localLogbook;
         this.currentIndex = 0;
+        
         // Restore game state from the most recent logbook entry
+        // This will load contact states from the snapshot - don't overwrite them!
         this.restoreGameStateFromLogbook(localLogbook);
+        needsContactInit = false; // Contacts already loaded from snapshot
+        
       } else {
         // No existing save - try to initialize from bootstrap JSON
         console.log('No existing save found, attempting bootstrap initialization...');
@@ -39,12 +48,103 @@ class SaveManager {
           this.needsImport = true;
           console.warn('Bootstrap initialization failed. User import required.');
         }
+        needsContactInit = bootstrapSuccess; // Only init contacts if bootstrap succeeded
       }
+      
+      // Initialize contacts only for fresh starts or successful bootstrap
+      // Do NOT initialize contacts if we restored from a snapshot (preserves dynamic state)
+      if (needsContactInit) {
+        await this.initializeContacts();
+      }
+      
       console.log(`SaveManager initialized with ${this.bookshelf.length} logbook(s)`);
       return true;
     } catch (error) {
       console.error('Failed to initialize SaveManager:', error);
       this.needsImport = true;
+      return false;
+    }
+  }
+
+  /** --------- Contacts Loading --------- */
+  async loadContacts() {
+    try {
+      console.log('Loading contacts data...');
+      const response = await fetch(CONTACTS_PATH);
+      if (!response.ok) {
+        console.warn('Contacts file not found, using empty contacts');
+        return { crew: {}, contacts: {} };
+      }
+      
+      const contactsData = await response.json();
+      console.log('Contacts data retrieved successfully');
+      return contactsData;
+    } catch (error) {
+      console.error('Failed to load contacts:', error);
+      return { crew: {}, contacts: {} };
+    }
+  }
+
+  async initializeContacts() {
+    if (!this.gameState) {
+      console.error('SaveManager: No GameState instance for contacts initialization');
+      return false;
+    }
+
+    try {
+      const contactsData = await this.loadContacts();
+
+      // Merge crew contacts - PRESERVE dynamic properties
+      for (const [id, staticContact] of Object.entries(contactsData.crew || {})) {
+        const existing = this.gameState.getProperty(`contacts.crew.${id}`) || {};
+        
+        // Create the merged contact with proper priority:
+        // 1. Static properties (name, role, bio, image, dialogueOptions) from JSON
+        // 2. Dynamic properties (communicator, known, contextual) from existing state
+        const mergedContact = {
+          // Static properties - always use from JSON file
+          name: staticContact.name,
+          role: staticContact.role,
+          bio: staticContact.bio,
+          image: staticContact.image,
+          dialogueOptions: staticContact.dialogueOptions,
+          
+          // Dynamic properties - preserve from existing state, use JSON as fallback
+          communicator: existing.communicator ?? staticContact.communicator ?? true,
+          known: existing.known ?? staticContact.known ?? false,
+          contextual: existing.contextual ?? staticContact.contextual ?? []
+        };
+        
+        this.gameState.updateProperty(`contacts.crew.${id}`, mergedContact);
+      }
+
+      // Merge external contacts - same logic
+      for (const [id, staticContact] of Object.entries(contactsData.contacts || {})) {
+        const existing = this.gameState.getProperty(`contacts.external.${id}`) || {};
+        
+        const mergedContact = {
+          // Static properties
+          name: staticContact.name,
+          company: staticContact.company,
+          department: staticContact.department,
+          role: staticContact.role,
+          bio: staticContact.bio,
+          image: staticContact.image,
+          dialogueOptions: staticContact.dialogueOptions,
+          
+          // Dynamic properties
+          communicator: existing.communicator ?? staticContact.communicator ?? false,
+          known: existing.known ?? staticContact.known ?? false,
+          contextual: existing.contextual ?? staticContact.contextual ?? []
+        };
+        
+        this.gameState.updateProperty(`contacts.external.${id}`, mergedContact);
+      }
+
+      console.log('Contacts initialized in game state');
+      return true;
+    } catch (error) {
+      console.error('Failed to initialize contacts:', error);
       return false;
     }
   }
@@ -110,6 +210,8 @@ class SaveManager {
         if (typeof this.gameState.loadFromSnapshot === 'function') {
           const success = this.gameState.loadFromSnapshot(lastEntry.gameSnapshot);
           if (success) {
+            // DO NOT call initializeContacts here!
+            // The snapshot already contains the correct contact state including dynamic properties
             console.log(`Game state restored from logbook entry: ${lastEntry.logbook.id}`);
           } else {
             console.warn('Failed to restore from snapshot, using default state');
@@ -239,7 +341,9 @@ class SaveManager {
           crew: state.crew,
           mission: state.mission,
           environment: state.environment,
-          progress: state.progress
+          progress: state.progress,
+          inventory: state.inventory,
+          contacts: state.contacts // This includes all dynamic contact state!
         };
       } else {
         console.error('GameState has no createSnapshot or getState method');
@@ -279,7 +383,7 @@ class SaveManager {
     }
 
     try {
-      // Revert game state
+      // Revert game state (this will restore contact states from the snapshot!)
       const success = this.gameState.loadFromSnapshot 
         ? this.gameState.loadFromSnapshot(targetEntry.gameSnapshot)
         : this.gameState.setState(targetEntry.gameSnapshot);
@@ -418,6 +522,7 @@ class SaveManager {
       this.currentIndex = index;
       
       // Restore game state from the newly mounted logbook
+      // This will restore contact states from the logbook's snapshot
       this.restoreGameStateFromLogbook(targetLogbook);
       
       // Save the newly mounted logbook to localStorage
@@ -478,7 +583,9 @@ class SaveManager {
           shipSystems: entry.shipSystems || {},
           crew: entry.crew || {},
           mission: entry.mission || {},
-          environment: entry.environment || {}
+          environment: entry.environment || {},
+          inventory: entry.inventory || {},
+          contacts: entry.contacts || {} // Include contacts from bootstrap
         },
         metadata: {
           importance: "critical",

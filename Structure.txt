@@ -10,14 +10,15 @@ AquaNova2/
 │   └── fonts/
 │
 ├── data/                    # Static game data
-│   ├── crew.json            # Character profiles, ranks, bios, contacts, etc.
+│   ├── logbooks/             
+│   │   └── SeaTrials.json   # First campaign logbook, Sea Trials of the Aqua Nova
+│   ├── contacts.json        # Character profiles, ranks, bios, contacts, etc.
 │   ├── missions.json        # Mission storage, communications, locations, etc. [not implemented yet]
 │   ├── locations.json       # Stores known geographic points of interest such as docks, reefs, and trenches.
 │   └── logbook.json         # Saved log entries and game states
 │
 ├── game/                    # Core game logic and state
 │   ├── state.js             # Tracks ship status, location, player state, etc.
-│   ├── router.js            # Navigates between stations (bridge, sensors, etc.) [Not implemented]
 │   ├── missionManager.js    # Handles loading/triggering missions [Not implemented]
 │   ├── procedural/             [Not implemented]
 │   │   ├── generator.js     # Map generation, seafloor, anomalies
@@ -76,7 +77,8 @@ AquaNova2/
 │           └── logbook.css
 │
 └── utils/                  # Reusable helpers, Utility functions (time, date, formatting)
-    ├── time.js
-    ├── pdaOverlay.js       # Generates the global PDA
+    ├── scale.js            # Calculates and sets a global scale for UI
+    ├── pdaOverlay.js       # Generates the global PDA for menu options and displaying crew bios, contacts, tasks...
+    ├── communicatorOverlay.js   # Communicator logic for dialogue
     └── formatters.js
     

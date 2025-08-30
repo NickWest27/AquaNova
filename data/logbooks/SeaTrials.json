@@ -156,6 +156,9 @@
             "status": "operational",
             "linkQuality": 100,
             "linkLoadPercentage": 0
+          },
+          "communicator": {     
+            "log": []
           }
         }
       },

@@ -1,0 +1,97 @@
+{
+    "crew": {
+        "captain": {
+            "name": "Captain Nicholas Westmoreland",
+            "role": "Captain",
+            "bio": "A seasoned explorer with a knack for leadership and quick decision-making. Nick helped design and build the Aqua Nova.",
+            "image": "images/crew/nicholas_westmoreland.png",
+            "dialogueOptions": {
+                "commands": [],
+                "emergency": [],
+                "pleasantries": ["Hello", "That is all for now", "Goodbye", "Thank you"]
+            }
+        },
+        "executiveOfficer": {
+            "name": "Commander AREA",
+            "role": "Executive Officer",
+            "bio": "AREA is a state of the art AI, designed to assist in ship operations and crew management. She is efficient, logical, and always ready to help.",
+            "image": "images/crew/AREA.png",
+            "dialogueOptions": {
+                "commands": ["Report to my quarters", "Status Report", "Lets take her to sea", "Lets go home"],
+                "emergency": ["Sound General Alarm"],
+                "pleasantries": ["How may I assist you Commander?", "What's on your mind?", "All systems are nominal Captain.", "Yes Commander?"]
+            }
+        },
+        "science": {
+            "name": "Dr. Sam Patel",
+            "role": "Chief Science and Medical Officer",
+            "bio": "Dr. Patel is a skilled physician with a background in marine biology. She ensure the health and well-being of the crew during long missions.",
+            "image": "images/crew/sam_patel.png",
+            "dialogueOptions": {
+                "commands": [],
+                "emergency": [],
+                "pleasantries": []
+            }
+        },
+        "sensors": {
+            "name": "",
+            "role": "",
+            "bio" : "",
+            "image": "images/crew/name.png",
+            "dialogueOptions": {
+                "commands": [],
+                "emergency": [],
+                "pleasantries": []
+            }
+        },
+        "engineering": {
+            "name": "Engineer Riley Chen",
+            "role": "Chief Engineer",
+            "bio": "Riley is a mechanical genius responsible for maintaining the Aqua Nova's complex systems. His innovative solutions have saved the ship on more than one occasion.",
+            "image": "images/crew/riley_chen.png",
+            "dialogueOptions": {
+                "commands": [],
+                "emergency": [],
+                "pleasantries": []
+            }
+        },
+        "security": {
+            "name": "Lieutenant Jordan Kim",
+            "role": "Head of Security",
+            "bio": "Jordan is a former special forces operative who ensures the safety of the crew and ship. His tactical expertise is invaluable during unexpected encounters.",
+            "image": "images/crew/jordan_kim.png",
+            "dialogueOptions": {
+                "commands": [],
+                "emergency": [],
+                "pleasantries": []
+            }
+        },
+        "communications": {
+            "name": "Specialist Nicole Brooks",
+            "role": "Communications Officer",
+            "bio": "Nicole manages all communications, both internal and external. Her quick thinking and technical skills keep the crew connected to the outside world.",
+            "image": "images/crew/nicole_brooks.png",
+            "dialogueOptions": {
+                "commands": [],
+                "emergency": [],
+                "pleasantries": []
+            }
+        }
+    },
+
+    "contacts": {
+        "operationsDirector": {
+            "name": "Admiral Elena Vasquez",
+            "company": "O.E.R.A - Oceanic Exploration and Research Alliance.",
+            "department": "Operations Command",
+            "role": "Director of Operations",
+            "bio": "Admiral Vasquez oversees all O.E.R.A operations. With decades of experience in maritime exploration, she is a respected leader known for her strategic vision and commitment to scientific discovery.",
+            "image": "images/contacts/elena_vasquez.png",
+            "dialogueOptions": {
+                "commands": [],
+                "emergency": [],
+                "pleasantries": []
+            }
+        }
+    }
+}

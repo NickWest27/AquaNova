@@ -4,8 +4,8 @@ import { setGlobalScale } from '/utils/scale.js';
 import gameStateInstance from '/game/state.js';
 import saveManager from '/game/saveManager.js';
 import { initPDAOverlay } from '/utils/pdaOverlay.js';
+import { initCommunicatorOverlay } from '/utils/communicatorOverlay.js';
 
-initPDAOverlay();
 
 class SplashScreen {
     constructor() {
@@ -30,6 +30,13 @@ class SplashScreen {
         // Initialize SaveManager with GameState
         await this.initializeSaveManager();
         this.bindControls();
+
+        initPDAOverlay();  // Initialize the PDA
+        console.log('PDA initialized');
+        this.updateConsole('PDA initialized')
+
+        initCommunicatorOverlay(); // Initialize the communicator
+        console.log('Communicator initialized');
         
         console.log('SplashScreen: Initialization complete');
     }
