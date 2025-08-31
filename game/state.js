@@ -1,32 +1,27 @@
 // game/state.js
-// Game state management for Aqua Nova DSV
-// This module tracks ship status, location, player state, and more.
-// One source of truth for the game state.
-// Integrated with logbook-based save system
+// Central game state management for Aqua Nova DSV
+// Single source of truth for ALL game data
+// Pure state management - no persistence logic
+// Observer pattern for UI updates
+// Simple get/set/update methods
+
 
 class GameState {
     constructor() {
         this.state = this.getDefaultState();
         this.observers = [];
-        this.initialize();
     }
 
     getDefaultState() {
         return {
             // Game meta information
             gameInfo: {
-                logbookId: null,
-                campaignTitle: null,
                 version: "1.0.0",
-                createdAt: new Date().toISOString(),
-                description: "",
-                lastSaved: new Date().toISOString(),
-                lastPlayed: null,
-                playTime: 0,
-                difficulty: "normal"
+                lastUpdated: new Date().toISOString(),
+                playTime: 0
             },
 
-            // Ship location and navigation
+            // Ship navigation
             navigation: {
                 location: {
                     type: "Feature",
@@ -40,62 +35,62 @@ class GameState {
                         description: "Primary research dock and submarine base."
                     }
                 },
-                depth: 0, // meters, 0 = surface/dry dock
-                heading: 0, // degrees
-                course: 0, // degrees
-                speed: 0, // knots
+                depth: 0,
+                heading: 0,
+                course: 0,
+                speed: 0,
                 destination: null
             },
 
-            // Ship status and systems
+            // Ship systems
             shipSystems: {
                 hull: {
-                    integrity: 100, // percentage
-                    dockingBay: "Open", // Docking bay status
-                    moonPool: "Closed", // Moon pool status
-                    wskrsBay: "Closed" // WSKRS docking bay status
+                    integrity: 100,
+                    dockingBay: "Open",
+                    moonPool: "Closed",
+                    wskrsBay: "Closed"
                 },
                 power: {
-                    leftReactorHealth: 100, // health percentage
-                    leftReactorOutput: 10, // Output Megawatts
-                    leftReactorElectricalDraw: 0.5, // current power draw Megawatts
-                    rightReactorHealth: 100, // health percentage
-                    rightReactorOutput: 10, // Output Megawatts
-                    rightReactorElectricalDraw: 0.5 // current power draw Megawatts
+                    leftReactorHealth: 100,
+                    leftReactorOutput: 10,
+                    leftReactorElectricalDraw: 0.5,
+                    rightReactorHealth: 100,
+                    rightReactorOutput: 10,
+                    rightReactorElectricalDraw: 0.5
                 },
                 helm: {
-                    leftDrivetrainHealth: 100, // health percentage of drivetrain
-                    rightDrivetrainHealth: 100, // health percentage of drivetrain
-                    ballastSystemHealth: 100, // health percentage of ballast system
-                    trimSystemHealth: 100, // health percentage of trim system
-                    leftThrust: 0, // current thrust percentage
-                    rightThrust: 0, // current thrust percentage
-                    fwdBallast: 0, // Forward ballast tank fill percentage
-                    aftBallast: 0, // Aft ballast tank fill percentage
-                    portBallast: 0, // Port ballast tank fill percentage
-                    starboardBallast: 0, // Starboard ballast tank fill percentage
-                    rollTrim: 0, // roll trim angle in degrees
-                    pitchTrim: 0, // pitch trim angle in degrees
-                    bowPlane: 45, // bow plane angle in degrees
-                    sternPlane: 45, // stern plane angle in degrees
-                    rudder: 0, // rudder angle in degrees
-                    bowThrusters: 0, // bow thruster percentage
-                    sternThrusters: 0 // stern thruster percentage
+                    leftDrivetrainHealth: 100,
+                    rightDrivetrainHealth: 100,
+                    ballastSystemHealth: 100,
+                    trimSystemHealth: 100,
+                    leftThrust: 0,
+                    rightThrust: 0,
+                    fwdBallast: 0,
+                    aftBallast: 0,
+                    portBallast: 0,
+                    starboardBallast: 0,
+                    rollTrim: 0,
+                    pitchTrim: 0,
+                    bowPlane: 45,
+                    sternPlane: 45,
+                    rudder: 0,
+                    bowThrusters: 0,
+                    sternThrusters: 0
                 },
                 lifeSupport: {
-                    oxygenTankQuantity: 98, // percentage
-                    nitrogenTankQuantity: 100, // percentage
-                    waterTankQuantity: 50, // percentage (fixed typo)
-                    nitrogenLevels: 78.08, // percentage
-                    oxygenLevels: 20.95, // percentage
-                    co2Levels: 0.04, // percentage
-                    co2: 400, // parts per million
-                    co2ScrubbersEfficiency: 100, // efficiency (fixed typo)
-                    airTemperature: 22, // celsius
-                    humidity: 45 // percentage
+                    oxygenTankQuantity: 98,
+                    nitrogenTankQuantity: 100,
+                    waterTankQuantity: 50,
+                    nitrogenLevels: 78.08,
+                    oxygenLevels: 20.95,
+                    co2Levels: 0.04,
+                    co2: 400,
+                    co2ScrubbersEfficiency: 100,
+                    airTemperature: 22,
+                    humidity: 45
                 },
                 sensors: {
-                    shipSonar: 100, // operational percentage
+                    shipSonar: 100,
                     wskrs: {
                         Triton: {
                             bearing: null,
@@ -131,94 +126,57 @@ class GameState {
                     radar: 100,
                     gravimeter: 100,
                     magnetometer: 100,
-                    passiveAcoustics: 100, // fixed typo
+                    passiveAcoustics: 100,
                     cameras: 100
                 },
                 communications: {
                     commHealth: 100,
                     satelliteLink: 100,
-                    dataDownload: 15, // Gbps
-                    dataUpload: 5, // Gbps
+                    dataDownload: 15,
+                    dataUpload: 5,
                     radios: {
-                        VHF1: {
-                            frequency: 156.800,
-                            status: "RX"
-                        },
-                        VHF2: {
-                            frequency: 157.100,
-                            status: "OFF"
-                        },
-                        UHF: {
-                            frequency: 400.000,
-                            status: "ON"
-                        },
-                        HF: {
-                            frequency: 3.000,
-                            status: "OFF"
-                        }
+                        VHF1: { frequency: 156.8, status: "RX" },
+                        VHF2: { frequency: 157.1, status: "OFF" },
+                        UHF: { frequency: 400.0, status: "ON" },
+                        HF: { frequency: 3.0, status: "OFF" }
                     },
                     quantumCommunication: {
                         status: "operational",
                         linkQuality: 100,
                         linkLoadPercentage: 0
                     },
-                    communicator: {     
-                        log: [],
-                    }
+                    communicator: { log: [] }
                 }
             },
 
-            // Display & UI settings
-            displaySettings: {
-                navDisplayRange: 10,  // NM
-                // later: brightness, overlays toggled on/off, etc.
+            // Crew status
+            crew: {
+                captain: { experience: 100, rest: "alert", status: "active" },
+                executiveOfficer: { experience: 100, rest: "alert", status: "active" },
+                medical: { experience: 85, rest: "alert", status: "active" },
+                engineer: { experience: 80, rest: "tired", status: "active" },
+                security: { experience: 75, rest: "alert", status: "active" },
+                communications: { experience: 70, rest: "alert", status: "active" },
+                science: { experience: 90, rest: "alert", status: "active" },
+                sensors: { experience: 60, rest: "alert", status: "active" },
+                totalCrew: 8
             },
 
-            // Contacts, crew and personnel
+            // Contacts (dynamic state only)
             contacts: {
                 crew: {
-                    captain: {
-                        communicator: true,
-                        known: true,
-                        contextual: []
-                    },
-                    executiveOfficer: {
-                        communicator: true,
-                        known: true,
-                        contextual: []
-                    },
-                    science: {
-                        communicator: true,
-                        known: false,
-                        contextual: []
-                    },
-                    engineering: {
-                        communicator: true,
-                        known: false,
-                        contextual: []
-                    },
-                    security: {
-                        communicator: true,
-                        known: false,
-                        contextual: []
-                    },
-                    communications: {
-                        communicator: true,
-                        known: false,
-                        contextual: []
-                    },
-                    sensors: {
-                        communicator: true,
-                        known: false,
-                        contextual: []
-                    },
+                    captain: { communicator: true, known: true, contextual: [] },
+                    executiveOfficer: { communicator: true, known: true, contextual: [] },
+                    science: { communicator: true, known: false, contextual: [] },
+                    engineering: { communicator: true, known: false, contextual: [] },
+                    security: { communicator: true, known: false, contextual: [] },
+                    communications: { communicator: true, known: false, contextual: [] },
+                    sensors: { communicator: true, known: false, contextual: [] }
                 },
-                external: {
-                    known: false
-                }
+                external: {}
             },
 
-            // Mission and exploration data
+            // Mission data
             mission: {
                 currentMission: null,
                 objectives: [],
@@ -227,114 +185,76 @@ class GameState {
                 researchData: []
             },
 
-            // Environment and world state
+            // Environment
             environment: {
                 weather: "calm",
-                seaState: 1, // 0-9 scale
+                seaState: 1,
                 visibility: "excellent",
-                waterTemperature: 20, // celsius
-                airTemperature: 20, // celsius
-                currentDirection: 180, // degrees
-                currentStrength: 0.5 // knots
+                waterTemperature: 20,
+                airTemperature: 20,
+                currentDirection: 180,
+                currentStrength: 0.5
             },
 
-            // Logbook statistics
-            statistics: {
-                totalEntries: 0,
-                totalMissions: 0,
-                firstEntry: null,
-                lastEntry: null
-            },
-
-            // Logbook settings
-            settings: {
-                autoSave: true,
-                autoSaveInterval: 5,
-                maxEntries: 1000,
-                compressionEnabled: false
-            },
-
-            // Game progression and unlocks
+            // Player progress
             progress: {
                 stationsUnlocked: ["captains-quarters"],
                 areasExplored: ["woods_hole"],
                 achievementsUnlocked: ["first_boot"]
+            },
+
+            // Player inventory
+            inventory: {},
+
+            // User preferences
+            settings: {
+                display: {
+                    width: 1920,
+                    height: 1080,
+                    aspectRatio: "16:9",
+                    navDisplayRange: 10
+                },
+                audio: {
+                    masterVolume: 0.8,
+                    sfxVolume: 0.7,
+                    musicVolume: 0.5,
+                    voiceVolume: 0.9
+                },
+                gameplay: {
+                    autoSave: true,
+                    autoSaveInterval: 5,
+                    tooltips: true,
+                    confirmActions: true
+                }
             }
         };
     }
 
-    initialize() {
-        console.log("GameState initialized");
-        this.updateTimestamp();
-        
-        // Try to load from localStorage if available (for backwards compatibility)
-        this.loadFromCache();
-    }
-
-    // Load state from localStorage (backwards compatibility)
-    loadFromCache() {
-        try {
-            const cached = localStorage.getItem('aquaNova_gameState');
-            if (cached) {
-                const cachedState = JSON.parse(cached);
-                // Merge with defaults to ensure new properties exist
-                this.state = this.mergeWithDefaults(cachedState);
-                console.log('GameState loaded from cache');
-                this.notifyObservers();
-            }
-        } catch (error) {
-            console.error('Failed to load cached game state:', error);
-        }
-    }
-
-    // Merge cached state with default state to handle schema updates
-    mergeWithDefaults(cachedState) {
-        const defaultState = this.getDefaultState();
-        return this.deepMerge(defaultState, cachedState);
-    }
-
-    // Deep merge utility function
-    deepMerge(target, source) {
-        const result = { ...target };
-        
-        for (const key in source) {
-            if (source[key] !== null && typeof source[key] === 'object' && !Array.isArray(source[key])) {
-                result[key] = this.deepMerge(target[key] || {}, source[key]);
-            } else {
-                result[key] = source[key];
-            }
-        }
-        
-        return result;
-    }
-
-    // Save state to localStorage
-    saveToCache() {
-        try {
-            localStorage.setItem('aquaNova_gameState', JSON.stringify(this.state));
-            console.log('GameState saved to cache');
-        } catch (error) {
-            console.error('Failed to cache game state:', error);
-        }
-    }
-
-    // Core state management methods
+    // Core state methods
     getState() {
-        return JSON.parse(JSON.stringify(this.state)); // Deep copy
+        return JSON.parse(JSON.stringify(this.state));
     }
 
     setState(newState) {
         if (!newState || typeof newState !== 'object') {
-            console.error('setState: Invalid state provided');
+            console.error('Invalid state provided');
             return false;
         }
-
-        // Merge new state with existing state
         this.state = this.deepMerge(this.state, newState);
         this.updateTimestamp();
-        this.saveToCache();
         this.notifyObservers();
         return true;
+    }
+
+    getProperty(path) {
+        const keys = path.split('.');
+        let current = this.state;
+        
+        for (const key of keys) {
+            if (current[key] === undefined) return null;
+            current = current[key];
+        }
+        return current;
     }
 
     updateProperty(path, value) {
@@ -348,33 +268,95 @@ class GameState {
         
         current[keys[keys.length - 1]] = value;
         this.updateTimestamp();
-        this.saveToCache();
         this.notifyObservers();
     }
 
-    getProperty(path) {
-        const keys = path.split('.');
-        let current = this.state;
-        
-        for (const key of keys) {
-            if (current[key] === undefined) return null;
-            current = current[key];
+    // Load from snapshot (SaveManager integration)
+    loadFromSnapshot(snapshot) {
+        if (!snapshot || typeof snapshot !== 'object') {
+            console.error('Invalid snapshot provided');
+            return false;
         }
+
+        try {
+            // Merge snapshot with defaults to handle schema updates
+            const defaultState = this.getDefaultState();
+            this.state = this.deepMerge(defaultState, snapshot);
+            this.updateTimestamp();
+            this.notifyObservers();
+            return true;
+        } catch (error) {
+            console.error('Failed to load snapshot:', error);
+            return false;
+        }
+    }
+
+    // Create snapshot for SaveManager
+    createSnapshot() {
+        return {
+            timestamp: new Date().toISOString(),
+            navigation: JSON.parse(JSON.stringify(this.state.navigation)),
+            shipSystems: JSON.parse(JSON.stringify(this.state.shipSystems)),
+            crew: JSON.parse(JSON.stringify(this.state.crew)),
+            mission: JSON.parse(JSON.stringify(this.state.mission)),
+            environment: JSON.parse(JSON.stringify(this.state.environment)),
+            contacts: JSON.parse(JSON.stringify(this.state.contacts)),
+            progress: JSON.parse(JSON.stringify(this.state.progress)),
+            inventory: JSON.parse(JSON.stringify(this.state.inventory)),
+            settings: JSON.parse(JSON.stringify(this.state.settings))
+        };
+    }
+
+    // Contact management
+    async loadContactsData() {
+        try {
+            const response = await fetch('/data/contacts.json');
+            if (!response.ok) {
+                console.warn('Contacts file not found');
+                return { crew: {}, contacts: {} };
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('Failed to load contacts:', error);
+            return { crew: {}, contacts: {} };
+        }
+    }
+
+    async initializeContacts() {
+        const contactsData = await this.loadContactsData();
         
-        return current;
+        // Merge crew contacts (preserve dynamic state)
+        for (const [id, staticData] of Object.entries(contactsData.crew || {})) {
+            const existing = this.getProperty(`contacts.crew.${id}`) || {};
+            this.updateProperty(`contacts.crew.${id}`, {
+                // Static from JSON
+                ...staticData,
+                // Dynamic from existing state
+                communicator: existing.communicator ?? true,
+                known: existing.known ?? (id === 'captain' || id === 'executiveOfficer'),
+                contextual: existing.contextual ?? []
+            });
+        }
+
+        // Merge external contacts
+        for (const [id, staticData] of Object.entries(contactsData.contacts || {})) {
+            const existing = this.getProperty(`contacts.external.${id}`) || {};
+            this.updateProperty(`contacts.external.${id}`, {
+                ...staticData,
+                communicator: existing.communicator ?? false,
+                known: existing.known ?? false,
+                contextual: existing.contextual ?? []
+            });
+        }
     }
 
     // Navigation methods
-    updateLocation(location, coordinates = null) {
+    updateLocation(location) {
         this.updateProperty('navigation.location', location);
-        if (coordinates) {
-            this.updateProperty('navigation.location.geometry.coordinates', coordinates);
-        }
     }
 
     updateDepth(depth) {
         this.updateProperty('navigation.depth', depth);
-        // Update status based on depth
         if (depth > 0 && this.state.shipSystems.hull.dockingBay === 'Open') {
             this.updateProperty('shipSystems.hull.dockingBay', 'Closed');
         }
@@ -382,30 +364,19 @@ class GameState {
 
     updateCourse(course, speed = null) {
         this.updateProperty('navigation.course', course);
-        this.updateProperty('navigation.heading', course); // Sync heading with course
+        this.updateProperty('navigation.heading', course);
         if (speed !== null) {
             this.updateProperty('navigation.speed', speed);
         }
     }
 
-    // Ship systems methods
+    // System methods
     updateSystemHealth(system, component, value) {
         this.updateProperty(`shipSystems.${system}.${component}`, value);
     }
 
     getSystemStatus(system) {
         return this.getProperty(`shipSystems.${system}`);
-    }
-
-    getAllSystemsStatus() {
-        return {
-            hull: this.getSystemStatus('hull'),
-            power: this.getSystemStatus('power'),
-            helm: this.getSystemStatus('helm'),
-            lifeSupport: this.getSystemStatus('lifeSupport'),
-            sensors: this.getSystemStatus('sensors'),
-            communications: this.getSystemStatus('communications')
-        };
     }
 
     // Mission methods
@@ -415,13 +386,6 @@ class GameState {
 
     addObjective(objective) {
         const objectives = [...this.state.mission.objectives, objective];
-        this.updateProperty('mission.objectives', objectives);
-    }
-
-    completeObjective(objectiveId) {
-        const objectives = this.state.mission.objectives.map(obj => 
-            obj.id === objectiveId ? { ...obj, completed: true } : obj
-        );
         this.updateProperty('mission.objectives', objectives);
     }
 
@@ -435,62 +399,8 @@ class GameState {
     }
 
     // Crew methods
-    updateCrewMember(member, property, value) {
-        this.updateProperty(`crew.${member}.${property}`, value);
-    }
-
-    getCrewStatus() {
-        const crew = this.state.crew;
-        const active = Object.values(crew).filter(member => 
-            typeof member === 'object' && member.status === 'active'
-        ).length;
-        
-        return {
-            active,
-            total: crew.totalCrew,
-            efficiency: this.calculateCrewEfficiency()
-        };
-    }
-
-    calculateCrewEfficiency() {
-        const crew = this.state.crew;
-        let totalEfficiency = 0;
-        let count = 0;
-        
-        Object.entries(crew).forEach(([key, member]) => {
-            if (typeof member === 'object' && member.experience !== undefined) {
-                let efficiency = member.experience;
-                
-                // Rest affects efficiency
-                if (member.rest === 'tired') efficiency *= 0.8;
-                if (member.rest === 'fatigued') efficiency *= 0.6;
-                
-                // Status affects efficiency
-                if (member.status !== 'active') efficiency *= 0.3;
-                
-                totalEfficiency += efficiency;
-                count++;
-            }
-        });
-        
-        return count > 0 ? Math.round(totalEfficiency / count) : 0;
-    }
-
-    // Meeting a new crew member
     unlockCrewMember(memberId) {
-        this.updateProperty(`crew.${memberId}.known`, true);
-        console.log(`Crew member unlocked: ${memberId}`);
-    }
-
-    // Gaining a communicator. - This should be unlocked by Task completion, finding communicator
-    givePlayerCommunicator() {
-        this.updateProperty('inventory.communicator', true);
-        console.log('Player obtained communicator');
-    }
-
-    // Environment methods
-    updateEnvironment(property, value) {
-        this.updateProperty(`environment.${property}`, value);
+        this.updateProperty(`contacts.crew.${memberId}.known`, true);
     }
 
     // Progress methods
@@ -510,46 +420,18 @@ class GameState {
         }
     }
 
-    // Observer pattern for UI updates
-    addObserver(callback) {
-        if (typeof callback === 'function') {
-            this.observers.push(callback);
-        }
-    }
-
-    removeObserver(callback) {
-        this.observers = this.observers.filter(obs => obs !== callback);
-    }
-
-    notifyObservers() {
-        this.observers.forEach(callback => {
-            try {
-                callback(this.getState()); // Pass a copy of the state
-            } catch (error) {
-                console.error('Observer callback error:', error);
-            }
-        });
-    }
-
-    // Utility methods
-    updateTimestamp() {
-        this.state.gameInfo.lastSaved = new Date().toISOString();
-    }
-
-    // Status check methods
+    // Status reporting
     getOverallStatus() {
         const systems = this.state.shipSystems;
-        let status = "OPERATIONAL";
         
-        // Check critical systems
-        if (systems.hull.integrity < 25) status = "CRITICAL";
-        else if (systems.hull.integrity < 50) status = "WARNING";
-        else if (systems.lifeSupport.oxygenTankQuantity < 25) status = "CRITICAL";
-        else if (systems.lifeSupport.oxygenTankQuantity < 50) status = "WARNING";
-        else if (systems.lifeSupport.co2 > 1000) status = "WARNING";
-        else if (systems.power.leftReactorHealth < 50 || systems.power.rightReactorHealth < 50) status = "WARNING";
+        if (systems.hull.integrity < 25) return "CRITICAL";
+        if (systems.hull.integrity < 50) return "WARNING";
+        if (systems.lifeSupport.oxygenTankQuantity < 25) return "CRITICAL";
+        if (systems.lifeSupport.oxygenTankQuantity < 50) return "WARNING";
+        if (systems.lifeSupport.co2 > 1000) return "WARNING";
+        if (systems.power.leftReactorHealth < 50 || systems.power.rightReactorHealth < 50) return "WARNING";
         
-        return status;
+        return "OPERATIONAL";
     }
 
     getStatusReport() {
@@ -566,138 +448,71 @@ class GameState {
             hull: systems.hull.integrity,
             oxygen: systems.lifeSupport.oxygenTankQuantity,
             power: Math.min(systems.power.leftReactorHealth, systems.power.rightReactorHealth),
-            crew: this.getCrewStatus(),
             docked: systems.hull.dockingBay === 'Open'
         };
     }
 
-    // Create a snapshot for logbook saves (SaveManager integration)
-    createSnapshot() {
-        try {
-            return {
-                timestamp: new Date().toISOString(),
-                // Include all relevant game state sections
-                navigation: JSON.parse(JSON.stringify(this.state.navigation)),
-                shipSystems: JSON.parse(JSON.stringify(this.state.shipSystems)),
-                crew: JSON.parse(JSON.stringify(this.state.crew)),
-                mission: JSON.parse(JSON.stringify(this.state.mission)),
-                environment: JSON.parse(JSON.stringify(this.state.environment)),
-                progress: JSON.parse(JSON.stringify(this.state.progress)),
-                displaySettings: JSON.parse(JSON.stringify(this.state.displaySettings)),
-                contacts: JSON.parse(JSON.stringify(this.state.contacts)),
-                // Include metadata for version tracking
-                gameInfo: {
-                    version: this.state.gameInfo.version,
-                    snapshotCreated: new Date().toISOString()
-                }
-            };
-        } catch (error) {
-            console.error('Failed to create snapshot:', error);
-            return null;
+    // Observer pattern
+    addObserver(callback) {
+        if (typeof callback === 'function') {
+            this.observers.push(callback);
         }
     }
 
-    // Load from a snapshot (SaveManager integration)
-    loadFromSnapshot(snapshot) {
-        if (!snapshot || typeof snapshot !== 'object') {
-            console.error('Invalid snapshot provided to loadFromSnapshot');
-            return false;
+    removeObserver(callback) {
+        this.observers = this.observers.filter(obs => obs !== callback);
+    }
+
+    notifyObservers() {
+        this.observers.forEach(callback => {
+            try {
+                callback(this.getState());
+            } catch (error) {
+                console.error('Observer callback error:', error);
+            }
+        });
+    }
+
+    // Utility methods
+    updateTimestamp() {
+        this.state.gameInfo.lastUpdated = new Date().toISOString();
+    }
+
+    deepMerge(target, source) {
+        const result = { ...target };
+        
+        for (const key in source) {
+            if (source[key] !== null && typeof source[key] === 'object' && !Array.isArray(source[key])) {
+                result[key] = this.deepMerge(target[key] || {}, source[key]);
+            } else {
+                result[key] = source[key];
+            }
         }
         
-        try {
-            // Validate snapshot has required structure
-            const requiredSections = ['navigation', 'shipSystems', 'crew'];
-            for (const section of requiredSections) {
-                if (!snapshot[section]) {
-                    console.warn(`Snapshot missing required section: ${section}`);
-                }
-            }
-            
-            // Create a new state by merging snapshot with current defaults
-            const restoredState = this.getDefaultState();
-            
-            // Merge snapshot data, keeping current gameInfo but updating relevant fields
-            if (snapshot.navigation) restoredState.navigation = snapshot.navigation;
-            if (snapshot.shipSystems) restoredState.shipSystems = snapshot.shipSystems;
-            if (snapshot.crew) restoredState.crew = snapshot.crew;
-            if (snapshot.mission) restoredState.mission = snapshot.mission;
-            if (snapshot.environment) restoredState.environment = snapshot.environment;
-            if (snapshot.progress) restoredState.progress = snapshot.progress;
-            if (snapshot.displaySettings) restoredState.displaySettings = snapshot.displaySettings;
-            if (snapshot.contacts) restoredState.contacts = snapshot.contacts;
-            
-            // Update gameInfo with snapshot metadata but preserve instance info
-            if (snapshot.gameInfo) {
-                restoredState.gameInfo.lastPlayed = new Date().toISOString();
-                restoredState.gameInfo.lastSaved = snapshot.gameInfo.snapshotCreated || snapshot.timestamp;
-            }
-            
-            // Apply the restored state
-            this.state = restoredState;
-            this.updateTimestamp();
-            this.saveToCache();
-            this.notifyObservers();
-            
-            console.log(`State restored from snapshot: ${snapshot.timestamp || 'unknown time'}`);
-            return true;
-        } catch (error) {
-            console.error('Failed to load from snapshot:', error);
-            return false;
-        }
+        return result;
     }
 
-    // Reset to default state
     reset() {
         this.state = this.getDefaultState();
-        this.saveToCache();
         this.notifyObservers();
-        console.log('GameState reset to defaults');
     }
 
-    // Get a summary for debugging
+    // Debug info
     getSummary() {
         const report = this.getStatusReport();
         return {
             version: this.state.gameInfo.version,
-            lastSaved: this.state.gameInfo.lastSaved,
+            lastUpdated: this.state.gameInfo.lastUpdated,
             location: report.location,
             depth: report.depth,
             status: report.status,
-            stationsUnlocked: this.state.progress.stationsUnlocked.length,
             observers: this.observers.length
         };
     }
-
-    // Validation method to ensure state integrity
-    validateState() {
-        try {
-            // Check required top-level properties exist
-            const requiredSections = ['gameInfo', 'navigation', 'shipSystems', 'crew', 'mission', 'environment', 'progress'];
-            
-            for (const section of requiredSections) {
-                if (!this.state[section]) {
-                    console.error(`Missing required state section: ${section}`);
-                    return false;
-                }
-            }
-            
-            // Check navigation structure
-            if (!this.state.navigation.location || !this.state.navigation.location.geometry) {
-                console.error('Invalid navigation structure');
-                return false;
-            }
-            
-            return true;
-        } catch (error) {
-            console.error('State validation error:', error);
-            return false;
-        }
-    }
 }
 
-// Create a singleton instance
+// Singleton instance
 const gameStateInstance = new GameState();
 
-// Export the class and a singleton instance
 export default gameStateInstance;
 export { GameState };

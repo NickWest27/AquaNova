@@ -17,7 +17,7 @@
             "bio": "AREA is a state of the art AI, designed to assist in ship operations and crew management. She is efficient, logical, and always ready to help.",
             "image": "images/crew/AREA.png",
             "dialogueOptions": {
-                "commands": ["Report to my quarters", "Status Report", "Lets take her to sea", "Lets go home"],
+                "commands": ["Report to my quarters", "Status Report", "Let's take her to sea", "Let's go home"],
                 "emergency": ["Sound General Alarm"],
                 "pleasantries": ["How may I assist you Commander?", "What's on your mind?", "All systems are nominal Captain.", "Yes Commander?"]
             }
@@ -25,23 +25,23 @@
         "science": {
             "name": "Dr. Sam Patel",
             "role": "Chief Science and Medical Officer",
-            "bio": "Dr. Patel is a skilled physician with a background in marine biology. She ensure the health and well-being of the crew during long missions.",
+            "bio": "Dr. Patel is a skilled physician with a background in marine biology. She ensures the health and well-being of the crew during long missions.",
             "image": "images/crew/sam_patel.png",
             "dialogueOptions": {
-                "commands": [],
-                "emergency": [],
-                "pleasantries": []
+                "commands": ["Report to Medical Bay", "Run crew diagnostics", "Prepare for dive operations"],
+                "emergency": ["Medical emergency alert", "Quarantine protocols"],
+                "pleasantries": ["How are you feeling today?", "Any medical concerns?", "All crew members are healthy.", "Need anything from Medical?"]
             }
         },
         "sensors": {
-            "name": "",
-            "role": "",
-            "bio" : "",
-            "image": "images/crew/name.png",
+            "name": "Specialist Alex Torres",
+            "role": "Sensor Operations Officer",
+            "bio": "Alex is a former sonar technician with exceptional analytical skills. His ability to interpret sensor data and detect anomalies makes him invaluable for deep-sea exploration.",
+            "image": "images/crew/alex_torres.png",
             "dialogueOptions": {
-                "commands": [],
-                "emergency": [],
-                "pleasantries": []
+                "commands": ["Full sensor sweep", "Passive listening mode", "Deploy sensor buoys"],
+                "emergency": ["Contact bearing unknown", "Sensor malfunction"],
+                "pleasantries": ["Sensors are clear", "What should I be looking for?", "Picking up some interesting readings", "All quiet on the scope"]
             }
         },
         "engineering": {
@@ -50,9 +50,9 @@
             "bio": "Riley is a mechanical genius responsible for maintaining the Aqua Nova's complex systems. His innovative solutions have saved the ship on more than one occasion.",
             "image": "images/crew/riley_chen.png",
             "dialogueOptions": {
-                "commands": [],
-                "emergency": [],
-                "pleasantries": []
+                "commands": ["Engineering status report", "Prepare for dive", "Emergency surface"],
+                "emergency": ["Hull breach!", "Reactor scram!", "All stop!"],
+                "pleasantries": ["Engine room ready", "Systems nominal", "Just finished maintenance", "How's she handling?"]
             }
         },
         "security": {
@@ -61,9 +61,9 @@
             "bio": "Jordan is a former special forces operative who ensures the safety of the crew and ship. His tactical expertise is invaluable during unexpected encounters.",
             "image": "images/crew/jordan_kim.png",
             "dialogueOptions": {
-                "commands": [],
-                "emergency": [],
-                "pleasantries": []
+                "commands": ["Security sweep", "Arm defensive systems", "Prepare boarding party"],
+                "emergency": ["Intruder alert", "Battle stations", "Lockdown procedures"],
+                "pleasantries": ["All secure", "No threats detected", "Standing ready", "Perimeter is clear"]
             }
         },
         "communications": {
@@ -72,25 +72,50 @@
             "bio": "Nicole manages all communications, both internal and external. Her quick thinking and technical skills keep the crew connected to the outside world.",
             "image": "images/crew/nicole_brooks.png",
             "dialogueOptions": {
-                "commands": [],
-                "emergency": [],
-                "pleasantries": []
+                "commands": ["Open channel", "Send message", "Monitor frequencies"],
+                "emergency": ["Mayday signal", "Emergency broadcast", "Comms blackout"],
+                "pleasantries": ["Comms are clear", "Any messages to send?", "Channel is open", "Signal strength is good"]
             }
         }
     },
-
     "contacts": {
         "operationsDirector": {
             "name": "Admiral Elena Vasquez",
-            "company": "O.E.R.A - Oceanic Exploration and Research Alliance.",
+            "company": "O.E.R.A - Oceanic Exploration and Research Alliance",
             "department": "Operations Command",
             "role": "Director of Operations",
             "bio": "Admiral Vasquez oversees all O.E.R.A operations. With decades of experience in maritime exploration, she is a respected leader known for her strategic vision and commitment to scientific discovery.",
             "image": "images/contacts/elena_vasquez.png",
             "dialogueOptions": {
-                "commands": [],
-                "emergency": [],
-                "pleasantries": []
+                "commands": ["Request new orders", "Mission briefing", "Report status"],
+                "emergency": ["Emergency assistance", "Abort mission"],
+                "pleasantries": ["Reporting in", "Mission update", "How can OERA assist?", "Good to hear from you"]
+            }
+        },
+        "harbormaster": {
+            "name": "Commander Sarah Mitchell",
+            "company": "Woods Hole Oceanographic Institution",
+            "department": "Port Operations",
+            "role": "Harbor Master",
+            "bio": "Commander Mitchell oversees all vessel operations at Woods Hole. Her attention to detail and operational expertise ensure safe harbor operations for research vessels.",
+            "image": "images/contacts/sarah_mitchell.png",
+            "dialogueOptions": {
+                "commands": ["Request departure clearance", "Docking procedures", "Port services"],
+                "emergency": ["Emergency docking", "Harbor emergency"],
+                "pleasantries": ["Harbor control here", "Safe travels", "Port is secure", "Clearance granted"]
+            }
+        },
+        "researchCoordinator": {
+            "name": "Dr. Marcus Webb",
+            "company": "O.E.R.A - Oceanic Exploration and Research Alliance",
+            "department": "Scientific Research Division",
+            "role": "Research Coordinator",
+            "bio": "Dr. Webb coordinates research activities and manages data collection protocols. His expertise in marine ecosystems guides many of OERA's exploration priorities.",
+            "image": "images/contacts/marcus_webb.png",
+            "dialogueOptions": {
+                "commands": ["Research objectives", "Data transmission", "Sample analysis"],
+                "emergency": ["Urgent research priority", "Data loss alert"],
+                "pleasantries": ["How's the research going?", "Any interesting findings?", "Data looks good", "Science team standing by"]
             }
         }
     }

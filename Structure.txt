@@ -22,7 +22,6 @@ AquaNova2/
 │   ├── missionManager.js    # Handles loading/triggering missions [Not implemented]
 │   ├── procedural/             [Not implemented]
 │   │   ├── generator.js     # Map generation, seafloor, anomalies
-│   │   ├── creatureSpawner.js
 │   │   └── nameGenerator.js
 │   └── systems/             # Modular ship systems
 │       ├── missionComputer/    # similar to FMC/MCDU of modern airliner

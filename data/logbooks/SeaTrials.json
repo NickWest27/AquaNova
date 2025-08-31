@@ -1,11 +1,15 @@
 {
-  "Metadata": {
-    "logbookId": "LB-SEA-TRIALS-0001",
-    "campaignTitle": "Sea Trials",
-    "version": "1.0.0",
-    "createdAt": "2075-08-16T00:00:00Z",
-    "description": "Initial sea trials and system familiarization mission",
-    "lastPlayed": null
+  "name": "Sea Trials",
+  "description": "Initial sea trials and system familiarization mission",
+  "version": "1.0.0",
+  "created": "2074-08-16T14:30:00.000Z",
+  "lastModified": "2074-08-16T14:30:00.000Z",
+  "schemaVersion": 1,
+  "statistics": {
+    "totalEntries": 1,
+    "totalMissions": 0,
+    "firstEntry": "2074-08-16T14:30:00.000Z",
+    "lastEntry": "2074-08-16T14:30:00.000Z"
   },
   "entries": [
     {
@@ -21,214 +25,270 @@
           "role": "Director of Operations"
         },
         "content": "Welcome onboard Captain. I trust you have settling in well. This is your digital logbook where you can record your mission progress, discoveries, and any important notes. Please ensure to keep it updated regularly. I must apologize for the haste, but it is of utmost importance that you get Aqua Nova out of dry dock and underway for sea trials. You and the crew need to get yourselves familiarized with the ships operation and systems under various conditions.",
-        "tasks": ["Familiarize yourself with the Aqua Nova", "Unpack and look around your personal quarters", "Meet 'AREA' the Executive Officer", "Find yourway to the Bridge"],
+        "tasks": [
+          "Familiarize yourself with the Aqua Nova", 
+          "Unpack and look around your personal quarters", 
+          "Meet 'AREA' the Executive Officer", 
+          "Find your way to the Bridge"
+        ],
         "completedTasks": []
       },
-      "navigation": {
-        "location": {
-          "type": "Feature",
-          "geometry": {
-            "type": "Point",
-            "coordinates": [-70.6709, 41.5223]
-          },
-          "properties": {
-            "name": "Woods Hole Oceanographic Institute",
-            "type": "dock",
-            "description": "Primary research dock and submarine base."
-            }
-        },
-        "depth": 0,
-        "heading": 0,
-        "course": 0,
-        "speed": 0,
-        "destination": null
-      },
-      "shipSystems": {
-        "hull": {
-          "integrity": 100,
-          "dockingBay": "Open",
-          "moonPool": "Closed",
-          "wskrsBay": "Closed"
-        },
-        "power": {
-          "leftReactorHealth": 100,
-          "leftReactorOutput": 10,
-          "leftReactorElectricalDraw": 0.5,
-          "rightReactorHealth": 100,
-          "rightReactorOutput": 10,
-          "rightReactorElectricalDraw": 0.5
-        },
-        "helm": {
-          "leftDrivetrainHealth": 100,
-          "rightDrivetrainHealth": 100,
-          "ballastSystemHealth": 100,
-          "trimSystemHealth": 100,
-          "leftThrust": 0,
-          "rightThrust": 0,
-          "fwdBallast": 0,
-          "aftBallast": 0,
-          "portBallast": 0,
-          "starboardBallast": 0,
-          "rollTrim": 0,
-          "pitchTrim": 0,
-          "bowPlane": 45,
-          "sternPlane": 45,
-          "rudder": 0,
-          "bowThrusters": 0,
-          "sternThrusters": 0
-        },
-        "lifeSupport": {
-          "oxygenTankQuantity": 98,
-          "nitrogenTankQuantity": 100,
-          "waterTankQantity": 50,
-          "nitrogenLevels": 78.08,
-          "oxygenLevels": 20.95,
-          "co2Levels": 0.04,
-          "co2": 400,
-          "co2ScrubbersEfficency": 100,
-          "airTemperature": 22,
-          "humidity": 45
-        },
-        "sensors": {
-          "shipSonar": 100,
-          "wskrs": {
-            "Triton": {
-              "bearing": null,
-              "distance": null,
-              "depth": null,
-              "heading": null,
-              "speed": null,
-              "status": "docked",
-              "linkQuality": 100,
-              "health": 100
+      "gameSnapshot": {
+        "timestamp": "2074-08-16T14:30:00.000Z",
+        "navigation": {
+          "location": {
+            "type": "Feature",
+            "geometry": {
+              "type": "Point",
+              "coordinates": [-70.6709, 41.5223]
             },
-            "Thalassa": {
-              "bearing": null,
-              "distance": null,
-              "depth": null,
-              "heading": null,
-              "speed": null,
-              "status": "docked",
-              "linkQuality": 100,
-              "health": 100
-            },
-            "Oceanus": {
-              "bearing": null,
-              "distance": null,
-              "depth": null,
-              "heading": null,
-              "speed": null,
-              "status": "docked",
-              "linkQuality": 100,
-              "health": 100
+            "properties": {
+              "name": "Woods Hole Oceanographic Institute",
+              "type": "dock",
+              "description": "Primary research dock and submarine base."
             }
           },
-          "radar": 100,
-          "gravimeter": 100,
-          "magnetometer": 100,
-          "passiveAccoustics": 100,
-          "cameras": 100
+          "depth": 0,
+          "heading": 0,
+          "course": 0,
+          "speed": 0,
+          "destination": null
         },
-        "communications": {
-          "commHealth": 100,
-          "satelliteLink": 100,
-          "dataDownload": 15,
-          "dataUpload": 5,
-          "radios": {
-            "VHF1": {
-              "frequency": 156.8,
-              "status": "RX"
+        "shipSystems": {
+          "hull": {
+            "integrity": 100,
+            "dockingBay": "Open",
+            "moonPool": "Closed",
+            "wskrsBay": "Closed"
+          },
+          "power": {
+            "leftReactorHealth": 100,
+            "leftReactorOutput": 10,
+            "leftReactorElectricalDraw": 0.5,
+            "rightReactorHealth": 100,
+            "rightReactorOutput": 10,
+            "rightReactorElectricalDraw": 0.5
+          },
+          "helm": {
+            "leftDrivetrainHealth": 100,
+            "rightDrivetrainHealth": 100,
+            "ballastSystemHealth": 100,
+            "trimSystemHealth": 100,
+            "leftThrust": 0,
+            "rightThrust": 0,
+            "fwdBallast": 0,
+            "aftBallast": 0,
+            "portBallast": 0,
+            "starboardBallast": 0,
+            "rollTrim": 0,
+            "pitchTrim": 0,
+            "bowPlane": 45,
+            "sternPlane": 45,
+            "rudder": 0,
+            "bowThrusters": 0,
+            "sternThrusters": 0
+          },
+          "lifeSupport": {
+            "oxygenTankQuantity": 98,
+            "nitrogenTankQuantity": 100,
+            "waterTankQuantity": 50,
+            "nitrogenLevels": 78.08,
+            "oxygenLevels": 20.95,
+            "co2Levels": 0.04,
+            "co2": 400,
+            "co2ScrubbersEfficiency": 100,
+            "airTemperature": 22,
+            "humidity": 45
+          },
+          "sensors": {
+            "shipSonar": 100,
+            "wskrs": {
+              "Triton": {
+                "bearing": null,
+                "distance": null,
+                "depth": null,
+                "heading": null,
+                "speed": null,
+                "status": "docked",
+                "linkQuality": 100,
+                "health": 100
+              },
+              "Thalassa": {
+                "bearing": null,
+                "distance": null,
+                "depth": null,
+                "heading": null,
+                "speed": null,
+                "status": "docked",
+                "linkQuality": 100,
+                "health": 100
+              },
+              "Oceanus": {
+                "bearing": null,
+                "distance": null,
+                "depth": null,
+                "heading": null,
+                "speed": null,
+                "status": "docked",
+                "linkQuality": 100,
+                "health": 100
+              }
             },
-            "VHF2": {
-              "frequency": 157.1,
-              "status": "OFF"
+            "radar": 100,
+            "gravimeter": 100,
+            "magnetometer": 100,
+            "passiveAcoustics": 100,
+            "cameras": 100
+          },
+          "communications": {
+            "commHealth": 100,
+            "satelliteLink": 100,
+            "dataDownload": 15,
+            "dataUpload": 5,
+            "radios": {
+              "VHF1": {
+                "frequency": 156.8,
+                "status": "RX"
+              },
+              "VHF2": {
+                "frequency": 157.1,
+                "status": "OFF"
+              },
+              "UHF": {
+                "frequency": 400.0,
+                "status": "ON"
+              },
+              "HF": {
+                "frequency": 3.0,
+                "status": "OFF"
+              }
             },
-            "UHF": {
-              "frequency": 400.0,
-              "status": "ON"
+            "quantumCommunication": {
+              "status": "operational",
+              "linkQuality": 100,
+              "linkLoadPercentage": 0
             },
-            "HF": {
-              "frequency": 3.0,
-              "status": "OFF"
+            "communicator": {     
+              "log": []
             }
-          },
-          "quantumCommunication": {
-            "status": "operational",
-            "linkQuality": 100,
-            "linkLoadPercentage": 0
-          },
-          "communicator": {     
-            "log": []
           }
+        },
+        "crew": {
+          "captain": {
+            "experience": 100,
+            "rest": "alert",
+            "status": "active"
+          },
+          "executiveOfficer": {
+            "experience": 100,
+            "rest": "alert",
+            "status": "active"
+          },
+          "medical": {
+            "experience": 85,
+            "rest": "alert",
+            "status": "active"
+          },
+          "engineer": {
+            "experience": 80,
+            "rest": "tired",
+            "status": "active"
+          },
+          "security": {
+            "experience": 75,
+            "rest": "alert",
+            "status": "active"
+          },
+          "communications": {
+            "experience": 70,
+            "rest": "alert",
+            "status": "active"
+          },
+          "science": {
+            "experience": 90,
+            "rest": "alert",
+            "status": "active"
+          },
+          "sensors": {
+            "experience": 60,
+            "rest": "alert",
+            "status": "active"
+          },
+          "totalCrew": 8
+        },
+        "mission": {
+          "currentMission": null,
+          "objectives": [],
+          "discoveries": [],
+          "samples": [],
+          "researchData": []
+        },
+        "environment": {
+          "weather": "calm",
+          "seaState": 1,
+          "visibility": "excellent",
+          "waterTemperature": 20,
+          "airTemperature": 20,
+          "currentDirection": 180,
+          "currentStrength": 0.5
+        },
+        "contacts": {
+          "crew": {
+            "captain": {
+              "communicator": true,
+              "known": true,
+              "contextual": []
+            },
+            "executiveOfficer": {
+              "communicator": true,
+              "known": true,
+              "contextual": []
+            },
+            "science": {
+              "communicator": true,
+              "known": false,
+              "contextual": []
+            },
+            "engineering": {
+              "communicator": true,
+              "known": false,
+              "contextual": []
+            },
+            "security": {
+              "communicator": true,
+              "known": false,
+              "contextual": []
+            },
+            "communications": {
+              "communicator": true,
+              "known": false,
+              "contextual": []
+            },
+            "sensors": {
+              "communicator": true,
+              "known": false,
+              "contextual": []
+            }
+          },
+          "external": {}
+        },
+        "progress": {
+          "stationsUnlocked": ["captains-quarters"],
+          "areasExplored": ["woods_hole"],
+          "achievementsUnlocked": ["first_boot"]
+        },
+        "inventory": {},
+        "displaySettings": {
+          "navDisplayRange": 10
         }
       },
-      "crew": {
-        "captain": {
-          "experience": 100,
-          "rest": "alert",
-          "status": "active"
-        },
-        "executiveOfficer": {
-          "experience": 100,
-          "rest": "alert",
-          "status": "active"
-        },
-        "medical": {
-          "experience": 85,
-          "rest": "alert",
-          "status": "active"
-        },
-        "engineer": {
-          "experience": 80,
-          "rest": "tired",
-          "status": "active"
-        },
-        "security": {
-          "experience": 75,
-          "rest": "alert",
-          "status": "active"
-        },
-        "communications": {
-          "experience": 70,
-          "rest": "alert",
-          "status": "active"
-        },
-        "science": {
-          "experience": 90,
-          "rest": "alert",
-          "status": "active"
-        },
-        "sensors": {
-          "experience": 60,
-          "rest": "alert",
-          "status": "active"
-        },
-        "totalCrew": 8
-      },
-      "mission": {
-        "currentMission": null,
-        "objectives": [],
-        "discoveries": [],
-        "samples": [],
-        "researchData": []
-      },
-      "environment": {
-        "weather": "calm",
-        "seaState": 1,
-        "visibility": "excellent",
-        "waterTemperature": 20,
-        "airTemperature": 20,
-        "currentDirection": 180,
-        "currentStrength": 0.5
+      "metadata": {
+        "importance": "critical",
+        "tags": ["mission", "bootstrap"],
+        "canRevert": false
       }
     }
   ],
-  "statistics": {
-    "totalEntries": 0,
-    "totalMissions": 0,
-    "firstEntry": "2074-08-16T14:30:00.000Z",
-    "lastEntry": "2074-08-16T14:30:00.000Z"
-  },
   "settings": {
     "autoSave": true,
     "autoSaveInterval": 5,

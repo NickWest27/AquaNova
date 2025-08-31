@@ -1,137 +1,230 @@
-// main.js - Bootstrap and splash screen functionality for Aqua Nova
-// Updated version with proper GameState and SaveManager integration
-import { setGlobalScale } from '/utils/scale.js';
+// main.js - Bootstrap and splash screen for Aqua Nova
+// Orchestrates initialization
+// Connects GameState ↔ SaveManager
+// Handles UI bootstrap
+
 import gameStateInstance from '/game/state.js';
-import saveManager from '/game/saveManager.js';
+import saveManagerInstance from '/game/saveManager.js';
 import { initPDAOverlay } from '/utils/pdaOverlay.js';
 import { initCommunicatorOverlay } from '/utils/communicatorOverlay.js';
 
-
 class SplashScreen {
     constructor() {
-        this.gameState = null;
-        this.saveManager = null;
-        this.eventListeners = new Map();
         this.initialized = false;
-        this.currentMenu = 'main';
-        this.bookshelfIndex = 0;
+        this.currentBookIndex = 0;
     }
 
     async initialize() {
-        console.log('SplashScreen: Starting initialization');
+        console.log('Initializing Aqua Nova...');
         this.updateConsole('System initializing...');
 
         this.createBubbles();
         this.startBubbleGeneration();
         
-        // Initialize GameState first
-        this.gameState = gameStateInstance; // no "new"
-        
-        // Initialize SaveManager with GameState
-        await this.initializeSaveManager();
+        // Initialize systems
+        await this.initializeSystems();
         this.bindControls();
-
-        initPDAOverlay();  // Initialize the PDA
-        console.log('PDA initialized');
-        this.updateConsole('PDA initialized')
-
-        initCommunicatorOverlay(); // Initialize the communicator
-        console.log('Communicator initialized');
         
-        console.log('SplashScreen: Initialization complete');
-    }
-
-    async initializeSaveManager() {
-        try {
-            this.updateConsole('Initializing save system...');
-            
-            // Initialize SaveManager singleton with GameState instance
-            this.saveManager = saveManager;
-            const success = await this.saveManager.init(this.gameState);
-            
-            if (!success) {
-                throw new Error('SaveManager initialization failed');
-            }
-
-            this.updateConsole('Searching for previous sessions...');
-            
-            // Analyze the save state and update UI accordingly
-            await this.analyzeSaveState();
-            
-        } catch (error) {
-            console.error('Failed to initialize SaveManager:', error);
-            this.updateConsole('Error: Failed to initialize save system');
-            this.showError('Failed to initialize save system');
-        }
-    }
-
-    async analyzeSaveState() {
-        if (this.saveManager.requiresImport()) {
-            this.updateConsole('No logbooks found - import required');
-            this.updateMenuForNoLogbooks();
-            return;
-        }
-
-        const bookshelf = this.saveManager.getBookshelf();
-        
-        if (bookshelf.length === 0) {
-            this.updateConsole('No logbooks available - import required');
-            this.updateMenuForNoLogbooks();
-            return;
-        }
-
-        const activeLogbook = this.saveManager.getActiveLogbook();
-        this.updateConsole(`${bookshelf.length} logbook(s) found`);
-
-        if (!activeLogbook) {
-            this.updateConsole('No active logbook selected');
-            this.updateMenuForLogbookSelection();
-            return;
-        }
-
-        // We have an active logbook - GameState should already be loaded
-        const entryCount = activeLogbook.entries ? activeLogbook.entries.length : 0;
-        
-        this.updateConsole(`Loaded logbook: "${activeLogbook.name}" (${entryCount} entries)`);
-        
-        // Update display with current game state
-        this.updateDisplayWithGameState();
-        this.updateMenuForActiveSession();
+        // Initialize overlays
+        initPDAOverlay();
+        initCommunicatorOverlay();
         
         this.initialized = true;
-        
-        // Auto-prompt after a moment
-        setTimeout(() => {
-            this.updateConsole('Press ENTER to board or select menu option');
-        }, 1000);
+        this.updateConsole('Press ENTER to board or I to import logbook');
+    }
+
+    async initializeSystems() {
+        try {
+            this.updateConsole('Initializing game systems...');
+            
+            // Initialize SaveManager with GameState
+            const success = await saveManagerInstance.init(gameStateInstance);
+            if (!success) throw new Error('System initialization failed');
+            
+            // Update display with current state
+            this.updateDisplay();
+            
+            const summary = saveManagerInstance.getSummary();
+            this.updateConsole(`Loaded: ${summary.activeLogbook} (${summary.activeEntries} entries)`);
+            
+        } catch (error) {
+            console.error('Initialization error:', error);
+            this.updateConsole('Error: System initialization failed');
+            this.showError('Failed to initialize game systems');
+        }
     }
 
     updateConsole(message) {
         const consoleElement = document.getElementById('console-info');
         if (consoleElement) {
             consoleElement.textContent = message;
-            console.log('Console:', message);
+        }
+        console.log('Console:', message);
+    }
+
+    updateDisplay() {
+        const state = gameStateInstance.getState();
+        this.updateHelmInfo(state);
+        this.updateLocationInfo(state);
+    }
+
+    updateHelmInfo(state) {
+        const helmInfo = document.querySelector('.helm-info');
+        if (helmInfo && state.navigation) {
+            helmInfo.innerHTML = `
+                Speed: ${state.navigation.speed} kts<br>
+                Heading: ${state.navigation.heading}°M<br>
+                Depth: ${state.navigation.depth} M
+            `;
         }
     }
 
-    updateMenuForNoLogbooks() {
-        // Since there's no menu in the current HTML, just update console
-        this.updateConsole('No logbooks found. Import required to begin.');
-    }
-
-    updateMenuForLogbookSelection() {
-        const bookCount = this.saveManager.getBookshelf().length;
-        this.updateConsole(`Found ${bookCount} logbook(s). Load required to continue.`);
-    }
-
-    updateMenuForActiveSession() {
-        const activeLogbook = this.saveManager.getActiveLogbook();
-        if (activeLogbook) {
-            const entryCount = activeLogbook.entries ? activeLogbook.entries.length : 0;
-            this.updateConsole(`Active: "${activeLogbook.name}" - ${entryCount} entries. Press ENTER to board.`);
+    updateLocationInfo(state) {
+        const coordInfo = document.querySelector('.coordinate-info');
+        if (coordInfo && state.navigation?.location) {
+            const location = state.navigation.location;
+            const coords = location.geometry.coordinates;
+            
+            let status = 'OFFLINE';
+            if (state.shipSystems?.hull?.dockingBay === 'Open') {
+                status = 'Docked';
+            } else if (state.navigation.depth > 0) {
+                status = 'Submerged';
+            }
+            
+            coordInfo.innerHTML = `
+                Status: ${status}<br>
+                Location: ${location.properties.name}<br>
+                LAT: ${this.convertToDMS(coords[1], 'lat')}<br>
+                LON: ${this.convertToDMS(coords[0], 'lon')}<br>
+                Course: ${state.navigation.course}°M
+            `;
         }
     }
 
+    convertToDMS(decimal, type) {
+        const absolute = Math.abs(decimal);
+        const degrees = Math.floor(absolute);
+        const minutesFloat = (absolute - degrees) * 60;
+        const minutes = Math.floor(minutesFloat);
+        const seconds = Math.floor((minutesFloat - minutes) * 60);
+        
+        const direction = type === 'lat' 
+            ? (decimal >= 0 ? 'N' : 'S') 
+            : (decimal >= 0 ? 'E' : 'W');
+            
+        return `${direction} ${degrees}°${minutes.toString().padStart(2, '0')}'${seconds.toString().padStart(2, '0')}"`;
+    }
+
+    bindControls() {
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                this.handleBoard();
+            } else if (e.key === 'i' || e.key === 'I') {
+                this.handleImport();
+            } else if (e.key === 'ArrowLeft') {
+                this.switchLogbook(-1);
+            } else if (e.key === 'ArrowRight') {
+                this.switchLogbook(1);
+            }
+        });
+        
+        document.addEventListener('click', () => {
+            if (this.initialized) this.handleBoard();
+        });
+    }
+
+    handleBoard() {
+        if (!this.initialized) {
+            this.updateConsole('System not ready. Please wait...');
+            return;
+        }
+
+        this.updateConsole('... boarding Aqua Nova ...');
+        
+        setTimeout(() => {
+            this.updateConsole('Accessing ship systems...');
+        }, 1000);
+        
+        setTimeout(() => {
+            this.updateConsole('Loading captain\'s quarters...');
+        }, 2000);
+        
+        setTimeout(() => {
+            window.location.href = 'ui/captains-quarters/logbook/logbook.html';
+        }, 3000);
+    }
+
+    async handleImport() {
+        try {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.style.display = 'none';
+            
+            input.onchange = async (e) => {
+                await this.importLogbook(e);
+                document.body.removeChild(input);
+            };
+            
+            document.body.appendChild(input);
+            input.click();
+        } catch (error) {
+            this.showError('Failed to open file dialog');
+        }
+    }
+
+    async importLogbook(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        this.updateConsole('Importing logbook...');
+
+        try {
+            const logbook = await saveManagerInstance.importLogbook(file);
+            this.updateConsole(`Imported: "${logbook.name}"`);
+            
+            // Optionally auto-mount the new logbook
+            const mount = confirm(`Mount "${logbook.name}" as active logbook?`);
+            if (mount) {
+                saveManagerInstance.mountLogbook(logbook.id);
+                this.updateDisplay();
+                this.updateConsole(`Active: ${logbook.name}`);
+            }
+            
+        } catch (error) {
+            console.error('Import error:', error);
+            this.updateConsole('Import failed');
+            this.showError('Failed to import logbook file');
+        }
+    }
+
+    switchLogbook(direction) {
+        const bookshelf = saveManagerInstance.getBookshelf();
+        if (bookshelf.length <= 1) return;
+        
+        this.currentBookIndex = (this.currentBookIndex + direction + bookshelf.length) % bookshelf.length;
+        const book = bookshelf[this.currentBookIndex];
+        
+        this.updateConsole(`Available: ${book.name} (${book.entryCount} entries) - ENTER to mount`);
+        
+        // Mount after a moment if user doesn't keep switching
+        clearTimeout(this.mountTimer);
+        this.mountTimer = setTimeout(() => {
+            if (confirm(`Switch to "${book.name}"?`)) {
+                saveManagerInstance.mountLogbook(book.id);
+                this.updateDisplay();
+                this.updateConsole(`Active: ${book.name} - ENTER to board`);
+            }
+        }, 1000);
+    }
+
+    showError(message) {
+        console.error('ERROR:', message);
+        alert(`Error: ${message}`);
+    }
+
+    // Bubble effects
     createBubble() {
         const bubble = document.createElement('div');
         bubble.className = 'bubble';
@@ -161,244 +254,12 @@ class SplashScreen {
     startBubbleGeneration() {
         setInterval(() => this.createBubble(), 800);
     }
-
-    bindControls() {
-        // Keyboard controls
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                this.handleEnterKey();
-            } else if (e.key === 'i' || e.key === 'I') {
-                this.triggerImport();
-            }
-        });
-        
-        // Click anywhere to board (if ready)
-        document.addEventListener('click', (e) => {
-            this.handleClick(e);
-        });
-    }
-
-    handleEnterKey() {
-        if (this.initialized) {
-            this.startBoarding();
-        } else if (this.saveManager && this.saveManager.requiresImport()) {
-            this.updateConsole('Import required. Press I to import logbook file.');
-        } else {
-            this.updateConsole('System not ready. Please wait...');
-        }
-    }
-
-    handleClick(e) {
-        // Visual feedback for console prompt
-        const prompt = document.getElementById('console-info');
-        if (prompt) {
-            prompt.style.transform = 'scale(1.1)';
-            setTimeout(() => {
-                prompt.style.transform = 'scale(1)';
-            }, 200);
-        }
-
-        // Try to board if initialized
-        if (this.initialized) {
-            this.startBoarding();
-        }
-    }
-
-    async triggerImport() {
-        try {
-            // Create a hidden file input
-            const input = document.createElement('input');
-            input.type = 'file';
-            input.accept = '.json';
-            input.style.display = 'none';
-            
-            input.onchange = async (e) => {
-                await this.handleImport(e);
-                document.body.removeChild(input);
-            };
-            
-            document.body.appendChild(input);
-            input.click();
-        } catch (error) {
-            console.error('Failed to trigger import:', error);
-            this.showError('Failed to open file dialog');
-        }
-    }
-
-    async handleImport(event) {
-        const file = event.target.files[0];
-        if (!file) return;
-
-        this.updateConsole('Importing logbook...');
-
-        try {
-            const logbook = await this.saveManager.importLogbook(file);
-            if (logbook) {
-                this.updateConsole(`Imported: "${logbook.name}"`);
-                
-                // Mount the new logbook and refresh state
-                const bookshelf = this.saveManager.getBookshelf();
-                const newIndex = bookshelf.length - 1;
-                
-                if (this.saveManager.mountLogbook(newIndex)) {
-                    this.updateConsole('Logbook mounted successfully');
-                    
-                    // Refresh the save state analysis
-                    await this.analyzeSaveState();
-                    
-                    this.showMessage('Logbook imported and loaded successfully');
-                } else {
-                    this.updateConsole('Failed to mount imported logbook');
-                    this.showError('Failed to activate imported logbook');
-                }
-            } else {
-                this.updateConsole('Import failed');
-                this.showError('Failed to import logbook');
-            }
-        } catch (error) {
-            console.error('Import error:', error);
-            this.updateConsole('Import error occurred');
-            this.showError('Failed to import logbook file');
-        }
-    }
-
-    // Update display with current game state
-    updateDisplayWithGameState() {
-        if (!this.gameState) return;
-
-        const currentState = this.gameState.getState();
-
-        // Update helm info
-        const helmInfo = document.querySelector('.helm-info');
-        if (helmInfo && currentState.navigation) {
-            const nav = currentState.navigation;
-            helmInfo.innerHTML = `
-                Speed: ${nav.speed || 0} kts<br>
-                Heading: ${nav.heading || 0}°M<br>
-                Depth: ${nav.depth || 0} M
-            `;
-        }
-
-        // Update coordinate info
-        const coordInfo = document.querySelector('.coordinate-info');
-        if (coordInfo && currentState.navigation?.location) {
-            const location = currentState.navigation.location;
-            const coords = location.geometry.coordinates;
-            
-            const lat = this.convertToDMS(coords[1], 'lat');
-            const lon = this.convertToDMS(coords[0], 'lon');
-            
-            let status = 'OFFLINE';
-            if (currentState.shipSystems?.hull?.dockingBay === 'Open') {
-                status = 'Docked';
-            } else if (currentState.navigation.depth > 0) {
-                status = 'Submerged';
-            }
-            
-            coordInfo.innerHTML = `
-                Status: ${status}<br>
-                Location: ${location.properties.name}<br>
-                LAT: ${lat}<br>
-                LON: ${lon}<br>
-                Course: ${currentState.navigation.course || 0}°M
-            `;
-        }
-    }
-
-    convertToDMS(decimal, type) {
-        const absolute = Math.abs(decimal);
-        const degrees = Math.floor(absolute);
-        const minutesFloat = (absolute - degrees) * 60;
-        const minutes = Math.floor(minutesFloat);
-        const seconds = Math.floor((minutesFloat - minutes) * 60);
-        
-        const direction = type === 'lat' 
-            ? (decimal >= 0 ? 'N' : 'S') 
-            : (decimal >= 0 ? 'E' : 'W');
-            
-        return `${direction} ${degrees}°${minutes.toString().padStart(2, '0')}'${seconds.toString().padStart(2, '0')}"`;
-    }
-
-    async startBoarding() {
-        if (!this.initialized) {
-            this.showError('No active campaign to board. Please import a logbook first.');
-            return;
-        }
-
-        if (!this.gameState) {
-            this.showError('No valid game state found. System may be corrupted.');
-            return;
-        }
-
-        const prompt = document.getElementById('console-info');
-        
-        if (prompt) {
-            prompt.textContent = '... boarding Aqua Nova ...';
-            prompt.classList.add('boarding');
-        }
-        
-        this.updateConsole('Initiating boarding sequence...');
-        console.log('Initiating boarding sequence...');
-        
-        // Show boarding progress
-        setTimeout(() => {
-            this.updateConsole('Accessing ship systems...');
-        }, 1000);
-        
-        setTimeout(() => {
-            this.updateConsole('Loading captain\'s quarters...');
-        }, 2000);
-        
-        // Navigate to logbook
-        setTimeout(() => {
-            this.navigateToLogbook();
-        }, 3000);
-    }
-
-    navigateToLogbook() {
-        // GameState and SaveManager are now properly initialized
-        // The logbook page can access them via their global state
-        window.location.href = 'ui/captains-quarters/logbook/logbook.html';
-    }
-
-    showMessage(message) {
-        console.log('INFO:', message);
-        // Simple alert for now - could be replaced with better UI
-        setTimeout(() => alert(message), 100);
-    }
-
-    showError(message) {
-        console.error('ERROR:', message);
-        // Simple alert for now - could be replaced with better UI
-        setTimeout(() => alert(`Error: ${message}`), 100);
-    }
-
-    // Cleanup when page unloads
-    cleanup() {
-        this.eventListeners.forEach((handler, key) => {
-            const [elementId, event] = key.split('-');
-            const element = document.getElementById(elementId);
-            if (element) {
-                element.removeEventListener(event, handler);
-            }
-        });
-        this.eventListeners.clear();
-    }
 }
 
-// Initialize the splash screen when the page loads
-let splashScreen = null;
-
+// Initialize when page loads
 document.addEventListener('DOMContentLoaded', async () => {
-    splashScreen = new SplashScreen();
-    await splashScreen.initialize();
-});
-
-// Cleanup on page unload
-window.addEventListener('beforeunload', () => {
-    if (splashScreen) {
-        splashScreen.cleanup();
-    }
+    const splash = new SplashScreen();
+    await splash.initialize();
 });
 
 export default SplashScreen;
