@@ -428,15 +428,14 @@ body {
 /* Communicator Overlay Styles */
 #communicator-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background: rgba(0, 20, 40, 0.85);
-  backdrop-filter: blur(8px);
-  z-index: 1000;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(var(--scale));
+  width: 360px;
+  height: 640px;
+  z-index: 9999;
+  pointer-events: auto;
   display: none;
-  font-family: 'Orbitron', monospace;
 }
 
 .comm-frame {

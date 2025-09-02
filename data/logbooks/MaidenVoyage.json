@@ -1,53 +1,50 @@
 {
-  "id": "LB-SeaTrials-740816",
-  "name": "Sea Trials",
-  "description": "Initial sea trials and system familiarization mission",
+  "id": "LB-MaidenVoyage-740902",
+  "name": "Maiden Voyage",
+  "description": "With the completion of sea trials, the Aqua Nova embarks on her maiden voyage ",
   "version": "1.0.0",
-  "created": "2074-08-16T14:30:00.000Z",
-  "lastModified": "2074-08-16T14:30:00.000Z",
+  "created": "2074-09-2T14:30:00.000Z",
+  "lastModified": "2074-09-02T14:30:00.000Z",
   "schemaVersion": 1,
   "statistics": {
     "totalEntries": 1,
     "totalMissions": 0,
-    "firstEntry": "2074-08-16T14:30:00.000Z",
-    "lastEntry": "2074-08-16T14:30:00.000Z"
+    "firstEntry": "2074-09-02T14:30:00.000Z",
+    "lastEntry": "2074-09-02T14:30:00.000Z"
   },
   "entries": [
     {
       "logbook": {
         "entryId": "M.LOG-0001",
-        "timestamp": "2074-08-16T14:30:00.000Z",
+        "timestamp": "2074-09-02T14:30:00.000Z",
         "type": "mission_log",
-        "tags": ["OERA", "dry_dock", "mission", "tasks"],
+        "tags": ["OERA", "underway", "mission", "tasks"],
         "author": {
           "company": "O.E.R.A - Oceanic Exploration and Research Alliance.",
           "department": "Operations Command",
           "name": "Admiral Elena Vasquez",
           "role": "Director of Operations"
         },
-        "content": "Welcome onboard Captain. I trust you are settling in well. This is your digital logbook where you can record your mission progress, discoveries, and any important notes. Please ensure to keep it updated regularly. I must apologize for the haste, but it is of utmost importance that you get Aqua Nova out of dry dock and underway for sea trials. You and the crew need to get yourselves familiarized with the ships operation and systems under various conditions.\nOn your desk in your quarters you should find a communicator pin. Put it on and use it to call AREA, your Executive Officer.",
+        "content": "Congratulations again on the successful completiong of the Aqua Novas sea trials! ...",
         "tasks": [
-          "Familiarize yourself with the Aqua Nova", 
-          "Unpack and look around your personal quarters",
-          "Find and put on communicator", 
-          "Meet 'AREA' the Executive Officer", 
-          "Find your way to the Bridge"
+          "Rondevouse with a resupply ship", 
+          "Resupply"
         ],
         "completedTasks": []
       },
       "gameSnapshot": {
-        "timestamp": "2074-08-16T14:30:00.000Z",
+        "timestamp": "2074-09-02T14:30:00.000Z",
         "navigation": {
           "location": {
             "type": "Feature",
             "geometry": {
               "type": "Point",
-              "coordinates": [-70.6709, 41.5223]
+              "coordinates": [-50.5409, 29.2823]
             },
             "properties": {
-              "name": "Woods Hole Oceanographic Institute",
-              "type": "dock",
-              "description": "Primary research dock and submarine base."
+              "name": "Atlantic Ocean",
+              "type": "ocean",
+              "description": "Mid Atlantic ocean."
             }
           },
           "depth": 0,
@@ -275,9 +272,9 @@
           "external": {}
         },
         "progress": {
-          "stationsUnlocked": ["captains-quarters"],
-          "areasExplored": ["woods_hole"],
-          "achievementsUnlocked": ["first_boot"]
+          "stationsUnlocked": ["captains-quarters", "helm"],
+          "areasExplored": ["woods_hole", "Atlantic"],
+          "achievementsUnlocked": ["first_boot", "sea trials"]
         },
         "inventory": {},
         "displaySettings": {

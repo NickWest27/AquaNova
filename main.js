@@ -206,15 +206,20 @@ class SplashScreen {
         this.currentBookIndex = (this.currentBookIndex + direction + bookshelf.length) % bookshelf.length;
         const book = bookshelf[this.currentBookIndex];
         
-        this.updateConsole(`Available: ${book.name} (${book.entryCount} entries) - ENTER to mount`);
+        this.updateConsole(`Available: ${book.name} (${book.entryCount} entries) - Arrow keys to browse`);
         
         // Mount after a moment if user doesn't keep switching
         clearTimeout(this.mountTimer);
         this.mountTimer = setTimeout(() => {
             if (confirm(`Switch to "${book.name}"?`)) {
-                saveManagerInstance.mountLogbook(book.id);
-                this.updateDisplay();
-                this.updateConsole(`Active: ${book.name} - ENTER to board`);
+                try {
+                    saveManagerInstance.mountLogbook(book.id);
+                    this.updateDisplay();
+                    this.updateConsole(`Active: ${book.name} - ENTER to board`);
+                } catch (error) {
+                    console.error('Failed to switch logbook:', error);
+                    this.updateConsole('Failed to switch logbook');
+                }
             }
         }, 1000);
     }

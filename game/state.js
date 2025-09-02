@@ -18,7 +18,8 @@ class GameState {
             gameInfo: {
                 version: "1.0.0",
                 lastUpdated: new Date().toISOString(),
-                playTime: 0
+                playTime: 0,
+                lastLogbookEntryId: null
             },
 
             // Ship navigation
@@ -198,7 +199,7 @@ class GameState {
 
             // Player progress
             progress: {
-                stationsUnlocked: ["captains-quarters"],
+                stationsUnlocked: ["Logbook"],
                 areasExplored: ["woods_hole"],
                 achievementsUnlocked: ["first_boot"]
             },
