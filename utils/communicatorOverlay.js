@@ -414,7 +414,7 @@ function renderCrewSelectPage(contentEl) {
       <div class="comm-page-header">Select Crew Member</div>
       <div class="comm-crew-list">
         ${crewData.map((member, index) => `
-          <button class="comm-crew-button ${index === selectedCrewIndex ? 'selected' : ''}"
+            <button class="btn btn-selectable comm-crew-button ${index === selectedCrewIndex ? 'selected' : ''}" ...>
                   data-crew-id="${member.id}">
             <div class="comm-crew-info">
               <div class="comm-crew-name">${member.name || member.id}</div>
@@ -448,14 +448,14 @@ function renderDialoguePage(contentEl) {
       </div>
       <div class="comm-dialogue-list">
         ${dialogueOptions.map((option, index) => `
-          <button class="comm-dialogue-button ${index === selectedDialogueIndex ? 'selected' : ''}"
+          <button class="btn btn-selectable comm-dialogue-button ${index === selectedDialogueIndex ? 'selected' : ''}" ...>
                   data-dialogue="${option}">
             ${option}
           </button>
         `).join('')}
       </div>
       <div class="comm-controls">
-        <button class="comm-back-button">← Back to Crew List</button>
+        <button class="btn btn-caution comm-back-button">← Back to Crew List</button>
       </div>
     </div>
   `;

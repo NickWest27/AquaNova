@@ -80,7 +80,7 @@ updateCurrentEntryId() {
         <h3>ERROR: No logbooks found</h3>
         <p>No logbooks were found in localStorage or the bootstrap file.</p>
         <p>Please import a valid logbook file to continue.</p>
-        <button id="import-first-logbook" class="control-btn">Import Logbook</button>
+        <button id="import-first-logbook" class="btn btn-selectable">Import Logbook</button>
       </div>
     `;
 
@@ -105,7 +105,7 @@ updateCurrentEntryId() {
         <h3>ERROR: No active logbook loaded</h3>
         <p>Logbooks found but no active logbook is currently loaded.</p>
         <p>Please select a logbook from the bookshelf below.</p>
-        <button id="load-first-logbook" class="control-btn">Browse Logbooks</button>
+        <button id="load-first-logbook" class="btn btn-selectable">Browse Logbooks</button>
       </div>
     `;
 
@@ -237,7 +237,7 @@ updateCurrentEntryId() {
         <span class="timestamp">${formattedDate} ${formattedTime}</span>
         <span class="entry-id">${logEntry.id}</span>
       </div>
-      <button class="control-btn revert-btn">Revert</button>
+      <button class="btn btn-caution revert-btn">Revert</button>
     `;
     
     const revertBtn = section.querySelector('.revert-btn');
@@ -435,11 +435,11 @@ updateCurrentEntryId() {
     if (actionBtn) {
       if (isActive) {
         actionBtn.textContent = 'Export Active';
-        actionBtn.className = 'action-btn export-btn';
+        actionBtn.className = 'btn btn-selectable';
         actionBtn.title = 'Export this logbook to a file';
       } else {
         actionBtn.textContent = 'Load Logbook';
-        actionBtn.className = 'action-btn load-btn warning';
+        actionBtn.className = 'btn btn-warning';
         actionBtn.title = 'Mount this logbook as active (will change current progress)';
       }
       actionBtn.dataset.logbookId = logbook.id;
@@ -603,8 +603,8 @@ updateCurrentEntryId() {
         <span class="timestamp">${currentDate.toLocaleDateString('en-US')} ${currentDate.toLocaleTimeString('en-US', { hour12: false })}</span>
         <span class="entry-id">${entryId}</span>
       </div>
-      <button class="control-btn save-btn">Save Entry</button>
-      <button class="control-btn cancel-btn">Cancel</button>
+      <button class="btn btn-activate save-btn">Save Entry</button>
+      <button class="btn btn-warning cancel-btn">Cancel</button>
     `;
 
     main.appendChild(section);

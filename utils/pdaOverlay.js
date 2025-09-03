@@ -517,18 +517,18 @@ function renderLogbookManagerPage(contentEl) {
         </div>
         
         <div class="pda-logbook-controls" style="display: flex; gap: 8px; justify-content: center; margin: 10px 0;">
-          <button class="pda-logbook-btn pda-action-btn" data-action="prev">◀ Previous</button>
-          <button class="pda-logbook-btn pda-action-btn save-btn" data-action="load" id="pda-logbook-load-btn">Load Campaign</button>
-          <button class="pda-logbook-btn pda-action-btn" data-action="next">Next ▶</button>
+          <button class="btn btn-selectable pda-logbook-btn" data-action="prev">◀ Previous</button>
+          <button class="btn btn-activate pda-logbook-btn" data-action="load" id="pda-logbook-load-btn">Load Campaign</button>
+          <button class="btn btn-selectable pda-logbook-btn" data-action="next">Next ▶</button>
         </div>
         
         <div class="pda-logbook-actions" style="display: flex; gap: 8px; justify-content: center; margin: 10px 0;">
-          <button class="pda-logbook-btn pda-action-btn" data-action="export">Export Logbook</button>
-          <button class="pda-logbook-btn pda-action-btn" data-action="import">Import Logbook</button>
+          <button class="btn btn-selectable pda-logbook-btn" data-action="export">Export Logbook</button>
+          <button class="btn btn-selectable pda-logbook-btn" data-action="import">Import Logbook</button>
         </div>
         
         <div style="text-align: center; margin-top: 20px;">
-          <button class="pda-logbook-btn pda-action-btn revert-btn" data-action="back">◀ Back to Main Menu</button>
+          <button class="btn btn-caution pda-logbook-btn" data-action="back">◀ Back to Main Menu</button>
         </div>
       </div>
     </div>
@@ -626,7 +626,7 @@ function renderScannerPage(contentEl) {
           </div>
         </div>
         <div style="text-align: center; margin-top: 10px;">
-          <button class="pda-action-btn" data-action="refresh-scanner">Refresh Readings</button>
+          <button class="btn btn-selectable" data-action="refresh-scanner">Refresh Readings</button>
         </div>
       </div>
 
@@ -710,7 +710,7 @@ function renderShipStatusPage(contentEl) {
         Ship Status page - Coming Soon
       </div>
       <div style="text-align: center; margin-top: 20px;">
-        <button class="pda-action-btn revert-btn" onclick="currentPDAPage='main'; selectedMenuItem=0; renderCurrentPage();">◀ Back to Main Menu</button>
+        <button class="btn btn-caution" onclick="currentPDAPage='main'; selectedMenuItem=0; renderCurrentPage();">◀ Back to Main Menu</button>
       </div>
     </div>
   `;
@@ -724,7 +724,7 @@ function renderTasksPage(contentEl) {
         Tasks page - Coming Soon
       </div>
       <div style="text-align: center; margin-top: 20px;">
-        <button class="pda-action-btn revert-btn" onclick="currentPDAPage='main'; selectedMenuItem=0; renderCurrentPage();">◀ Back to Main Menu</button>
+        <button class="btn btn-caution" onclick="currentPDAPage='main'; selectedMenuItem=0; renderCurrentPage();">◀ Back to Main Menu</button>
       </div>
     </div>
   `;
@@ -738,7 +738,7 @@ function renderContactsPage(contentEl) {
         Contacts page - Coming Soon
       </div>
       <div style="text-align: center; margin-top: 20px;">
-        <button class="pda-action-btn revert-btn" onclick="currentPDAPage='main'; selectedMenuItem=0; renderCurrentPage();">◀ Back to Main Menu</button>
+        <button class="btn btn-caution" onclick="currentPDAPage='main'; selectedMenuItem=0; renderCurrentPage();">◀ Back to Main Menu</button>
       </div>
     </div>
   `;
@@ -752,7 +752,7 @@ function renderSettingsPage(contentEl) {
         Settings page - Coming Soon
       </div>
       <div style="text-align: center; margin-top: 20px;">
-        <button class="pda-action-btn revert-btn" onclick="currentPDAPage='main'; selectedMenuItem=0; renderCurrentPage();">◀ Back to Main Menu</button>
+        <button class="btn btn-caution" onclick="currentPDAPage='main'; selectedMenuItem=0; renderCurrentPage();">◀ Back to Main Menu</button>
       </div>
     </div>
   `;

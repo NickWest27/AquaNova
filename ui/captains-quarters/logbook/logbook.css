@@ -149,6 +149,8 @@ h2 {
   font-weight: bold;
 }
 
+.logbook-description,
+.logbook-name,
 .logbook-date,
 .logbook-count {
   font-size: calc(0.85em * var(--scale));

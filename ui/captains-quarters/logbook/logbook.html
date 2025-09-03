@@ -18,8 +18,8 @@
         <p>Date: <span id="current-date"></span></p>
       </div>
       <div class="logbook-controls">
-        <button id="exit-logbook" class="control-btn">Exit Logbook</button>
-        <button id="new-entry" class="control-btn">New Entry</button>
+        <button id="exit-logbook" class="btn btn-selectable">Exit Logbook</button>
+        <button id="new-entry" class="btn btn-activate">New Entry</button>
       </div>
     </div>
     
@@ -38,11 +38,11 @@
       </div>
 
       <div id="logbook-controls">
-        <button id="logbook-prev" class="nav-btn" title="Previous Logbook">←</button>
-        <button id="logbook-action" class="action-btn">Export</button>
+        <button id="logbook-prev" class="btn btn-selectable" title="Previous Logbook">←</button>
+        <button id="logbook-action" class="btn btn-selectable">Export</button>
         <input type="file" id="logbook-import" accept=".json" style="display: none;">
-        <button id="logbook-import-btn" class="action-btn" onclick="document.getElementById('logbook-import').click()">Import</button>
-        <button id="logbook-next" class="nav-btn" title="Next Logbook">→</button>
+        <button id="logbook-import-btn" class="btn btn-selectable" onclick="document.getElementById('logbook-import').click()">Import</button>
+        <button id="logbook-next" class="btn btn-selectable" title="Next Logbook">→</button>
       </div>
     </div>
   </header>
@@ -57,7 +57,7 @@
         <span class="timestamp">OFFLINE</span>
         <span class="entry-id">OFFLINE</span>
       </div>
-      <button class="control-btn revert-btn"></button>
+      <button class="btn btn-caution">Revert</button>
     </section>
   </main>
 
