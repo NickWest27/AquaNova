@@ -324,15 +324,16 @@ class GameState {
     }
 
     async initializeContacts() {
+        console.log("[Contacts] --- initializeContacts: START ---");
         const contactsData = await this.loadContactsData();
-        
+
         // Merge crew contacts (preserve dynamic state)
         for (const [id, staticData] of Object.entries(contactsData.crew || {})) {
             const existing = this.getProperty(`contacts.crew.${id}`) || {};
             this.updateProperty(`contacts.crew.${id}`, {
-                // Static from JSON
+                id,
+                type: 'crew',
                 ...staticData,
-                // Dynamic from existing state
                 communicator: existing.communicator ?? true,
                 known: existing.known ?? (id === 'captain' || id === 'executiveOfficer'),
                 contextual: existing.contextual ?? []
@@ -343,12 +344,27 @@ class GameState {
         for (const [id, staticData] of Object.entries(contactsData.contacts || {})) {
             const existing = this.getProperty(`contacts.external.${id}`) || {};
             this.updateProperty(`contacts.external.${id}`, {
+                id,
+                type: 'external',
                 ...staticData,
                 communicator: existing.communicator ?? false,
                 known: existing.known ?? false,
                 contextual: existing.contextual ?? []
             });
         }
+
+        // Log concise summaries of contacts
+        const crewContacts = this.getProperty("contacts.crew") || {};
+        const externalContacts = this.getProperty("contacts.external") || {};
+        console.log("[Contacts] Crew contacts summary:");
+        Object.entries(crewContacts).forEach(([id, contact]) => {
+            console.log(`  [Crew] id: ${id}, name: ${contact.name || "(unnamed)"}, known: ${!!contact.known}`);
+        });
+        console.log("[Contacts] External contacts summary:");
+        Object.entries(externalContacts).forEach(([id, contact]) => {
+            console.log(`  [External] id: ${id}, name: ${contact.name || "(unnamed)"}, known: ${!!contact.known}`);
+        });
+        console.log("[Contacts] --- initializeContacts: END ---");
     }
 
     // Navigation methods
@@ -483,7 +499,12 @@ class GameState {
         const result = { ...target };
         
         for (const key in source) {
-            if (source[key] !== null && typeof source[key] === 'object' && !Array.isArray(source[key])) {
+            if (source[key] === null) {
+                result[key] = null;
+            } else if (Array.isArray(source[key])) {
+                // Handle arrays explicitly
+                result[key] = [...source[key]];
+            } else if (typeof source[key] === 'object') {
                 result[key] = this.deepMerge(target[key] || {}, source[key]);
             } else {
                 result[key] = source[key];

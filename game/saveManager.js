@@ -68,9 +68,15 @@ class SaveManager {
     async bootstrap() {
         try {
             const response = await fetch(BOOTSTRAP_PATH);
-            if (!response.ok) throw new Error('Bootstrap file not found');
+            if (!response.ok) {
+                throw new Error(`Bootstrap file not found: ${response.status}`);
+            }
             
             const logbook = await response.json();
+            // Add JSON validation here
+            if (!this.validateLogbook(logbook)) {
+                throw new Error('Bootstrap logbook failed validation');
+            }
             
             // Ensure the logbook has the correct structure and ID
             if (!logbook.id) {
@@ -89,9 +95,11 @@ class SaveManager {
             console.log(`Bootstrapped from SeaTrials.json with ID: ${logbook.id}`);
             return true;
         } catch (error) {
-            console.error('Bootstrap failed:', error);
-            return false;
-        }
+                console.error('Bootstrap failed:', error);
+                // Provide user-friendly fallback
+                this.showFallbackOptions();
+                return false;
+            }
     }
 
     // Mount logbook to GameState
@@ -102,9 +110,6 @@ class SaveManager {
             return false;
         }
 
-        // Initialize contacts first
-        await this.gameState.initializeContacts();
-        
         // Load the most recent entry's game snapshot if available
         if (logbook.entries && logbook.entries.length > 0) {
             const lastEntry = logbook.entries[logbook.entries.length - 1];
@@ -112,7 +117,26 @@ class SaveManager {
                 this.gameState.loadFromSnapshot(lastEntry.gameSnapshot);
             }
         }
-        
+
+        // Initialize contacts after loading snapshot
+        await this.gameState.initializeContacts();
+
+        // --- DEBUG: Contacts Info ---
+        console.log('--- DEBUG: Contacts Info START ---');
+        const crewContacts = this.gameState.getProperty('contacts.crew');
+        const externalContacts = this.gameState.getProperty('contacts.external');
+        const crewCount = Array.isArray(crewContacts) ? crewContacts.length : 0;
+        const externalCount = Array.isArray(externalContacts) ? externalContacts.length : 0;
+        console.log(`Crew contacts: ${crewCount}`);
+        if (crewCount > 0) {
+            console.log('Crew names:', crewContacts.map(c => c.name).join(', '));
+        }
+        console.log(`External contacts: ${externalCount}`);
+        if (externalCount > 0) {
+            console.log('External names:', externalContacts.map(c => c.name).join(', '));
+        }
+        console.log('--- DEBUG: Contacts Info END ---');
+
         console.log(`Mounted logbook: ${logbook.name} (${logbook.id})`);
         return true;
     }

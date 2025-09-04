@@ -1,6 +1,7 @@
 {
     "crew": {
         "captain": {
+            "id": "captain",
             "name": "Captain Nicholas Westmoreland",
             "role": "Captain",
             "bio": "A seasoned explorer with a knack for leadership and quick decision-making. Nick helped design and build the Aqua Nova.",
@@ -12,6 +13,7 @@
             }
         },
         "executiveOfficer": {
+            "id": "executiveOfficer",
             "name": "Commander AREA",
             "role": "Executive Officer",
             "bio": "AREA is a state of the art AI, designed to assist in ship operations and crew management. She is efficient, logical, and always ready to help.",
@@ -23,6 +25,7 @@
             }
         },
         "science": {
+            "id": "science",
             "name": "Dr. Sam Patel",
             "role": "Chief Science and Medical Officer",
             "bio": "Dr. Patel is a skilled physician with a background in marine biology. She ensures the health and well-being of the crew during long missions.",
@@ -34,6 +37,7 @@
             }
         },
         "sensors": {
+            "id": "sensors",
             "name": "Specialist Alex Torres",
             "role": "Sensor Operations Officer",
             "bio": "Alex is a former sonar technician with exceptional analytical skills. His ability to interpret sensor data and detect anomalies makes him invaluable for deep-sea exploration.",
@@ -45,6 +49,7 @@
             }
         },
         "engineering": {
+            "id": "engineering:",
             "name": "Engineer Riley Chen",
             "role": "Chief Engineer",
             "bio": "Riley is a mechanical genius responsible for maintaining the Aqua Nova's complex systems. His innovative solutions have saved the ship on more than one occasion.",
@@ -56,6 +61,7 @@
             }
         },
         "security": {
+            "id": "security",
             "name": "Lieutenant Jordan Kim",
             "role": "Head of Security",
             "bio": "Jordan is a former special forces operative who ensures the safety of the crew and ship. His tactical expertise is invaluable during unexpected encounters.",
@@ -67,6 +73,7 @@
             }
         },
         "communications": {
+            "id": "communications",
             "name": "Specialist Nicole Brooks",
             "role": "Communications Officer",
             "bio": "Nicole manages all communications, both internal and external. Her quick thinking and technical skills keep the crew connected to the outside world.",
@@ -80,6 +87,7 @@
     },
     "contacts": {
         "operationsDirector": {
+            "id": "operationsDirector",
             "name": "Admiral Elena Vasquez",
             "company": "O.E.R.A - Oceanic Exploration and Research Alliance",
             "department": "Operations Command",
@@ -93,6 +101,7 @@
             }
         },
         "harbormaster": {
+            "id": "harbormaster",
             "name": "Commander Sarah Mitchell",
             "company": "Woods Hole Oceanographic Institution",
             "department": "Port Operations",
@@ -106,6 +115,7 @@
             }
         },
         "researchCoordinator": {
+            "id": "researchCoordinator",
             "name": "Dr. Marcus Webb",
             "company": "O.E.R.A - Oceanic Exploration and Research Alliance",
             "department": "Scientific Research Division",

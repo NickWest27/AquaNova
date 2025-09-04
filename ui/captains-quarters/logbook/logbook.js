@@ -8,8 +8,10 @@ import { setGlobalScale } from '/utils/scale.js';
 import gameStateInstance from '/game/state.js';
 import saveManager from '/game/saveManager.js';
 import { initPDAOverlay } from '/utils/pdaOverlay.js';
+import { initCommunicatorOverlay } from '/utils/communicatorOverlay.js';
 
 initPDAOverlay();
+initCommunicatorOverlay(); 
 
 class LogbookSystem {
   constructor() {
@@ -924,9 +926,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 // Cleanup on page unload
 window.addEventListener('beforeunload', () => {
-  if (logbookSystem) {
-    logbookSystem.destroy();
-  }
+    if (logbookSystem) {
+        logbookSystem.destroy();
+    }
+});
+
+// Cleanup on navigation
+window.addEventListener('pagehide', () => {
+    if (logbookSystem) {
+        logbookSystem.destroy();
+    }
 });
 
 // Export for potential external access
