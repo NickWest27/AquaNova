@@ -1,0 +1,157 @@
+{
+  "id": "meetTheCrew",
+  "name": "First Contact",
+  "description": "Locate your personal communicator and establish contact with AREA, your executive officer.",
+  "category": "tutorial",
+  "priority": "high",
+  "autoStart": true,
+  "prerequisites": [
+    {
+      "type": "property_equals",
+      "property": "contacts.crew.captain.communicator",
+      "value": false
+    }
+  ],
+  "objectives": [
+    {
+      "id": "find_communicator",
+      "description": "Locate your communicator on your desk in your quarters",
+      "required": true,
+      "triggers": [
+        {
+          "type": "location_enter",
+          "location": "quarters"
+        }
+      ],
+      "onComplete": [
+        {
+          "type": "spawn_interactive",
+          "elementId": "communicator_pickup",
+          "location": "quarters_desk"
+        }
+      ]
+    },
+    {
+      "id": "pickup_communicator",
+      "description": "Pick up the communicator from your desk",
+      "required": true,
+      "triggers": [
+        {
+          "type": "item_pickup",
+          "itemId": "communicator"
+        }
+      ],
+      "onComplete": [
+        {
+          "type": "set_property",
+          "property": "contacts.crew.captain.communicator",
+          "value": true
+        },
+        {
+          "type": "add_item",
+          "itemId": "communicator",
+          "quantity": 1
+        },
+        {
+          "type": "show_dialogue",
+          "characterId": "system",
+          "dialogueId": "communicator_tutorial"
+        }
+      ]
+    },
+    {
+      "id": "learn_communicator",
+      "description": "Learn how to use the communicator (Press C to activate)",
+      "required": true,
+      "triggers": [
+        {
+          "type": "property_change",
+          "property": "tutorial.communicator_opened",
+          "value": true
+        }
+      ],
+      "onComplete": [
+        {
+          "type": "unlock_crew",
+          "crewId": "executiveOfficer"
+        }
+      ]
+    },
+    {
+      "id": "contact_area",
+      "description": "Use the communicator to contact AREA command",
+      "required": true,
+      "triggers": [
+        {
+          "type": "dialogue_complete",
+          "characterId": "area_command",
+          "dialogueId": "first_contact"
+        }
+      ],
+      "onComplete": [
+        {
+          "type": "add_contextual",
+          "characterId": "area_command",
+          "context": "first_meeting"
+        },
+        {
+          "type": "unlock_crew",
+          "crewId": "science"
+        },
+        {
+          "type": "unlock_crew",
+          "crewId": "engineering"
+        }
+      ]
+    }
+  ],
+  "onStart": [
+    {
+      "type": "show_dialogue",
+      "characterId": "system",
+      "dialogueId": "mission_start_tutorial"
+    }
+  ],
+  "onComplete": [
+    {
+      "type": "unlock_station",
+      "station": "Communications"
+    },
+    {
+      "type": "set_property",
+      "property": "progress.tutorial_phase",
+      "value": "communications_complete"
+    }
+  ],
+  "followUpMissions": [
+    "tutorial_meet_crew",
+    "tutorial_ship_systems"
+  ],
+  "rewards": {
+    "experience": 100,
+    "items": [
+      {
+        "id": "communicator_manual",
+        "quantity": 1
+      }
+    ]
+  },
+  "hints": [
+    {
+      "condition": {
+        "type": "objective_active_for",
+        "objectiveId": "find_communicator",
+        "seconds": 30
+      },
+      "message": "Check your personal quarters - the communicator should be somewhere on your desk."
+    },
+    {
+      "condition": {
+        "type": "objective_active_for",
+        "objectiveId": "learn_communicator",
+        "seconds": 45
+      },
+      "message": "Press the C key to activate your communicator once you've picked it up."
+    }
+  ]
+}

@@ -898,6 +898,74 @@ body {
   font-weight: bold;
 }
 
+/* Tasks page */
+.pda-tasks-content {
+  display: flex;
+  flex-direction: column;
+  gap: calc(15px * var(--scale));
+  padding: calc(10px * var(--scale));
+}
+
+.pda-tasks-list {
+  display: flex;
+  flex-direction: column;
+  gap: calc(8px * var(--scale));
+}
+
+.pda-task-item {
+  display: flex;
+  align-items: center;
+  gap: calc(10px * var(--scale));
+  padding: calc(10px * var(--scale));
+  border-radius: calc(4px * var(--scale));
+  transition: all 0.3s ease;
+  border-left: calc(3px * var(--scale)) solid transparent;
+}
+
+.pda-task-item.active {
+  background-color: rgba(100, 255, 218, 0.1);
+  border-left-color: var(--primary-cyan);
+}
+
+.pda-task-item.completed {
+  background-color: rgba(0, 255, 0, 0.05);
+  border-left-color: var(--success-green);
+  opacity: 0.8;
+}
+
+.pda-task-status {
+  color: var(--primary-cyan);
+  font-weight: bold;
+  min-width: calc(20px * var(--scale));
+  font-size: calc(1.1rem * var(--scale));
+}
+
+.pda-task-item.completed .pda-task-status {
+  color: var(--success-green);
+}
+
+.pda-task-text {
+  color: var(--text-gray);
+  flex: 1;
+  font-size: calc(0.9rem * var(--scale));
+}
+
+.pda-task-item.completed .pda-task-text {
+  text-decoration: line-through;
+  opacity: 0.7;
+}
+
+.pda-task-priority {
+  color: var(--accent-orange);
+  font-size: calc(0.7rem * var(--scale));
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  background-color: rgba(255, 165, 0, 0.2);
+  padding: calc(2px * var(--scale)) calc(6px * var(--scale));
+  border-radius: calc(3px * var(--scale));
+  border: calc(1px * var(--scale)) solid var(--accent-orange);
+}
+
 /* Logbook Manager */
 .pda-logbook-browser {
   display: flex;

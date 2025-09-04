@@ -3,6 +3,7 @@
 // Redesigned for thought-like, personal interactions
 
 import gameStateInstance from '/game/state.js';
+import missionManager from '/game/systems/missionManager.js';
 
 let communicatorVisible = false;
 let communicatorElement = null;
@@ -310,6 +311,21 @@ function sendThought(message) {
   } catch (error) {
     console.error('Failed to log communication:', error);
   }
+    if (selectedCrewMember.id === 'executiveOfficer') {
+    // Check if this is their first conversation
+    const previousMessages = history.filter(msg => msg.type === 'outgoing').length;
+    
+    if (previousMessages === 1) { // First message to AREA
+        const event = new CustomEvent('dialogue-complete', {
+            detail: { 
+                characterId: 'executiveOfficer',
+                dialogueId: 'first_contact'
+            }
+        });
+        document.dispatchEvent(event);
+        console.log('First contact with AREA completed - mission event fired');
+    }
+}
   
   // Generate response with natural delay
   const delay = Math.random() < 0.3 ? 800 : 2000 + Math.random() * 3000;
@@ -328,11 +344,11 @@ function generatePersonalizedResponse(originalMessage) {
   const messageCount = history.filter(msg => msg.type === 'outgoing').length;
   
   let response = '';
-  
+
   // Personality-based responses
   const responses = {
     executiveOfficer: {
-      greetings: ["Good to connect with you, Captain.", "Always here when you need me.", "What's on your mind?"],
+      greetings: ["Good to connect with you, Captain.", "Always here when you need me.", "Captain, I've been waiting for your contact.", "Glad you found your communicator, sir."],
       status: ["Everything's running smoothly up here.", "The crew's doing well.", "All systems nominal."],
       personal: ["I appreciate you checking in.", "It's good to have moments like this.", "Thanks for reaching out."],
       casual: ["Of course, Captain.", "I'll take care of it.", "Understood."]
@@ -371,18 +387,18 @@ function generatePersonalizedResponse(originalMessage) {
   
   const memberResponses = responses[selectedCrewMember.id] || responses.casual;
   
-  // Choose response type based on message content
-  const msg = originalMessage.toLowerCase();
-  
-  if (msg.includes('hello') || msg.includes('connect') || messageCount === 0) {
-    response = memberResponses.greetings[Math.floor(Math.random() * memberResponses.greetings.length)];
-  } else if (msg.includes('status') || msg.includes('how are') || msg.includes('doing')) {
-    response = memberResponses.status[Math.floor(Math.random() * memberResponses.status.length)];
-  } else if (msg.includes('personal') || msg.includes('you personally') || msg.includes('settling')) {
-    response = memberResponses.personal[Math.floor(Math.random() * memberResponses.personal.length)];
-  } else {
-    response = memberResponses.casual[Math.floor(Math.random() * memberResponses.casual.length)];
-  }
+    // Choose response type based on message content
+    const msg = originalMessage.toLowerCase();
+
+    if (msg.includes('hello') || msg.includes('connect') || messageCount === 1) {
+        response = memberResponses.greetings[Math.floor(Math.random() * memberResponses.greetings.length)];
+    } else if (msg.includes('status') || msg.includes('how are') || msg.includes('doing')) {
+        response = memberResponses.status[Math.floor(Math.random() * memberResponses.status.length)];
+    } else if (msg.includes('personal') || msg.includes('you personally') || msg.includes('settling')) {
+        response = memberResponses.personal[Math.floor(Math.random() * memberResponses.personal.length)];
+    } else {
+        response = memberResponses.casual[Math.floor(Math.random() * memberResponses.casual.length)];
+    }
   
   // Add to conversation history
   const updatedHistory = conversationHistory.get(selectedCrewMember.id) || [];

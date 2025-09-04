@@ -1,9 +1,18 @@
 // Handles the Captains quarters system for Aqua Nova
 import { setGlobalScale } from '/utils/scale.js';
+import missionManager from '/game/systems/missionManager.js';
 
 const eventListeners = new Map();
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    console.log('Quarters loading...');
+    
+    // Initialize mission system if not already done
+    if (!missionManager.initialized) {
+        console.log('Initializing mission system...');
+        await missionManager.init();
+    }
+    
     const logbookButton = document.getElementById('logbook-button');
     const exitButton = document.getElementById('exit-button');
 
@@ -13,12 +22,30 @@ document.addEventListener('DOMContentLoaded', () => {
             window.location.href = './logbook/logbook.html';
         });
     }
+    
     if (exitButton) {
         addEventListenerWithCleanup(exitButton, 'click', () => {
-            console.log('Exiting quarter, returning to bridge...');
+            console.log('Exiting quarters, returning to bridge...');
             window.location.href = '../bridge/bridge.html';
         });
     }
+    // Fire location enter event for missions
+    console.log('Firing location-enter event for quarters');
+    const locationEvent = new CustomEvent('location-enter', {
+        detail: { location: 'quarters' }
+    });
+    document.dispatchEvent(locationEvent);
+    
+    // Add keyboard handler for communicator tutorial
+    addEventListenerWithCleanup(document, 'keydown', (e) => {
+        if (e.key.toLowerCase() === 'c') {
+            // Set tutorial property when C is pressed
+            gameStateInstance.updateProperty('tutorial.communicator_opened', true);
+            console.log('Communicator tutorial property set');
+        }
+    });
+    
+    console.log('Quarters initialization complete');
 });
 
 // Event listener management to prevent memory leaks

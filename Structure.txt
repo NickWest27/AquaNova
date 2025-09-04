@@ -13,6 +13,9 @@ AquaNova2/
 │   ├── logbooks/
 │   │   ├── MaidenVoyage.json # A placeholder second campaign used for testing bookshelf functionality.            
 │   │   └── SeaTrials.json   # First campaign logbook, Sea Trials of the Aqua Nova
+│   ├── missions/
+│   │   ├── index.json      # Lists all mission files 
+│   │   └── meetTheCrew.json # First mission, meet the crew and explore the ship
 │   ├── contacts.json        # Character profiles, ranks, bios, contacts, etc.
 │   ├── missions.json        # Mission storage, communications, locations, etc. [not implemented yet]
 │   ├── locations.json       # Stores known geographic points of interest such as docks, reefs, and trenches.
@@ -20,7 +23,6 @@ AquaNova2/
 │
 ├── game/                    # Core game logic and state
 │   ├── state.js             # Tracks ship status, location, player state, contacts, etc.
-│   ├── missionManager.js    # Handles loading/triggering missions [Not implemented]
 │   ├── procedural/             [Not implemented]
 │   │   ├── generator.js     # Map generation, seafloor, anomalies
 │   │   └── nameGenerator.js
@@ -30,6 +32,7 @@ AquaNova2/
 │       ├── navComputer/        # Navigation display
 │       │   ├── navComputer.js     # Handles calculations on how to draw navigation display (canvas with SVG overlay)
 │       │   └── navComputer.css    # Styling of navigation display
+│       ├── missionManager.js   # Main mission engine
 │       ├── propulsion.js
 │       ├── lifeSupport.js
 │       ├── power.js
@@ -80,5 +83,5 @@ AquaNova2/
     ├── scale.js            # Calculates and sets a global scale for UI
     ├── pdaOverlay.js       # Generates the global PDA for menu options and displaying crew bios, contacts, tasks...
     ├── communicatorOverlay.js   # Communicator logic for crew dialogue
-    └── formatters.js
+    └── interactiveElements.js  # Interactive element spawner
     

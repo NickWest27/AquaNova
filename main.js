@@ -7,6 +7,8 @@ import gameStateInstance from '/game/state.js';
 import saveManagerInstance from '/game/saveManager.js';
 import { initPDAOverlay } from '/utils/pdaOverlay.js';
 import { initCommunicatorOverlay } from '/utils/communicatorOverlay.js';
+import missionManager from '/game/systems/missionManager.js';
+import interactiveElementManager from '/utils/interactiveElements.js';
 
 class SplashScreen {
     constructor() {
@@ -28,6 +30,13 @@ class SplashScreen {
         // Initialize overlays
         initPDAOverlay();
         initCommunicatorOverlay();
+
+        // Initialize mission system
+        await missionManager.init();
+        console.log('Mission system initialized');
+        
+        // Interactive elements are auto-initialized
+        console.log('Interactive elements ready');
         
         this.initialized = true;
         this.updateConsole('Press ENTER to board or I to import logbook');

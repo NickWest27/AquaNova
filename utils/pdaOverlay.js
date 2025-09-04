@@ -388,6 +388,9 @@ function renderCurrentPage() {
     case 'scanner':
       renderScannerPage(contentEl);
       break;
+    case 'tasks':
+      renderTasksPage(contentEl);
+      break;
     case 'logbook-manager':
       renderLogbookManagerPage(contentEl);
       break;
@@ -401,6 +404,7 @@ function renderMainPage(contentEl) {
     { id: 'ship-status', text: 'Ship Status' },
     { id: 'contacts', text: 'Contacts' },
     { id: 'scanner', text: 'Scanner' },
+    { id: 'tasks', text: 'Tasks' },
     { id: 'logbook-manager', text: 'Logbook Manager' }
   ];
 
@@ -577,6 +581,42 @@ function renderScannerPage(contentEl) {
         <button class="pda-action-btn" data-action="refresh-scanner">Refresh Readings</button>
       </div>
       <button class="pda-back-btn">← Back to Main Menu</button>
+    </div>
+  `;
+}
+
+// Tasks page rendering
+function renderTasksPage(contentEl) {
+  const currentObjectives = missionManager?.getCurrentObjectives?.() || [];
+  
+  // Group objectives by status
+  const activeTasks = currentObjectives.filter(obj => obj.status === 'active');
+  const completedTasks = currentObjectives.filter(obj => obj.status === 'completed');
+  
+  contentEl.innerHTML = `
+    <div class="pda-page">
+      <div class="pda-page-header">Current Tasks</div>
+      <div class="pda-tasks-content">
+        ${activeTasks.length > 0 ? renderTaskList('Active Tasks', activeTasks, 'active') : ''}
+        ${completedTasks.length > 0 ? renderTaskList('Completed Tasks', completedTasks, 'completed') : ''}
+        ${activeTasks.length === 0 && completedTasks.length === 0 ? '<div class="pda-placeholder">No current tasks</div>' : ''}
+      </div>
+      <button class="pda-back-btn">← Back to Main Menu</button>
+    </div>
+  `;
+}
+
+function renderTaskList(title, tasks, status) {
+  return `
+    <div class="pda-section-title">${title}</div>
+    <div class="pda-tasks-list">
+      ${tasks.map(task => `
+        <div class="pda-task-item ${status}">
+          <span class="pda-task-status">${status === 'completed' ? '✓' : '○'}</span>
+          <span class="pda-task-text">${task.description}</span>
+          ${task.required ? '<span class="pda-task-priority">PRIORITY</span>' : ''}
+        </div>
+      `).join('')}
     </div>
   `;
 }
