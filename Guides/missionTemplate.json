@@ -1,0 +1,99 @@
+{
+    "id": "CHANGE_ME_unique_mission_id",
+    "name": "CHANGE_ME Mission Name",
+    "description": "CHANGE_ME - Brief description of what this mission accomplishes",
+    "category": "tutorial",
+    "priority": "medium",
+    "autoStart": false,
+    
+    "prerequisites": [
+        {
+            "type": "property_equals",
+            "property": "CHANGE_ME.property.path",
+            "value": "CHANGE_ME_expected_value"
+        }
+    ],
+    
+    "objectives": [
+        {
+            "id": "CHANGE_ME_objective_1",
+            "description": "CHANGE_ME - Task description shown in PDA Tasks",
+            "required": true,
+            "triggers": [
+                {
+                    "type": "CHANGE_ME_trigger_type",
+                    "CHANGE_ME_trigger_property": "CHANGE_ME_trigger_value"
+                }
+            ],
+            "onComplete": [
+                {
+                    "type": "CHANGE_ME_action_type",
+                    "CHANGE_ME_action_property": "CHANGE_ME_action_value"
+                }
+            ]
+        },
+        {
+            "id": "CHANGE_ME_objective_2",
+            "description": "CHANGE_ME - Second task description",
+            "required": true,
+            "triggers": [
+                {
+                    "type": "dialogue_complete",
+                    "characterId": "CHANGE_ME_character_id",
+                    "dialogueId": "CHANGE_ME_dialogue_id"
+                }
+            ],
+            "onComplete": [
+                {
+                    "type": "unlock_crew",
+                    "crewId": "CHANGE_ME_crew_member_id"
+                }
+            ]
+        }
+    ],
+    
+    "onStart": [
+        {
+            "type": "show_dialogue",
+            "characterId": "system",
+            "dialogueId": "CHANGE_ME_start_dialogue"
+        }
+    ],
+    
+    "onComplete": [
+        {
+            "type": "set_property",
+            "property": "CHANGE_ME.completion.property",
+            "value": true
+        },
+        {
+            "type": "unlock_station",
+            "station": "CHANGE_ME_Station_Name"
+        }
+    ],
+    
+    "followUpMissions": [
+        "CHANGE_ME_next_mission_id"
+    ],
+    
+    "rewards": {
+        "experience": 100,
+        "items": [
+            {
+                "id": "CHANGE_ME_reward_item",
+                "quantity": 1
+            }
+        ]
+    },
+    
+    "hints": [
+        {
+            "condition": {
+                "type": "objective_active_for",
+                "objectiveId": "CHANGE_ME_objective_1",
+                "seconds": 30
+            },
+            "message": "CHANGE_ME - Helpful hint for stuck players"
+        }
+    ]
+}
