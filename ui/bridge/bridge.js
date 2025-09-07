@@ -1,10 +1,14 @@
 // Enhanced Bridge System for Aqua Nova
-import { setGlobalScale } from '/utils/scale.js';
-import { drawNavigationDisplay, animateNavigationDisplay } from "../../game/systems/navComputer/navComputer.js";
-import gameStateInstance from "../../game/state.js";
+import displayManager from '/utils/displayManager.js';
+import gameStateInstance from '/game/state.js';
+import { initPDAOverlay } from '/utils/pdaOverlay.js';
+import { initCommunicatorOverlay } from '/utils/communicatorOverlay.js';
+import KeyboardUnit from '/utils/keyboardUnit/keyboardUnit.js';
+import { drawNavigationDisplay } from '/game/systems/navComputer/navComputer.js';
 
 const gameState = gameStateInstance;
 let animationId;
+let keyboardUnit; // Add this variable
 const canvas = document.getElementById("navigation-canvas");
 const svg = document.getElementById("navigation-overlay");
 
@@ -15,6 +19,13 @@ const displayTypeSelect = document.getElementById("display-type-select");
 
 function initializeBridge() {
   
+  // Initialize overlays
+  initPDAOverlay();
+  initCommunicatorOverlay();
+  
+  // Initialize Keyboard Unit
+  initializeKeyboardUnit();
+  
   // Set up event listeners
   setupEventListeners();
   
@@ -23,6 +34,74 @@ function initializeBridge() {
   
   // Start animation loop for radar sweep
   startAnimation();
+}
+
+function initializeKeyboardUnit() {
+  console.log('initializeKeyboardUnit called');
+  
+  // Check if container exists
+  const container = document.getElementById('keyboard-unit-container');
+  console.log('Keyboard container found:', container);
+  
+  if (!container) {
+    console.error('Keyboard Unit container not found!');
+    return;
+  }
+  
+  console.log('Container innerHTML before:', container.innerHTML);
+  
+  try {
+    console.log('Creating KeyboardUnit...');
+    keyboardUnit = new KeyboardUnit('keyboard-unit-container');
+    console.log('KeyboardUnit created successfully:', keyboardUnit);
+    
+    // Listen for keyboard unit data
+    document.addEventListener('keyboard-data-sent', (e) => {
+      console.log('Keyboard data event received:', e.detail);
+      handleKeyboardData(e.detail);
+    });
+    
+    console.log('Keyboard Unit initialized successfully');
+    
+    // Check container content after initialization
+    setTimeout(() => {
+      console.log('Container innerHTML after:', container.innerHTML);
+    }, 100);
+    
+  } catch (error) {
+    console.error('Failed to initialize Keyboard Unit:', error);
+    console.error('Error stack:', error.stack);
+  }
+}
+
+function handleKeyboardInput(data) {
+  const { prompt, input, context } = data;
+  
+  switch (context) {
+    case 'latitude':
+      // Handle latitude input
+      console.log(`Latitude entered: ${input}`);
+      // You could update game state or navigation here
+      break;
+    case 'longitude':
+      // Handle longitude input
+      console.log(`Longitude entered: ${input}`);
+      break;
+    case 'waypoint':
+      // Handle waypoint name input
+      console.log(`Waypoint name entered: ${input}`);
+      break;
+    case 'speed':
+      // Handle speed input
+      console.log(`Speed entered: ${input}`);
+      // Update game state
+      if (!isNaN(parseFloat(input))) {
+        gameState.updateProperty("navigation.speed", parseFloat(input));
+      }
+      break;
+    default:
+      console.log(`Unknown input context: ${context}, data: ${input}`);
+  }
 }
 
 function setupEventListeners() {
@@ -169,6 +248,10 @@ document.addEventListener('visibilitychange', () => {
 // Exit button
 window.exitToQuarters = function exitToQuarters() {
   stopAnimation();
+  // Clean up keyboard unit
+  if (keyboardUnit) {
+    keyboardUnit.destroy();
+  }
   window.location.href = "../captains-quarters/quarters.html";
 };
 
@@ -184,3 +267,40 @@ window.switchToHelmDisplay = function() {
 window.switchToCenterDisplay = function() {
   window.location.href = window.location.pathname + "?display=centerDisplay";
 };
+
+// Test functions for the keyboard unit
+window.testLatInput = function() {
+  if (keyboardUnit) {
+    keyboardUnit.requestInput('LAT>', 'latitude', 15);
+  }
+};
+
+window.testLonInput = function() {
+  if (keyboardUnit) {
+    keyboardUnit.requestInput('LON>', 'longitude', 15);
+  }
+};
+
+window.testWptInput = function() {
+  if (keyboardUnit) {
+    keyboardUnit.requestInput('WPT>', 'waypoint', 8);
+  }
+};
+
+window.testSpdInput = function() {
+  if (keyboardUnit) {
+    keyboardUnit.requestInput('SPD>', 'speed', 6);
+  }
+};
+
+// Initialize when DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+  initializeBridge();
+});
+
+// Cleanup on page unload
+window.addEventListener('beforeunload', () => {
+  if (keyboardUnit) {
+    keyboardUnit.destroy();
+  }
+});

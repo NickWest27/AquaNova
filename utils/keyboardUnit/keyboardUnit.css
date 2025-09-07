@@ -1,0 +1,378 @@
+/* utils/keyboardUnit/keyboardUnit.css */
+/* Apache-style Keyboard Unit styling - extends global design system */
+
+.keyboard-unit {
+  background-color: var(--primary-blue);
+  border: calc(2px * var(--scale)) solid var(--primary-cyan);
+  border-radius: calc(8px * var(--scale));
+  box-shadow: 0 0 calc(15px * var(--scale)) rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(8px);
+
+  /* width: 100%;  Fill the container from bridge.css ( This caused issues) */
+  /* height: 100%; This was causing issues */
+  padding: 0;     /* Remove padding so it doesn’t shrink */
+  box-sizing: border-box; /* Ensure borders are included in size */
+}
+
+/* Scratchpad Section */
+.scratchpad-section {
+  margin-bottom: calc(15px * var(--scale));
+}
+
+.scratchpad-label {
+  color: var(--text-gray);
+  font-size: calc(10px * var(--scale));
+  font-weight: bold;
+  text-transform: uppercase;
+  margin-bottom: calc(5px * var(--scale));
+  text-align: center;
+  letter-spacing: calc(1px * var(--scale));
+}
+
+.scratchpad-display {
+  background-color: #000;
+  border: calc(2px * var(--scale)) solid var(--primary-cyan);
+  border-radius: calc(4px * var(--scale));
+  padding: calc(10px * var(--scale));
+  min-height: calc(32px * var(--scale));
+  font-size: calc(14px * var(--scale));
+  font-family: 'Courier New', monospace;
+  display: flex;
+  align-items: center;
+  letter-spacing: calc(1px * var(--scale));
+  position: relative;
+  overflow: hidden;
+}
+
+.prompt-text {
+  color: var(--primary-cyan);
+  font-weight: bold;
+}
+
+.input-text {
+  color: var(--text-white);
+  margin-left: calc(2px * var(--scale));
+}
+
+.cursor {
+  color: var(--primary-cyan);
+  font-weight: bold;
+  animation: cursorBlink 1s infinite;
+}
+
+@keyframes cursorBlink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+/* Error flash animation */
+.scratchpad-display.error-flash {
+  animation: errorFlash 0.5s ease-out;
+}
+
+@keyframes errorFlash {
+  0%, 100% { border-color: var(--primary-cyan); }
+  50% { border-color: var(--error-red); background-color: rgba(255, 68, 68, 0.1); }
+}
+
+/* Keyboard Section */
+.keyboard-section {
+  display: flex;
+  flex-direction: column;
+  gap: calc(3px * var(--scale));
+  margin-bottom: calc(15px * var(--scale));
+}
+
+.key-row {
+  display: flex;
+  gap: calc(3px * var(--scale));
+  justify-content: center;
+}
+
+.key-row.special-row {
+  margin-top: calc(5px * var(--scale));
+}
+
+/* Base key styling - extends your existing button system */
+.kbd-key {
+  border: calc(1px * var(--scale)) solid;
+  border-radius: calc(3px * var(--scale));
+  font-family: 'Courier New', monospace;
+  font-size: calc(11px * var(--scale));
+  font-weight: bold;
+  padding: calc(6px * var(--scale)) calc(8px * var(--scale));
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: calc(30px * var(--scale));
+  min-height: calc(30px * var(--scale));
+  text-align: center;
+  user-select: none;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Key press animation */
+.kbd-key.key-pressed {
+  transform: scale(0.95);
+  box-shadow: inset 0 calc(2px * var(--scale)) calc(4px * var(--scale)) rgba(0, 0, 0, 0.3);
+}
+
+.kbd-key.key-pressed::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.2);
+  animation: keyPressFlash 0.15s ease-out;
+}
+
+@keyframes keyPressFlash {
+  0% { opacity: 0; }
+  50% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* Alpha Keys - uses your existing color scheme */
+.kbd-key.alpha-key {
+  background-color: rgba(100, 255, 218, 0.05);
+  border-color: var(--primary-cyan);
+  color: var(--primary-cyan);
+}
+
+.kbd-key.alpha-key:hover {
+  background-color: rgba(100, 255, 218, 0.15);
+  box-shadow: 0 0 calc(8px * var(--scale)) var(--shadow-glow);
+}
+
+.kbd-key.alpha-key:active {
+  background-color: var(--primary-cyan);
+  color: var(--primary-blue);
+}
+
+/* Numeric Keys */
+.kbd-key.num-key {
+  background-color: rgba(255, 255, 170, 0.05);
+  border-color: #aaaa44;
+  color: #ffffaa;
+}
+
+.kbd-key.num-key:hover {
+  background-color: rgba(255, 255, 170, 0.15);
+  box-shadow: 0 0 calc(8px * var(--scale)) rgba(255, 255, 170, 0.3);
+}
+
+.kbd-key.num-key:active {
+  background-color: #ffffaa;
+  color: var(--primary-blue);
+}
+
+/* Function Keys */
+.kbd-key.function-key {
+  background-color: rgba(255, 165, 0, 0.05);
+  border-color: var(--accent-orange);
+  color: var(--accent-orange);
+}
+
+.kbd-key.function-key:hover {
+  background-color: rgba(255, 165, 0, 0.15);
+  box-shadow: 0 0 calc(8px * var(--scale)) rgba(255, 165, 0, 0.3);
+}
+
+.kbd-key.function-key:active {
+  background-color: var(--accent-orange);
+  color: var(--primary-blue);
+}
+
+/* Special Keys */
+.kbd-key.special-key {
+  background-color: rgba(255, 170, 255, 0.05);
+  border-color: #aa44aa;
+  color: #ffaaff;
+}
+
+.kbd-key.special-key:hover {
+  background-color: rgba(255, 170, 255, 0.15);
+  box-shadow: 0 0 calc(8px * var(--scale)) rgba(255, 170, 255, 0.3);
+}
+
+.kbd-key.special-key:active {
+  background-color: #ffaaff;
+  color: var(--primary-blue);
+}
+
+/* Enter Key - uses your success/activate color */
+.kbd-key.enter-key {
+  background-color: rgba(0, 255, 0, 0.1);
+  border-color: var(--success-green);
+  color: var(--success-green);
+  min-width: calc(80px * var(--scale));
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+.kbd-key.enter-key:hover {
+  background-color: rgba(0, 255, 0, 0.2);
+  box-shadow: 0 0 calc(10px * var(--scale)) rgba(0, 255, 0, 0.4);
+}
+
+.kbd-key.enter-key:active {
+  background-color: var(--success-green);
+  color: var(--primary-blue);
+}
+
+/* Status Section */
+.status-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: calc(10px * var(--scale));
+  border-top: calc(1px * var(--scale)) solid rgba(100, 255, 218, 0.2);
+  font-size: calc(10px * var(--scale));
+  text-transform: uppercase;
+}
+
+.unit-status {
+  color: var(--primary-cyan);
+  font-weight: bold;
+  transition: color 0.3s ease;
+}
+
+.unit-status.ready {
+  color: var(--success-green);
+}
+
+.unit-status.input-requested {
+  color: var(--primary-cyan);
+  animation: statusPulse 1s infinite;
+}
+
+.unit-status.error {
+  color: var(--error-red);
+}
+
+.unit-status.data-sent {
+  color: var(--success-green);
+  animation: dataSentFlash 0.5s ease-out;
+}
+
+.unit-status.input-cancelled {
+  color: var(--accent-orange);
+}
+
+@keyframes statusPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+@keyframes dataSentFlash {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+.data-link {
+  color: var(--text-gray);
+  transition: all 0.3s ease;
+}
+
+.data-link.transmitting {
+  color: var(--primary-cyan);
+  animation: dataTransmit 1s ease-out;
+}
+
+@keyframes dataTransmit {
+  0% { 
+    color: var(--text-gray);
+    text-shadow: none;
+  }
+  50% { 
+    color: var(--primary-cyan);
+    text-shadow: 0 0 calc(8px * var(--scale)) var(--primary-cyan);
+  }
+  100% { 
+    color: var(--text-gray);
+    text-shadow: none;
+  }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .keyboard-unit {
+    max-width: calc(350px * var(--scale));
+    padding: calc(12px * var(--scale));
+  }
+  
+  .kbd-key {
+    min-width: calc(26px * var(--scale));
+    min-height: calc(26px * var(--scale));
+    font-size: calc(10px * var(--scale));
+    padding: calc(4px * var(--scale)) calc(6px * var(--scale));
+  }
+  
+  .scratchpad-display {
+    font-size: calc(12px * var(--scale));
+    min-height: calc(28px * var(--scale));
+  }
+  
+  .enter-key {
+    min-width: calc(60px * var(--scale));
+  }
+}
+
+@media (max-width: 480px) {
+  .keyboard-unit {
+    max-width: calc(300px * var(--scale));
+    padding: calc(10px * var(--scale));
+  }
+  
+  .kbd-key {
+    min-width: calc(22px * var(--scale));
+    min-height: calc(22px * var(--scale));
+    font-size: calc(9px * var(--scale));
+    padding: calc(3px * var(--scale)) calc(4px * var(--scale));
+  }
+  
+  .key-row {
+    gap: calc(2px * var(--scale));
+  }
+  
+  .keyboard-section {
+    gap: calc(2px * var(--scale));
+  }
+  
+  .status-section {
+    flex-direction: column;
+    gap: calc(4px * var(--scale));
+    font-size: calc(9px * var(--scale));
+  }
+}
+
+/* Accessibility */
+.kbd-key:focus {
+  outline: calc(2px * var(--scale)) solid var(--primary-cyan);
+  outline-offset: calc(2px * var(--scale));
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .kbd-key {
+    border-width: calc(2px * var(--scale));
+  }
+  
+  .scratchpad-display {
+    border-width: calc(3px * var(--scale));
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .kbd-key,
+  .cursor,
+  .unit-status,
+  .data-link {
+    animation: none;
+    transition: none;
+  }
+}

@@ -5,10 +5,12 @@
 
 import gameStateInstance from '/game/state.js';
 import saveManagerInstance from '/game/saveManager.js';
+import displayManager from '/utils/displayManager.js';
 import { initPDAOverlay } from '/utils/pdaOverlay.js';
 import { initCommunicatorOverlay } from '/utils/communicatorOverlay.js';
 import missionManager from '/game/systems/missionManager.js';
 import interactiveElementManager from '/utils/interactiveElements.js';
+
 
 class SplashScreen {
     constructor() {
@@ -19,6 +21,9 @@ class SplashScreen {
     async initialize() {
         console.log('Initializing Aqua Nova...');
         this.updateConsole('System initializing...');
+
+        // Initialize display system FIRST
+        await displayManager.init();
 
         this.createBubbles();
         this.startBubbleGeneration();

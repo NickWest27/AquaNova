@@ -26,6 +26,7 @@ body {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  overflow: auto; 
 }
 
 /* Header Layout */
@@ -483,19 +484,39 @@ footer {
 /* Responsive Design */
 @media (max-width: 1200px) {
   header {
-    flex-direction: column;
+    flex-direction: row; /* Keep horizontal layout */
+    flex-wrap: wrap; /* Allow wrapping if needed */
+    align-items: flex-start;
+  }
+  
+  .header-main {
+    flex: 1;
+    min-width: 300px; /* Ensure minimum width before wrapping */
+  }
+  
+  #logbook-manager {
+    width: calc(300px * var(--scale));
+    max-width: calc(300px * var(--scale));
+    flex-shrink: 0;
+    align-self: flex-start; /* Align with top of log-info */
+  }
+  
+  #logbook-controls {
+    justify-content: center;
+    gap: calc(8px * var(--scale));
+  }
+}
+
+@media (max-width: 900px) {
+  header {
+    flex-direction: column; /* Only stack on very small screens */
     align-items: stretch;
   }
   
   #logbook-manager {
     width: 100%;
-    max-width: calc(400px * var(--scale));
-    align-self: flex-end;
-  }
-  
-  #logbook-controls {
-    justify-content: center;
-    gap: calc(12px * var(--scale));
+    max-width: 100%;
+    align-self: stretch;
   }
 }
 

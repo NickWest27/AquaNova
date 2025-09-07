@@ -1,5 +1,7 @@
 import gameStateInstance from '/game/state.js';
 import saveManager from '/game/saveManager.js';
+import displayManager from '/utils/displayManager.js';
+
 
 // =============================================================================
 // CORE STATE AND CONFIGURATION
@@ -186,12 +188,99 @@ function showContactDetail(contactId) {
   }
 }
 
+
 // =============================================================================
 // ACTION HANDLERS
 // =============================================================================
 
 function handleAction(action) {
+  // Handle display settings actions before switch
+  if (action === 'set-resolution') {
+    const button = event.target.closest('[data-resolution]');
+    const resolution = button && button.getAttribute('data-resolution');
+    if (resolution) {
+      displayManager.setResolution(resolution);
+      renderCurrentPage();
+      showMessage(`Resolution set to ${resolution}`);
+    }
+    return;
+  }
+  if (action === 'set-scale-mode') {
+    const button = event.target.closest('[data-mode]');
+    const mode = button && button.getAttribute('data-mode');
+    if (mode) {
+      displayManager.setScaleMode(mode);
+      renderCurrentPage();
+      showMessage(`Scale mode set to ${mode}`);
+    }
+    return;
+  }
+  if (action === 'set-ui-scale') {
+    const button = event.target.closest('[data-scale]');
+    const scale = button && parseFloat(button.getAttribute('data-scale'));
+    if (scale) {
+      displayManager.setUIScale(scale);
+      renderCurrentPage();
+      showMessage(`UI scale set to ${Math.round(scale * 100)}%`);
+    }
+    return;
+  }
+
   switch(action) {
+    // New settings cases
+    case 'apply-custom-resolution': {
+      const width = parseInt(document.getElementById('custom-width').value);
+      const height = parseInt(document.getElementById('custom-height').value);
+      displayManager.setResolution('custom', width, height);
+      renderCurrentPage();
+      showMessage(`Custom resolution applied: ${width}×${height}`);
+      break;
+    }
+    case 'apply-recommendations': {
+      const recommendations = displayManager.getRecommendedSettings();
+      displayManager.setResolution(recommendations.resolution);
+      displayManager.setScaleMode(recommendations.scaleMode);
+      displayManager.setUIScale(recommendations.uiScale);
+      renderCurrentPage();
+      showMessage('Recommended settings applied');
+      break;
+    }
+    case 'show-debug':
+      displayManager.showDebugInfo();
+      showMessage('Debug info displayed');
+      break;
+    case 'test-resolutions':
+      testAllResolutions();
+      break;
+    case 'export-settings':
+      displayManager.exportSettings();
+      showMessage('Settings exported');
+      break;
+    case 'import-settings': {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.json';
+      input.onchange = async (e) => {
+        const file = e.target.files[0];
+        if (file) {
+          const success = await displayManager.importSettings(file);
+          showMessage(success ? 'Settings imported successfully' : 'Import failed');
+          if (success) renderCurrentPage();
+        }
+      };
+      input.click();
+      break;
+    }
+    case 'reset-settings': {
+      const success = displayManager.resetSettings();
+      if (success) {
+        renderCurrentPage();
+        showMessage('Settings reset to defaults');
+      }
+      break;
+    }
+
+    // Existing PDA overlay actions
     case 'navigate-logbook':
       window.location.href = 'ui/captains-quarters/logbook/logbook.html';
       break;
@@ -208,11 +297,12 @@ function handleAction(action) {
       logbookBrowserIndex = Math.max(0, logbookBrowserIndex - 1);
       renderCurrentPage();
       break;
-    case 'logbook-next':
+    case 'logbook-next': {
       const bookshelf = getBookshelf();
       logbookBrowserIndex = Math.min(bookshelf.length - 1, logbookBrowserIndex + 1);
       renderCurrentPage();
       break;
+    }
     case 'logbook-load':
       loadLogbook();
       break;
@@ -394,6 +484,9 @@ function renderCurrentPage() {
     case 'logbook-manager':
       renderLogbookManagerPage(contentEl);
       break;
+    case 'settings':
+      renderSettingsPage(contentEl);
+      break;
     default:
       renderPlaceholderPage(contentEl, currentPage);
   }
@@ -405,7 +498,8 @@ function renderMainPage(contentEl) {
     { id: 'contacts', text: 'Contacts' },
     { id: 'scanner', text: 'Scanner' },
     { id: 'tasks', text: 'Tasks' },
-    { id: 'logbook-manager', text: 'Logbook Manager' }
+    { id: 'logbook-manager', text: 'Logbook Manager' },
+    { id: 'settings', text: 'Settings' }
   ];
 
   contentEl.innerHTML = `
@@ -674,6 +768,66 @@ function renderLogbookManagerPage(contentEl) {
       <button class="pda-back-btn">← Back to Main Menu</button>
     </div>
   `;
+}
+function renderSettingsPage(contentEl) {
+  const currentSettings = displayManager.getAllSettings();
+  const displayInfo = displayManager.getCurrentDisplayInfo();
+  
+  contentEl.innerHTML = `
+    <div class="pda-page">
+      <div class="pda-page-header">Settings</div>
+      
+      <!-- Current Display Info -->
+      <div class="pda-status-section">
+        <div class="pda-status-item">
+          <span>Display:</span>
+          <span>${displayInfo.windowSize}</span>
+        </div>
+        <div class="pda-status-item">
+          <span>Scale:</span>
+          <span>${displayInfo.scale} (${displayInfo.mode})</span>
+        </div>
+        <div class="pda-status-item">
+          <span>UI Size:</span>
+          <span>${Math.round(currentSettings.uiScale * 100)}%</span>
+        </div>
+      </div>
+
+      <!-- Simple UI Scale Controls -->
+      <div class="pda-section-title">Interface Size</div>
+      <div class="settings-quick-ui-scale">
+        <button class="btn ${currentSettings.uiScale === 0.8 ? 'btn-on' : 'btn-selectable'}" 
+                data-action="set-ui-scale" data-scale="0.8">Small</button>
+        <button class="btn ${currentSettings.uiScale === 1.0 ? 'btn-on' : 'btn-selectable'}" 
+                data-action="set-ui-scale" data-scale="1.0">Normal</button>
+        <button class="btn ${currentSettings.uiScale === 1.2 ? 'btn-on' : 'btn-selectable'}" 
+                data-action="set-ui-scale" data-scale="1.2">Large</button>
+      </div>
+
+      <!-- Simple Resolution Presets -->
+      <div class="pda-section-title">Display Mode</div>
+      <div class="settings-resolution-grid">
+        <button class="btn ${currentSettings.resolution === 'auto' ? 'btn-on' : 'btn-selectable'}" 
+                data-action="set-resolution" data-resolution="auto">Auto</button>
+        <button class="btn ${currentSettings.resolution === '16:9' ? 'btn-on' : 'btn-selectable'}" 
+                data-action="set-resolution" data-resolution="16:9">Widescreen</button>
+        <button class="btn ${currentSettings.resolution === 'fullscreen' ? 'btn-on' : 'btn-selectable'}" 
+                data-action="set-resolution" data-resolution="fullscreen">Fullscreen</button>
+      </div>
+
+      <!-- Basic Actions -->
+      <div class="pda-section-title">Actions</div>
+      <div class="settings-actions">
+        <button class="btn btn-selectable" data-action="export-settings">Export</button>
+        <button class="btn btn-selectable" data-action="import-settings">Import</button>
+        <button class="btn btn-caution" data-action="reset-settings">Reset</button>
+      </div>
+      
+      <button class="pda-back-btn">← Back to Main Menu</button>
+    </div>
+  `;
+
+  // No complex event listeners needed - the existing click handler covers everything
 }
 
 function renderPlaceholderPage(contentEl, pageName) {

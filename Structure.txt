@@ -80,8 +80,10 @@ AquaNova2/
 │           └── logbook.css
 │
 └── utils/                  # Reusable helpers, Utility functions (time, date, formatting)
-    ├── scale.js            # Calculates and sets a global scale for UI
+    ├── displayManager.js   # Unified display management system combining scaling and settings
     ├── pdaOverlay.js       # Generates the global PDA for menu options and displaying crew bios, contacts, tasks...
     ├── communicatorOverlay.js   # Communicator logic for crew dialogue
-    └── interactiveElements.js  # Interactive element spawner
-    
+    ├── interactiveElements.js  # Interactive element spawner
+    └── keyboardUnit/       # Keyboard Unit
+            ├── keyboard.css    # 
+            └── keyboard.js     #

@@ -4,7 +4,7 @@
 // Uses SaveManager for all persistence operations
 // Uses GameState for all state operations
 
-import { setGlobalScale } from '/utils/scale.js';
+import displayManager from '/utils/displayManager.js';
 import gameStateInstance from '/game/state.js';
 import saveManager from '/game/saveManager.js';
 import { initPDAOverlay } from '/utils/pdaOverlay.js';

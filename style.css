@@ -262,19 +262,6 @@ body {
 .btn-warning { background-color: rgba(255,68,68,0.1); border-color: var(--error-red); color: var(--error-red); }
 .btn-warning:hover { background-color: rgba(255,68,68,0.2); }
 
-/* Example usage in HTML:
-   <button class="btn btn-selectable">Load</button>
-   <button class="btn btn-caution">Revert</button>
-   <button class="btn btn-warning">Delete</button>
-   <button class="btn btn-activate">Confirm</button>
-   <button class="btn btn-disabled">Unavailable</button>
-   <button class="btn btn-fault">FAULT</button>
-   <button class="btn btn-on">ON</button>
-   <button class="btn btn-off">OFF</button>
-   <button class="btn btn-temp">TEMP</button>
-   <button class="btn btn-avail">AVAIL</button>
-*/
-
 /* Info boxes */
 .helm-info,
 .coordinate-info {
@@ -304,12 +291,11 @@ body {
   position: fixed;
   top: 50%;
   left: 50%;
-  transform: translate(-50%, -50%) scale(var(--scale));
+  transform: translate(-50%, -50%) scale(var(--effective-scale, var(--scale)));
   width: 360px;
   height: 640px;
-  z-index: 9999;
-  pointer-events: auto;
-  display: none;
+  z-index: 9900;
+  transform-origin: center center;
 }
 
 .pda-frame {
@@ -329,7 +315,7 @@ body {
 .pda-glass {
   position: absolute;
   top: 10px;     /* adjust to match window inside your frame */
-  left: 38px;
+  left: 35px;
   right: 10px;
   bottom: 33px;
   z-index: 2;    /* behind frame */
@@ -470,7 +456,6 @@ body {
   box-shadow: 0 0 calc(12px * var(--scale)) var(--shadow-glow);
 }
 
-/* //////////////// Minimalist Ethereal Communicator ///////////////// */
 /* //////////////// Minimalist Ethereal Communicator ///////////////// */
 
 #communicator-overlay {
@@ -1003,6 +988,50 @@ body {
   gap: calc(8px * var(--scale));
   justify-content: center;
   flex-wrap: wrap;
+}
+
+/* Settings Page */
+.settings-quick-ui-scale {
+  display: flex;
+  gap: calc(8px * var(--scale));
+  justify-content: center;
+  margin: calc(15px * var(--scale)) 0;
+}
+
+.settings-resolution-grid {
+  display: flex;
+  gap: calc(8px * var(--scale));
+  justify-content: center;
+  margin: calc(15px * var(--scale)) 0;
+  flex-wrap: wrap;
+}
+
+.settings-actions {
+  display: flex;
+  gap: calc(8px * var(--scale));
+  justify-content: center;
+  margin: calc(15px * var(--scale)) 0;
+  flex-wrap: wrap;
+}
+/* Remove all the complex grid/slider/recommendation styling */
+.settings-section,
+.settings-section-title,
+.settings-description,
+.settings-option-grid,
+.settings-option-btn,
+.settings-scale-modes,
+.settings-scale-btn,
+.settings-slider-container,
+.settings-slider-labels,
+.settings-slider-value,
+.settings-custom-resolution,
+.settings-input-group,
+.settings-recommendations,
+.settings-recommendation,
+.settings-info-grid,
+.settings-info-item {
+  /* These are no longer needed */
+  display: none;
 }
 
 /* General PDA Utilities */
