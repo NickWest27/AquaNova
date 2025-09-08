@@ -84,6 +84,12 @@ AquaNova2/
     ├── pdaOverlay.js       # Generates the global PDA for menu options and displaying crew bios, contacts, tasks...
     ├── communicatorOverlay.js   # Communicator logic for crew dialogue
     ├── interactiveElements.js  # Interactive element spawner
-    └── keyboardUnit/       # Keyboard Unit
-            ├── keyboard.css    # 
-            └── keyboard.js     #
+    ├── keyboardUnit/       # Keyboard Unit
+    │       ├── logbook.css
+    │       ├── keyboard.css    # 
+    │       └── keyboard.js     #
+    └── mfd/     
+        ├── mfdCore.js      # Main MFD engine
+        ├── mfd.css         # MFD styling
+        └── pages/
+            └── navigationPage.js   # Navigation map display

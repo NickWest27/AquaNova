@@ -298,15 +298,17 @@ body {
   position: relative;
   width: 100%;
   height: 100%;
+  min-height: calc(200px * var(--scale)); /* Ensure minimum height for MFD */
 }
 
 #navigation-canvas,
 #navigation-overlay {
+  /* Keep existing styles but let MFD override as needed */
   position: absolute;
   top: 0;
   left: 0;
-  width: 100%;   /* scale to fit */
-  height: 100%;  /* scale to fit */
+  width: 100%;
+  height: 100%;
 }
 
 /* Hotspots for going to different places on the ship */
@@ -375,4 +377,30 @@ body {
 
 .debug-canvas #navigation-overlay {
   border: 1px solid green !important;
+}
+/* Optional: Add test buttons temporarily */
+.mfd-test-controls {
+  position: absolute;
+  bottom: 200px;
+  left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: calc(8px * var(--scale));
+  z-index: 100;
+}
+
+.mfd-test-controls button {
+  padding: calc(6px * var(--scale)) calc(12px * var(--scale));
+  font-size: calc(10px * var(--scale));
+  background-color: rgba(17, 34, 64, 0.8);
+  border: calc(1px * var(--scale)) solid var(--primary-cyan);
+  color: var(--primary-cyan);
+  border-radius: calc(3px * var(--scale));
+  cursor: pointer;
+  font-family: 'Courier New', monospace;
+}
+
+.mfd-test-controls button:hover {
+  background-color: rgba(17, 34, 64, 0.9);
+  box-shadow: 0 0 calc(8px * var(--scale)) rgba(100, 255, 218, 0.3);
 }
