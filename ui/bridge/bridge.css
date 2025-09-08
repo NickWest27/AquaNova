@@ -191,6 +191,8 @@ body {
     opacity: 1;
 }
 
+/* Once the nav display is working, use this for proper 3D effect */
+
 .center-display {
     position: absolute;
     bottom: 28%;
@@ -202,8 +204,38 @@ body {
     transition: all 0.3s ease;
     background: rgba(0, 50, 100, 0.1);
     opacity: 1;
-    transform: perspective(1000px) rotateX(35deg);
+    
+    /* PROPER 3D TRANSFORM - less aggressive rotation */
+    transform: perspective(1200px) rotateX(15deg);
     transform-origin: bottom center;
+    transform-style: preserve-3d;
+    
+    /* Keep minimum dimensions */
+    min-height: 200px;
+    min-width: 300px;
+}
+
+/* Critical: navigation content should NOT inherit the 3D transform */
+.center-display #navigation-container {
+    width: 100%;
+    height: 100%;
+    /* Flatten the content inside the 3D container */
+    transform-style: flat;
+    transform: rotateX(0deg) !important;
+}
+
+/* Ensure canvas and SVG are properly positioned */
+#navigation-canvas,
+#navigation-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  /* Prevent any sub-pixel rendering issues */
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
 }
 .center-console {
     position: absolute;
@@ -323,4 +355,24 @@ body {
     border-color: #64ffda;
     box-shadow: 0 0 20px rgba(100, 255, 218, 0.5);
     background: rgba(100, 255, 218, 0.2);
+}
+/* Fix for high DPI displays */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  #navigation-canvas {
+    image-rendering: auto;
+  }
+}
+
+/* Debug styles - add this class to navigation-container to see boundaries */
+.debug-canvas {
+  border: 2px solid red !important;
+  background: rgba(255, 0, 0, 0.1) !important;
+}
+
+.debug-canvas #navigation-canvas {
+  border: 1px solid blue !important;
+}
+
+.debug-canvas #navigation-overlay {
+  border: 1px solid green !important;
 }

@@ -40,7 +40,10 @@ class GameState {
                 heading: 0,
                 course: 0,
                 speed: 0,
-                destination: null
+                destination: null,
+                displaySettings: {
+                    navDisplayRange: 10,  // Default range in nautical miles
+                }
             },
 
             // Ship systems
@@ -385,6 +388,13 @@ class GameState {
         if (speed !== null) {
             this.updateProperty('navigation.speed', speed);
         }
+    }
+    updateNavDisplayRange(range) {
+    this.updateProperty('navigation.displaySettings.navDisplayRange', range);
+    }
+
+    updateSelectedHeading(heading) {
+        this.updateProperty('navigation.heading', heading);
     }
 
     // System methods

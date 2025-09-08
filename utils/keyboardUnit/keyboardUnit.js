@@ -1,6 +1,7 @@
 // utils/keyboardUnit/keyboardUnit.js
 // Apache-style Keyboard Unit for Aqua Nova
 // Self-contained input device with scratchpad display
+// Future enhancments: Change to QWERTY, press caps lock to grab from physical keyboard
 
 class KeyboardUnit {
     constructor(containerId) {
