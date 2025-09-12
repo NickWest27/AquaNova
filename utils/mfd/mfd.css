@@ -1,72 +1,73 @@
 /* utils/mfd/mfd.css */
 /* Multi-Function Display styling - extends global design system */
-
+/* UPDATED: Left/Right soft key layout with triangle symbols */
 .mfd-display-container {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  display: grid;
-  grid-template-rows: auto 1fr auto;
-  gap: calc(8px * var(--scale));
-  background-color: #000;
-  border: calc(2px * var(--scale)) solid var(--primary-cyan);
-  border-radius: calc(6px * var(--scale));
-  padding: calc(8px * var(--scale));
-  overflow: hidden;
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
 }
 
-/* Soft Keys Layout */
 .soft-keys {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: calc(4px * var(--scale));
-  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  width: 80px;
 }
 
-.soft-keys.top-keys {
-  margin-bottom: calc(4px * var(--scale));
+.soft-keys.left-keys {
+  justify-content: space-evenly; /* CHANGED: Space keys evenly */
 }
 
-.soft-keys.bottom-keys {
-  margin-top: calc(4px * var(--scale));
+.soft-keys.right-keys {
+  justify-content: space-evenly; /* CHANGED: Space keys evenly */
 }
 
-/* Individual Soft Key Styling */
+/* UPDATED: Vertical soft key styling */
 .soft-key {
   background-color: rgba(17, 34, 64, 0.8);
-  border: calc(1px * var(--scale)) solid rgba(100, 255, 218, 0.3);
+  border: none;
   border-radius: calc(3px * var(--scale));
   color: var(--text-gray);
   font-family: 'Courier New', monospace;
-  font-size: calc(9px * var(--scale));
+  font-size: calc(20px * var(--scale));
   font-weight: bold;
-  padding: calc(6px * var(--scale)) calc(4px * var(--scale));
+  padding: calc(12px * var(--scale)) calc(8px * var(--scale)); /* CHANGED: More vertical and horizontal padding */
   cursor: pointer;
   transition: all 0.2s ease;
   text-align: center;
   text-transform: uppercase;
-  min-height: calc(28px * var(--scale));
+  min-height: calc(48px * var(--scale)); /* CHANGED: Taller buttons for vertical layout */
+  line-height: 1.4; /* ADDED: Improved readability */
   backdrop-filter: blur(4px);
   user-select: none;
+  display: flex; /* ADDED: Flex for better content alignment */
+  align-items: center;
+  justify-content: center;
+  flex-direction: column; /* ADDED: Stack symbol and text vertically */
+  writing-mode: horizontal-tb; /* ADDED: Ensure horizontal text */
 }
 
-.soft-key:hover {
-  background-color: rgba(17, 34, 64, 0.9);
-  border-color: var(--primary-cyan);
-  color: var(--primary-cyan);
-  box-shadow: 0 0 calc(8px * var(--scale)) rgba(100, 255, 218, 0.3);
+/* ADDED: Triangle symbols for range controls */
+.soft-key.range-up::before {
+
+  font-size: calc(12px * var(--scale));
+  line-height: 1;
+  margin-bottom: calc(2px * var(--scale));
+}
+
+.soft-key.range-down::before {
+  content: "▼";
+  font-size: calc(12px * var(--scale));
+  line-height: 1;
+  margin-bottom: calc(2px * var(--scale));
 }
 
 .soft-key.active {
-  color: var(--primary-cyan);
-  border-color: var(--primary-cyan);
+  background-color: var(--primary-cyan);
+  color: #000;
 }
 
 .soft-key.pressed {
-  background-color: var(--primary-cyan);
-  color: var(--primary-blue);
   transform: scale(0.95);
-  box-shadow: inset 0 calc(2px * var(--scale)) calc(4px * var(--scale)) rgba(0, 0, 0, 0.3);
 }
 
 .soft-key:empty,
@@ -269,17 +270,26 @@
   }
 }
 
-/* Responsive Design */
+/* UPDATED: Responsive Design for vertical layout */
 @media (max-width: 768px) {
   .mfd-display-container {
     gap: calc(4px * var(--scale));
     padding: calc(4px * var(--scale));
   }
   
+  .soft-keys {
+    width: calc(60px * var(--scale)); /* CHANGED: Narrower on mobile */
+  }
+  
   .soft-key {
     font-size: calc(8px * var(--scale));
-    padding: calc(4px * var(--scale)) calc(2px * var(--scale));
-    min-height: calc(24px * var(--scale));
+    padding: calc(6px * var(--scale)) calc(2px * var(--scale));
+    min-height: calc(30px * var(--scale)); /* CHANGED: Shorter on mobile */
+  }
+  
+  .soft-key.range-up::before,
+  .soft-key.range-down::before {
+    font-size: calc(10px * var(--scale)); /* CHANGED: Smaller triangles on mobile */
   }
   
   .page-indicator {
@@ -295,12 +305,19 @@
 @media (max-width: 480px) {
   .soft-keys {
     gap: calc(2px * var(--scale));
+    width: calc(50px * var(--scale)); /* CHANGED: Even narrower on small mobile */
   }
   
   .soft-key {
     font-size: calc(7px * var(--scale));
-    padding: calc(3px * var(--scale)) calc(1px * var(--scale));
-    min-height: calc(20px * var(--scale));
+    padding: calc(4px * var(--scale)) calc(1px * var(--scale));
+    min-height: calc(25px * var(--scale)); /* CHANGED: Even shorter on small mobile */
+  }
+  
+  .soft-key.range-up::before,
+  .soft-key.range-down::before {
+    font-size: calc(8px * var(--scale)); /* CHANGED: Smaller triangles */
+    margin-bottom: calc(1px * var(--scale));
   }
   
   .mfd-display-container {
@@ -309,10 +326,11 @@
   }
 }
 
-/* Accessibility */
+/* Accessibility - OPTIMIZED */
 .soft-key:focus {
-  outline: calc(2px * var(--scale)) solid var(--primary-cyan);
-  outline-offset: calc(2px * var(--scale));
+  outline: none;
+  background-color: rgba(17, 34, 64, 0.8);
+  color: var(--text-gray);
 }
 
 /* High contrast mode support */

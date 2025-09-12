@@ -40,20 +40,20 @@ class NavigationPage {
         }
     }
 
+    // Group related actions together
     static getMapSoftKeys(mfd, state) {
-        return {
-            labels: ['RNG+', 'SHOW', 'ROUTE', 'MENU', 'RNG-', 'ZOOM', 'INFO', '----'],
-            actions: [
-                () => this.increaseRange(mfd),           // L1: RNG+
-                () => this.showOverlays(mfd),            // L2: SHOW
-                () => this.showRoute(mfd),               // L3: ROUTE
-                () => this.showMenu(mfd),                // L4: MENU
-                () => this.decreaseRange(mfd),           // R1: RNG-
-                () => this.toggleZoom(mfd),              // R2: ZOOM
-                () => this.showInfo(mfd),                // R3: INFO
-                null                                     // R4: ----
-            ]
-        };
+    const range = gameStateInstance.getProperty("displaySettings.navDisplayRange") || 10;
+    return {
+        labels: ['▲', `${range}`, '▼', 'SHOW', 'ROUTE', '', '', ''],
+        actions: [
+        () => this.changeRange(mfd, 1),   // Unified range handler
+        null,
+        () => this.changeRange(mfd, -1),
+        () => this.setMode(mfd, 'overlays'),
+        () => this.setMode(mfd, 'route'),
+        null, null, null
+        ]
+    };
     }
 
     static getOverlaySoftKeys(mfd, state) {
@@ -88,7 +88,7 @@ class NavigationPage {
         };
     }
 
-    static render(mfd) {
+    static render(mfd, currentGameState) {
         const canvas = mfd.getDisplayCanvas();
         const svg = mfd.getDisplaySVG();
         const state = mfd.getPageState('navigation');
@@ -98,11 +98,11 @@ class NavigationPage {
         // Clear SVG overlays
         svg.innerHTML = '';
 
-        // Get current navigation state from game - FIXED: Use gameStateInstance directly
+        // Use passed game state (push-based, no pulling from gameStateInstance)
         const navState = {
-            range: gameStateInstance.getProperty("displaySettings.navDisplayRange") || 10,
-            ownshipTrack: gameStateInstance.getProperty("navigation.course") || 0,
-            selectedHeading: gameStateInstance.getProperty("navigation.heading") || 0,
+            range: currentGameState.range,
+            ownshipTrack: currentGameState.course,
+            selectedHeading: currentGameState.heading,
             overlays: state.overlaysVisible
         };
 
@@ -261,29 +261,33 @@ class NavigationPage {
         svg.appendChild(statusText);
     }
 
-    // Soft Key Action Methods
-    static increaseRange(mfd) {
-        // FIXED: Use gameStateInstance directly
+    static changeRange(mfd, direction) {
         const currentRange = gameStateInstance.getProperty("displaySettings.navDisplayRange") || 10;
         const ranges = [5, 10, 20, 40, 80];
         const currentIndex = ranges.indexOf(currentRange);
-        const newRange = currentIndex < ranges.length - 1 ? ranges[currentIndex + 1] : ranges[ranges.length - 1];
         
+        let newIndex;
+        if (direction > 0) {
+            // Increase range
+            newIndex = currentIndex < ranges.length - 1 ? currentIndex + 1 : ranges.length - 1;
+        } else {
+            // Decrease range
+            newIndex = currentIndex > 0 ? currentIndex - 1 : 0;
+        }
+        
+        const newRange = ranges[newIndex];
         gameStateInstance.updateProperty("displaySettings.navDisplayRange", newRange);
-        mfd.updateDisplay();
-        console.log(`Navigation: Range increased to ${newRange}nm`);
+        mfd.needsRedraw = true; // Force redraw
+        console.log(`Navigation: Range changed to ${newRange}nm`);
     }
 
-    static decreaseRange(mfd) {
-        // FIXED: Use gameStateInstance directly
-        const currentRange = gameStateInstance.getProperty("displaySettings.navDisplayRange") || 10;
-        const ranges = [5, 10, 20, 40, 80];
-        const currentIndex = ranges.indexOf(currentRange);
-        const newRange = currentIndex > 0 ? ranges[currentIndex - 1] : ranges[0];
-        
-        gameStateInstance.updateProperty("displaySettings.navDisplayRange", newRange);
-        mfd.updateDisplay();
-        console.log(`Navigation: Range decreased to ${newRange}nm`);
+    static setMode(mfd, newMode) {
+        const state = mfd.getPageState('navigation');
+        state.mode = newMode;
+        mfd.setPageState(state, 'navigation');
+        mfd.setupPageSoftKeys('navigation');
+        mfd.needsRedraw = true; // Force redraw
+        console.log(`Navigation: Mode changed to ${newMode}`);
     }
 
     static showOverlays(mfd) {

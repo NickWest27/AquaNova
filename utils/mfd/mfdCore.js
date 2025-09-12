@@ -24,6 +24,9 @@ class MFDCore {
         this.eventListeners = new Map();
         
         // Page state and data
+        // Push-based change detection
+        this.pendingStateChange = false;
+        this.lastPageState = null;
         this.pageState = new Map();
         this.displayData = {};
         
@@ -54,7 +57,7 @@ class MFDCore {
     createMFDStructure() {
         this.container.innerHTML = `
             <div class="mfd-display-container">
-                <!-- Top soft keys -->
+                <!-- left soft keys -->
                 <div class="soft-keys top-keys">
                     <button class="soft-key" data-key="L1" id="soft-key-L1"></button>
                     <button class="soft-key" data-key="L2" id="soft-key-L2"></button>
@@ -103,10 +106,10 @@ class MFDCore {
             this.resizeDisplay();
         });
 
-        // MODIFIED: Mark for redraw instead of immediate update
+        // Push-based: game state tells MFD when it changes
         gameStateInstance.addObserver(() => {
-            this.needsRedraw = true;
-            // Don't call updateDisplay here - let the animation loop handle it
+            this.pendingStateChange = true; // Set flag, don't pull data
+            // Animation loop will handle the actual update
         });
 
         // Listen for keyboard unit data
@@ -120,71 +123,46 @@ class MFDCore {
     // MODIFIED: Add change detection to updateDisplay
     updateDisplay(forceRedraw = false) {
         if (!this.displayCanvas || !this.displaySVG) return;
-
-        // ADDED: Check if redraw is needed
+        
         if (!forceRedraw && !this.needsRedraw && !this.hasStateChanged()) {
-            return; // Skip redraw if nothing changed
+            return;
+        }
+        
+        // Pull current values only when actually rendering
+        const currentGameState = {
+            range: gameStateInstance.getProperty("displaySettings.navDisplayRange") || 10,
+            course: gameStateInstance.getProperty("navigation.course") || 0,
+            heading: gameStateInstance.getProperty("navigation.heading") || 0
+        };
+        
+        // Pass current state to page renderer
+        const pageClass = this.pages.get(this.currentPage);
+        if (pageClass && typeof pageClass.render === 'function') {
+            pageClass.render(this, currentGameState);
+            this.updateLastRenderState();
+            this.needsRedraw = false;
         }
 
         this.renderCount++;
         console.log(`MFD Render #${this.renderCount} - State changed or forced redraw`);
-
-        const pageClass = this.pages.get(this.currentPage);
-        if (pageClass && typeof pageClass.render === 'function') {
-            // Let the page handle rendering
-            pageClass.render(this);
-            
-            // ADDED: Update last render state after successful render
-            this.updateLastRenderState();
-            this.needsRedraw = false;
-            
-        } else {
-            // Default: clear display
-            const ctx = this.displayCanvas.getContext('2d');
-            ctx.clearRect(0, 0, this.displayCanvas.width, this.displayCanvas.height);
-            this.displaySVG.innerHTML = '';
-            this.needsRedraw = false;
-        }
     }
 
-    // ADDED: Check if relevant state has changed
+    // Simplified change detection
     hasStateChanged() {
-        // Get current navigation state for comparison
-        const currentState = {
-            range: gameStateInstance.getProperty("displaySettings.navDisplayRange") || 10,
-            course: gameStateInstance.getProperty("navigation.course") || 0,
-            heading: gameStateInstance.getProperty("navigation.heading") || 0,
-            currentPage: this.currentPage,
-            pageState: JSON.stringify(this.getPageState()), // Convert to string for comparison
-            canvasSize: `${this.displayCanvas?.width || 0}x${this.displayCanvas?.height || 0}`
-        };
-
-        // Compare with last render state
-        if (!this.lastRenderState) {
-            return true; // First render
-        }
-
-        const stateChanged = 
-            this.lastRenderState.range !== currentState.range ||
-            this.lastRenderState.course !== currentState.course ||
-            this.lastRenderState.heading !== currentState.heading ||
-            this.lastRenderState.currentPage !== currentState.currentPage ||
-            this.lastRenderState.pageState !== currentState.pageState ||
-            this.lastRenderState.canvasSize !== currentState.canvasSize;
-
-        return stateChanged;
+        // Check if game state pushed a change
+        const gameStateChanged = this.pendingStateChange;
+        
+        // Check if page-specific state changed
+        const currentPageState = JSON.stringify(this.getPageState());
+        const pageStateChanged = this.lastPageState !== currentPageState;
+        
+        return gameStateChanged || pageStateChanged;
     }
 
-    // ADDED: Update the stored render state
+    // Update the render state
     updateLastRenderState() {
-        this.lastRenderState = {
-            range: gameStateInstance.getProperty("displaySettings.navDisplayRange") || 10,
-            course: gameStateInstance.getProperty("navigation.course") || 0,
-            heading: gameStateInstance.getProperty("navigation.heading") || 0,
-            currentPage: this.currentPage,
-            pageState: JSON.stringify(this.getPageState()),
-            canvasSize: `${this.displayCanvas?.width || 0}x${this.displayCanvas?.height || 0}`
-        };
+        this.pendingStateChange = false; // Clear the flag
+        this.lastPageState = JSON.stringify(this.getPageState());
     }
 
     // ADDED: Public method to check if redraw is needed (for animation loop)

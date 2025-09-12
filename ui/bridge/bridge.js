@@ -28,21 +28,14 @@ async function initializeBridge() {
   // Initialize Keyboard Unit first
   initializeKeyboardUnit();
   
-  // Initialize MFD system (now async)
+  // Initialize MFD system - this handles the navigation display
   await initializeMFD();
   
   // Set up event listeners
   setupEventListeners();
   
-  // FIXED: Choose display system based on what's available
-  if (mfdSystem) {
-    console.log('Using MFD display system');
-    // MFD handles its own display, just init game state
-    initializeGameStateProperties();
-  } else {
-    console.log('Using legacy display system');
-    initializeDisplay();
-  }
+  // Initialize game state properties for MFD
+  initializeGameStateProperties();
   
   // Start animation loop
   startAnimation();
@@ -318,55 +311,22 @@ function getCurrentDisplayType() {
 }
 
 function startAnimation() {
-  function animate() {
-    try {
-      if (mfdSystem) {
-        // Let MFD handle its own rendering
-        mfdSystem.updateDisplay();
-      } else {
-        // Fallback to original navigation display logic
-        const canvas = document.getElementById("navigation-canvas");
-        const svg = document.getElementById("navigation-overlay");
-        
-        if (canvas && canvas.width > 0 && canvas.height > 0 && gameState) {
-          const displayType = getCurrentDisplayType();
-          
-          const currentState = {
-            range: gameState.getProperty("displaySettings.navDisplayRange") || 10,
-            ownshipTrack: gameState.getProperty("navigation.course") || 0,
-            selectedHeading: gameState.getProperty("navigation.heading") || 0,
-          };
-          
-          // Only redraw if state has changed
-          const stateChanged = !lastState || 
-            lastState.range !== currentState.range ||
-            lastState.ownshipTrack !== currentState.ownshipTrack ||
-            lastState.selectedHeading !== currentState.selectedHeading;
-          
-          if (stateChanged) {
-            console.log('State changed, redrawing nav display');
-            drawNavigationDisplay(canvas, svg, currentState, displayType);
-            lastState = { ...currentState };
-            
-            // Keep UI in sync
-            const rangeSelect = document.getElementById("range-select");
-            const headingInput = document.getElementById("heading-input");
-            const trackInput = document.getElementById("track-input");
-            
-            if (rangeSelect) rangeSelect.value = currentState.range;
-            if (headingInput) headingInput.value = currentState.selectedHeading;
-            if (trackInput) trackInput.value = currentState.ownshipTrack;
-          }
+    function animate() {
+        try {
+            if (mfdSystem) {
+                // Only update if MFD needs it
+                if (mfdSystem.needsUpdate()) {
+                    mfdSystem.updateDisplay();
+                }
+            }
+        } catch (error) {
+            console.error('Animation error:', error);
         }
-      }
-    } catch (error) {
-      console.error('Animation error:', error);
+        
+        animationId = requestAnimationFrame(animate); // Keep the loop going
     }
     
-    animationId = requestAnimationFrame(animate);
-  }
-  
-  animate();
+    animate();
 }
 
 // Add a function to force a redraw when needed
