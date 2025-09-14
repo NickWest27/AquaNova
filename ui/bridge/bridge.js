@@ -1,4 +1,5 @@
 // Enhanced Bridge System for Aqua Nova
+// Separates navigation display from MFD overlay system
 import displayManager from '/utils/displayManager.js';
 import gameStateInstance from '/game/state.js';
 import { initPDAOverlay } from '/utils/pdaOverlay.js';
@@ -12,13 +13,13 @@ let lastState = null;
 let animationId = null;
 let keyboardUnit = null;
 let mfdSystem = null;
-const canvas = document.getElementById("navigation-canvas");
-const svg = document.getElementById("navigation-overlay");
+let navigationCanvas = null;
+let navigationSVG = null;
 
+// UI controls
 const rangeSelect = document.getElementById("range-select");
 const trackInput = document.getElementById("track-input");
 const headingInput = document.getElementById("heading-input");
-const displayTypeSelect = document.getElementById("display-type-select");
 
 async function initializeBridge() {
   // Initialize overlays
@@ -28,13 +29,16 @@ async function initializeBridge() {
   // Initialize Keyboard Unit first
   initializeKeyboardUnit();
   
-  // Initialize MFD system - this handles the navigation display
-  await initializeMFD();
+  // Initialize navigation display (content system)
+  await initializeNavigationDisplay();
+  
+  // Initialize MFD overlay system
+  await initializeMFDOverlay();
   
   // Set up event listeners
   setupEventListeners();
   
-  // Initialize game state properties for MFD
+  // Initialize game state properties
   initializeGameStateProperties();
   
   // Start animation loop
@@ -55,24 +59,61 @@ function initializeGameStateProperties() {
   });
 }
 
+async function initializeNavigationDisplay() {
+  console.log('Initializing navigation display content...');
+  
+  // Create navigation display elements in container
+  const container = document.getElementById('navigation-container');
+  if (!container) {
+    console.error('Navigation container not found!');
+    return;
+  }
+  
+  // Create canvas and SVG for navigation content
+  container.innerHTML = `
+    <canvas id="navigation-canvas"></canvas>
+    <svg id="navigation-overlay"></svg>
+  `;
+  
+  // Get references
+  navigationCanvas = document.getElementById('navigation-canvas');
+  navigationSVG = document.getElementById('navigation-overlay');
+  
+  // Set up proper canvas sizing
+  resizeNavigationDisplay();
+  
+  console.log('Navigation display content initialized');
+}
+
+async function initializeMFDOverlay() {
+  try {
+    console.log('Initializing MFD overlay system...');
+    
+    // Create MFD overlay instance
+    mfdSystem = new MFDCore('navigation-container', keyboardUnit);
+    
+    console.log('MFD overlay system initialized successfully');
+    
+    // Make MFD accessible globally for debugging
+    window.mfdSystem = mfdSystem;
+    
+  } catch (error) {
+    console.error('Failed to initialize MFD overlay system:', error);
+    console.error('Error stack:', error.stack);
+  }
+}
+
 function initializeKeyboardUnit() {
-  console.log('initializeKeyboardUnit called');
+  console.log('Initializing keyboard unit...');
   
-  // Check if container exists
   const container = document.getElementById('keyboard-unit-container');
-  console.log('Keyboard container found:', container);
-  
   if (!container) {
     console.error('Keyboard Unit container not found!');
     return;
   }
   
-  console.log('Container innerHTML before:', container.innerHTML);
-  
   try {
-    console.log('Creating KeyboardUnit...');
     keyboardUnit = new KeyboardUnit('keyboard-unit-container');
-    console.log('KeyboardUnit created successfully:', keyboardUnit);
     
     // Listen for keyboard unit data
     document.addEventListener('keyboard-data-sent', (e) => {
@@ -86,24 +127,6 @@ function initializeKeyboardUnit() {
     console.error('Failed to initialize Keyboard Unit:', error);
     console.error('Error stack:', error.stack);
   }
-}
-
-async function initializeMFD() {
-    try {
-        console.log('Initializing MFD System...');
-        
-        // Create MFD instance
-        mfdSystem = new MFDCore('navigation-container', keyboardUnit);
-        
-        console.log('MFD System initialized successfully');
-        
-        // Make MFD accessible globally for debugging
-        window.mfdSystem = mfdSystem;
-        
-    } catch (error) {
-        console.error('Failed to initialize MFD System:', error);
-        console.error('Error stack:', error.stack);
-    }
 }
 
 function handleKeyboardData(data) {
@@ -121,7 +144,6 @@ function handleKeyboardData(data) {
     case 'latitude':
     case 'latitude_input':
       console.log(`Latitude entered: ${input}`);
-      // Could update game state or navigation here
       break;
     case 'longitude':
     case 'longitude_input':
@@ -134,7 +156,6 @@ function handleKeyboardData(data) {
     case 'speed':
     case 'speed_input':
       console.log(`Speed entered: ${input}`);
-      // Update game state
       if (!isNaN(parseFloat(input))) {
         gameState.updateProperty("navigation.speed", parseFloat(input));
       }
@@ -153,8 +174,9 @@ function setupEventListeners() {
     });
   }
 
-  // Track/Course input
+  // Track/Course input (display only)
   if (trackInput) {
+    trackInput.disabled = true;
     trackInput.addEventListener('change', (e) => {
       const newCourse = parseInt(e.target.value);
       gameState.updateProperty('navigation.course', newCourse);
@@ -169,40 +191,28 @@ function setupEventListeners() {
     });
   }
 
-  // Display type selector (if you add one)
-  if (displayTypeSelect) {
-    displayTypeSelect.addEventListener("change", (e) => {
-      const displayType = e.target.value;
-      // Store the display preference
-      localStorage.setItem('aquaNova_displayType', displayType);
-      resizeCanvas();
-    });
-  }
-
-  // Canvas resize handling
+  // Resize handling
   window.addEventListener('resize', () => {
-    resizeCanvas();
+    resizeNavigationDisplay();
     if (mfdSystem) {
-      mfdSystem.resizeDisplay();
+      mfdSystem.updateOverlayPositions();
     }
   });
 
-  // Track input is display-only: disable it
-  if (trackInput) {
-    trackInput.disabled = true;
-  }
-
-  // Redraw whenever state changes
+  // Game state observer - updates both navigation content and MFD overlay
   gameState.addObserver(() => {
-    // MFD will handle its own updates
+    // Update navigation display
+    updateNavigationDisplay();
+    
+    // Update MFD overlay
     if (mfdSystem) {
-      mfdSystem.updateDisplay();
+      mfdSystem.updateOverlay();
     }
   });
 
   // Keyboard shortcuts for quick range changes
   document.addEventListener("keydown", (e) => {
-    if (e.target.tagName === 'INPUT') return; // Don't interfere with input fields
+    if (e.target.tagName === 'INPUT') return;
     
     switch(e.key) {
       case '1': setRange(5); break;
@@ -221,76 +231,60 @@ function setRange(range) {
   }
 }
 
-// Function to properly size the canvas
-function resizeCanvas() {
+// Navigation display content management (separate from MFD)
+function resizeNavigationDisplay() {
   const container = document.getElementById("navigation-container");
-  if (!container || !canvas) return;
+  if (!container || !navigationCanvas || !navigationSVG) return;
 
   // Get the actual rendered size of the container
   const rect = container.getBoundingClientRect();
   
   // Set canvas display size (CSS)
-  canvas.style.width = '100%';
-  canvas.style.height = '100%';
+  navigationCanvas.style.width = '100%';
+  navigationCanvas.style.height = '100%';
   
   // Set canvas buffer size (actual pixels) - account for device pixel ratio
   const dpr = window.devicePixelRatio || 1;
-  canvas.width = rect.width * dpr;
-  canvas.height = rect.height * dpr;
+  navigationCanvas.width = rect.width * dpr;
+  navigationCanvas.height = rect.height * dpr;
   
   // Scale canvas context to account for device pixel ratio
-  const ctx = canvas.getContext('2d');
+  const ctx = navigationCanvas.getContext('2d');
   ctx.scale(dpr, dpr);
   
   // Update SVG viewBox to match the CSS size (not pixel size)
-  if (svg) {
-    svg.setAttribute('viewBox', `0 0 ${rect.width} ${rect.height}`);
-    svg.style.width = '100%';
-    svg.style.height = '100%';
-  }
+  navigationSVG.setAttribute('viewBox', `0 0 ${rect.width} ${rect.height}`);
+  navigationSVG.style.width = '100%';
+  navigationSVG.style.height = '100%';
   
-  console.log(`Canvas resized: CSS(${rect.width}x${rect.height}) Buffer(${canvas.width}x${canvas.height}) DPR(${dpr})`);
+  console.log(`Navigation display resized: CSS(${rect.width}x${rect.height}) Buffer(${navigationCanvas.width}x${navigationCanvas.height}) DPR(${dpr})`);
+  
+  // Redraw navigation content
+  updateNavigationDisplay();
 }
 
-// Initial setup
-function initializeDisplay() {
-  console.log('Initializing display...');
+function updateNavigationDisplay() {
+  if (!navigationCanvas || !navigationSVG) return;
   
-  // Get canvas and SVG elements
-  const canvas = document.getElementById("navigation-canvas");
-  const svg = document.getElementById("navigation-overlay");
-  
-  if (!canvas || !svg) {
-    console.error('Navigation display elements not found');
-    return;
-  }
-
-  // Set up proper canvas sizing
-  resizeCanvas();
-  
-  // Initialize state properties if they don't exist
-  const initProps = [
-    ['displaySettings.navDisplayRange', 10],
-    ['navigation.heading', 0],
-    ['navigation.course', 0]
-  ];
-  
-  initProps.forEach(([path, defaultValue]) => {
-    if (!gameState.getProperty(path)) {
-      gameState.updateProperty(path, defaultValue);
+  // Get current navigation state from game state
+  const navState = {
+    range: gameState.getProperty("displaySettings.navDisplayRange") || 10,
+    ownshipTrack: gameState.getProperty("navigation.course") || 0,
+    selectedHeading: gameState.getProperty("navigation.heading") || 0,
+    overlays: {
+      route: true,
+      waypoints: true,
+      contours: false,
+      hazards: true,
+      traffic: false
     }
-  });
-
-  console.log('Navigation display initialized');
+  };
+  
+  // Draw navigation content using navComputer
+  drawNavigationDisplay(navigationCanvas, navigationSVG, navState, getCurrentDisplayType());
 }
 
 function getCurrentDisplayType() {
-  // You can determine display type based on:
-  // 1. URL parameter: ?display=mainScreen
-  // 2. Container size
-  // 3. User preference stored in localStorage
-  // 4. Current page/context
-  
   const urlParams = new URLSearchParams(window.location.search);
   const urlDisplayType = urlParams.get('display');
   if (urlDisplayType) return urlDisplayType;
@@ -305,55 +299,39 @@ function getCurrentDisplayType() {
   const rect = container.getBoundingClientRect();
   const ratio = rect.width / rect.height;
   
-  if (ratio > 2.5) return 'mainScreen';      // Very wide
-  if (ratio > 2.0) return 'helmScreen';      // Wide
-  return 'centerDisplay';                     // Default
+  if (ratio > 2.5) return 'mainScreen';
+  if (ratio > 2.0) return 'helmScreen';
+  return 'centerDisplay';
 }
 
 function startAnimation() {
-    function animate() {
-        try {
-            if (mfdSystem) {
-                // Only update if MFD needs it
-                if (mfdSystem.needsUpdate()) {
-                    mfdSystem.updateDisplay();
-                }
-            }
-        } catch (error) {
-            console.error('Animation error:', error);
-        }
-        
-        animationId = requestAnimationFrame(animate); // Keep the loop going
+  function animate() {
+    try {
+      // Update navigation display if state changed
+      const currentState = JSON.stringify({
+        range: gameState.getProperty("displaySettings.navDisplayRange"),
+        course: gameState.getProperty("navigation.course"),
+        heading: gameState.getProperty("navigation.heading")
+      });
+      
+      if (currentState !== lastState) {
+        updateNavigationDisplay();
+        lastState = currentState;
+      }
+      
+      // Update MFD overlay if needed
+      if (mfdSystem && mfdSystem.needsUpdate()) {
+        mfdSystem.updateOverlay();
+      }
+    } catch (error) {
+      console.error('Animation error:', error);
     }
     
-    animate();
-}
-
-// Add a function to force a redraw when needed
-window.forceNavRedraw = function() {
-  lastState = null; // This will force a redraw on next frame
-  if (mfdSystem) {
-    mfdSystem.updateDisplay();
+    animationId = requestAnimationFrame(animate);
   }
-};
-
-function debugCanvasInfo() {
-  const container = document.getElementById("navigation-container");
-  const canvas = document.getElementById("navigation-canvas");
   
-  if (container && canvas) {
-    const containerRect = container.getBoundingClientRect();
-    console.log('=== Canvas Debug Info ===');
-    console.log('Container size:', containerRect.width, 'x', containerRect.height);
-    console.log('Canvas buffer size:', canvas.width, 'x', canvas.height);
-    console.log('Canvas CSS size:', canvas.style.width, 'x', canvas.style.height);
-    console.log('Device pixel ratio:', window.devicePixelRatio);
-    console.log('========================');
-  }
+  animate();
 }
-
-// Make debug function available globally for testing
-window.debugCanvasInfo = debugCanvasInfo;
 
 function stopAnimation() {
   if (animationId) {
@@ -362,7 +340,34 @@ function stopAnimation() {
   }
 }
 
-// Page visibility handling to pause animation when tab is not active
+// Force redraw function
+window.forceNavRedraw = function() {
+  lastState = null;
+  updateNavigationDisplay();
+  if (mfdSystem) {
+    mfdSystem.forceRedraw();
+  }
+};
+
+// Debug functions
+function debugCanvasInfo() {
+  const container = document.getElementById("navigation-container");
+  
+  if (container && navigationCanvas) {
+    const containerRect = container.getBoundingClientRect();
+    console.log('=== Navigation Display Debug Info ===');
+    console.log('Container size:', containerRect.width, 'x', containerRect.height);
+    console.log('Canvas buffer size:', navigationCanvas.width, 'x', navigationCanvas.height);
+    console.log('Canvas CSS size:', navigationCanvas.style.width, 'x', navigationCanvas.style.height);
+    console.log('Device pixel ratio:', window.devicePixelRatio);
+    console.log('MFD System:', mfdSystem ? 'Active' : 'Not initialized');
+    console.log('====================================');
+  }
+}
+
+window.debugCanvasInfo = debugCanvasInfo;
+
+// Page visibility handling
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
     stopAnimation();
@@ -371,21 +376,19 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 
-// Exit button
+// Navigation functions
 window.exitToQuarters = function exitToQuarters() {
   stopAnimation();
-  // Clean up keyboard unit
   if (keyboardUnit) {
     keyboardUnit.destroy();
   }
-  // Clean up MFD system
   if (mfdSystem) {
     mfdSystem.destroy();
   }
   window.location.href = "../captains-quarters/quarters.html";
 };
 
-// Utility functions for other parts of the game
+// Display switching functions
 window.switchToMainDisplay = function() {
   window.location.href = window.location.pathname + "?display=mainScreen";
 };
@@ -398,39 +401,34 @@ window.switchToCenterDisplay = function() {
   window.location.href = window.location.pathname + "?display=centerDisplay";
 };
 
-// Test functions for the keyboard unit
+// Test functions for keyboard unit
 window.testLatInput = function() {
   if (keyboardUnit) {
     keyboardUnit.requestInput('LAT: N ', 'latitude_input', 15);
-    console.log('Latitude input requested...');
   }
 };
 
 window.testLonInput = function() {
   if (keyboardUnit) {
     keyboardUnit.requestInput('LON: W ', 'longitude_input', 15);
-    console.log('Longitude input requested...');
   }
 };
 
 window.testWptInput = function() {
   if (keyboardUnit) {
     keyboardUnit.requestInput('WPT: ', 'waypoint_name', 8);
-    console.log('Waypoint input requested...');
   }
 };
 
 window.testSpdInput = function() {
   if (keyboardUnit) {
     keyboardUnit.requestInput('SPD: ', 'speed_input', 6);
-    console.log('Speed input requested...');
   }
 };
 
 window.cancelInput = function() {
   if (keyboardUnit) {
     keyboardUnit.cancelInput();
-    console.log('Input cancelled...');
   }
 };
 
@@ -438,8 +436,6 @@ window.cancelInput = function() {
 window.testMFDRange = function() {
   if (mfdSystem) {
     console.log('MFD Status:', mfdSystem.getStatus());
-    console.log('Testing range increase...');
-    // Simulate soft key press for range increase (L1)
     mfdSystem.handleSoftKey('L1');
   } else {
     console.log('MFD System not available');
@@ -448,9 +444,7 @@ window.testMFDRange = function() {
 
 window.testMFDOverlays = function() {
   if (mfdSystem) {
-    console.log('Testing overlays menu...');
-    // Simulate soft key press for overlays (L2)
-    mfdSystem.handleSoftKey('L2');
+    mfdSystem.handleSoftKey('L4');
   } else {
     console.log('MFD System not available');
   }
@@ -458,43 +452,37 @@ window.testMFDOverlays = function() {
 
 window.testMFDRoute = function() {
   if (mfdSystem) {
-    console.log('Testing route menu...');
-    // Simulate soft key press for route (L3)
-    mfdSystem.handleSoftKey('L3');
+    mfdSystem.handleSoftKey('R1');
   } else {
     console.log('MFD System not available');
   }
 };
 
-window.testMFDBack = function() {
-  if (mfdSystem) {
-    console.log('Testing back to map...');
-    // Simulate soft key press for back (L4)
-    mfdSystem.handleSoftKey('L4');
-  } else {
-    console.log('MFD System not available');
-  }
-};
-
-// Make keyboardUnit accessible globally for debugging
+// Debug object
 window.debugBridge = {
   keyboardUnit: keyboardUnit,
   mfdSystem: mfdSystem,
   gameState: gameState,
-  forceRedraw: () => window.forceNavRedraw()
+  navigationCanvas: navigationCanvas,
+  navigationSVG: navigationSVG,
+  forceRedraw: () => window.forceNavRedraw(),
+  updateDisplay: updateNavigationDisplay,
+  resizeDisplay: resizeNavigationDisplay
 };
 
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', async () => {
-    console.log('DOM loaded, initializing bridge...');
-    await initializeBridge();
-    
-    // Make systems accessible for debugging after initialization
-    setTimeout(() => {
-        window.debugBridge.keyboardUnit = keyboardUnit;
-        window.debugBridge.mfdSystem = mfdSystem;
-        console.log('Bridge initialization complete');
-    }, 100);
+  console.log('DOM loaded, initializing bridge...');
+  await initializeBridge();
+  
+  // Update debug object after initialization
+  setTimeout(() => {
+    window.debugBridge.keyboardUnit = keyboardUnit;
+    window.debugBridge.mfdSystem = mfdSystem;
+    window.debugBridge.navigationCanvas = navigationCanvas;
+    window.debugBridge.navigationSVG = navigationSVG;
+    console.log('Bridge initialization complete');
+  }, 100);
 });
 
 // Cleanup on page unload

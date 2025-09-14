@@ -1,9 +1,7 @@
 // utils/mfd/mfdCore.js
-// Multi-Function Display Core System for Aqua Nova
-// Handles display area, soft keys, page management
-// NOW WITH CHANGE DETECTION to prevent constant redrawing
+// Multi-Function Display Overlay System for Aqua Nova
+// Pure overlay system - doesn't control display content, only provides interaction
 
-import { drawNavigationDisplay } from '/game/systems/navComputer/navComputer.js';
 import gameStateInstance from '/game/state.js';
 
 class MFDCore {
@@ -15,82 +13,77 @@ class MFDCore {
         this.softKeyLabels = Array(8).fill('');
         this.softKeyActions = Array(8).fill(null);
         
-        // Display elements
-        this.displayCanvas = null;
-        this.displaySVG = null;
+        // Overlay elements (not display content)
+        this.overlayContainer = null;
         this.softKeyElements = [];
         
         // Event listeners for cleanup
         this.eventListeners = new Map();
         
-        // Page state and data
-        // Push-based change detection
+        // Page state management
         this.pendingStateChange = false;
         this.lastPageState = null;
         this.pageState = new Map();
-        this.displayData = {};
         
-        // ADDED: Change detection for preventing unnecessary redraws
+        // Change detection
         this.lastRenderState = null;
-        this.needsRedraw = true; // Force initial draw
-        this.renderCount = 0; // Debug counter
+        this.needsRedraw = true;
+        this.renderCount = 0;
         
         this.init();
     }
 
     async init() {
         if (!this.container) {
-            console.error('MFD Core: Container not found');
+            console.error('MFD Overlay: Container not found');
             return;
         }
 
-        this.createMFDStructure();
+        this.createOverlayStructure();
         this.bindEvents();
         
-        // FIXED: Await the page loading before setting active page
         await this.loadPages();
         this.setActivePage('navigation');
         
-        console.log('MFD Core initialized');
+        console.log('MFD Overlay initialized');
     }
 
-    createMFDStructure() {
-        this.container.innerHTML = `
-            <div class="mfd-display-container">
-                <!-- left soft keys -->
-                <div class="soft-keys top-keys">
-                    <button class="soft-key" data-key="L1" id="soft-key-L1"></button>
-                    <button class="soft-key" data-key="L2" id="soft-key-L2"></button>
-                    <button class="soft-key" data-key="L3" id="soft-key-L3"></button>
-                    <button class="soft-key" data-key="L4" id="soft-key-L4"></button>
-                </div>
-                
-                <!-- Main display area -->
-                <div class="mfd-display-area" id="mfd-display-area">
-                    <canvas id="mfd-canvas"></canvas>
-                    <svg id="mfd-overlay"></svg>
-                    
-                    <!-- Page indicator -->
-                    <div class="page-indicator" id="page-indicator">NAV</div>
-                </div>
-                
-                <!-- Bottom soft keys -->
-                <div class="soft-keys bottom-keys">
-                    <button class="soft-key" data-key="R1" id="soft-key-R1"></button>
-                    <button class="soft-key" data-key="R2" id="soft-key-R2"></button>
-                    <button class="soft-key" data-key="R3" id="soft-key-R3"></button>
-                    <button class="soft-key" data-key="R4" id="soft-key-R4"></button>
-                </div>
+    createOverlayStructure() {
+        // Create overlay container that doesn't interfere with existing content
+        const overlay = document.createElement('div');
+        overlay.className = 'mfd-overlay-container';
+        overlay.innerHTML = `
+            <!-- Left soft keys -->
+            <div class="mfd-soft-keys mfd-left-keys">
+                <button class="soft-key" data-key="L1" id="soft-key-L1"></button>
+                <button class="soft-key" data-key="L2" id="soft-key-L2"></button>
+                <button class="soft-key" data-key="L3" id="soft-key-L3"></button>
+                <button class="soft-key" data-key="L4" id="soft-key-L4"></button>
+            </div>
+            
+            <!-- Right soft keys -->
+            <div class="mfd-soft-keys mfd-right-keys">
+                <button class="soft-key" data-key="R1" id="soft-key-R1"></button>
+                <button class="soft-key" data-key="R2" id="soft-key-R2"></button>
+                <button class="soft-key" data-key="R3" id="soft-key-R3"></button>
+                <button class="soft-key" data-key="R4" id="soft-key-R4"></button>
+            </div>
+            
+            <!-- Page indicator -->
+            <div class="mfd-page-indicator" id="mfd-page-indicator">NAV</div>
+            
+            <!-- Status indicator -->
+            <div class="mfd-status-bar">
+                <div class="mfd-status-item online" id="mfd-status">MFD</div>
             </div>
         `;
 
-        // Get references to display elements
-        this.displayCanvas = document.getElementById('mfd-canvas');
-        this.displaySVG = document.getElementById('mfd-overlay');
-        this.softKeyElements = this.container.querySelectorAll('.soft-key');
-
-        // Set up display canvas
-        this.resizeDisplay();
+        // Append overlay to container (doesn't replace existing content)
+        this.container.appendChild(overlay);
+        this.overlayContainer = overlay;
+        
+        // Get references to overlay elements
+        this.softKeyElements = overlay.querySelectorAll('.soft-key');
     }
 
     bindEvents() {
@@ -103,13 +96,12 @@ class MFDCore {
 
         // Handle container resize
         this.addEventListenerWithCleanup(window, 'resize', () => {
-            this.resizeDisplay();
+            this.updateOverlayPositions();
         });
 
-        // Push-based: game state tells MFD when it changes
+        // Game state change detection
         gameStateInstance.addObserver(() => {
-            this.pendingStateChange = true; // Set flag, don't pull data
-            // Animation loop will handle the actual update
+            this.pendingStateChange = true;
         });
 
         // Listen for keyboard unit data
@@ -120,79 +112,58 @@ class MFDCore {
         }
     }
 
-    // MODIFIED: Add change detection to updateDisplay
-    updateDisplay(forceRedraw = false) {
-        if (!this.displayCanvas || !this.displaySVG) return;
-        
-        if (!forceRedraw && !this.needsRedraw && !this.hasStateChanged()) {
-            return;
-        }
-        
-        // Pull current values only when actually rendering
-        const currentGameState = {
-            range: gameStateInstance.getProperty("displaySettings.navDisplayRange") || 10,
-            course: gameStateInstance.getProperty("navigation.course") || 0,
-            heading: gameStateInstance.getProperty("navigation.heading") || 0
-        };
-        
-        // Pass current state to page renderer
-        const pageClass = this.pages.get(this.currentPage);
-        if (pageClass && typeof pageClass.render === 'function') {
-            pageClass.render(this, currentGameState);
-            this.updateLastRenderState();
-            this.needsRedraw = false;
-        }
-
-        this.renderCount++;
-        console.log(`MFD Render #${this.renderCount} - State changed or forced redraw`);
+    // Update overlay positioning (called on resize)
+    updateOverlayPositions() {
+        // Overlay positions are handled by CSS, but trigger any needed recalculations
+        console.log('MFD Overlay positions updated');
     }
 
-    // Simplified change detection
+    // Check if overlay needs updating
+    needsUpdate() {
+        return this.needsRedraw || this.hasStateChanged();
+    }
+
+    // State change detection
     hasStateChanged() {
-        // Check if game state pushed a change
         const gameStateChanged = this.pendingStateChange;
-        
-        // Check if page-specific state changed
         const currentPageState = JSON.stringify(this.getPageState());
         const pageStateChanged = this.lastPageState !== currentPageState;
         
         return gameStateChanged || pageStateChanged;
     }
 
-    // Update the render state
+    // Update render state
     updateLastRenderState() {
-        this.pendingStateChange = false; // Clear the flag
+        this.pendingStateChange = false;
         this.lastPageState = JSON.stringify(this.getPageState());
     }
 
-    // ADDED: Public method to check if redraw is needed (for animation loop)
-    needsUpdate() {
-        return this.needsRedraw || this.hasStateChanged();
-    }
-
-    // ADDED: Public method to force redraw
+    // Force overlay redraw
     forceRedraw() {
         this.needsRedraw = true;
-        this.updateDisplay(true);
+        this.updateOverlay(true);
     }
 
-    resizeDisplay() {
-        const displayArea = document.getElementById('mfd-display-area');
-        const rect = displayArea.getBoundingClientRect();
+    // Update overlay display (soft keys, indicators, etc.)
+    updateOverlay(forceUpdate = false) {
+        if (!forceUpdate && !this.needsUpdate()) {
+            return;
+        }
+
+        // Update soft key labels and states
+        this.updateSoftKeyLabels();
         
-        // Set canvas size to match display area
-        this.displayCanvas.width = rect.width;
-        this.displayCanvas.height = rect.height;
+        // Update page indicator
+        const indicator = this.overlayContainer.querySelector('#mfd-page-indicator');
+        if (indicator) {
+            indicator.textContent = this.currentPage.toUpperCase();
+        }
+
+        this.updateLastRenderState();
+        this.needsRedraw = false;
+        this.renderCount++;
         
-        // Update SVG dimensions
-        this.displaySVG.setAttribute('width', rect.width);
-        this.displaySVG.setAttribute('height', rect.height);
-        
-        console.log('MFD Display resized:', rect.width, 'x', rect.height);
-        
-        // MODIFIED: Force redraw on resize
-        this.needsRedraw = true;
-        this.updateDisplay(true);
+        console.log(`MFD Overlay updated #${this.renderCount}`);
     }
 
     // Page Management
@@ -202,7 +173,6 @@ class MFDCore {
         console.log(`MFD Page registered: ${pageId}`);
     }
 
-    // MODIFIED: Force redraw on page changes
     setActivePage(pageId) {
         if (!this.pages.has(pageId)) {
             console.error(`MFD Page not found: ${pageId}`);
@@ -217,18 +187,12 @@ class MFDCore {
             pageClass.init(this);
         }
 
-        // Update page indicator
-        const indicator = document.getElementById('page-indicator');
-        if (indicator) {
-            indicator.textContent = pageId.toUpperCase();
-        }
-
         // Setup soft keys for this page
         this.setupPageSoftKeys(pageId);
         
-        // MODIFIED: Force redraw on page change
+        // Force overlay update
         this.needsRedraw = true;
-        this.updateDisplay(true);
+        this.updateOverlay(true);
         
         console.log(`MFD Active page: ${pageId}`);
     }
@@ -236,7 +200,6 @@ class MFDCore {
     setupPageSoftKeys(pageId) {
         const pageClass = this.pages.get(pageId);
         if (!pageClass || typeof pageClass.getSoftKeys !== 'function') {
-            // Clear all soft keys
             this.softKeyLabels.fill('');
             this.softKeyActions.fill(null);
         } else {
@@ -245,7 +208,6 @@ class MFDCore {
             this.softKeyActions = [...softKeyConfig.actions];
         }
 
-        // Update soft key visual labels
         this.updateSoftKeyLabels();
     }
 
@@ -255,7 +217,6 @@ class MFDCore {
             element.textContent = label;
             element.style.visibility = label ? 'visible' : 'hidden';
             
-            // Add/remove active class based on state
             if (label) {
                 element.classList.add('active');
             } else {
@@ -265,7 +226,6 @@ class MFDCore {
     }
 
     handleSoftKey(keyId) {
-        // Map key IDs to indices
         const keyMap = {
             'L1': 0, 'L2': 1, 'L3': 2, 'L4': 3,
             'R1': 4, 'R2': 5, 'R3': 6, 'R4': 7
@@ -279,10 +239,8 @@ class MFDCore {
 
         console.log(`MFD Soft key pressed: ${keyId} (${this.softKeyLabels[index]})`);
 
-        // Visual feedback
         this.flashSoftKey(keyId);
 
-        // Execute action
         if (typeof action === 'function') {
             action(this);
         } else if (typeof action === 'string') {
@@ -291,7 +249,6 @@ class MFDCore {
     }
 
     handleStringAction(action) {
-        // Handle common string actions
         switch (action) {
             case 'page:navigation':
                 this.setActivePage('navigation');
@@ -336,13 +293,11 @@ class MFDCore {
         return this.pageState.get(targetPage) || {};
     }
 
-    // MODIFIED: Force redraw on page state changes
     setPageState(newState, pageId = null) {
         const targetPage = pageId || this.currentPage;
         const currentState = this.pageState.get(targetPage) || {};
         this.pageState.set(targetPage, { ...currentState, ...newState });
         
-        // ADDED: Mark for redraw when page state changes
         this.needsRedraw = true;
     }
 
@@ -355,12 +310,13 @@ class MFDCore {
         }
     }
 
+    // Get display elements (canvas/svg) from container
     getDisplayCanvas() {
-        return this.displayCanvas;
+        return this.container.querySelector('canvas');
     }
 
     getDisplaySVG() {
-        return this.displaySVG;
+        return this.container.querySelector('svg');
     }
 
     getCurrentPage() {
@@ -370,7 +326,6 @@ class MFDCore {
     // Load default pages
     async loadPages() {
         try {
-            // Import and register navigation page
             const { default: NavigationPage } = await import('./pages/navigationPage.js');
             this.registerPage('navigation', NavigationPage);
             
@@ -386,20 +341,17 @@ class MFDCore {
         
         const key = `${element.id || Math.random()}-${event}`;
         
-        // Remove existing listener if present
         if (this.eventListeners.has(key)) {
             const oldHandler = this.eventListeners.get(key);
             element.removeEventListener(event, oldHandler);
         }
         
-        // Add new listener
         element.addEventListener(event, handler);
         this.eventListeners.set(key, handler);
     }
 
     // Cleanup
     destroy() {
-        // Remove all event listeners
         this.eventListeners.forEach((handler, key) => {
             const [elementId, event] = key.split('-');
             const element = document.getElementById(elementId);
@@ -409,7 +361,12 @@ class MFDCore {
         });
         this.eventListeners.clear();
         
-        console.log('MFD Core destroyed');
+        // Remove overlay from container
+        if (this.overlayContainer && this.overlayContainer.parentNode) {
+            this.overlayContainer.parentNode.removeChild(this.overlayContainer);
+        }
+        
+        console.log('MFD Overlay destroyed');
     }
 
     // Debug methods
@@ -418,13 +375,9 @@ class MFDCore {
             currentPage: this.currentPage,
             availablePages: Array.from(this.pages.keys()),
             softKeyLabels: this.softKeyLabels,
-            displaySize: {
-                width: this.displayCanvas?.width || 0,
-                height: this.displayCanvas?.height || 0
-            },
             renderCount: this.renderCount,
             needsRedraw: this.needsRedraw,
-            lastRenderState: this.lastRenderState
+            overlayActive: !!this.overlayContainer
         };
     }
 }

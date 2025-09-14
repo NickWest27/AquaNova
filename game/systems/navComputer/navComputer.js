@@ -1,13 +1,14 @@
+// /game/systems/navComputer/navComputer.js
 // Enhanced Navigation Computer for Aqua Nova Bridge
-// Supports multiple display types and 3D perspective
+// Properly handles canvas scaling with displayManager and virtual resolutions
 
-// Display configuration presets - adjusted for proper scaling
+// Display configuration presets
 const DISPLAY_CONFIGS = {
   centerDisplay: {
-    virtualWidth: 800,    // Simpler virtual resolution
+    virtualWidth: 800,
     virtualHeight: 600,
     perspective: { enabled: false },
-    navScale: 0.9       // Use most of the display
+    navScale: 0.9
   },
   mainScreen: {
     virtualWidth: 1600,   
@@ -35,32 +36,31 @@ export function drawNavigationDisplay(canvas, svg, state, displayType = 'centerD
   
   const ctx = canvas.getContext("2d");
   
-  // Get the actual CSS dimensions of the canvas
-  const rect = canvas.getBoundingClientRect();
-  const cssWidth = rect.width;
-  const cssHeight = rect.height;
+  // FIXED: Use actual canvas buffer dimensions, accounting for device pixel ratio
+  const canvasWidth = canvas.width / (window.devicePixelRatio || 1);
+  const canvasHeight = canvas.height / (window.devicePixelRatio || 1);
   
-  // Clear the entire canvas
+  // Clear the entire canvas using buffer dimensions
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   
-  // Work directly in CSS pixel coordinates (no virtual scaling for now)
-  const cx = cssWidth / 2;
-  const cy = cssHeight / 2;
-  const maxRadius = Math.min(cssWidth, cssHeight) * 0.4; // Use 40% of smallest dimension
+  // Work in CSS pixel coordinates (adjusted for DPR by bridge.js ctx.scale())
+  const cx = canvasWidth / 2;
+  const cy = canvasHeight / 2;
+  const maxRadius = Math.min(canvasWidth, canvasHeight) * 0.4; // Use 40% of smallest dimension
   
   // Draw the navigation content
-  drawNavContent(ctx, cx, cy, maxRadius, state);
+  drawNavContent(ctx, cx, cy, maxRadius, state, canvasWidth, canvasHeight);
   
-  // Set up SVG overlay to match
-  setupSVGOverlay(svg, cx, cy, maxRadius, state, cssWidth, cssHeight);
+  // Set up SVG overlay to match canvas dimensions
+  setupSVGOverlay(svg, cx, cy, maxRadius, state, canvasWidth, canvasHeight);
 }
 
-function drawNavContent(ctx, cx, cy, maxRadius, state) {
-  console.log(`Drawing nav at center(${cx}, ${cy}) with radius ${maxRadius}`);
+function drawNavContent(ctx, cx, cy, maxRadius, state, canvasWidth, canvasHeight) {
+  console.log(`Drawing nav at center(${cx}, ${cy}) with radius ${maxRadius}, canvas ${canvasWidth}x${canvasHeight}`);
   
-  // 1. Clear background with dark blue
+  // 1. Clear background with dark blue (use CSS pixel dimensions)
   ctx.fillStyle = "#001122";
-  ctx.fillRect(0, 0, ctx.canvas.width / (window.devicePixelRatio || 1), ctx.canvas.height / (window.devicePixelRatio || 1));
+  ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 
   // 2. Range rings - bright and visible
   ctx.strokeStyle = "#00ffcc";
@@ -85,7 +85,7 @@ function drawNavContent(ctx, cx, cy, maxRadius, state) {
     ctx.moveTo(startX, startY);
     ctx.lineTo(endX, endY);
     ctx.stroke();
-  }
+  };
 
   // 4. Cardinal direction labels
   ctx.fillStyle = "#ffffff";
@@ -177,8 +177,10 @@ function setupSVGOverlay(svg, cx, cy, maxRadius, state, width, height) {
   // Clear existing SVG content
   svg.innerHTML = '';
   
-  // Set SVG dimensions to match canvas
+  // FIXED: Set SVG dimensions to match canvas CSS dimensions
   svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+  svg.setAttribute('width', width);
+  svg.setAttribute('height', height);
   
   // Add range labels
   drawRangeLabels(svg, cx, cy, maxRadius, state);

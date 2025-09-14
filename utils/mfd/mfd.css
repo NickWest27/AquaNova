@@ -1,73 +1,94 @@
 /* utils/mfd/mfd.css */
-/* Multi-Function Display styling - extends global design system */
-/* UPDATED: Left/Right soft key layout with triangle symbols */
-.mfd-display-container {
-  display: flex;
-  align-items: stretch;
-  gap: 8px;
+/* Multi-Function Display Overlay styling - extends global design system */
+/* Pure overlay system - positions soft keys around existing display content */
+
+/* Main overlay container - positioned absolutely within display container */
+.mfd-overlay-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none; /* Let display content handle events */
+  z-index: 10; /* Above display content */
 }
 
-.soft-keys {
+/* Enable pointer events for interactive elements */
+.mfd-overlay-container > * {
+  pointer-events: auto;
+}
+
+/* Left soft keys positioned on left edge */
+.mfd-soft-keys.mfd-left-keys {
+  position: absolute;
+  left: calc(8px * var(--scale));
+  top: calc(8px * var(--scale));
+  bottom: calc(8px * var(--scale));
   display: flex;
   flex-direction: column;
-  width: 80px;
+  gap: calc(8px * var(--scale));
+  width: calc(60px * var(--scale));
+  justify-content: space-evenly;
 }
 
-.soft-keys.left-keys {
-  justify-content: space-evenly; /* CHANGED: Space keys evenly */
+/* Right soft keys positioned on right edge */
+.mfd-soft-keys.mfd-right-keys {
+  position: absolute;
+  right: calc(8px * var(--scale));
+  top: calc(8px * var(--scale));
+  bottom: calc(8px * var(--scale));
+  display: flex;
+  flex-direction: column;
+  gap: calc(8px * var(--scale));
+  width: calc(60px * var(--scale));
+  justify-content: space-evenly;
 }
 
-.soft-keys.right-keys {
-  justify-content: space-evenly; /* CHANGED: Space keys evenly */
-}
-
-/* UPDATED: Vertical soft key styling */
+/* Soft key styling */
 .soft-key {
   background-color: rgba(17, 34, 64, 0.8);
-  border: none;
+  border: calc(1px * var(--scale)) solid var(--text-gray);
   border-radius: calc(3px * var(--scale));
   color: var(--text-gray);
   font-family: 'Courier New', monospace;
-  font-size: calc(20px * var(--scale));
+  font-size: calc(10px * var(--scale));
   font-weight: bold;
-  padding: calc(12px * var(--scale)) calc(8px * var(--scale)); /* CHANGED: More vertical and horizontal padding */
+  padding: calc(8px * var(--scale)) calc(4px * var(--scale));
   cursor: pointer;
   transition: all 0.2s ease;
   text-align: center;
   text-transform: uppercase;
-  min-height: calc(48px * var(--scale)); /* CHANGED: Taller buttons for vertical layout */
-  line-height: 1.4; /* ADDED: Improved readability */
+  flex: 1; /* Allow buttons to grow and fill available space */
+  line-height: 1.2;
   backdrop-filter: blur(4px);
   user-select: none;
-  display: flex; /* ADDED: Flex for better content alignment */
+  display: flex;
   align-items: center;
   justify-content: center;
-  flex-direction: column; /* ADDED: Stack symbol and text vertically */
-  writing-mode: horizontal-tb; /* ADDED: Ensure horizontal text */
+  flex-direction: column;
+  writing-mode: horizontal-tb;
 }
 
-/* ADDED: Triangle symbols for range controls */
+/* Triangle symbols for range controls */
 .soft-key.range-up::before {
-
-  font-size: calc(12px * var(--scale));
+  content: "▲";
+  font-size: calc(8px * var(--scale));
   line-height: 1;
   margin-bottom: calc(2px * var(--scale));
 }
 
 .soft-key.range-down::before {
   content: "▼";
-  font-size: calc(12px * var(--scale));
+  font-size: calc(8px * var(--scale));
   line-height: 1;
   margin-bottom: calc(2px * var(--scale));
 }
 
 .soft-key.active {
-  background-color: var(--primary-cyan);
-  color: #000;
-}
-
-.soft-key.pressed {
-  transform: scale(0.95);
+  background-color: rgba(100, 255, 218, 0.2);
+  border-color: var(--primary-cyan);
+  color: var(--primary-cyan);
+  box-shadow: 0 0 calc(5px * var(--scale)) rgba(100, 255, 218, 0.3);
 }
 
 .soft-key:empty,
@@ -75,39 +96,13 @@
   visibility: hidden;
 }
 
-/* Main Display Area */
-.mfd-display-area {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  background-color: #000;
-  border: calc(1px * var(--scale)) solid rgba(100, 255, 218, 0.2);
-  border-radius: calc(4px * var(--scale));
-  overflow: hidden;
-  min-height: calc(200px * var(--scale));
+.soft-key:hover {
+  border-color: var(--primary-cyan);
+  background-color: rgba(100, 255, 218, 0.1);
 }
 
-/* Canvas and SVG Overlay */
-#mfd-canvas,
-#mfd-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-}
-
-#mfd-canvas {
-  background-color: transparent;
-}
-
-#mfd-overlay {
-  pointer-events: none;
-  z-index: 5;
-}
-
-/* Page Indicator */
-.page-indicator {
+/* Page indicator positioned in top-left corner */
+.mfd-page-indicator {
   position: absolute;
   top: calc(8px * var(--scale));
   left: calc(8px * var(--scale));
@@ -120,18 +115,18 @@
   font-weight: bold;
   padding: calc(4px * var(--scale)) calc(8px * var(--scale));
   text-transform: uppercase;
-  z-index: 10;
   backdrop-filter: blur(4px);
+  z-index: 15;
 }
 
-/* MFD Status Indicators */
+/* Status bar positioned in bottom-right corner */
 .mfd-status-bar {
   position: absolute;
   bottom: calc(8px * var(--scale));
   right: calc(8px * var(--scale));
   display: flex;
   gap: calc(8px * var(--scale));
-  z-index: 10;
+  z-index: 15;
 }
 
 .mfd-status-item {
@@ -143,6 +138,7 @@
   font-size: calc(8px * var(--scale));
   padding: calc(2px * var(--scale)) calc(6px * var(--scale));
   backdrop-filter: blur(4px);
+  text-transform: uppercase;
 }
 
 .mfd-status-item.online {
@@ -155,7 +151,7 @@
   border-color: var(--error-red);
 }
 
-/* Page Content Overlays */
+/* Page Content Overlays - for overlay menus and dialogs */
 .mfd-page-overlay {
   position: absolute;
   background-color: rgba(0, 0, 0, 0.85);
@@ -164,7 +160,7 @@
   color: var(--primary-cyan);
   font-family: 'Courier New', monospace;
   backdrop-filter: blur(8px);
-  z-index: 8;
+  z-index: 20;
 }
 
 .mfd-page-overlay.top-left {
@@ -270,29 +266,25 @@
   }
 }
 
-/* UPDATED: Responsive Design for vertical layout */
+/* Responsive Design */
 @media (max-width: 768px) {
-  .mfd-display-container {
-    gap: calc(4px * var(--scale));
-    padding: calc(4px * var(--scale));
-  }
-  
-  .soft-keys {
-    width: calc(60px * var(--scale)); /* CHANGED: Narrower on mobile */
+  .mfd-soft-keys.mfd-left-keys,
+  .mfd-soft-keys.mfd-right-keys {
+    width: calc(45px * var(--scale));
   }
   
   .soft-key {
     font-size: calc(8px * var(--scale));
     padding: calc(6px * var(--scale)) calc(2px * var(--scale));
-    min-height: calc(30px * var(--scale)); /* CHANGED: Shorter on mobile */
+    min-height: calc(24px * var(--scale));
   }
   
   .soft-key.range-up::before,
   .soft-key.range-down::before {
-    font-size: calc(10px * var(--scale)); /* CHANGED: Smaller triangles on mobile */
+    font-size: calc(6px * var(--scale));
   }
   
-  .page-indicator {
+  .mfd-page-indicator {
     font-size: calc(9px * var(--scale));
     padding: calc(3px * var(--scale)) calc(6px * var(--scale));
   }
@@ -303,34 +295,29 @@
 }
 
 @media (max-width: 480px) {
-  .soft-keys {
-    gap: calc(2px * var(--scale));
-    width: calc(50px * var(--scale)); /* CHANGED: Even narrower on small mobile */
+  .mfd-soft-keys.mfd-left-keys,
+  .mfd-soft-keys.mfd-right-keys {
+    width: calc(35px * var(--scale));
+    gap: calc(4px * var(--scale));
   }
   
   .soft-key {
     font-size: calc(7px * var(--scale));
     padding: calc(4px * var(--scale)) calc(1px * var(--scale));
-    min-height: calc(25px * var(--scale)); /* CHANGED: Even shorter on small mobile */
+    min-height: calc(20px * var(--scale));
   }
   
   .soft-key.range-up::before,
   .soft-key.range-down::before {
-    font-size: calc(8px * var(--scale)); /* CHANGED: Smaller triangles */
+    font-size: calc(5px * var(--scale));
     margin-bottom: calc(1px * var(--scale));
-  }
-  
-  .mfd-display-container {
-    gap: calc(2px * var(--scale));
-    padding: calc(2px * var(--scale));
   }
 }
 
-/* Accessibility - OPTIMIZED */
+/* Accessibility */
 .soft-key:focus {
-  outline: none;
-  background-color: rgba(17, 34, 64, 0.8);
-  color: var(--text-gray);
+  outline: calc(2px * var(--scale)) solid var(--primary-cyan);
+  outline-offset: calc(2px * var(--scale));
 }
 
 /* High contrast mode support */
@@ -339,7 +326,8 @@
     border-width: calc(2px * var(--scale));
   }
   
-  .mfd-display-area {
+  .mfd-page-indicator,
+  .mfd-status-item {
     border-width: calc(2px * var(--scale));
   }
 }
