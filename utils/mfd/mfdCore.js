@@ -59,6 +59,7 @@ class MFDCore {
                 <button class="soft-key" data-key="L2" id="soft-key-L2"></button>
                 <button class="soft-key" data-key="L3" id="soft-key-L3"></button>
                 <button class="soft-key" data-key="L4" id="soft-key-L4"></button>
+                <button class="soft-key" data-key="L5" id="soft-key-L5"></button>
             </div>
             
             <!-- Right soft keys -->
@@ -67,6 +68,7 @@ class MFDCore {
                 <button class="soft-key" data-key="R2" id="soft-key-R2"></button>
                 <button class="soft-key" data-key="R3" id="soft-key-R3"></button>
                 <button class="soft-key" data-key="R4" id="soft-key-R4"></button>
+                <button class="soft-key" data-key="R5" id="soft-key-R5"></button>
             </div>
             
             <!-- Page indicator -->
@@ -227,8 +229,8 @@ class MFDCore {
 
     handleSoftKey(keyId) {
         const keyMap = {
-            'L1': 0, 'L2': 1, 'L3': 2, 'L4': 3,
-            'R1': 4, 'R2': 5, 'R3': 6, 'R4': 7
+            'L1': 0, 'L2': 1, 'L3': 2, 'L4': 3, 'L5': 4, 
+            'R1': 5, 'R2': 6, 'R3': 7, 'R4': 8, 'R5': 9
         };
 
         const index = keyMap[keyId];

@@ -2,7 +2,7 @@
 // Enhanced Navigation Computer for Aqua Nova Bridge
 // Properly handles canvas scaling with displayManager and virtual resolutions
 
-// Display configuration presets
+// Display configuration presets - adjusted for proper scaling
 const DISPLAY_CONFIGS = {
   centerDisplay: {
     virtualWidth: 800,
@@ -33,103 +33,219 @@ export function drawNavigationDisplay(canvas, svg, state, displayType = 'centerD
     console.warn(`Unknown display type: ${displayType}, using centerDisplay`);
     return drawNavigationDisplay(canvas, svg, state, 'centerDisplay');
   }
-  
-  const ctx = canvas.getContext("2d");
-  
-  // FIXED: Use actual canvas buffer dimensions, accounting for device pixel ratio
-  const canvasWidth = canvas.width / (window.devicePixelRatio || 1);
-  const canvasHeight = canvas.height / (window.devicePixelRatio || 1);
-  
-  // Clear the entire canvas using buffer dimensions
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  
-  // Work in CSS pixel coordinates (adjusted for DPR by bridge.js ctx.scale())
-  const cx = canvasWidth / 2;
-  const cy = canvasHeight / 2;
-  const maxRadius = Math.min(canvasWidth, canvasHeight) * 0.4; // Use 40% of smallest dimension
-  
-  // Draw the navigation content
-  drawNavContent(ctx, cx, cy, maxRadius, state, canvasWidth, canvasHeight);
-  
-  // Set up SVG overlay to match canvas dimensions
-  setupSVGOverlay(svg, cx, cy, maxRadius, state, canvasWidth, canvasHeight);
+
+  const ctx = canvas.getContext('2d');
+
+  // Respect devicePixelRatio so the ND can fill the DOM area crisply
+  const dpr = window.devicePixelRatio || 1;
+
+  // Use CSS size (getBoundingClientRect) as the layout reference
+  const rect = canvas.getBoundingClientRect();
+  const cssWidth = Math.max(1, rect.width);
+  const cssHeight = Math.max(1, rect.height);
+
+  // Resize canvas backing store to match DPR
+  if (canvas.width !== Math.round(cssWidth * dpr) || canvas.height !== Math.round(cssHeight * dpr)) {
+    canvas.width = Math.round(cssWidth * dpr);
+    canvas.height = Math.round(cssHeight * dpr);
+  }
+
+  // Work in CSS pixels for layout, but scale drawing by DPR
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  // Clear the logical CSS pixel area
+  ctx.clearRect(0, 0, cssWidth, cssHeight);
+
+  // ND center and radius: move center up so arcs fill upward area
+  const cx = cssWidth / 2;
+  const cy = cssHeight * 0.9; // lift center so forward arcs occupy most of the display
+
+  // Make rings almost fill available area (leave margin for readouts)
+  const margin = Math.max(20, Math.min(cssWidth, cssHeight) * 0.04);
+  const maxRadius = Math.min(cssWidth, cssHeight) * 0.9 - margin;
+
+  // Draw the navigation content in CSS pixel coordinates
+  drawNavContent(ctx, cx, cy, maxRadius, state, cssWidth, cssHeight);
+
+  // Update SVG overlay to match
+  setupSVGOverlay(svg, cx, cy, maxRadius, state, cssWidth, cssHeight);
 }
 
 function drawNavContent(ctx, cx, cy, maxRadius, state, canvasWidth, canvasHeight) {
-  console.log(`Drawing nav at center(${cx}, ${cy}) with radius ${maxRadius}, canvas ${canvasWidth}x${canvasHeight}`);
+  console.log(`Drawing nav at center(${cx}, ${cy}) with radius ${maxRadius}`);
   
-  // 1. Clear background with dark blue (use CSS pixel dimensions)
-  ctx.fillStyle = "#001122";
+  // 1. Clear background with black (like real ND)
+  ctx.fillStyle = "#000000";
   ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 
-  // 2. Range rings - bright and visible
-  ctx.strokeStyle = "#00ffcc";
-  ctx.lineWidth = 2;
+  // 2. Draw forward arc range rings (only front 180 degrees)
+  drawRangeRings(ctx, cx, cy, maxRadius);
+
+  // 3. Draw compass rose on outer ring
+  drawCompassRose(ctx, cx, cy, maxRadius, state.selectedHeading || 0);
+
+  // 4. Draw bearing lines (every 30 degrees, forward arc only)
+  drawBearingLines(ctx, cx, cy, maxRadius);
+
+  // 5. Draw ownship symbol (white hollow triangle at bottom)
+  drawOwnshipSymbol(ctx, cx, cy, state.selectedHeading || 0);
+
+  // 6. Draw heading bug and course line
+  drawHeadingAndCourse(ctx, cx, cy, maxRadius, state);
+
+  // 7. Draw range labels
+  drawRangeLabels(ctx, cx, cy, maxRadius, state.range || 10);
+}
+
+function drawRangeRings(ctx, cx, cy, maxRadius) {
+  ctx.strokeStyle = "#ffffff";
+  ctx.lineWidth = 1;
+  ctx.setLineDash([5, 5]); // Dashed lines like real ND
+  
+  // Draw only forward arc (180 degrees)
   [0.25, 0.5, 0.75, 1.0].forEach(fraction => {
+    const radius = maxRadius * fraction;
     ctx.beginPath();
-    ctx.arc(cx, cy, maxRadius * fraction, 0, Math.PI * 2);
+    // Arc from 180° to 360° (front view)
+    ctx.arc(cx, cy, radius, Math.PI, Math.PI * 2);
     ctx.stroke();
   });
+  
+  ctx.setLineDash([]); // Reset dash pattern
+}
 
-  // 3. Bearing lines (every 30 degrees) - dimmer
-  ctx.strokeStyle = "rgba(0, 255, 204, 0.3)";
+function drawCompassRose(ctx, cx, cy, maxRadius, currentHeading) {
+  const radius = maxRadius * 0.95;
+  
+  // Draw compass markings every 10 degrees
+  for (let bearing = 0; bearing < 360; bearing += 10) {
+    const angle = toRadians(bearing);
+    const isMajor = bearing % 30 === 0;
+    const isCardinal = bearing % 90 === 0;
+    
+    // Only draw markings in the forward arc (roughly 120 degrees each side)
+    const relativeAngle = (bearing - currentHeading + 360) % 360;
+    if (relativeAngle > 120 && relativeAngle < 240) continue;
+    
+    const outerRadius = radius;
+    const innerRadius = radius - (isMajor ? 15 : 8);
+    
+    const x1 = cx + outerRadius * Math.cos(angle);
+    const y1 = cy + outerRadius * Math.sin(angle);
+    const x2 = cx + innerRadius * Math.cos(angle);
+    const y2 = cy + innerRadius * Math.sin(angle);
+    
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = isMajor ? 2 : 1;
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+    
+    // Add numbers for major headings
+    if (isMajor) {
+      ctx.fillStyle = "#ffffff";
+      ctx.font = "12px Arial";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      
+      const labelRadius = radius - 25;
+      const labelX = cx + labelRadius * Math.cos(angle);
+      const labelY = cy + labelRadius * Math.sin(angle);
+      
+      let label;
+      if (isCardinal) {
+        // Use cardinal letters
+        const cardinals = { 0: "N", 90: "E", 180: "S", 270: "W" };
+        label = cardinals[bearing];
+      } else {
+        // Use abbreviated numbers (03, 06, 09, etc.)
+        label = String(Math.round(bearing / 10)).padStart(2, '0');
+      }
+      
+      ctx.fillText(label, labelX, labelY);
+    }
+  }
+}
+
+function drawBearingLines(ctx, cx, cy, maxRadius) {
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.2)";
   ctx.lineWidth = 1;
+  
+  // Only draw lines in forward arc, every 30 degrees
   for (let bearing = 0; bearing < 360; bearing += 30) {
     const angle = toRadians(bearing);
-    const startX = cx + (maxRadius * 0.1) * Math.cos(angle);
-    const startY = cy + (maxRadius * 0.1) * Math.sin(angle);
+    const startRadius = maxRadius * 0.1;
+    
+    const startX = cx + startRadius * Math.cos(angle);
+    const startY = cy + startRadius * Math.sin(angle);
     const endX = cx + maxRadius * Math.cos(angle);
     const endY = cy + maxRadius * Math.sin(angle);
     
-    ctx.beginPath();
-    ctx.moveTo(startX, startY);
-    ctx.lineTo(endX, endY);
-    ctx.stroke();
-  };
+    // Only draw if in forward view
+    if (angle >= Math.PI && angle <= Math.PI * 2) {
+      ctx.beginPath();
+      ctx.moveTo(startX, startY);
+      ctx.lineTo(endX, endY);
+      ctx.stroke();
+    }
+  }
+}
 
-  // 4. Cardinal direction labels
+function drawOwnshipSymbol(ctx, cx, cy, heading) {
+  ctx.save();
+  ctx.translate(cx, cy);
+  
+  // White hollow triangle pointing up (north-oriented)
+  ctx.strokeStyle = "#ffffff";
+  ctx.fillStyle = "#000000"; // Black fill for hollow effect
+  ctx.lineWidth = 2;
+  
+  // Triangle shape (pointing up when heading = 0)
+  const size = 12;
+  ctx.beginPath();
+  ctx.moveTo(0, -size);      // Top point
+  ctx.lineTo(-size/2, size/2); // Bottom left
+  ctx.lineTo(size/2, size/2);   // Bottom right
+  ctx.closePath();
+  
+  ctx.fill();   // Fill with black first
+  ctx.stroke(); // Then stroke with white
+  
+  // Add small white dot in center
   ctx.fillStyle = "#ffffff";
-  ctx.font = "14px monospace";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
+  ctx.beginPath();
+  ctx.arc(0, 0, 2, 0, Math.PI * 2);
+  ctx.fill();
   
-  const directions = [
-    { label: "N", angle: 0 },
-    { label: "E", angle: 90 },
-    { label: "S", angle: 180 },
-    { label: "W", angle: 270 }
-  ];
+  ctx.restore();
+}
+
+function drawHeadingAndCourse(ctx, cx, cy, maxRadius, state) {
+  const selectedHeading = state.selectedHeading || 0;
+  const currentTrack = state.ownshipTrack || selectedHeading;
   
-  directions.forEach(({ label, angle }) => {
-    const radian = toRadians(angle);
-    const labelX = cx + (maxRadius * 0.85) * Math.cos(radian);
-    const labelY = cy + (maxRadius * 0.85) * Math.sin(radian);
-    ctx.fillText(label, labelX, labelY);
-  });
-
-  // 5. Ownship symbol (submarine)
-  drawOwnship(ctx, cx, cy, state.selectedHeading || 0);
-
-  // 6. Heading line
-  ctx.strokeStyle = "#ffff00";
+  // Heading bug (yellow/cyan line)
+  ctx.strokeStyle = "#00ffff";
   ctx.lineWidth = 3;
-  const headingAngle = toRadians(state.selectedHeading || 0);
-  const headingEndX = cx + (maxRadius * 0.8) * Math.cos(headingAngle);
-  const headingEndY = cy + (maxRadius * 0.8) * Math.sin(headingAngle);
+  const headingAngle = toRadians(selectedHeading);
+  const headingEndX = cx + (maxRadius * 0.9) * Math.cos(headingAngle);
+  const headingEndY = cy + (maxRadius * 0.9) * Math.sin(headingAngle);
   
   ctx.beginPath();
   ctx.moveTo(cx, cy);
   ctx.lineTo(headingEndX, headingEndY);
   ctx.stroke();
-
-  // 7. Course line (if different from heading)
-  if (state.ownshipTrack !== state.selectedHeading) {
-    ctx.strokeStyle = "#ff8800";
+  
+  // Course line (if different from heading)
+  if (Math.abs(currentTrack - selectedHeading) > 2) {
+    ctx.strokeStyle = "#ffff00";
     ctx.lineWidth = 2;
     ctx.setLineDash([10, 5]);
-    const courseAngle = toRadians(state.ownshipTrack);
-    const courseEndX = cx + (maxRadius * 0.6) * Math.cos(courseAngle);
-    const courseEndY = cy + (maxRadius * 0.6) * Math.sin(courseAngle);
+    
+    const courseAngle = toRadians(currentTrack);
+    const courseEndX = cx + (maxRadius * 0.7) * Math.cos(courseAngle);
+    const courseEndY = cy + (maxRadius * 0.7) * Math.sin(courseAngle);
     
     ctx.beginPath();
     ctx.moveTo(cx, cy);
@@ -139,36 +255,27 @@ function drawNavContent(ctx, cx, cy, maxRadius, state, canvasWidth, canvasHeight
   }
 }
 
-function drawOwnship(ctx, cx, cy, heading) {
-  ctx.save();
-  ctx.translate(cx, cy);
-  ctx.rotate(toRadians(heading));
-  
-  // Submarine shape - larger and more visible
-  ctx.fillStyle = "#00ffcc";
-  ctx.strokeStyle = "#ffffff";
-  ctx.lineWidth = 2;
-  
-  // Hull (elongated ellipse)
-  ctx.beginPath();
-  ctx.ellipse(0, 0, 12, 4, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.stroke();
-  
-  // Conning tower
-  ctx.fillRect(-3, -8, 6, 8);
-  ctx.strokeRect(-3, -8, 6, 8);
-  
-  // Bow indicator (small triangle pointing forward)
+function drawRangeLabels(ctx, cx, cy, maxRadius, range) {
   ctx.fillStyle = "#ffffff";
-  ctx.beginPath();
-  ctx.moveTo(12, 0);
-  ctx.lineTo(8, -3);
-  ctx.lineTo(8, 3);
-  ctx.closePath();
-  ctx.fill();
-  
-  ctx.restore();
+  ctx.font = "11px Arial";
+  ctx.textBaseline = "middle";
+
+  // Label each ring at a position along the left arc so they track visually with the rings
+  [0.25, 0.5, 0.75, 1.0].forEach((fraction, idx) => {
+    const r = maxRadius * fraction;
+    const value = Math.round((idx + 1) * range / 4);
+
+    // left-most part of the forward arc (180 degrees)
+    const angle = Math.PI;
+
+    // compute label position slightly outside the ring
+    const labelX = cx + (r + 8) * Math.cos(angle);
+    const labelY = cy + (r + 8) * Math.sin(angle);
+
+    // Draw right-aligned so text sits just left of the ring
+    ctx.textAlign = 'right';
+    ctx.fillText(`${value}`, labelX, labelY);
+  });
 }
 
 function setupSVGOverlay(svg, cx, cy, maxRadius, state, width, height) {
@@ -177,67 +284,85 @@ function setupSVGOverlay(svg, cx, cy, maxRadius, state, width, height) {
   // Clear existing SVG content
   svg.innerHTML = '';
   
-  // FIXED: Set SVG dimensions to match canvas CSS dimensions
+  // Set SVG dimensions to match canvas
   svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
-  svg.setAttribute('width', width);
-  svg.setAttribute('height', height);
   
-  // Add range labels
-  drawRangeLabels(svg, cx, cy, maxRadius, state);
-  
-  // Add navigation readouts
+  // Add navigation readouts in corners
   drawNavigationReadouts(svg, cx, cy, maxRadius, state, width, height);
 }
 
-function drawRangeLabels(svg, cx, cy, maxRadius, state) {
-  [0.25, 0.5, 0.75, 1.0].forEach((fraction, idx) => {
-    const r = maxRadius * fraction;
-    const angle = toRadians(45); // Upper right position
-    const x = cx + r * Math.cos(angle);
-    const y = cy + r * Math.sin(angle);
-    
-    const value = Math.round((idx + 1) * (state.range || 10) / 4);
-    
-    const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
-    text.setAttribute("x", x);
-    text.setAttribute("y", y);
-    text.setAttribute("fill", "#00ffcc");
-    text.setAttribute("font-size", "12");
-    text.setAttribute("text-anchor", "start");
-    text.setAttribute("font-family", "monospace");
-    text.textContent = `${value}nm`;
-    svg.appendChild(text);
-  });
-}
-
 function drawNavigationReadouts(svg, cx, cy, maxRadius, state, width, height) {
+  // Top readouts - modern airliner style
   const readouts = [
-    { label: "HDG", value: String(Math.round(state.selectedHeading || 0)).padStart(3, '0'), x: 20, y: 30 },
-    { label: "CRS", value: String(Math.round(state.ownshipTrack || 0)).padStart(3, '0'), x: 20, y: 55 },
-    { label: "RNG", value: `${state.range || 10}nm`, x: width - 80, y: 30 }
+    { 
+      label: "HDG", 
+      value: String(Math.round(state.selectedHeading || 0)).padStart(3, '0') + "°", 
+      x: 20, 
+      y: 25 
+    },
+    { 
+      label: "TRK", 
+      value: String(Math.round(state.ownshipTrack || 0)).padStart(3, '0') + "°", 
+      x: 120, 
+      y: 25 
+    },
+    { 
+      label: "RNG", 
+      value: `${state.range || 10}NM`, 
+      x: width - 100, 
+      y: 25 
+    }
   ];
 
   readouts.forEach(readout => {
+    // Create group for each readout
+    const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    
+    // Background box
+    const bg = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+    bg.setAttribute("x", readout.x - 5);
+    bg.setAttribute("y", readout.y - 15);
+    bg.setAttribute("width", 80);
+    bg.setAttribute("height", 20);
+    bg.setAttribute("fill", "rgba(0, 0, 0, 0.7)");
+    bg.setAttribute("stroke", "#ffffff");
+    bg.setAttribute("stroke-width", "1");
+    bg.setAttribute("rx", "3");
+    group.appendChild(bg);
+    
     // Label
     const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
     label.setAttribute("x", readout.x);
-    label.setAttribute("y", readout.y);
-    label.setAttribute("fill", "#00ffcc");
-    label.setAttribute("font-size", "12");
-    label.setAttribute("font-family", "monospace");
+    label.setAttribute("y", readout.y - 2);
+    label.setAttribute("fill", "#00ffff");
+    label.setAttribute("font-size", "10");
+    label.setAttribute("font-family", "Arial, sans-serif");
     label.setAttribute("font-weight", "bold");
     label.textContent = readout.label;
-    svg.appendChild(label);
+    group.appendChild(label);
 
     // Value
     const value = document.createElementNS("http://www.w3.org/2000/svg", "text");
-    value.setAttribute("x", readout.x + 35);
-    value.setAttribute("y", readout.y);
+    value.setAttribute("x", readout.x + 25);
+    value.setAttribute("y", readout.y - 2);
     value.setAttribute("fill", "#ffffff");
-    value.setAttribute("font-size", "14");
-    value.setAttribute("font-family", "monospace");
+    value.setAttribute("font-size", "12");
+    value.setAttribute("font-family", "Arial, sans-serif");
     value.setAttribute("font-weight", "bold");
     value.textContent = readout.value;
-    svg.appendChild(value);
+    group.appendChild(value);
+    
+    svg.appendChild(group);
   });
+  
+  // Add mode indicator
+  const modeText = document.createElementNS("http://www.w3.org/2000/svg", "text");
+  modeText.setAttribute("x", 20);
+  modeText.setAttribute("y", height - 20);
+  modeText.setAttribute("fill", "#00ffff");
+  modeText.setAttribute("font-size", "12");
+  modeText.setAttribute("font-family", "Arial, sans-serif");
+  modeText.setAttribute("font-weight", "bold");
+  modeText.textContent = "ARC";
+  svg.appendChild(modeText);
 }

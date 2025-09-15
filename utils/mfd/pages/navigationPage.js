@@ -44,42 +44,47 @@ class NavigationPage {
     static getMapSoftKeys(mfd, state) {
     const range = gameStateInstance.getProperty("displaySettings.navDisplayRange") || 10;
     return {
-        labels: ['▲', `${range}`, '▼', 'SHOW', 'ROUTE', '', '', ''],
+        labels: ['▲', `${range}`, '▼', '', 'SHOW', 'ROUTE', '', '', '', ''],
         actions: [
         () => this.changeRange(mfd, 1),   // Unified range handler
         null,
         () => this.changeRange(mfd, -1),
+        null,
         () => this.setMode(mfd, 'overlays'),
         () => this.setMode(mfd, 'route'),
-        null, null, null
+        null, null, null, null
         ]
     };
     }
 
     static getOverlaySoftKeys(mfd, state) {
         return {
-            labels: ['ROUTE', 'WAYPTS', 'CONTOUR', 'BACK', 'HAZARDS', 'TRAFFIC', 'ALL ON', 'ALL OFF'],
+            labels: ['ROUTE', 'WAYPTS', 'CONTOUR', '', 'SHOW', 'HAZARDS', 'TRAFFIC', '', 'ALL ON', 'ALL OFF'],
             actions: [
                 () => this.toggleOverlay(mfd, 'route'),     // L1: ROUTE
                 () => this.toggleOverlay(mfd, 'waypoints'), // L2: WAYPTS
                 () => this.toggleOverlay(mfd, 'contours'),  // L3: CONTOUR
-                () => this.backToMap(mfd),                  // L4: BACK
+                null,                                       // L4: empty
+                () => this.backToMap(mfd),                  // L5: SHOW
                 () => this.toggleOverlay(mfd, 'hazards'),   // R1: HAZARDS
                 () => this.toggleOverlay(mfd, 'traffic'),   // R2: TRAFFIC
-                () => this.allOverlaysOn(mfd),              // R3: ALL ON
-                () => this.allOverlaysOff(mfd)              // R4: ALL OFF
+                null,                                       // R3: empty 
+                () => this.allOverlaysOn(mfd),              // R4: ALL ON
+                () => this.allOverlaysOff(mfd)              // R5: ALL OFF
             ]
         };
     }
 
     static getRouteSoftKeys(mfd, state) {
         return {
-            labels: ['ADD', 'EDIT', 'DELETE', 'BACK', 'UP', 'DOWN', 'EXEC', 'DIRECT'],
+            labels: ['ADD', 'EDIT', 'DELETE', '', '', 'ROUTE', 'DOWN', 'EXEC', 'BACK', 'DIRECT'],
             actions: [
                 () => this.addWaypoint(mfd),            // L1: ADD
                 () => this.editWaypoint(mfd),           // L2: EDIT
                 () => this.deleteWaypoint(mfd),         // L3: DELETE
-                () => this.backToMap(mfd),              // L4: BACK
+                null,                                   // L4: empty
+                null,                                   // L5: empty
+                () => this.backToMap(mfd),              // R1: ROUTE
                 () => this.moveWaypointUp(mfd),         // R1: UP
                 () => this.moveWaypointDown(mfd),       // R2: DOWN
                 () => this.executeRoute(mfd),           // R3: EXEC
