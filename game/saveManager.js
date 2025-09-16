@@ -29,6 +29,9 @@ class SaveManager {
         
         // Mount the active logbook (or first available)
         await this.mountActiveLogbook();
+
+        // Always initialize contacts, even if no logbook
+        await this.gameState.initializeContacts();
         
         return true;
     }

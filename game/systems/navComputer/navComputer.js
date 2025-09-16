@@ -127,8 +127,8 @@ function drawCompassRose(ctx, cx, cy, maxRadius, currentHeading) {
     const relativeAngle = (bearing - currentHeading + 360) % 360;
     if (relativeAngle > 120 && relativeAngle < 240) continue;
     
-    const outerRadius = radius;
-    const innerRadius = radius - (isMajor ? 15 : 8);
+    const outerRadius = radius + (isMajor ? 8 : 4);
+    const innerRadius = radius;
     
     const x1 = cx + outerRadius * Math.cos(angle);
     const y1 = cy + outerRadius * Math.sin(angle);
@@ -149,7 +149,7 @@ function drawCompassRose(ctx, cx, cy, maxRadius, currentHeading) {
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       
-      const labelRadius = radius - 25;
+      const labelRadius = radius + 20;
       const labelX = cx + labelRadius * Math.cos(angle);
       const labelY = cy + labelRadius * Math.sin(angle);
       
@@ -227,7 +227,7 @@ function drawHeadingAndCourse(ctx, cx, cy, maxRadius, state) {
   
   // Heading bug (yellow/cyan line)
   ctx.strokeStyle = "#00ffff";
-  ctx.lineWidth = 3;
+  ctx.lineWidth = 2;
   const headingAngle = toRadians(selectedHeading);
   const headingEndX = cx + (maxRadius * 0.9) * Math.cos(headingAngle);
   const headingEndY = cy + (maxRadius * 0.9) * Math.sin(headingAngle);
@@ -240,7 +240,7 @@ function drawHeadingAndCourse(ctx, cx, cy, maxRadius, state) {
   // Course line (if different from heading)
   if (Math.abs(currentTrack - selectedHeading) > 2) {
     ctx.strokeStyle = "#ffff00";
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 1;
     ctx.setLineDash([10, 5]);
     
     const courseAngle = toRadians(currentTrack);
@@ -269,8 +269,8 @@ function drawRangeLabels(ctx, cx, cy, maxRadius, range) {
     const angle = Math.PI;
 
     // compute label position slightly outside the ring
-    const labelX = cx + (r + 8) * Math.cos(angle);
-    const labelY = cy + (r + 8) * Math.sin(angle);
+    const labelX = cx + (r + 2) * Math.cos(angle);
+    const labelY = cy + (r + 2) * Math.sin(angle);
 
     // Draw right-aligned so text sits just left of the ring
     ctx.textAlign = 'right';

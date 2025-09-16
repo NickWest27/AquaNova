@@ -237,7 +237,7 @@ updateCurrentEntryId() {
       ${tasksHtml}
       <div class="entry-metadata">
         <span class="timestamp">${formattedDate} ${formattedTime}</span>
-        <span class="entry-id">${logEntry.id}</span>
+        <span class="entry-id">${logEntry.entryId}</span>
       </div>
       <button class="btn btn-caution revert-btn">Revert</button>
     `;

@@ -24,6 +24,19 @@
                 "pleasantries": ["How may I assist you Commander?", "What's on your mind?", "All systems are nominal Captain.", "Yes Commander?"]
             }
         },
+        "helm": {
+            "id": "helm",
+            "name": "Marcus Chen",
+            "role": "Helmsman",
+            "bio": "Skilled helmsman with precise ship handling abilities. Former Navy coxswain with experience in challenging maritime conditions. Responsible for all ship movement and maneuvering.",
+            "image": "images/crew/Marcus_Chen.png",
+            "dialogueOptions": {
+                "commands": ["Make your depth", "Come left", "Come right", "Make your heading", "Make you speed"],
+                "emergency": ["All ahead flank", "All stop", "Emergency surfaace", "Emergency dive"],
+                "pleasantries": ["Say the word Captain", "Smooth sailing Sir", "All systems are green Captain.", "Yes Commander?"]
+            }
+        },
+        
         "science": {
             "id": "science",
             "name": "Dr. Sam Patel",
@@ -49,7 +62,7 @@
             }
         },
         "engineering": {
-            "id": "engineering:",
+            "id": "engineering",
             "name": "Engineer Riley Chen",
             "role": "Chief Engineer",
             "bio": "Riley is a mechanical genius responsible for maintaining the Aqua Nova's complex systems. His innovative solutions have saved the ship on more than one occasion.",

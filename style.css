@@ -629,6 +629,40 @@ body {
   display: none;
 }
 
+/* Category option styling - consistent with crew info */
+.comm-category-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  font-size: 1.1rem;
+  color: rgba(255, 255, 255, 0.8);
+  padding: 12px 0;
+  margin: 4px 0;
+  transition: all 0.4s ease;
+  border-radius: 16px;
+  background: transparent;
+}
+
+.comm-category-text:hover {
+  color: rgba(255, 255, 255, 1);
+  background: rgba(255, 255, 255, 0.08);
+  transform: scale(1.02);
+}
+
+.comm-category-text.selected {
+  color: rgba(255, 255, 255, 1);
+  background: rgba(255, 255, 255, 0.12);
+  text-shadow: 0 0 8px rgba(255, 255, 255, 0.4);
+  transform: scale(1.02);
+}
+
+.comm-category-name {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.6);
+  font-style: italic;
+}
+
 @media (max-width: 768px) {
   .comm-glass {
     width: 90vw;

@@ -157,6 +157,7 @@ class GameState {
             crew: {
                 captain: { experience: 100, rest: "alert", status: "active" },
                 executiveOfficer: { experience: 100, rest: "alert", status: "active" },
+                helm: { experience: 95, rest: "alert", status: "active" },
                 medical: { experience: 85, rest: "alert", status: "active" },
                 engineer: { experience: 80, rest: "tired", status: "active" },
                 security: { experience: 75, rest: "alert", status: "active" },
@@ -171,6 +172,7 @@ class GameState {
                 crew: {
                     captain: { communicator: true, known: true, contextual: [] },
                     executiveOfficer: { communicator: true, known: true, contextual: [] },
+                    helm: { communicator: true, known: true, contextual: [] },
                     science: { communicator: true, known: false, contextual: [] },
                     engineering: { communicator: true, known: false, contextual: [] },
                     security: { communicator: true, known: false, contextual: [] },

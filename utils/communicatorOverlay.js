@@ -1,6 +1,6 @@
 // utils/communicatorOverlay.js
 // Ship communicator overlay system for crew communications
-// Redesigned for thought-like, personal interactions
+// Updated with hierarchical dialogue menu system
 
 import gameStateInstance from '/game/state.js';
 import missionManager from '/game/systems/missionManager.js';
@@ -11,14 +11,14 @@ let currentCommPage = 'crew-select';
 let selectedCrewMember = null;
 let selectedDialogueIndex = 0;
 let selectedCrewIndex = 0;
-let conversationHistory = new Map(); // Track conversations with each crew member
+let currentDialogueCategory = null; // Track which submenu we're in
+let conversationHistory = new Map();
 
 export function initCommunicatorOverlay() {
-  // Initialize keyboard controls
   document.addEventListener('keydown', (e) => {
     const active = document.activeElement;
     if (active && (active.tagName === 'TEXTAREA' || active.tagName === 'INPUT')) {
-      return; // ignore typing
+      return;
     }
 
     if (e.key.toLowerCase() === 'c') {
@@ -28,7 +28,6 @@ export function initCommunicatorOverlay() {
       }
     }
 
-    // Communicator navigation when visible
     if (communicatorVisible) {
       handleCommunicatorNavigation(e);
     }
@@ -37,7 +36,6 @@ export function initCommunicatorOverlay() {
   console.log('Communicator initialized');
 }
 
-// Always read crew data dynamically from current game state
 function getCrewData() {
   try {
     const gameState = gameStateInstance?.getState();
@@ -46,7 +44,6 @@ function getCrewData() {
       return [];
     }
     
-    // Filter crew members who have communicators and are known - exclude the captain
     const crewData = Object.entries(gameState.contacts.crew)
       .filter(([key, member]) => member?.communicator && member?.known && key !== 'captain')
       .map(([key, member]) => ({ ...member, id: key }));
@@ -60,13 +57,7 @@ function getCrewData() {
 
 function hasCommunicator() {
   const gameState = gameStateInstance?.getState();
-  const hasCommunicator = gameState?.contacts?.crew?.captain?.communicator;
-  
-  if (!hasCommunicator) {
-    console.log("No communicator found in captain's contacts");
-  }
-  
-  return hasCommunicator;
+  return gameState?.contacts?.crew?.captain?.communicator || false;
 }
 
 function toggleCommunicator() {
@@ -75,10 +66,10 @@ function toggleCommunicator() {
   communicatorElement.style.display = communicatorVisible ? 'block' : 'none';
   
   if (communicatorVisible) {
-    // Reset to crew select when opening
     currentCommPage = 'crew-select';
     selectedCrewIndex = 0;
     selectedDialogueIndex = 0;
+    currentDialogueCategory = null;
     renderCurrentCommPage();
   }
 }
@@ -96,7 +87,6 @@ function createCommunicator() {
   `;
   document.body.appendChild(communicatorElement);
   
-  // Add click event listeners
   communicatorElement.addEventListener('click', handleCommunicatorClick);
 }
 
@@ -114,16 +104,22 @@ function handleCommunicatorClick(e) {
     return;
   }
   
+  // Handle category selection
+  const categoryText = e.target.closest('.comm-category-text');
+  if (categoryText) {
+    const category = categoryText.getAttribute('data-category');
+    if (category) {
+      selectDialogueCategory(category);
+    }
+    return;
+  }
+  
   // Handle dialogue option selection
   const dialogueText = e.target.closest('.comm-dialogue-text');
   if (dialogueText) {
     const dialogueMessage = dialogueText.getAttribute('data-dialogue');
     if (dialogueMessage) {
-      if (dialogueMessage === "Something else...") {
-        goBackToCrewSelect();
-      } else {
-        sendThought(dialogueMessage);
-      }
+      sendThought(dialogueMessage);
     }
     return;
   }
@@ -131,7 +127,7 @@ function handleCommunicatorClick(e) {
   // Handle back text
   const backText = e.target.closest('.comm-back-text');
   if (backText) {
-    goBackToCrewSelect();
+    goBack();
     return;
   }
 }
@@ -149,37 +145,45 @@ function handleCommunicatorNavigation(e) {
       break;
     case 'Escape':
       e.preventDefault();
-      if (currentCommPage !== 'crew-select') {
-        goBackToCrewSelect();
-      } else {
-        toggleCommunicator();
-      }
+      goBack();
       break;
   }
 }
 
 function navigateCommMenu(direction) {
+  let maxIndex = 0;
+  
   if (currentCommPage === 'crew-select') {
     const crewData = getCrewData();
-    const maxIndex = crewData.length - 1;
+    maxIndex = crewData.length - 1;
     
     if (direction === 'ArrowUp') {
       selectedCrewIndex = Math.max(0, selectedCrewIndex - 1);
     } else if (direction === 'ArrowDown') {
       selectedCrewIndex = Math.min(maxIndex, selectedCrewIndex + 1);
     }
-    
     updateCrewSelection();
-  } else if (currentCommPage === 'dialogue') {
-    const dialogueOptions = getDialogueOptions();
-    const maxIndex = dialogueOptions.length - 1;
+    
+  } else if (currentCommPage === 'dialogue-categories') {
+    const categories = getDialogueCategories();
+    maxIndex = categories.length - 1;
     
     if (direction === 'ArrowUp') {
       selectedDialogueIndex = Math.max(0, selectedDialogueIndex - 1);
     } else if (direction === 'ArrowDown') {
       selectedDialogueIndex = Math.min(maxIndex, selectedDialogueIndex + 1);
     }
+    updateCategorySelection();
     
+  } else if (currentCommPage === 'dialogue-options') {
+    const options = getDialogueOptionsForCategory(currentDialogueCategory);
+    maxIndex = options.length - 1;
+    
+    if (direction === 'ArrowUp') {
+      selectedDialogueIndex = Math.max(0, selectedDialogueIndex - 1);
+    } else if (direction === 'ArrowDown') {
+      selectedDialogueIndex = Math.min(maxIndex, selectedDialogueIndex + 1);
+    }
     updateDialogueSelection();
   }
 }
@@ -190,15 +194,15 @@ function activateCommSelection() {
     if (crewData[selectedCrewIndex]) {
       selectCrewMember(crewData[selectedCrewIndex].id);
     }
-  } else if (currentCommPage === 'dialogue') {
-    const dialogueOptions = getDialogueOptions();
-    const selectedOption = dialogueOptions[selectedDialogueIndex];
-    if (selectedOption) {
-      if (selectedOption === "Something else...") {
-        goBackToCrewSelect();
-      } else {
-        sendThought(selectedOption);
-      }
+  } else if (currentCommPage === 'dialogue-categories') {
+    const categories = getDialogueCategories();
+    if (categories[selectedDialogueIndex]) {
+      selectDialogueCategory(categories[selectedDialogueIndex].id);
+    }
+  } else if (currentCommPage === 'dialogue-options') {
+    const options = getDialogueOptionsForCategory(currentDialogueCategory);
+    if (options[selectedDialogueIndex]) {
+      sendThought(options[selectedDialogueIndex]);
     }
   }
 }
@@ -208,78 +212,99 @@ function selectCrewMember(memberId) {
   selectedCrewMember = crewData.find(member => member.id === memberId);
   
   if (selectedCrewMember) {
-    currentCommPage = 'dialogue';
+    currentCommPage = 'dialogue-categories';
     selectedDialogueIndex = 0;
+    currentDialogueCategory = null;
     renderCurrentCommPage();
   }
 }
 
-function getDialogueOptions() {
-  if (!selectedCrewMember) {
-    return ["Something else..."];
+function selectDialogueCategory(category) {
+  currentDialogueCategory = category;
+  currentCommPage = 'dialogue-options';
+  selectedDialogueIndex = 0;
+  renderCurrentCommPage();
+}
+
+function getDialogueCategories() {
+  if (!selectedCrewMember) return [];
+  
+  const categories = [];
+  
+  // Always include pleasantries
+  categories.push({ id: 'pleasantries', name: 'Casual Chat' });
+  
+  // Add contextual if available
+  const contextual = selectedCrewMember.contextual || [];
+  if (contextual.length > 0) {
+    categories.push({ id: 'contextual', name: 'Follow Up' });
   }
   
-  // Get conversation history for context
+  // Add commands if available
+  const commands = selectedCrewMember.dialogueOptions?.commands || [];
+  if (commands.length > 0) {
+    categories.push({ id: 'commands', name: 'Orders' });
+  }
+  
+  // Add emergency if available
+  const emergency = selectedCrewMember.dialogueOptions?.emergency || [];
+  if (emergency.length > 0) {
+    categories.push({ id: 'emergency', name: 'Emergency' });
+  }
+  
+  return categories;
+}
+
+function getDialogueOptionsForCategory(category) {
+  if (!selectedCrewMember || !category) return [];
+  
   const history = conversationHistory.get(selectedCrewMember.id) || [];
-  const recentTopics = history.slice(-3).map(msg => msg.message.toLowerCase());
   
-  let options = [];
-  
-  // Context-sensitive greetings
-  if (history.length === 0) {
-    options.push("Hello there", "Good to finally connect", "How are you settling in?");
-  } else {
-    options.push("How are you doing?", "What's on your mind?", "Just checking in...");
-  }
-  
-  // Role-specific options
-  switch(selectedCrewMember.id) {
-    case 'executiveOfficer':
-      options.push("How's the crew doing?", "Any concerns I should know about?", "Status update?");
-      break;
-    case 'science':
-      options.push("How's everyone's health?", "Any medical concerns?", "Any new discoveries?");
-      break;
-    case 'engineering':
-      options.push("How are the systems running?", "Everything working smoothly?", "Any maintenance needed?");
-      break;
-    case 'sensors':
-      options.push("Anything interesting on sensors?", "All quiet out there?", "What are you seeing?");
-      break;
-    case 'security':
-      options.push("Everything secure?", "All quiet on your watch?", "Any concerns?");
-      break;
-    case 'communications':
-      options.push("Any messages coming in?", "Comms working well?", "Signal strength good?");
-      break;
+  switch(category) {
+    case 'pleasantries':
+      return selectedCrewMember.dialogueOptions?.pleasantries || generatePersonalizedPleasantries(history);
+      
+    case 'contextual':
+      return selectedCrewMember.contextual || [];
+      
+    case 'commands':
+      return selectedCrewMember.dialogueOptions?.commands || [];
+      
+    case 'emergency':
+      return selectedCrewMember.dialogueOptions?.emergency || [];
+      
     default:
-      options.push("Everything okay over there?", "Wanted to hear your voice");
+      return [];
   }
-  
-  // Add contextual options based on recent conversation
-  if (!recentTopics.includes("personal")) {
-    options.push("How are you personally?");
+}
+
+function generatePersonalizedPleasantries(history) {
+  // Fallback if no pleasantries defined in contacts.json
+  if (history.length === 0) {
+    return ["Hello there", "Good to finally connect", "How are you settling in?"];
+  } else {
+    return ["How are you doing?", "What's on your mind?", "Just checking in...", "How's everything going?"];
   }
-  
-  // Always include back option
-  options.push("Something else...");
-  
-  // Shuffle middle options for variety, keep first few and last one
-  const firstOptions = options.slice(0, 2);
-  const middleOptions = options.slice(2, -1);
-  const lastOption = options.slice(-1);
-  
-  // Simple shuffle for middle options
-  for (let i = middleOptions.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [middleOptions[i], middleOptions[j]] = [middleOptions[j], middleOptions[i]];
+}
+
+function goBack() {
+  if (currentCommPage === 'dialogue-options') {
+    // Go back to categories
+    currentCommPage = 'dialogue-categories';
+    currentDialogueCategory = null;
+    selectedDialogueIndex = 0;
+    renderCurrentCommPage();
+  } else if (currentCommPage === 'dialogue-categories') {
+    // Go back to crew select
+    goBackToCrewSelect();
+  } else if (currentCommPage === 'crew-select') {
+    // Close communicator
+    toggleCommunicator();
   }
-  
-  return [...firstOptions, ...middleOptions.slice(0, 4), ...lastOption];
 }
 
 function sendThought(message) {
-  console.log(`Thought sent to ${selectedCrewMember?.name || 'Unknown'}: ${message}`);
+  console.log(`Message sent to ${selectedCrewMember?.name || 'Unknown'}: ${message}`);
   
   // Add to conversation history
   const history = conversationHistory.get(selectedCrewMember.id) || [];
@@ -291,7 +316,7 @@ function sendThought(message) {
   });
   conversationHistory.set(selectedCrewMember.id, history);
   
-  // Add message to communications log in game state
+  // Log in game state
   try {
     const gameState = gameStateInstance?.getState();
     if (gameState?.shipSystems?.communications?.communicator) {
@@ -311,29 +336,29 @@ function sendThought(message) {
   } catch (error) {
     console.error('Failed to log communication:', error);
   }
-    if (selectedCrewMember.id === 'executiveOfficer') {
-    // Check if this is their first conversation
+  
+  // Check for mission triggers
+  if (selectedCrewMember.id === 'executiveOfficer') {
     const previousMessages = history.filter(msg => msg.type === 'outgoing').length;
     
-    if (previousMessages === 1) { // First message to AREA
-        const event = new CustomEvent('dialogue-complete', {
-            detail: { 
-                characterId: 'executiveOfficer',
-                dialogueId: 'first_contact'
-            }
-        });
-        document.dispatchEvent(event);
-        console.log('First contact with AREA completed - mission event fired');
+    if (previousMessages === 1) {
+      const event = new CustomEvent('dialogue-complete', {
+        detail: { 
+          characterId: 'executiveOfficer',
+          dialogueId: 'first_contact'
+        }
+      });
+      document.dispatchEvent(event);
+      console.log('First contact with AREA completed - mission event fired');
     }
-}
+  }
   
-  // Generate response with natural delay
+  // Generate response
   const delay = Math.random() < 0.3 ? 800 : 2000 + Math.random() * 3000;
   setTimeout(() => {
     generatePersonalizedResponse(message);
   }, delay);
   
-  // Show sent thought
   showThought(`You reach out: "${message}"`);
 }
 
@@ -345,60 +370,42 @@ function generatePersonalizedResponse(originalMessage) {
   
   let response = '';
 
-  // Personality-based responses
+  // Use role-specific responses
   const responses = {
     executiveOfficer: {
-      greetings: ["Good to connect with you, Captain.", "Always here when you need me.", "Captain, I've been waiting for your contact.", "Glad you found your communicator, sir."],
+      greetings: ["Good to connect with you, Captain.", "Always here when you need me.", "Captain, I've been waiting for your contact."],
       status: ["Everything's running smoothly up here.", "The crew's doing well.", "All systems nominal."],
-      personal: ["I appreciate you checking in.", "It's good to have moments like this.", "Thanks for reaching out."],
+      commands: ["Understood, Captain.", "Right away, sir.", "Consider it done."],
       casual: ["Of course, Captain.", "I'll take care of it.", "Understood."]
     },
     science: {
       greetings: ["Captain! How are you feeling?", "Hope you're taking care of yourself.", "Good to hear from you."],
-      status: ["Everyone's healthy and accounted for.", "Medical bay is peaceful today.", "No concerns from my end.", "Facinating creatures down here!"],
-      personal: ["I'm doing well, thanks for asking.", "Still getting used to ship life, but I like it.", "The crew's been welcoming."],
+      status: ["Everyone's healthy and accounted for.", "Medical bay is peaceful today.", "No concerns from my end."],
+      commands: ["I'll get right on it.", "Medical protocols engaged.", "Understood, Captain."],
       casual: ["Interesting question...", "I've been thinking about that too.", "Let me know if you need anything."]
-    },
-    engineering: {
-      greetings: ["Hey Captain!", "Good to hear from you.", "What's up?"],
-      status: ["Engines are purring like kittens.", "All systems green down here.", "Just finished some routine maintenance."],
-      personal: ["Living the dream down here with my machines.", "Can't complain, love what I do.", "Ship's treating me well."],
-      casual: ["You got it, Captain.", "Consider it done.", "On it."]
-    },
-    sensors: {
-      greetings: ["Captain, good to connect.", "Hey there.", "What can I do for you?"],
-      status: ["All quiet on the scope.", "Sensors are clear.", "Nothing unusual out there."],
-      personal: ["Doing well, thanks. Enjoying the peace and quiet.", "The ocean's fascinating from this perspective.", "All good here."],
-      casual: ["Roger that.", "I'll keep an eye on it.", "Sounds good."]
-    },
-    security: {
-      greetings: ["Captain.", "Good to hear from you.", "Sir."],
-      status: ["All secure.", "No threats detected.", "Perimeter is clear."],
-      personal: ["I'm well, thank you.", "Keeping busy, staying alert.", "All good on my end."],
-      casual: ["Understood.", "Will do.", "Copy that."]
-    },
-    communications: {
-      greetings: ["Hi Captain!", "Good to connect.", "How's your day going?"],
-      status: ["Comms are clear.", "Signal strength is good.", "All channels open."],
-      personal: ["Doing great! Love keeping everyone connected.", "Really enjoying the work.", "Happy to be here."],
-      casual: ["Absolutely.", "I'll handle it.", "No problem."]
     }
+    // Add other crew members as needed
   };
   
-  const memberResponses = responses[selectedCrewMember.id] || responses.casual;
+  const memberResponses = responses[selectedCrewMember.id] || {
+    greetings: ["Good to hear from you.", "How can I help?"],
+    status: ["All good here.", "Everything's running smoothly."],
+    commands: ["Roger that.", "Will do.", "Understood."],
+    casual: ["Sure thing.", "No problem.", "Got it."]
+  };
   
-    // Choose response type based on message content
-    const msg = originalMessage.toLowerCase();
-
-    if (msg.includes('hello') || msg.includes('connect') || messageCount === 1) {
-        response = memberResponses.greetings[Math.floor(Math.random() * memberResponses.greetings.length)];
-    } else if (msg.includes('status') || msg.includes('how are') || msg.includes('doing')) {
-        response = memberResponses.status[Math.floor(Math.random() * memberResponses.status.length)];
-    } else if (msg.includes('personal') || msg.includes('you personally') || msg.includes('settling')) {
-        response = memberResponses.personal[Math.floor(Math.random() * memberResponses.personal.length)];
-    } else {
-        response = memberResponses.casual[Math.floor(Math.random() * memberResponses.casual.length)];
-    }
+  // Choose response based on message and context
+  const msg = originalMessage.toLowerCase();
+  
+  if (msg.includes('hello') || msg.includes('connect') || messageCount === 1) {
+    response = memberResponses.greetings[Math.floor(Math.random() * memberResponses.greetings.length)];
+  } else if (msg.includes('status') || msg.includes('how are')) {
+    response = memberResponses.status[Math.floor(Math.random() * memberResponses.status.length)];
+  } else if (currentDialogueCategory === 'commands') {
+    response = memberResponses.commands[Math.floor(Math.random() * memberResponses.commands.length)];
+  } else {
+    response = memberResponses.casual[Math.floor(Math.random() * memberResponses.casual.length)];
+  }
   
   // Add to conversation history
   const updatedHistory = conversationHistory.get(selectedCrewMember.id) || [];
@@ -410,7 +417,7 @@ function generatePersonalizedResponse(originalMessage) {
   });
   conversationHistory.set(selectedCrewMember.id, updatedHistory);
   
-  // Log the response in game state
+  // Log response in game state
   try {
     const gameState = gameStateInstance?.getState();
     if (gameState?.shipSystems?.communications?.communicator) {
@@ -456,7 +463,6 @@ function showThought(message, duration = 5000) {
     animation: thoughtBubble 0.5s ease-out;
   `;
   
-  // Add animation styles if not already present
   if (!document.getElementById('thought-styles')) {
     const style = document.createElement('style');
     style.id = 'thought-styles';
@@ -489,6 +495,7 @@ function goBackToCrewSelect() {
   selectedCrewMember = null;
   selectedCrewIndex = 0;
   selectedDialogueIndex = 0;
+  currentDialogueCategory = null;
   renderCurrentCommPage();
 }
 
@@ -500,8 +507,11 @@ function renderCurrentCommPage() {
     case 'crew-select':
       renderCrewSelectPage(contentEl);
       break;
-    case 'dialogue':
-      renderDialoguePage(contentEl);
+    case 'dialogue-categories':
+      renderCategoriesPage(contentEl);
+      break;
+    case 'dialogue-options':
+      renderDialogueOptionsPage(contentEl);
       break;
     default:
       renderCrewSelectPage(contentEl);
@@ -540,25 +550,51 @@ function renderCrewSelectPage(contentEl) {
   `;
 }
 
-function renderDialoguePage(contentEl) {
+function renderCategoriesPage(contentEl) {
   if (!selectedCrewMember) {
     goBackToCrewSelect();
     return;
   }
   
-  const dialogueOptions = getDialogueOptions();
+  const categories = getDialogueCategories();
   
   contentEl.innerHTML = `
     <div class="comm-page">
-      <div class="comm-page-header">What would you like to say to ${selectedCrewMember?.name}?</div>
+      <div class="comm-page-header">What type of message for ${selectedCrewMember?.name}?</div>
+      <div class="comm-category-list">
+        ${categories.map((category, index) => `
+          <div class="comm-category-text ${index === selectedDialogueIndex ? 'selected' : ''}" 
+               data-category="${category.id}">
+            <span class="comm-category-name">${category.name}</span>
+          </div>
+        `).join('')}
+      </div>
+      <div class="comm-back-text">Someone else ...</div>
+    </div>
+  `;
+}
+
+function renderDialogueOptionsPage(contentEl) {
+  if (!selectedCrewMember || !currentDialogueCategory) {
+    goBack();
+    return;
+  }
+  
+  const options = getDialogueOptionsForCategory(currentDialogueCategory);
+  const categoryName = getDialogueCategories().find(cat => cat.id === currentDialogueCategory)?.name || currentDialogueCategory;
+  
+  contentEl.innerHTML = `
+    <div class="comm-page">
+      <div class="comm-page-header">${categoryName} with ${selectedCrewMember?.name}</div>
       <div class="comm-dialogue-list">
-        ${dialogueOptions.map((option, index) => `
+        ${options.map((option, index) => `
           <div class="comm-dialogue-text ${index === selectedDialogueIndex ? 'selected' : ''}" 
                data-dialogue="${option}">
             ${option}
           </div>
         `).join('')}
       </div>
+      <div class="comm-back-text">Something else ...</div>
     </div>
   `;
 }
@@ -570,6 +606,13 @@ function updateCrewSelection() {
   });
 }
 
+function updateCategorySelection() {
+  const textElements = document.querySelectorAll('.comm-category-text');
+  textElements.forEach((element, index) => {
+    element.classList.toggle('selected', index === selectedDialogueIndex);
+  });
+}
+
 function updateDialogueSelection() {
   const textElements = document.querySelectorAll('.comm-dialogue-text');
   textElements.forEach((element, index) => {
@@ -577,5 +620,4 @@ function updateDialogueSelection() {
   });
 }
 
-// Export functions that might be needed elsewhere
 export { hasCommunicator, toggleCommunicator };
