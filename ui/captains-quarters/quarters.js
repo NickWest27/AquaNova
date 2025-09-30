@@ -5,8 +5,7 @@ import missionManager from '/game/systems/missionManager.js';
 import { initPDAOverlay } from '/utils/pdaOverlay.js';
 import { initCommunicatorOverlay } from '/utils/communicatorOverlay.js';
 
-initPDAOverlay();
-initCommunicatorOverlay(); 
+
 
 const eventListeners = new Map();
 
@@ -18,6 +17,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.log('Initializing mission system...');
         await missionManager.init();
     }
+
+    initPDAOverlay();
+    initCommunicatorOverlay(); 
     
     const logbookButton = document.getElementById('logbook-button');
     const exitButton = document.getElementById('exit-button');

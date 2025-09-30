@@ -1225,3 +1225,74 @@ body {
 .pda-status-warning {
   color: var(--error-red);
 }
+
+/* ================= PDA CONSOLE STYLES ================= */
+
+.pda-console-section {
+  margin-top: calc(20px * var(--scale));
+  background: rgba(10, 25, 47, 0.8);
+  border-radius: calc(6px * var(--scale));
+  padding: calc(12px * var(--scale));
+  border: calc(1px * var(--scale)) solid rgba(100, 255, 218, 0.3);
+}
+
+.pda-console-controls {
+  display: flex;
+  gap: calc(8px * var(--scale));
+  flex-wrap: wrap;
+  margin-bottom: calc(10px * var(--scale));
+}
+
+.pda-console-logs {
+  max-height: calc(180px * var(--scale));
+  overflow-y: auto;
+  background: rgba(0, 20, 40, 0.8);
+  border: calc(1px * var(--scale)) solid var(--primary-cyan);
+  border-radius: calc(4px * var(--scale));
+  padding: calc(8px * var(--scale));
+  font-family: 'Courier New', monospace;
+  font-size: calc(0.7rem * var(--scale));
+}
+
+.pda-console-log-list {
+  display: flex;
+  flex-direction: column;
+  gap: calc(4px * var(--scale));
+}
+
+.pda-console-log {
+  display: flex;
+  gap: calc(8px * var(--scale));
+  word-wrap: break-word;
+  padding: calc(2px * var(--scale)) 0;
+}
+
+.pda-console-time {
+  color: var(--text-gray);
+  flex-shrink: 0;
+}
+
+.pda-console-type {
+  flex-shrink: 0;
+  font-weight: bold;
+  min-width: calc(50px * var(--scale));
+  text-align: right;
+}
+
+.pda-console-msg {
+  flex: 1;
+  white-space: pre-wrap;
+  color: var(--text-white);
+}
+
+.pda-console-log.pda-console-log .pda-console-type { color: var(--primary-cyan); }
+.pda-console-log.pda-console-warn .pda-console-type { color: var(--accent-orange); }
+.pda-console-log.pda-console-error .pda-console-type { color: var(--error-red); }
+.pda-console-log.pda-console-info .pda-console-type { color: #2196f3; }
+
+.pda-console-empty {
+  padding: calc(16px * var(--scale));
+  text-align: center;
+  color: var(--text-gray);
+  font-style: italic;
+}

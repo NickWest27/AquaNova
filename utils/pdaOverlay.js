@@ -15,11 +15,19 @@ let logbookBrowserIndex = 0;
 let selectedContact = null;
 
 // =============================================================================
+// DEBUG CONSOLE STATE (for scanner page)
+// =============================================================================
+let capturedLogs = [];
+let originalConsole = {};
+const maxLogEntries = 20;
+
+// =============================================================================
 // INITIALIZATION AND MAIN CONTROL
 // =============================================================================
 
 export function initPDAOverlay() {
   document.addEventListener('keydown', handleGlobalKeydown);
+  initConsoleCapture();
 }
 
 function handleGlobalKeydown(e) {
@@ -455,6 +463,91 @@ function getAmbientData() {
 }
 
 // =============================================================================
+// CONSOLE LOG CAPTURE AND DEBUG UTILITIES
+// =============================================================================
+
+function initConsoleCapture() {
+  if (Object.keys(originalConsole).length === 0) {
+    createLogCapture();
+  }
+}
+
+function createLogCapture() {
+  const methods = ['log', 'info', 'warn', 'error', 'debug'];
+  methods.forEach(method => {
+    originalConsole[method] = console[method];
+    console[method] = function(...args) {
+      const msg = args.map(arg => {
+        if (typeof arg === 'object') {
+          try {
+            return JSON.stringify(arg);
+          } catch {
+            return '[object]';
+          }
+        }
+        return String(arg);
+      }).join(' ');
+      
+      capturedLogs.push({
+        type: method,
+        message: msg,
+        timestamp: new Date()
+      });
+      if (capturedLogs.length > maxLogEntries) {
+        capturedLogs.splice(0, capturedLogs.length - maxLogEntries);
+      }
+      
+      originalConsole[method].apply(console, args);
+    };
+  });
+}
+
+function getStationSpecificInfo() {
+  // You can expand this with more detailed station/system state as needed.
+  const state = getGameState();
+  const systems = getSystemStatus();
+  const location = getLocation();
+  return `
+    <div class="pda-section-title">Station/Ship Details</div>
+    <div class="pda-status-item"><strong>Location:</strong> ${escapeHtml(location)}</div>
+    <div class="pda-status-item"><strong>Hull Integrity:</strong> ${systems.hull?.integrity || 0}%</div>
+    <div class="pda-status-item"><strong>O₂ Tank:</strong> ${systems.lifeSupport?.oxygenTankQuantity || 0}%</div>
+    <div class="pda-status-item"><strong>Reactor Health:</strong> ${systems.power?.leftReactorHealth || 0}% / ${systems.power?.rightReactorHealth || 0}%</div>
+  `;
+}
+
+function renderConsoleLogs() {
+  if (!capturedLogs.length) {
+    return `<div class="pda-console-empty">No logs captured.</div>`;
+  }
+  return `
+    <div class="pda-console-log-list">
+      ${capturedLogs.map(log => `
+        <div class="pda-console-log pda-console-${log.type}">
+          <span class="pda-console-time">${log.timestamp.toLocaleTimeString()}</span>
+          <span class="pda-console-type">${log.type.toUpperCase()}</span>
+          <span class="pda-console-msg">${escapeHtml(log.message)}</span>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+function escapeHtml(str) {
+  if (typeof str !== 'string') return str;
+  return str.replace(/[&<>"']/g, function(m) {
+    switch(m) {
+      case '&': return '&amp;';
+      case '<': return '&lt;';
+      case '>': return '&gt;';
+      case '"': return '&quot;';
+      case "'": return '&#39;';
+      default: return m;
+    }
+  });
+}
+
+// =============================================================================
 // PAGE RENDERING
 // =============================================================================
 
@@ -640,7 +733,6 @@ function renderContactDetailPage(contentEl) {
 
 function renderScannerPage(contentEl) {
   const ambient = getAmbientData();
-  
   contentEl.innerHTML = `
     <div class="pda-page">
       <div class="pda-page-header">Environmental Scanner</div>
@@ -673,6 +765,15 @@ function renderScannerPage(contentEl) {
           </div>
         </div>
         <button class="pda-action-btn" data-action="refresh-scanner">Refresh Readings</button>
+      </div>
+      <div class="pda-scanner-section">
+        ${getStationSpecificInfo()}
+      </div>
+      <div class="pda-scanner-section pda-console-section">
+        <div class="pda-section-title">Debug Console</div>
+        <div class="pda-console-logs">
+          ${renderConsoleLogs()}
+        </div>
       </div>
       <button class="pda-back-btn">← Back to Main Menu</button>
     </div>

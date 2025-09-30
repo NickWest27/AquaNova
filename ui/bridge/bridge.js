@@ -2,6 +2,7 @@
 // Separates navigation display from MFD overlay system
 import displayManager from '/utils/displayManager.js';
 import gameStateInstance from '/game/state.js';
+import missionManager from '/game/systems/missionManager.js';
 import { initPDAOverlay } from '/utils/pdaOverlay.js';
 import { initCommunicatorOverlay } from '/utils/communicatorOverlay.js';
 import KeyboardUnit from '/utils/keyboardUnit/keyboardUnit.js';
@@ -22,6 +23,12 @@ const trackInput = document.getElementById("track-input");
 const headingInput = document.getElementById("heading-input");
 
 async function initializeBridge() {
+  
+  if (!missionManager.initialized) {
+    console.log('Initializing mission system...');
+    await missionManager.init();
+  }
+
   // Initialize overlays
   initPDAOverlay();
   initCommunicatorOverlay();

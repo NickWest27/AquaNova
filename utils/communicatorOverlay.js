@@ -1,6 +1,5 @@
 // utils/communicatorOverlay.js
-// Ship communicator overlay system for crew communications
-// Updated with hierarchical dialogue menu system
+// Ship communicator overlay system with hierarchical dialogue and number input
 
 import gameStateInstance from '/game/state.js';
 import missionManager from '/game/systems/missionManager.js';
@@ -11,8 +10,14 @@ let currentCommPage = 'crew-select';
 let selectedCrewMember = null;
 let selectedDialogueIndex = 0;
 let selectedCrewIndex = 0;
-let currentDialogueCategory = null; // Track which submenu we're in
+let currentDialogueCategory = null;
 let conversationHistory = new Map();
+
+// Number input state
+let numberInputMode = false;
+let currentNumberInput = '';
+let inputCommandType = '';
+let maxDigits = 3;
 
 export function initCommunicatorOverlay() {
   document.addEventListener('keydown', (e) => {
@@ -70,6 +75,8 @@ function toggleCommunicator() {
     selectedCrewIndex = 0;
     selectedDialogueIndex = 0;
     currentDialogueCategory = null;
+    numberInputMode = false;
+    currentNumberInput = '';
     renderCurrentCommPage();
   }
 }
@@ -80,13 +87,10 @@ function createCommunicator() {
   communicatorElement.innerHTML = `
     <div class="comm-frame"></div>
     <div class="comm-glass">
-      <div class="comm-content" id="comm-content">
-        <!-- Content will be dynamically generated -->
-      </div>
+      <div class="comm-content" id="comm-content"></div>
     </div>
   `;
   document.body.appendChild(communicatorElement);
-  
   communicatorElement.addEventListener('click', handleCommunicatorClick);
 }
 
@@ -94,7 +98,37 @@ function handleCommunicatorClick(e) {
   e.preventDefault();
   e.stopPropagation();
   
-  // Handle crew member selection
+  // Handle number input clicks
+  if (numberInputMode) {
+    const numberBtn = e.target.closest('.number-btn');
+    if (numberBtn) {
+      const digit = numberBtn.getAttribute('data-digit');
+      handleNumberInput(digit);
+      return;
+    }
+    
+    const unitBtn = e.target.closest('.unit-btn');
+    if (unitBtn) {
+      const unit = unitBtn.getAttribute('data-unit');
+      completeNumberCommand(unit);
+      return;
+    }
+    
+    const clearBtn = e.target.closest('.clear-btn');
+    if (clearBtn) {
+      clearNumberInput();
+      return;
+    }
+    
+    const backBtn = e.target.closest('.back-btn');
+    if (backBtn) {
+      exitNumberInput();
+      return;
+    }
+    return;
+  }
+  
+  // Regular navigation clicks
   const crewText = e.target.closest('.comm-crew-text');
   if (crewText) {
     const crewId = crewText.getAttribute('data-crew-id');
@@ -104,7 +138,6 @@ function handleCommunicatorClick(e) {
     return;
   }
   
-  // Handle category selection
   const categoryText = e.target.closest('.comm-category-text');
   if (categoryText) {
     const category = categoryText.getAttribute('data-category');
@@ -114,7 +147,6 @@ function handleCommunicatorClick(e) {
     return;
   }
   
-  // Handle dialogue option selection
   const dialogueText = e.target.closest('.comm-dialogue-text');
   if (dialogueText) {
     const dialogueMessage = dialogueText.getAttribute('data-dialogue');
@@ -124,7 +156,6 @@ function handleCommunicatorClick(e) {
     return;
   }
   
-  // Handle back text
   const backText = e.target.closest('.comm-back-text');
   if (backText) {
     goBack();
@@ -133,6 +164,31 @@ function handleCommunicatorClick(e) {
 }
 
 function handleCommunicatorNavigation(e) {
+  if (numberInputMode) {
+    switch(e.key) {
+      case '0': case '1': case '2': case '3': case '4':
+      case '5': case '6': case '7': case '8': case '9':
+        e.preventDefault();
+        handleNumberInput(e.key);
+        break;
+      case 'Backspace':
+        e.preventDefault();
+        clearNumberInput();
+        break;
+      case 'Escape':
+        e.preventDefault();
+        exitNumberInput();
+        break;
+      case 'Enter':
+        e.preventDefault();
+        const defaultUnit = inputCommandType === 'speed' ? 'kts' : 
+                          inputCommandType === 'heading' ? 'degrees' : 'meters';
+        completeNumberCommand(defaultUnit);
+        break;
+    }
+    return;
+  }
+  
   switch(e.key) {
     case 'ArrowUp':
     case 'ArrowDown':
@@ -148,6 +204,122 @@ function handleCommunicatorNavigation(e) {
       goBack();
       break;
   }
+}
+
+function handleNumberInput(digit) {
+  if (currentNumberInput.length < maxDigits) {
+    currentNumberInput += digit;
+    renderCurrentCommPage();
+  }
+}
+
+function clearNumberInput() {
+  currentNumberInput = '';
+  renderCurrentCommPage();
+}
+
+function exitNumberInput() {
+  numberInputMode = false;
+  currentNumberInput = '';
+  inputCommandType = '';
+  currentCommPage = 'dialogue-options';
+  renderCurrentCommPage();
+}
+
+function completeNumberCommand(unit) {
+  if (currentNumberInput === '') return;
+  
+  let value = parseInt(currentNumberInput);
+  let commandText = '';
+
+  // Range checks for each command type
+  if (inputCommandType === 'speed') {
+    if (value > 160) {
+      executeHelmCommand('speed', 160);
+      logCommand("Unable sir, setting 160 knots.");
+      showThought('You order: "Unable sir, setting 160 knots."');
+      exitNumberInput();
+      setTimeout(() => {
+        generateHelmResponse('speed', 160);
+      }, 800);
+      return;
+    }
+    commandText = `Make your speed ${value} ${unit}`;
+    executeHelmCommand('speed', value);
+  } else if (inputCommandType === 'heading') {
+    if (value > 359) {
+      executeHelmCommand('heading', 359);
+      logCommand("Unable sir, setting 359 degrees.");
+      showThought('You order: "Unable sir, setting 359 degrees."');
+      exitNumberInput();
+      setTimeout(() => {
+        generateHelmResponse('heading', 359);
+      }, 800);
+      return;
+    }
+    commandText = `Make your heading ${value} ${unit}`;
+    executeHelmCommand('heading', value);
+  } else if (inputCommandType === 'depth') {
+    if (value > 9000) {
+      executeHelmCommand('depth', 9000);
+      logCommand("Unable sir, setting 9000 meters.");
+      showThought('You order: "Unable sir, setting 9000 meters."');
+      exitNumberInput();
+      setTimeout(() => {
+        generateHelmResponse('depth', 9000);
+      }, 800);
+      return;
+    }
+    commandText = `Make your depth ${value} meters`;
+    executeHelmCommand('depth', value);
+  }
+  
+  logCommand(commandText);
+  showThought(`You order: "${commandText}"`);
+  
+  exitNumberInput();
+  
+  setTimeout(() => {
+    generateHelmResponse(inputCommandType, value);
+  }, 800);
+}
+
+function executeHelmCommand(type, value) {
+  if (type === 'speed') {
+    gameStateInstance.updateProperty('navigation.speed', value);
+    gameStateInstance.updateProperty('shipSystems.helm.lastSpeedCommand', {
+      timestamp: new Date().toISOString(),
+      value: value
+    });
+  } else if (type === 'heading') {
+    gameStateInstance.updateProperty('navigation.heading', value);
+    gameStateInstance.updateProperty('navigation.course', value);
+    gameStateInstance.updateProperty('shipSystems.helm.lastHeadingCommand', {
+      timestamp: new Date().toISOString(),
+      value: value
+    });
+  } else if (type === 'depth') {
+    gameStateInstance.updateProperty('navigation.depth', value);
+    gameStateInstance.updateProperty('shipSystems.helm.lastDepthCommand', {
+      timestamp: new Date().toISOString(),
+      value: value
+    });
+  }
+}
+
+function generateHelmResponse(commandType, value) {
+  let response = '';
+  
+  if (commandType === 'speed') {
+    response = value === 0 ? "Aye Captain, all stop." : `Aye Captain, making ${value} knots.`;
+  } else if (commandType === 'heading') {
+    response = `Aye Captain, coming to ${value} degrees.`;
+  } else if (commandType === 'depth') {
+    response = value === 0 ? "Aye Captain, surfacing." : `Aye Captain, making depth ${value} meters.`;
+  }
+  
+  logResponse(response);
+  showThought(`${selectedCrewMember.name} responds: "${response}"`);
 }
 
 function navigateCommMenu(direction) {
@@ -231,22 +403,18 @@ function getDialogueCategories() {
   
   const categories = [];
   
-  // Always include pleasantries
   categories.push({ id: 'pleasantries', name: 'Casual Chat' });
   
-  // Add contextual if available
   const contextual = selectedCrewMember.contextual || [];
   if (contextual.length > 0) {
     categories.push({ id: 'contextual', name: 'Follow Up' });
   }
   
-  // Add commands if available
   const commands = selectedCrewMember.dialogueOptions?.commands || [];
   if (commands.length > 0) {
     categories.push({ id: 'commands', name: 'Orders' });
   }
   
-  // Add emergency if available
   const emergency = selectedCrewMember.dialogueOptions?.emergency || [];
   if (emergency.length > 0) {
     categories.push({ id: 'emergency', name: 'Emergency' });
@@ -263,23 +431,18 @@ function getDialogueOptionsForCategory(category) {
   switch(category) {
     case 'pleasantries':
       return selectedCrewMember.dialogueOptions?.pleasantries || generatePersonalizedPleasantries(history);
-      
     case 'contextual':
       return selectedCrewMember.contextual || [];
-      
     case 'commands':
       return selectedCrewMember.dialogueOptions?.commands || [];
-      
     case 'emergency':
       return selectedCrewMember.dialogueOptions?.emergency || [];
-      
     default:
       return [];
   }
 }
 
 function generatePersonalizedPleasantries(history) {
-  // Fallback if no pleasantries defined in contacts.json
   if (history.length === 0) {
     return ["Hello there", "Good to finally connect", "How are you settling in?"];
   } else {
@@ -289,16 +452,13 @@ function generatePersonalizedPleasantries(history) {
 
 function goBack() {
   if (currentCommPage === 'dialogue-options') {
-    // Go back to categories
     currentCommPage = 'dialogue-categories';
     currentDialogueCategory = null;
     selectedDialogueIndex = 0;
     renderCurrentCommPage();
   } else if (currentCommPage === 'dialogue-categories') {
-    // Go back to crew select
     goBackToCrewSelect();
   } else if (currentCommPage === 'crew-select') {
-    // Close communicator
     toggleCommunicator();
   }
 }
@@ -306,7 +466,23 @@ function goBack() {
 function sendThought(message) {
   console.log(`Message sent to ${selectedCrewMember?.name || 'Unknown'}: ${message}`);
   
-  // Add to conversation history
+  // Check for helm number input commands
+  if (selectedCrewMember?.id === 'helm') {
+    if (message.includes('Make your speed') || message.includes('Make you speed')) {
+      enterNumberInputMode('speed');
+      return;
+    } else if (message.includes('Make your heading')) {
+      enterNumberInputMode('heading');
+      return;
+    } else if (message.includes('Make your depth')) {
+      enterNumberInputMode('depth');
+      return;
+    } else if (handleDirectHelmCommands(message)) {
+      return;
+    }
+  }
+  
+  // Regular message processing
   const history = conversationHistory.get(selectedCrewMember.id) || [];
   history.push({
     timestamp: new Date().toISOString(),
@@ -316,28 +492,9 @@ function sendThought(message) {
   });
   conversationHistory.set(selectedCrewMember.id, history);
   
-  // Log in game state
-  try {
-    const gameState = gameStateInstance?.getState();
-    if (gameState?.shipSystems?.communications?.communicator) {
-      const logEntry = {
-        timestamp: new Date().toISOString(),
-        from: 'Captain',
-        to: selectedCrewMember?.name || selectedCrewMember?.id || 'Unknown',
-        message: message,
-        type: 'outgoing'
-      };
-      
-      const currentLog = gameState.shipSystems.communications.communicator.log || [];
-      currentLog.push(logEntry);
-      
-      gameStateInstance.updateProperty('shipSystems.communications.communicator.log', currentLog);
-    }
-  } catch (error) {
-    console.error('Failed to log communication:', error);
-  }
+  logCommunication('Captain', selectedCrewMember?.name || selectedCrewMember?.id, message, 'outgoing');
   
-  // Check for mission triggers
+  // Mission triggers
   if (selectedCrewMember.id === 'executiveOfficer') {
     const previousMessages = history.filter(msg => msg.type === 'outgoing').length;
     
@@ -353,13 +510,91 @@ function sendThought(message) {
     }
   }
   
-  // Generate response
   const delay = Math.random() < 0.3 ? 800 : 2000 + Math.random() * 3000;
   setTimeout(() => {
     generatePersonalizedResponse(message);
   }, delay);
   
   showThought(`You reach out: "${message}"`);
+}
+
+function enterNumberInputMode(commandType) {
+  numberInputMode = true;
+  currentNumberInput = '';
+  inputCommandType = commandType;
+  currentCommPage = 'number-input';
+  
+  if (commandType === 'speed') {
+    maxDigits = 2; // 0-25 kts
+  } else if (commandType === 'heading') {
+    maxDigits = 3; // 0-359 degrees
+  } else if (commandType === 'depth') {
+    maxDigits = 4; // 0-1000 meters
+  }
+  
+  renderCurrentCommPage();
+}
+
+function handleDirectHelmCommands(message) {
+  const msg = message.toLowerCase();
+  
+  if (msg.includes('all stop')) {
+    executeHelmCommand('speed', 0);
+    logCommand(message);
+    showThought(`You order: "${message}"`);
+    setTimeout(() => generateHelmResponse('speed', 0), 800);
+    return true;
+  } else if (msg.includes('all ahead flank')) {
+    executeHelmCommand('speed', 25);
+    logCommand(message);
+    showThought(`You order: "${message}"`);
+    setTimeout(() => generateHelmResponse('speed', 25), 800);
+    return true;
+  } else if (msg.includes('come left')) {
+    const currentHeading = gameStateInstance.getProperty('navigation.heading') || 0;
+    const newHeading = (currentHeading - 10 + 360) % 360;
+    executeHelmCommand('heading', newHeading);
+    logCommand(message);
+    showThought(`You order: "${message}"`);
+    setTimeout(() => generateHelmResponse('heading', newHeading), 800);
+    return true;
+  } else if (msg.includes('come right')) {
+    const currentHeading = gameStateInstance.getProperty('navigation.heading') || 0;
+    const newHeading = (currentHeading + 10) % 360;
+    executeHelmCommand('heading', newHeading);
+    logCommand(message);
+    showThought(`You order: "${message}"`);
+    setTimeout(() => generateHelmResponse('heading', newHeading), 800);
+    return true;
+  }
+  
+  return false;
+}
+
+function logCommand(message) {
+  const history = conversationHistory.get(selectedCrewMember.id) || [];
+  history.push({
+    timestamp: new Date().toISOString(),
+    from: 'Captain',
+    message: message,
+    type: 'outgoing'
+  });
+  conversationHistory.set(selectedCrewMember.id, history);
+  
+  logCommunication('Captain', selectedCrewMember?.name || selectedCrewMember?.id, message, 'command');
+}
+
+function logResponse(message) {
+  const history = conversationHistory.get(selectedCrewMember.id) || [];
+  history.push({
+    timestamp: new Date().toISOString(),
+    from: selectedCrewMember.name || selectedCrewMember.id,
+    message: message,
+    type: 'incoming'
+  });
+  conversationHistory.set(selectedCrewMember.id, history);
+  
+  logCommunication(selectedCrewMember.name || selectedCrewMember.id, 'Captain', message, 'response');
 }
 
 function generatePersonalizedResponse(originalMessage) {
@@ -370,7 +605,6 @@ function generatePersonalizedResponse(originalMessage) {
   
   let response = '';
 
-  // Use role-specific responses
   const responses = {
     executiveOfficer: {
       greetings: ["Good to connect with you, Captain.", "Always here when you need me.", "Captain, I've been waiting for your contact."],
@@ -384,7 +618,6 @@ function generatePersonalizedResponse(originalMessage) {
       commands: ["I'll get right on it.", "Medical protocols engaged.", "Understood, Captain."],
       casual: ["Interesting question...", "I've been thinking about that too.", "Let me know if you need anything."]
     }
-    // Add other crew members as needed
   };
   
   const memberResponses = responses[selectedCrewMember.id] || {
@@ -394,7 +627,6 @@ function generatePersonalizedResponse(originalMessage) {
     casual: ["Sure thing.", "No problem.", "Got it."]
   };
   
-  // Choose response based on message and context
   const msg = originalMessage.toLowerCase();
   
   if (msg.includes('hello') || msg.includes('connect') || messageCount === 1) {
@@ -407,7 +639,6 @@ function generatePersonalizedResponse(originalMessage) {
     response = memberResponses.casual[Math.floor(Math.random() * memberResponses.casual.length)];
   }
   
-  // Add to conversation history
   const updatedHistory = conversationHistory.get(selectedCrewMember.id) || [];
   updatedHistory.push({
     timestamp: new Date().toISOString(),
@@ -417,16 +648,21 @@ function generatePersonalizedResponse(originalMessage) {
   });
   conversationHistory.set(selectedCrewMember.id, updatedHistory);
   
-  // Log response in game state
+  logCommunication(selectedCrewMember.name || selectedCrewMember.id, 'Captain', response, 'incoming');
+  
+  showThought(`${selectedCrewMember.name} responds: "${response}"`);
+}
+
+function logCommunication(from, to, message, type) {
   try {
     const gameState = gameStateInstance?.getState();
     if (gameState?.shipSystems?.communications?.communicator) {
       const logEntry = {
         timestamp: new Date().toISOString(),
-        from: selectedCrewMember.name || selectedCrewMember.id,
-        to: 'Captain',
-        message: response,
-        type: 'incoming'
+        from: from,
+        to: to,
+        message: message,
+        type: type
       };
       
       const currentLog = gameState.shipSystems.communications.communicator.log || [];
@@ -435,10 +671,8 @@ function generatePersonalizedResponse(originalMessage) {
       gameStateInstance.updateProperty('shipSystems.communications.communicator.log', currentLog);
     }
   } catch (error) {
-    console.error('Failed to log response:', error);
+    console.error('Failed to log communication:', error);
   }
-  
-  showThought(`${selectedCrewMember.name} responds: "${response}"`);
 }
 
 function showThought(message, duration = 5000) {
@@ -513,6 +747,9 @@ function renderCurrentCommPage() {
     case 'dialogue-options':
       renderDialogueOptionsPage(contentEl);
       break;
+    case 'number-input':
+      renderNumberInputPage(contentEl);
+      break;
     default:
       renderCrewSelectPage(contentEl);
   }
@@ -524,9 +761,7 @@ function renderCrewSelectPage(contentEl) {
   if (crewData.length === 0) {
     contentEl.innerHTML = `
       <div class="comm-page">
-        <div class="comm-no-crew">
-          No one else seems to be available right now...
-        </div>
+        <div class="comm-no-crew">No one else seems to be available right now...</div>
       </div>
     `;
     return;
@@ -595,6 +830,49 @@ function renderDialogueOptionsPage(contentEl) {
         `).join('')}
       </div>
       <div class="comm-back-text">Something else ...</div>
+    </div>
+  `;
+}
+
+function renderNumberInputPage(contentEl) {
+  const commandTitle = inputCommandType.charAt(0).toUpperCase() + inputCommandType.slice(1);
+  const units = inputCommandType === 'speed' ? ['kts'] : 
+               inputCommandType === 'heading' ? ['degrees'] : 
+               ['meters'];
+  
+  contentEl.innerHTML = `
+    <div class="comm-page">
+      <div class="comm-page-header">${commandTitle} Input</div>
+      <div class="number-input-display">
+        <div class="current-input">${currentNumberInput || '_'}</div>
+      </div>
+      <div class="number-pad">
+        <div class="number-row">
+          <button class="number-btn" data-digit="1">1</button>
+          <button class="number-btn" data-digit="2">2</button>
+          <button class="number-btn" data-digit="3">3</button>
+        </div>
+        <div class="number-row">
+          <button class="number-btn" data-digit="4">4</button>
+          <button class="number-btn" data-digit="5">5</button>
+          <button class="number-btn" data-digit="6">6</button>
+        </div>
+        <div class="number-row">
+          <button class="number-btn" data-digit="7">7</button>
+          <button class="number-btn" data-digit="8">8</button>
+          <button class="number-btn" data-digit="9">9</button>
+        </div>
+        <div class="number-row">
+          <button class="clear-btn">CLEAR</button>
+          <button class="number-btn" data-digit="0">0</button>
+          <button class="back-btn">BACK</button>
+        </div>
+      </div>
+      <div class="unit-buttons">
+        ${units.map(unit => `
+          <button class="unit-btn" data-unit="${unit}">${unit.toUpperCase()}</button>
+        `).join('')}
+      </div>
     </div>
   `;
 }
