@@ -196,12 +196,12 @@ function drawOwnshipSymbol(ctx, cx, cy, heading) {
   ctx.save();
   ctx.translate(cx, cy);
   
-  // White hollow triangle pointing up (north-oriented)
+  // Ownship triangle pointing up (track-up-oriented)
   ctx.strokeStyle = "#ffffff";
   ctx.fillStyle = "#000000"; // Black fill for hollow effect
   ctx.lineWidth = 2;
   
-  // Triangle shape (pointing up when heading = 0)
+  // Ownship Triangle shape
   const size = 12;
   ctx.beginPath();
   ctx.moveTo(0, -size);      // Top point

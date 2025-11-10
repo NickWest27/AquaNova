@@ -38,41 +38,10 @@
                     <svg id="navigation-overlay"></svg>
                 </div>
             </div>
-            <div class="center-console">
-            <!-- Control Panel -->
-                <label>
-                Range (NM)
-                <select id="range-select">
-                    <option value="5">5</option>
-                    <option value="10" selected>10</option>
-                    <option value="20">20</option>
-                    <option value="40">40</option>
-                    <option value="80">80</option>
-                </select>
-                </label>
-                <label>
-                Track (°)
-                <input type="number" id="track-input" value="26" min="0" max="359">
-                </label>
-
-                <label>
-                Selected Heading (°)
-                <input type="number" id="heading-input" value="350" min="0" max="359">
-                </label>
-            </div>
+            <!-- Center Console Unit Container -->
+            <div class="center-console" id="center-console">OFFLINE</div>
             <!-- Keyboard Unit Container -->
             <div id="keyboard-unit-container">OFFLINE</div>
-
-            <!-- Keyboard Unit Test Controls -->
-            <div class="ku-test-panel">
-                <h4>Test Functions</h4>
-                <div class="test-controls">
-                    <button class="btn btn-selectable" onclick="testLatInput()">LAT Input</button>
-                    <button class="btn btn-selectable" onclick="testLonInput()">LON Input</button>
-                    <button class="btn btn-selectable" onclick="testWptInput()">WPT Name</button>
-                    <button class="btn btn-selectable" onclick="testSpdInput()">Speed</button>
-                </div>
-            </div>
             <!-- Communicator Icon -->
             <div class="communicator-icon hidden" id="comm-icon">📡 Communicator</div>
         </div>

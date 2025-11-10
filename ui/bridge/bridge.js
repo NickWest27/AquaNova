@@ -33,7 +33,7 @@ async function initializeBridge() {
   initPDAOverlay();
   initCommunicatorOverlay();
   
-  // Initialize Keyboard Unit first
+  // Initialize Keyboard Unit
   initializeKeyboardUnit();
   
   // Initialize navigation display (content system)
@@ -96,13 +96,15 @@ async function initializeMFDOverlay() {
   try {
     console.log('Initializing MFD overlay system...');
     
-    // Create MFD overlay instance
-    mfdSystem = new MFDCore('navigation-container', keyboardUnit);
-    
-    console.log('MFD overlay system initialized successfully');
-    
-    // Make MFD accessible globally for debugging
-    window.mfdSystem = mfdSystem;
+    const centerEl = document.querySelector('.center-console');
+    if (centerEl) {
+      if (!centerEl.id) centerEl.id = 'center-console';
+      mfdSystem = new MFDCore(centerEl.id, keyboardUnit);
+      console.log('MFD initialized in center-console');
+      window.mfdSystem = mfdSystem;
+    } else {
+      console.error('Center-console element not found. MFD could not initialize.');
+    }
     
   } catch (error) {
     console.error('Failed to initialize MFD overlay system:', error);
