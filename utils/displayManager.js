@@ -70,7 +70,7 @@ export class DisplayManager {
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', () => this.updateScale());
     } else {
-    - this.updateScale();
+      this.updateScale();
     }
   }
 

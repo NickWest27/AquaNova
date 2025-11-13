@@ -17,17 +17,17 @@ AquaNova2/
 │   │   ├── index.json      # Lists all mission files 
 │   │   └── meetTheCrew.json # First mission, meet the crew and explore the ship
 │   ├── contacts.json        # Character profiles, ranks, bios, contacts, etc.
-│   ├── missions.json        # Mission storage, communications, locations, etc. [not implemented yet]
+│   ├── missions.json        # Mission storage, communications, locations, etc. [To Come]
 │   ├── locations.json       # Stores known geographic points of interest such as docks, reefs, and trenches.
 │   └── logbook.json         # Saved log entries and game states
 │
 ├── game/                    # Core game logic and state
 │   ├── state.js             # Tracks ship status, location, player state, contacts, etc.
-│   ├── procedural/             [Not implemented]
+│   ├── procedural/          # Procedural generation modules [Not Implemented]
 │   │   ├── generator.js     # Map generation, seafloor, anomalies
 │   │   └── nameGenerator.js
-│   └── systems/             # Modular ship systems
-│       ├── missionComputer/    # similar to FMC/MCDU of modern airliner
+│   └── systems/             # Modular ship systems [Implemented]
+│       ├── missionComputer/    # Similar to FMC/MCDU of modern airliner
 │       │   └── missionComputer.js     # Handles calculation (drift, routing between waypoints, etc.) pulls from ship state, passes to navComputer 
 │       ├── navComputer/        # Navigation display
 │       │   ├── navComputer.js     # Handles calculations on how to draw navigation display (canvas with SVG overlay)
@@ -39,11 +39,11 @@ AquaNova2/
 │       ├── sensors.js
 │       └── repairManager.js
 │
-├── ui/                      # UI Components and station screens
+├── ui/                      # UI Components and station screens [Implemented]
 │   ├── bridge/              # Bridge station
-│   │   ├── bridge.html      # bridgeFrame with cutouts for various displays, place orders for ship control and see results on screens 
+│   │   ├── bridge.html      # Bridge frame with cutouts for various displays, place orders for ship control and see results on screens 
 │   │   ├── bridge.js        # Control of the buttons, and displays
-│   │   └── bridge.css       # Style and tilt displays to fit in the bridgeFrame giving a 3D perspective.
+│   │   └── bridge.css       # Style and tilt displays to fit in the bridge frame giving a 3D perspective.
 │   │
 │   ├── helm/               # Helm station for ship control such as ballast, trim, thrust, etc ...
 │   │   ├── helm.html
@@ -55,17 +55,17 @@ AquaNova2/
 │   │   ├── sensors.js
 │   │   └── sensors.css
 │   │
-│   ├── communications/     # Communications for radio, data, satellite etc...
+│   ├── communications/     # Communications for radio, data, satellite etc... [Implemented]
 │   │   ├── comms.html
 │   │   ├── comms.js
 │   │   └── comms.css
-|   |
-│   ├── science/           # Science station for research and medical bay
+│   │
+│   ├── science/           # Science station for research and medical bay [To Come]
 │   │   ├── science.html
 │   │   ├── science.js
 │   │   └── science.css
-|   |
-│   ├── engineering/        # Engineering for ship systems like life support, electrical, fuel, hydraulics, propulsion,...
+│   │
+│   ├── engineering/        # Engineering for ship systems like life support, electrical, fuel, hydraulics, propulsion,... [Implemented]
 │   │   ├── engineering.html
 │   │   ├── engineering.js
 │   │   └── engineering.css
@@ -79,7 +79,7 @@ AquaNova2/
 │           ├── logbook.js  # Handles logbook entries and logbook shelf for managing campaigns.
 │           └── logbook.css
 │
-└── utils/                  # Reusable helpers, Utility functions (time, date, formatting)
+└── utils/                  # Reusable helpers, Utility functions (time, date, formatting) [Implemented]
     ├── displayManager.js   # Unified display management system combining scaling and settings
     ├── pdaOverlay.js       # Generates the global PDA for menu options and displaying crew bios, contacts, tasks...
     ├── communicatorOverlay.js   # Communicator logic for crew dialogue

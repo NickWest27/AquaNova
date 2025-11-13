@@ -11,42 +11,35 @@
     <link rel="stylesheet" href="/utils/keyboardUnit/keyboardUnit.css">
     <link rel="stylesheet" href="/utils/mfd/mfd.css">
 </head>
-<body>
+<body class="bridge-page">
     <div class="bridge-container">
-        <div class="bridge-frame"></div>
+        <div class="bridge-background"></div>
         <div class="bridge-overlay">
             <div class="upper-display">upper-display... OFFLINE</div>
-            <div class="main-display">main-screen...<br>OFFLINE</div>
+            <div class="main-screen">main-screen...<br>OFFLINE</div>
             <div class="left-display">left-display...<br>OFFLINE</div>
             <div class="right-display">right-display...<br>OFFLINE</div>
             <div class="left-console">left-console...<br>OFFLINE</div>
+            <div class="center-console">center-console...<br>OFFLINE</div>
             <div class="right-console">right-console...<br>OFFLINE</div>
-            <div class="left-buttons">OFFLINE
-                <!-- left buttons (icons) go here to move to different ship locations
-                (Engineering, Science Lab, Helm)-->
-                <div class="quarters-button" onclick="exitToQuarters()">
-                    <div class="tooltip">Exit to Captains Quarters</div>
-                </div>
-            </div>
-            <div class="right-buttons">OFFLINE
-                <!-- right buttons go here to issue orders to different stations
-                 eg. selecting helm here, brings up possible orders on center-console -->
-            </div>
             <div class="center-display">
                 <div id="navigation-container">
                     <canvas id="navigation-canvas"></canvas>
                     <svg id="navigation-overlay"></svg>
                 </div>
             </div>
-            <!-- Center Console Unit Container -->
-            <div class="center-console" id="center-console">OFFLINE</div>
             <!-- Keyboard Unit Container -->
-            <div id="keyboard-unit-container">OFFLINE</div>
+            <!-- <div id="keyboard-unit-container">OFFLINE</div> -->
+        </div>
+        <div class="bridge-frame"></div>
+        <img class="bridge-icons" src="..."> <!-- communicator pins, etc -->
             <!-- Communicator Icon -->
             <div class="communicator-icon hidden" id="comm-icon">📡 Communicator</div>
-        </div>
+        <div id="pda-overlay"></div>
+        <div id="communicator-overlay"></div>
     </div>
 
 <script type="module" src="bridge.js"></script>
+<!-- <script src="/utils/transformTuner.js"></script> <!-- Temp for tuning 3D transforms -->
 </body>
 </html>
