@@ -457,6 +457,26 @@ body {
 }
 
 /* //////////////// Minimalist Ethereal Communicator ///////////////// */
+.communicator-icon {
+  position: fixed;
+
+  /* size locked to virtual 102x153 and scaled with effective scale */
+  width:  calc(102px * var(--effective-scale, var(--scale)));
+  height: calc(153px * var(--effective-scale, var(--scale)));
+
+  /* lock to bottom-right of the 1920x1080 bridge stage, with a margin
+     of 40px from bottom and 80px from right in virtual coordinates */
+  top:  calc(var(--offset-y, 0px) + (1080px - 153px - 40px) * var(--effective-scale, var(--scale)));
+  left: calc(var(--offset-x, 0px) + (1920px - 102px - 80px) * var(--effective-scale, var(--scale)));
+
+  background-image: url('/assets/images/communicatorPin.png');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+
+  cursor: pointer;
+  z-index: 9999; /* above frame & overlays, below any debug/UI if needed */
+}
 
 #communicator-overlay {
   position: fixed;
@@ -464,7 +484,7 @@ body {
   left: 0;
   width: 100vw;
   height: 100vh;
-  z-index: 9999;
+  z-index: 9000;
   pointer-events: auto;
   display: none;
   background: transparent;
@@ -625,9 +645,6 @@ body {
   font-style: italic;
 }
 
-.communicator-icon {
-  display: none;
-}
 
 /* Category option styling - consistent with crew info */
 .comm-category-text {

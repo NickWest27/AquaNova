@@ -37,7 +37,19 @@ export function initCommunicatorOverlay() {
       handleCommunicatorNavigation(e);
     }
   });
-  
+
+  // Wire up communicator icon click handler
+  const commIcon = document.getElementById('comm-icon');
+  if (commIcon) {
+    commIcon.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (hasCommunicator()) {
+        toggleCommunicator();
+      }
+    });
+  }
+
   console.log('Communicator initialized');
 }
 

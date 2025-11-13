@@ -38,7 +38,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    /* Letter/pillarbox fallback gradient background */
+    /* Letter/pillarbox fallback background */
     background: linear-gradient(135deg, #001122 0%, #002244 50%, #001133 100%);
 }
 
