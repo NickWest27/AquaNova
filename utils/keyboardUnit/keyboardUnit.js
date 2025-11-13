@@ -45,20 +45,58 @@ class KeyboardUnit {
                 </div>
                 
                 <div class="keyboard-section">
-                    <div class="key-row">
-                        ${this.createKeyRow(['A','B','C','D','E','F','G','H','I','J'])}
+                    <div class="keyboard-main">
+                        <!-- Function keys row -->
+                        <div class="key-row function-row">
+                            ${this.createKeyRow(['F1','F2','F3','F4','F5','F6','F7','F8'])}
+                        </div>
+
+                        <!-- Number row + ESC -->
+                        <div class="key-row">
+                            ${this.createKeyRow(['ESC','1','2','3','4','5','6','7','8','9','0','-','='])}
+                        </div>
+
+                        <!-- QWERTY rows -->
+                        <div class="key-row">
+                            ${this.createKeyRow(['Q','W','E','R','T','Y','U','I','O','P'])}
+                        </div>
+                        <div class="key-row">
+                            ${this.createKeyRow(['A','S','D','F','G','H','J','K','L'])}
+                        </div>
+                        <div class="key-row">
+                            ${this.createKeyRow(['Z','X','C','V','B','N','M',',','.','/'])}
+                        </div>
+
+                        <!-- Space bar row -->
+                        <div class="key-row special-row">
+                            ${this.createKeyRow(['SP','SP','SP'])}
+                        </div>
                     </div>
-                    <div class="key-row">
-                        ${this.createKeyRow(['K','L','M','N','O','P','Q','R','S','T'])}
-                    </div>
-                    <div class="key-row">
-                        ${this.createKeyRow(['U','V','W','X','Y','Z','SP','DEL','CLR','/'])}
-                    </div>
-                    <div class="key-row">
-                        ${this.createKeyRow(['1','2','3','4','5','6','7','8','9','0'])}
-                    </div>
-                    <div class="key-row special-row">
-                        ${this.createSpecialKeys()}
+
+                    <div class="keyboard-numpad">
+                        <div class="key-row">
+                            ${this.createKeyRow(['NUM','/','*','-'])}
+                        </div>
+                        <div class="key-row">
+                            ${this.createKeyRow(['7','8','9','+'])}
+                        </div>
+                        <div class="key-row">
+                            ${this.createKeyRow(['4','5','6'])}
+                        </div>
+                        <div class="key-row">
+                            ${this.createKeyRow(['1','2','3'])}
+                        </div>
+                        <div class="key-row">
+                            ${this.createKeyRow(['0','0','.'])}
+                        </div>
+
+                        <!-- Arrow cluster -->
+                        <div class="key-row arrow-row">
+                            ${this.createKeyRow(['ARROW_UP'])}
+                        </div>
+                        <div class="key-row arrow-row">
+                            ${this.createKeyRow(['ARROW_LEFT','ARROW_DOWN','ARROW_RIGHT'])}
+                        </div>
                     </div>
                 </div>
                 
@@ -90,17 +128,31 @@ class KeyboardUnit {
     }
 
     getKeyClass(key) {
+        if (/^F[0-9]{1,2}$/.test(key)) return 'function-key';
+        if (['ARROW_UP','ARROW_DOWN','ARROW_LEFT','ARROW_RIGHT'].includes(key)) return 'arrow-key';
+        if (['NUM','ESC'].includes(key)) return 'special-key';
+
         if (/^[A-Z]$/.test(key)) return 'alpha-key';
         if (/^[0-9]$/.test(key)) return 'num-key';
-        if (['SP', 'DEL', 'CLR', '/'].includes(key)) return 'function-key';
+
+        if (['SP', 'DEL', 'CLR', '/', '-', '+', '=', '*', ',', '.'].includes(key)) {
+            return 'special-key';
+        }
+
         return 'special-key';
     }
 
     getKeyLabel(key) {
         const labels = {
-            'SP': 'SP',
+            'SP': 'SPACE',
             'DEL': 'DEL',
-            'CLR': 'CLR'
+            'CLR': 'CLR',
+            'ESC': 'ESC',
+            'NUM': 'NUM',
+            'ARROW_UP': '↑',
+            'ARROW_DOWN': '↓',
+            'ARROW_LEFT': '←',
+            'ARROW_RIGHT': '→'
         };
         return labels[key] || key;
     }
@@ -110,8 +162,19 @@ class KeyboardUnit {
             'SP': 'Space',
             'DEL': 'Delete Last Character',
             'CLR': 'Clear All Input',
-            '/': 'Forward Slash'
+            '/': 'Forward Slash',
+            'ESC': 'Cancel / Escape',
+            'NUM': 'Toggle numpad context',
+            'ARROW_UP': 'Cursor Up / Option Up',
+            'ARROW_DOWN': 'Cursor Down / Option Down',
+            'ARROW_LEFT': 'Cursor Left / Option Left',
+            'ARROW_RIGHT': 'Cursor Right / Option Right'
         };
+
+        if (/^F[0-9]{1,2}$/.test(key)) {
+            return `Function Key ${key}`;
+        }
+
         return titles[key] || key;
     }
 
@@ -136,7 +199,7 @@ class KeyboardUnit {
     }
 
     handleKeyPress(key) {
-        if (!this.isActive) return;
+        if (!this.isActive && !this.isGlobalKey(key)) return;
 
         // Visual feedback
         this.flashKey(key);
@@ -151,11 +214,31 @@ class KeyboardUnit {
             case 'SP':
                 this.addCharacter(' ');
                 break;
+            case 'ESC':
+                this.cancelInput();
+                break;
             case 'ENTER':
                 this.processEnter();
                 break;
+            case 'NUM':
+                // lightweight status indicator for now
+                this.updateStatus('NUMPAD');
+                setTimeout(() => this.updateStatus(this.isActive ? 'INPUT REQUESTED' : 'READY'), 1000);
+                break;
+
+            case 'ARROW_UP':
+            case 'ARROW_DOWN':
+            case 'ARROW_LEFT':
+            case 'ARROW_RIGHT':
+                this.sendNavigationKey(key);
+                break;
+
             default:
-                this.addCharacter(key);
+                if (/^F[0-9]{1,2}$/.test(key)) {
+                    this.sendFunctionKey(key);
+                } else {
+                    this.addCharacter(key);
+                }
         }
 
         this.updateScratchpadDisplay();
@@ -171,7 +254,21 @@ class KeyboardUnit {
             '/': '/',
             '.': '.',
             '-': '-',
-            '+': '+'
+            '+': '+',
+            '=': '=',
+            'Escape': 'ESC',
+            'ArrowUp': 'ARROW_UP',
+            'ArrowDown': 'ARROW_DOWN',
+            'ArrowLeft': 'ARROW_LEFT',
+            'ArrowRight': 'ARROW_RIGHT',
+            'F1': 'F1',
+            'F2': 'F2',
+            'F3': 'F3',
+            'F4': 'F4',
+            'F5': 'F5',
+            'F6': 'F6',
+            'F7': 'F7',
+            'F8': 'F8'
         };
 
         let mappedKey = keyMap[e.key];
@@ -254,6 +351,34 @@ class KeyboardUnit {
         document.dispatchEvent(event);
 
         // Flash data link indicator
+        this.flashDataLink();
+    }
+
+    sendFunctionKey(key) {
+        const data = {
+            key,
+            context: this.currentContext,
+            timestamp: new Date().toISOString()
+        };
+
+        const event = new CustomEvent('keyboard-function-pressed', {
+            detail: data
+        });
+        document.dispatchEvent(event);
+        this.flashDataLink();
+    }
+
+    sendNavigationKey(key) {
+        const data = {
+            key,
+            context: this.currentContext,
+            timestamp: new Date().toISOString()
+        };
+
+        const event = new CustomEvent('keyboard-nav-pressed', {
+            detail: data
+        });
+        document.dispatchEvent(event);
         this.flashDataLink();
     }
 
@@ -405,6 +530,13 @@ class KeyboardUnit {
             scratchpadContent: this.scratchpadContent,
             currentContext: this.currentContext
         };
+    }
+
+    isGlobalKey(key) {
+        return (
+            /^F[0-9]{1,2}$/.test(key) ||
+            ['ARROW_UP','ARROW_DOWN','ARROW_LEFT','ARROW_RIGHT'].includes(key)
+        );
     }
 }
 

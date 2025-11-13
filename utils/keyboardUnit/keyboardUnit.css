@@ -78,9 +78,26 @@
 /* Keyboard Section */
 .keyboard-section {
   display: flex;
+  flex-direction: row;
+  gap: calc(6px * var(--scale));
+  margin-bottom: calc(15px * var(--scale));
+}
+
+/* main & numpad columns */
+.keyboard-main,
+.keyboard-numpad {
+  display: flex;
   flex-direction: column;
   gap: calc(3px * var(--scale));
-  margin-bottom: calc(15px * var(--scale));
+}
+
+.keyboard-main {
+  flex: 3;
+}
+
+.keyboard-numpad {
+  flex: 1;
+  align-items: center;
 }
 
 .key-row {
@@ -182,6 +199,26 @@
 
 .kbd-key.function-key:active {
   background-color: var(--accent-orange);
+  color: var(--primary-blue);
+}
+
+/* Arrow & numpad keys – reuse numeric look */
+.kbd-key.arrow-key,
+.kbd-key.numpad-key {
+  background-color: rgba(255, 255, 170, 0.05);
+  border-color: #aaaa44;
+  color: #ffffaa;
+}
+
+.kbd-key.arrow-key:hover,
+.kbd-key.numpad-key:hover {
+  background-color: rgba(255, 255, 170, 0.15);
+  box-shadow: 0 0 calc(8px * var(--scale)) rgba(255, 255, 170, 0.3);
+}
+
+.kbd-key.arrow-key:active,
+.kbd-key.numpad-key:active {
+  background-color: #ffffaa;
   color: var(--primary-blue);
 }
 

@@ -76,12 +76,6 @@ async function initializeNavigationDisplay() {
     return;
   }
   
-  // Create canvas and SVG for navigation content
-  container.innerHTML = `
-    <canvas id="navigation-canvas"></canvas>
-    <svg id="navigation-overlay"></svg>
-  `;
-  
   // Get references
   navigationCanvas = document.getElementById('navigation-canvas');
   navigationSVG = document.getElementById('navigation-overlay');
@@ -96,14 +90,14 @@ async function initializeMFDOverlay() {
   try {
     console.log('Initializing MFD overlay system...');
     
-    const centerEl = document.querySelector('.center-console');
+    const centerEl = document.querySelector('.right-console');
     if (centerEl) {
-      if (!centerEl.id) centerEl.id = 'center-console';
+      if (!centerEl.id) centerEl.id = 'right-console';
       mfdSystem = new MFDCore(centerEl.id, keyboardUnit);
-      console.log('MFD initialized in center-console');
+      console.log('MFD initialized in right-console');
       window.mfdSystem = mfdSystem;
     } else {
-      console.error('Center-console element not found. MFD could not initialize.');
+      console.error('right-console element not found. MFD could not initialize.');
     }
     
   } catch (error) {
@@ -115,22 +109,24 @@ async function initializeMFDOverlay() {
 function initializeKeyboardUnit() {
   console.log('Initializing keyboard unit...');
   
-  const container = document.getElementById('keyboard-unit-container');
-  if (!container) {
-    console.error('Keyboard Unit container not found!');
+  const consoleContainer = document.getElementById('center-console');
+  const keyboardContainer = document.getElementById('keyboard-unit-container');
+
+  if (!consoleContainer || !keyboardContainer) {
+    console.error('Keyboard Unit container not found in center console!');
     return;
   }
   
   try {
     keyboardUnit = new KeyboardUnit('keyboard-unit-container');
     
-    // Listen for keyboard unit data
+    // Listen for keyboard unit data (scratchpad ENTER)
     document.addEventListener('keyboard-data-sent', (e) => {
       console.log('Keyboard data event received:', e.detail);
       handleKeyboardData(e.detail);
     });
     
-    console.log('Keyboard Unit initialized successfully');
+    console.log('Keyboard Unit initialized successfully in center console');
     
   } catch (error) {
     console.error('Failed to initialize Keyboard Unit:', error);
@@ -410,63 +406,6 @@ window.switchToCenterDisplay = function() {
   window.location.href = window.location.pathname + "?display=centerDisplay";
 };
 
-// Test functions for keyboard unit
-window.testLatInput = function() {
-  if (keyboardUnit) {
-    keyboardUnit.requestInput('LAT: N ', 'latitude_input', 15);
-  }
-};
-
-window.testLonInput = function() {
-  if (keyboardUnit) {
-    keyboardUnit.requestInput('LON: W ', 'longitude_input', 15);
-  }
-};
-
-window.testWptInput = function() {
-  if (keyboardUnit) {
-    keyboardUnit.requestInput('WPT: ', 'waypoint_name', 8);
-  }
-};
-
-window.testSpdInput = function() {
-  if (keyboardUnit) {
-    keyboardUnit.requestInput('SPD: ', 'speed_input', 6);
-  }
-};
-
-window.cancelInput = function() {
-  if (keyboardUnit) {
-    keyboardUnit.cancelInput();
-  }
-};
-
-// MFD test functions
-window.testMFDRange = function() {
-  if (mfdSystem) {
-    console.log('MFD Status:', mfdSystem.getStatus());
-    mfdSystem.handleSoftKey('L1');
-  } else {
-    console.log('MFD System not available');
-  }
-};
-
-window.testMFDOverlays = function() {
-  if (mfdSystem) {
-    mfdSystem.handleSoftKey('L4');
-  } else {
-    console.log('MFD System not available');
-  }
-};
-
-window.testMFDRoute = function() {
-  if (mfdSystem) {
-    mfdSystem.handleSoftKey('R1');
-  } else {
-    console.log('MFD System not available');
-  }
-};
-
 // Debug object
 window.debugBridge = {
   keyboardUnit: keyboardUnit,
@@ -478,6 +417,13 @@ window.debugBridge = {
   updateDisplay: updateNavigationDisplay,
   resizeDisplay: resizeNavigationDisplay
 };
+
+document.addEventListener('keyboard-function-pressed', (e) => {
+  console.log('Function key pressed:', e.detail);
+  // if (mfdSystem && typeof mfdSystem.handleFunctionKey === 'function') {
+  //   mfdSystem.handleFunctionKey(e.detail);
+  // }
+});
 
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', async () => {
