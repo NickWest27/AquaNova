@@ -70,14 +70,6 @@ class MFDCore {
                 <button class="soft-key" data-key="R4" id="soft-key-R4"></button>
                 <button class="soft-key" data-key="R5" id="soft-key-R5"></button>
             </div>
-            
-            <!-- Page indicator -->
-            <div class="mfd-page-indicator" id="mfd-page-indicator">NAV</div>
-            
-            <!-- Status indicator -->
-            <div class="mfd-status-bar">
-                <div class="mfd-status-item online" id="mfd-status">MFD</div>
-            </div>
         `;
 
         // Append overlay to container (doesn't replace existing content)
@@ -154,12 +146,6 @@ class MFDCore {
 
         // Update soft key labels and states
         this.updateSoftKeyLabels();
-        
-        // Update page indicator
-        const indicator = this.overlayContainer.querySelector('#mfd-page-indicator');
-        if (indicator) {
-            indicator.textContent = this.currentPage.toUpperCase();
-        }
 
         this.updateLastRenderState();
         this.needsRedraw = false;
