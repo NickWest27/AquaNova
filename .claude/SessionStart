@@ -1,0 +1,30 @@
+#!/bin/bash
+
+echo "🎮 AquaNova Development Environment"
+echo "======================================"
+
+# Check if Python server is needed
+if ! lsof -ti:8000 > /dev/null 2>&1; then
+    echo "🚀 Starting development server on port 8000..."
+    python3 server.py > /dev/null 2>&1 &
+    sleep 2
+    if lsof -ti:8000 > /dev/null 2>&1; then
+        echo "✅ Server running at http://localhost:8000"
+    else
+        echo "⚠️  Server failed to start - you may need to start it manually"
+    fi
+else
+    echo "✅ Server already running on port 8000"
+fi
+
+echo ""
+echo "📂 Project Structure:"
+echo "   - Bridge, Helm, Sensors, Communications, Science, Engineering stations"
+echo "   - Mission system with navigation & MFD"
+echo "   - Save/load via logbook system"
+echo ""
+echo "💡 Quick Tips:"
+echo "   - View in browser: http://localhost:8000"
+echo "   - Project norms: ./ProjectNorms.txt"
+echo "   - Structure overview: ./Structure.txt"
+echo ""
