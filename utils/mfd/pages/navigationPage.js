@@ -1,5 +1,5 @@
 // utils/mfd/pages/navigationPage.js
-// Navigation page for MFD - shows map with range controls and overlays
+// 
 
 import { drawNavigationDisplay } from '/game/systems/navComputer/navComputer.js';
 import gameStateInstance from '/game/state.js';

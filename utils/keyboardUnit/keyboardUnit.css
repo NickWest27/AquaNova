@@ -8,37 +8,34 @@
   box-shadow: 0 0 calc(15px * var(--scale)) rgba(0, 0, 0, 0.4);
   backdrop-filter: blur(8px);
 
-  /* width: 100%;  Fill the container from bridge.css ( This caused issues) */
-  /* height: 100%; This was causing issues */
+  width: 100%;  
+  height: 100%; 
   padding: 0;     /* Remove padding so it doesn’t shrink */
+
+  display: flex;
+  flex-direction: column;
   box-sizing: border-box; /* Ensure borders are included in size */
 }
 
 /* Scratchpad Section */
 .scratchpad-section {
-  margin-bottom: calc(15px * var(--scale));
+  margin-bottom: calc(4px * var(--scale));
+  display: flex;
+  justify-content: center;
 }
 
-.scratchpad-label {
-  color: var(--text-gray);
-  font-size: calc(10px * var(--scale));
-  font-weight: bold;
-  text-transform: uppercase;
-  margin-bottom: calc(5px * var(--scale));
-  text-align: center;
-  letter-spacing: calc(1px * var(--scale));
-}
 
 .scratchpad-display {
   background-color: #000;
   border: calc(2px * var(--scale)) solid var(--primary-cyan);
   border-radius: calc(4px * var(--scale));
   padding: calc(10px * var(--scale));
-  min-height: calc(32px * var(--scale));
+  min-height: calc(48px * var(--scale));         /* taller */
+  width: 70%;                                    /* narrower */
   font-size: calc(14px * var(--scale));
   font-family: 'Courier New', monospace;
   display: flex;
-  align-items: center;
+  align-items: flex-start;                       /* text starts at top */
   letter-spacing: calc(1px * var(--scale));
   position: relative;
   overflow: hidden;
@@ -80,12 +77,16 @@
   display: flex;
   flex-direction: row;
   gap: calc(6px * var(--scale));
-  margin-bottom: calc(15px * var(--scale));
+  margin-top: calc(8px * var(--scale));
+  margin-bottom: calc(8px * var(--scale));
+  flex: 1;                          /* fill remaining height */
+  align-items: flex-start;          /* align all columns to the same top line */
 }
 
 /* main & numpad columns */
 .keyboard-main,
-.keyboard-numpad {
+.keyboard-numpad,
+.keyboard-arrows {
   display: flex;
   flex-direction: column;
   gap: calc(3px * var(--scale));
@@ -93,6 +94,11 @@
 
 .keyboard-main {
   flex: 3;
+}
+
+.keyboard-arrows {
+  flex: 0.8;
+  justify-content: flex-start;
 }
 
 .keyboard-numpad {
@@ -103,11 +109,30 @@
 .key-row {
   display: flex;
   gap: calc(3px * var(--scale));
-  justify-content: center;
+  justify-content: space-between;
 }
 
 .key-row.special-row {
   margin-top: calc(5px * var(--scale));
+}
+
+/* Normalize arrow & numpad alignment and key sizing */
+.keyboard-arrows .key-row,
+.keyboard-numpad .key-row {
+  justify-content: center;                 /* center clusters instead of stretching */
+}
+
+.keyboard-arrows .kbd-key,
+.keyboard-numpad .kbd-key {
+  flex: 0 0 auto;                          /* prevent row-filling stretch */
+  width: calc(40px * var(--scale));
+  min-width: calc(40px * var(--scale));
+  min-height: calc(32px * var(--scale));
+}
+
+/* Space bar: ~5 normal key widths */
+.kbd-key.space-key {
+  flex: 5 1 0;
 }
 
 /* Base key styling - extends your existing button system */
@@ -120,12 +145,14 @@
   padding: calc(6px * var(--scale)) calc(8px * var(--scale));
   cursor: pointer;
   transition: all 0.2s ease;
-  min-width: calc(30px * var(--scale));
+  min-width: 0;                           /* allow flex shrink */
   min-height: calc(30px * var(--scale));
   text-align: center;
   user-select: none;
   position: relative;
   overflow: hidden;
+
+  flex: 1 1 0;                             /* keys expand to fill each row */
 }
 
 /* Key press animation */
