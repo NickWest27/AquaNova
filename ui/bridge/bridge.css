@@ -466,6 +466,7 @@ body {
     background-position: center;
     z-index: 3; /* Temporary placed back so I can see overlay during testing */
     transform-origin: center center;
+    pointer-events: none; /* Frame is visual only - allow clicks through to interactive elements */
 }
 
 .bridge-icons {

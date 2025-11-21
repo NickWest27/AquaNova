@@ -11,3 +11,5 @@ make communicator, "c" to bring it up.
 Make console or bit test screen, viewable on diffrent display.
 
 Get Claude code working with me.
+
+Hello World

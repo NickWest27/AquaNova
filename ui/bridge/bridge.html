@@ -15,7 +15,7 @@
     <div class="bridge-container">
         <div class="bridge-background"></div>
         <div class="bridge-overlay">
-            <div class="upper-display">upper-display... OFFLINE</div>
+            <div class="upper-display">upper-display... STANDBY</div>
             <div class="main-screen">main-screen...<br>OFFLINE</div>
             <div class="left-display">left-display...<br>OFFLINE</div>
             <div class="right-display">right-display...<br>OFFLINE</div>
@@ -23,7 +23,10 @@
             <div class="center-console" id="center-console">
                 <div id="keyboard-unit-container"></div>
             </div>
-            <div class="right-console">right-console...<br>OFFLINE</div>
+            <div class="right-console" id="right-console">
+                <canvas id="right-console-canvas"></canvas>
+                <svg id="right-console-overlay"></svg>
+            </div>
             <div class="center-display">
                 <div id="navigation-container">
                     <canvas id="navigation-canvas"></canvas>
