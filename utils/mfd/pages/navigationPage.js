@@ -9,6 +9,7 @@ class NavigationPage {
         // Initialize navigation page state
         const defaultState = {
             mode: 'map', // 'map', 'overlays', 'route'
+            displayMode: 'ARC', // 'ARC', 'PLAN', 'ROSE'
             overlaysVisible: {
                 route: true,
                 waypoints: true,
@@ -43,13 +44,15 @@ class NavigationPage {
     // Group related actions together
     static getMapSoftKeys(mfd, state) {
     const range = gameStateInstance.getProperty("displaySettings.navDisplayRange") || 10;
+    const displayMode = state.displayMode || 'ARC';
+    console.log(`[NAV] getMapSoftKeys - displayMode: ${displayMode}`);
     return {
-        labels: ['▲', `${range}`, '▼', '', 'SHOW', 'ROUTE', '', '', '', ''],
+        labels: ['▲', `${range}`, '▼', displayMode, 'SHOW', 'ROUTE', '', '', '', ''],
         actions: [
         () => this.changeRange(mfd, 1),   // Unified range handler
         null,
         () => this.changeRange(mfd, -1),
-        null,
+        () => this.cycleDisplayMode(mfd),  // L4: MODE button
         () => this.setMode(mfd, 'overlays'),
         () => this.setMode(mfd, 'route'),
         null, null, null, null
@@ -108,7 +111,8 @@ class NavigationPage {
             range: currentGameState.range,
             ownshipTrack: currentGameState.course,
             selectedHeading: currentGameState.heading,
-            overlays: state.overlaysVisible
+            overlays: state.overlaysVisible,
+            displayMode: state.displayMode || 'ARC'
         };
 
         // Use existing nav computer to draw the display
@@ -293,6 +297,19 @@ class NavigationPage {
         mfd.setupPageSoftKeys('navigation');
         mfd.needsRedraw = true; // Force redraw
         console.log(`Navigation: Mode changed to ${newMode}`);
+    }
+
+    static cycleDisplayMode(mfd) {
+        const state = mfd.getPageState('navigation');
+        const modes = ['ARC', 'PLAN', 'ROSE'];
+        const currentIndex = modes.indexOf(state.displayMode || 'ARC');
+        const nextIndex = (currentIndex + 1) % modes.length;
+
+        state.displayMode = modes[nextIndex];
+        mfd.setPageState(state, 'navigation');
+        mfd.setupPageSoftKeys('navigation');  // Update button labels
+        mfd.needsRedraw = true;  // Force redraw
+        console.log(`Navigation: Display mode changed to ${state.displayMode}`);
     }
 
     static showOverlays(mfd) {

@@ -10,8 +10,8 @@ class MFDCore {
         this.keyboardUnit = keyboardUnit;
         this.currentPage = 'navigation';
         this.pages = new Map();
-        this.softKeyLabels = Array(8).fill('');
-        this.softKeyActions = Array(8).fill(null);
+        this.softKeyLabels = Array(10).fill('');  // 10 keys: L1-L5, R1-R5
+        this.softKeyActions = Array(10).fill(null);  // 10 keys: L1-L5, R1-R5
         
         // Overlay elements (not display content)
         this.overlayContainer = null;

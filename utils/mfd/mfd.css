@@ -314,10 +314,14 @@
   }
 }
 
-/* Accessibility */
-.soft-key:focus {
+/* Accessibility - only show outline for keyboard navigation, not mouse clicks */
+.soft-key:focus-visible {
   outline: calc(2px * var(--scale)) solid var(--primary-cyan);
   outline-offset: calc(2px * var(--scale));
+}
+
+.soft-key:focus:not(:focus-visible) {
+  outline: none;
 }
 
 /* High contrast mode support */

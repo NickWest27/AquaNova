@@ -56,16 +56,33 @@ export function drawNavigationDisplay(canvas, svg, state, displayType = 'centerD
   // Clear the logical CSS pixel area
   ctx.clearRect(0, 0, cssWidth, cssHeight);
 
-  // ND center and radius: move center up so arcs fill upward area
-  const cx = cssWidth / 2;
-  const cy = cssHeight * 0.9; // lift center so forward arcs occupy most of the display
+  // ND center and radius: adjust based on display mode
+  const displayMode = state.displayMode || 'ARC';
+  let cx, cy;
+
+  if (displayMode === 'PLAN' || displayMode === 'ROSE') {
+    // Centered for PLAN and ROSE views
+    cx = cssWidth / 2;
+    cy = cssHeight / 2;
+  } else {
+    // Bottom-biased for ARC view
+    cx = cssWidth / 2;
+    cy = cssHeight * 0.9;
+  }
 
   // Make rings almost fill available area (leave margin for readouts)
   const margin = Math.max(20, Math.min(cssWidth, cssHeight) * 0.04);
   const maxRadius = Math.min(cssWidth, cssHeight) * 0.9 - margin;
 
-  // Draw the navigation content in CSS pixel coordinates
-  drawNavContent(ctx, cx, cy, maxRadius, state, cssWidth, cssHeight);
+  // Draw the navigation content based on display mode
+  if (displayMode === 'PLAN') {
+    drawPlanContent(ctx, cx, cy, maxRadius, state, cssWidth, cssHeight);
+  } else if (displayMode === 'ROSE') {
+    drawRoseContent(ctx, cx, cy, maxRadius, state, cssWidth, cssHeight);
+  } else {
+    // Default ARC view
+    drawNavContent(ctx, cx, cy, maxRadius, state, cssWidth, cssHeight);
+  }
 
   // Update SVG overlay to match
   setupSVGOverlay(svg, cx, cy, maxRadius, state, cssWidth, cssHeight);
@@ -363,6 +380,236 @@ function drawNavigationReadouts(svg, cx, cy, maxRadius, state, width, height) {
   modeText.setAttribute("font-size", "12");
   modeText.setAttribute("font-family", "Arial, sans-serif");
   modeText.setAttribute("font-weight", "bold");
-  modeText.textContent = "ARC";
+  modeText.textContent = state.displayMode || "ARC";
   svg.appendChild(modeText);
+}
+
+// ============================================================================
+// HELPER FUNCTIONS FOR 360° DISPLAYS (PLAN AND ROSE VIEWS)
+// ============================================================================
+
+function drawFullRangeRings(ctx, cx, cy, maxRadius) {
+  ctx.strokeStyle = "#ffffff";
+  ctx.lineWidth = 1;
+  ctx.setLineDash([5, 5]);
+
+  [0.25, 0.5, 0.75, 1.0].forEach(fraction => {
+    const radius = maxRadius * fraction;
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius, 0, Math.PI * 2);  // Full circle
+    ctx.stroke();
+  });
+
+  ctx.setLineDash([]);
+}
+
+function drawFullCompassRose(ctx, cx, cy, maxRadius) {
+  const radius = maxRadius * 0.95;
+
+  // Draw all compass markings (0-360)
+  for (let bearing = 0; bearing < 360; bearing += 10) {
+    const angle = toRadians(bearing);
+    const isMajor = bearing % 30 === 0;
+    const isCardinal = bearing % 90 === 0;
+
+    const outerRadius = radius + (isMajor ? 8 : 4);
+    const innerRadius = radius;
+
+    const x1 = cx + outerRadius * Math.cos(angle);
+    const y1 = cy + outerRadius * Math.sin(angle);
+    const x2 = cx + innerRadius * Math.cos(angle);
+    const y2 = cy + innerRadius * Math.sin(angle);
+
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = isMajor ? 2 : 1;
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+
+    // Labels for major headings
+    if (isMajor) {
+      ctx.fillStyle = "#ffffff";
+      ctx.font = "12px Arial";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+
+      const labelRadius = radius + 20;
+      const labelX = cx + labelRadius * Math.cos(angle);
+      const labelY = cy + labelRadius * Math.sin(angle);
+
+      let label;
+      if (isCardinal) {
+        const cardinals = { 0: "N", 90: "E", 180: "S", 270: "W" };
+        label = cardinals[bearing];
+      } else {
+        label = String(Math.round(bearing / 10)).padStart(2, '0');
+      }
+
+      ctx.fillText(label, labelX, labelY);
+    }
+  }
+}
+
+function drawFullBearingLines(ctx, cx, cy, maxRadius) {
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.2)";
+  ctx.lineWidth = 1;
+
+  // Draw radial lines every 30 degrees (full circle)
+  for (let bearing = 0; bearing < 360; bearing += 30) {
+    const angle = toRadians(bearing);
+    const startRadius = maxRadius * 0.1;
+
+    const startX = cx + startRadius * Math.cos(angle);
+    const startY = cy + startRadius * Math.sin(angle);
+    const endX = cx + maxRadius * Math.cos(angle);
+    const endY = cy + maxRadius * Math.sin(angle);
+
+    ctx.beginPath();
+    ctx.moveTo(startX, startY);
+    ctx.lineTo(endX, endY);
+    ctx.stroke();
+  }
+}
+
+function drawOwnshipSymbolRotated(ctx, cx, cy, heading) {
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(toRadians(heading));  // Rotate to heading
+
+  // White hollow triangle
+  ctx.strokeStyle = "#ffffff";
+  ctx.fillStyle = "#000000";
+  ctx.lineWidth = 2;
+
+  const size = 12;
+  ctx.beginPath();
+  ctx.moveTo(0, -size);
+  ctx.lineTo(-size/2, size/2);
+  ctx.lineTo(size/2, size/2);
+  ctx.closePath();
+
+  ctx.fill();
+  ctx.stroke();
+
+  // Center dot
+  ctx.fillStyle = "#ffffff";
+  ctx.beginPath();
+  ctx.arc(0, 0, 2, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+}
+
+function drawTrackIndicator(ctx, cx, cy, maxRadius, state) {
+  // Draw yellow track arrow/line for PLAN view
+  if (state.ownshipTrack !== undefined) {
+    ctx.strokeStyle = "#ffff00";
+    ctx.lineWidth = 2;
+    ctx.setLineDash([10, 5]);
+
+    const trackAngle = toRadians(state.ownshipTrack);
+    const lineLength = maxRadius * 0.3;
+    const endX = cx + lineLength * Math.cos(trackAngle);
+    const endY = cy + lineLength * Math.sin(trackAngle);
+
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(endX, endY);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Arrow head
+    const arrowSize = 8;
+    ctx.save();
+    ctx.translate(endX, endY);
+    ctx.rotate(trackAngle);
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(-arrowSize, -arrowSize/2);
+    ctx.lineTo(-arrowSize, arrowSize/2);
+    ctx.closePath();
+    ctx.fillStyle = "#ffff00";
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
+// ============================================================================
+// PLAN VIEW RENDERER (North up, ownship centered, 360° view)
+// ============================================================================
+
+function drawPlanContent(ctx, cx, cy, maxRadius, state, canvasWidth, canvasHeight) {
+  console.log(`Drawing PLAN view at center(${cx}, ${cy}) with radius ${maxRadius}`);
+
+  // 1. Clear background with black
+  ctx.fillStyle = "#000000";
+  ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+
+  // 2. Full 360° range rings
+  drawFullRangeRings(ctx, cx, cy, maxRadius);
+
+  // 3. Full compass rose (north up)
+  drawFullCompassRose(ctx, cx, cy, maxRadius);
+
+  // 4. Bearing lines (every 30°, full circle)
+  drawFullBearingLines(ctx, cx, cy, maxRadius);
+
+  // 5. Ownship at center, rotated to heading
+  drawOwnshipSymbolRotated(ctx, cx, cy, state.selectedHeading || 0);
+
+  // 6. Track direction indicator (yellow arrow)
+  drawTrackIndicator(ctx, cx, cy, maxRadius, state);
+
+  // 7. Range labels
+  drawRangeLabels(ctx, cx, cy, maxRadius, state.range || 10);
+}
+
+// ============================================================================
+// ROSE VIEW RENDERER (Track up, ownship centered, rotating compass)
+// ============================================================================
+
+function drawRoseContent(ctx, cx, cy, maxRadius, state, canvasWidth, canvasHeight) {
+  console.log(`Drawing ROSE view at center(${cx}, ${cy}) with radius ${maxRadius}`);
+
+  // 1. Clear background with black
+  ctx.fillStyle = "#000000";
+  ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+
+  const track = state.ownshipTrack || 0;
+
+  // 2. Save context for rotation (track-up orientation)
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(-toRadians(track));  // Rotate display to track-up
+  ctx.translate(-cx, -cy);
+
+  // 3. Draw rotated content (compass and rings rotate with track)
+  drawFullRangeRings(ctx, cx, cy, maxRadius);
+  drawFullCompassRose(ctx, cx, cy, maxRadius);
+  drawFullBearingLines(ctx, cx, cy, maxRadius);
+
+  ctx.restore();
+
+  // 4. Ownship at center (shows heading offset from track)
+  const headingOffset = (state.selectedHeading || 0) - track;
+  drawOwnshipSymbolRotated(ctx, cx, cy, headingOffset);
+
+  // 5. Heading bug (cyan line) if different from track
+  if (Math.abs(headingOffset) > 2) {
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.strokeStyle = "#00ffff";
+    ctx.lineWidth = 2;
+    const bugAngle = toRadians(headingOffset);
+    const bugLength = maxRadius * 0.8;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(bugLength * Math.cos(bugAngle), bugLength * Math.sin(bugAngle));
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // 6. Range labels
+  drawRangeLabels(ctx, cx, cy, maxRadius, state.range || 10);
 }

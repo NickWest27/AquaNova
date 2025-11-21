@@ -270,21 +270,28 @@ function resizeNavigationDisplay() {
 
 function updateNavigationDisplay() {
   if (!navigationCanvas || !navigationSVG) return;
-  
+
+  // Get display mode from MFD page state
+  const displayMode = mfdSystem?.getPageState('navigation')?.displayMode || 'ARC';
+
+  // Get overlay settings from MFD page state
+  const overlays = mfdSystem?.getPageState('navigation')?.overlaysVisible || {
+    route: true,
+    waypoints: true,
+    contours: false,
+    hazards: true,
+    traffic: false
+  };
+
   // Get current navigation state from game state
   const navState = {
     range: gameState.getProperty("displaySettings.navDisplayRange") || 10,
     ownshipTrack: gameState.getProperty("navigation.course") || 0,
     selectedHeading: gameState.getProperty("navigation.heading") || 0,
-    overlays: {
-      route: true,
-      waypoints: true,
-      contours: false,
-      hazards: true,
-      traffic: false
-    }
+    displayMode: displayMode,
+    overlays: overlays
   };
-  
+
   // Draw navigation content using navComputer
   drawNavigationDisplay(navigationCanvas, navigationSVG, navState, getCurrentDisplayType());
 }
@@ -316,9 +323,10 @@ function startAnimation() {
       const currentState = JSON.stringify({
         range: gameState.getProperty("displaySettings.navDisplayRange"),
         course: gameState.getProperty("navigation.course"),
-        heading: gameState.getProperty("navigation.heading")
+        heading: gameState.getProperty("navigation.heading"),
+        displayMode: mfdSystem?.getPageState('navigation')?.displayMode
       });
-      
+
       if (currentState !== lastState) {
         updateNavigationDisplay();
         lastState = currentState;
