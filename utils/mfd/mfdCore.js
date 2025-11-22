@@ -41,10 +41,12 @@ class MFDCore {
 
         this.createOverlayStructure();
         this.bindEvents();
-        
+
         await this.loadPages();
-        this.setActivePage('navigation');
-        
+
+        // Don't set initial page here - let station manager control it
+        // this.setActivePage('navigation');
+
         console.log('MFD Overlay initialized');
     }
 
@@ -53,30 +55,26 @@ class MFDCore {
         const overlay = document.createElement('div');
         overlay.className = 'mfd-overlay-container';
         overlay.innerHTML = `
-            <!-- Left soft keys -->
-            <div class="mfd-soft-keys mfd-left-keys">
+            <!-- 3x5 Grid: Left column, Center column, Right column (5 rows each) -->
+            <div class="mfd-button-grid">
                 <button class="soft-key" data-key="L1" id="soft-key-L1"></button>
-                <button class="soft-key" data-key="L2" id="soft-key-L2"></button>
-                <button class="soft-key" data-key="L3" id="soft-key-L3"></button>
-                <button class="soft-key" data-key="L4" id="soft-key-L4"></button>
-                <button class="soft-key" data-key="L5" id="soft-key-L5"></button>
-            </div>
-
-            <!-- Center soft keys -->
-            <div class="mfd-soft-keys mfd-center-keys">
                 <button class="soft-key" data-key="C1" id="soft-key-C1"></button>
-                <button class="soft-key" data-key="C2" id="soft-key-C2"></button>
-                <button class="soft-key" data-key="C3" id="soft-key-C3"></button>
-                <button class="soft-key" data-key="C4" id="soft-key-C4"></button>
-                <button class="soft-key" data-key="C5" id="soft-key-C5"></button>
-            </div>
-
-            <!-- Right soft keys -->
-            <div class="mfd-soft-keys mfd-right-keys">
                 <button class="soft-key" data-key="R1" id="soft-key-R1"></button>
+
+                <button class="soft-key" data-key="L2" id="soft-key-L2"></button>
+                <button class="soft-key" data-key="C2" id="soft-key-C2"></button>
                 <button class="soft-key" data-key="R2" id="soft-key-R2"></button>
+
+                <button class="soft-key" data-key="L3" id="soft-key-L3"></button>
+                <button class="soft-key" data-key="C3" id="soft-key-C3"></button>
                 <button class="soft-key" data-key="R3" id="soft-key-R3"></button>
+
+                <button class="soft-key" data-key="L4" id="soft-key-L4"></button>
+                <button class="soft-key" data-key="C4" id="soft-key-C4"></button>
                 <button class="soft-key" data-key="R4" id="soft-key-R4"></button>
+
+                <button class="soft-key" data-key="L5" id="soft-key-L5"></button>
+                <button class="soft-key" data-key="C5" id="soft-key-C5"></button>
                 <button class="soft-key" data-key="R5" id="soft-key-R5"></button>
             </div>
         `;
@@ -84,7 +82,7 @@ class MFDCore {
         // Append overlay to container (doesn't replace existing content)
         this.container.appendChild(overlay);
         this.overlayContainer = overlay;
-        
+
         // Get references to overlay elements
         this.softKeyElements = overlay.querySelectorAll('.soft-key');
     }
@@ -213,12 +211,9 @@ class MFDCore {
             const label = this.softKeyLabels[index] || '';
             element.textContent = label;
             element.style.visibility = label ? 'visible' : 'hidden';
-            
-            if (label) {
-                element.classList.add('active');
-            } else {
-                element.classList.remove('active');
-            }
+
+            // Don't add 'active' class here - it's for selected state only
+            // Buttons are visible/hidden based on whether they have a label
         });
     }
 
@@ -230,12 +225,18 @@ class MFDCore {
         };
 
         const index = keyMap[keyId];
-        if (index === undefined) return;
+        if (index === undefined) {
+            console.warn(`MFD: Unknown key ID: ${keyId}`);
+            return;
+        }
 
         const action = this.softKeyActions[index];
-        if (!action) return;
+        if (!action) {
+            console.log(`MFD: No action for key ${keyId} (index ${index})`);
+            return;
+        }
 
-        console.log(`MFD Soft key pressed: ${keyId} (${this.softKeyLabels[index]})`);
+        console.log(`MFD Soft key pressed: ${keyId} (index: ${index}, label: "${this.softKeyLabels[index]}")`);
 
         this.flashSoftKey(keyId);
 

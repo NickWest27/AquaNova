@@ -1,0 +1,120 @@
+/* Engineering Station Styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background-color: #1a1a1a;
+    font-family: 'Courier New', monospace;
+    overflow: hidden;
+}
+
+.engineering-container {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #001122 0%, #002244 50%, #001133 100%);
+}
+
+.engineering-frame {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(var(--scale));
+    width: 1920px;
+    height: 1080px;
+    background-color: #001122;
+    z-index: 1;
+    transform-origin: center center;
+}
+
+.engineering-overlay {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(var(--scale));
+    width: 1920px;
+    height: 1080px;
+    z-index: 2;
+    pointer-events: none;
+    transform-origin: center center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.engineering-overlay > * {
+    pointer-events: auto;
+}
+
+.station-title {
+    font-size: calc(48px * var(--scale));
+    color: var(--primary-cyan);
+    text-align: center;
+    margin-bottom: calc(40px * var(--scale));
+    text-shadow: 0 0 calc(10px * var(--scale)) rgba(100, 255, 218, 0.5);
+}
+
+.status-message {
+    font-size: calc(24px * var(--scale));
+    color: var(--text-gray);
+    text-align: center;
+    line-height: 1.5;
+}
+
+/* Bridge hotspot */
+.bridge-hotspot {
+    position: absolute;
+    left: 2%;
+    bottom: 2%;
+    width: 8%;
+    height: 12%;
+    cursor: pointer;
+    border: calc(2px * var(--scale)) solid transparent;
+    border-radius: calc(8px * var(--scale));
+    transition: all 0.3s ease;
+    background: rgba(100, 255, 218, 0.1);
+    animation: pulse 3s infinite;
+}
+
+.bridge-hotspot:hover {
+    border-color: #64ffda;
+    box-shadow: 0 0 calc(20px * var(--scale)) rgba(100, 255, 218, 0.5);
+    background: rgba(100, 255, 218, 0.2);
+}
+
+.tooltip {
+    position: absolute;
+    bottom: -35px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.9);
+    color: #64ffda;
+    padding: calc(5px * var(--scale)) calc(10px * var(--scale));
+    border-radius: calc(4px * var(--scale));
+    font-size: calc(12px * var(--scale));
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+    border: calc(1px * var(--scale)) solid #64ffda;
+}
+
+.bridge-hotspot:hover .tooltip {
+    opacity: 1;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        box-shadow: 0 0 calc(5px * var(--scale)) rgba(100, 255, 218, 0.3);
+    }
+    50% {
+        box-shadow: 0 0 calc(15px * var(--scale)) rgba(100, 255, 218, 0.6);
+    }
+}

@@ -26,7 +26,7 @@ class HelmPage {
                 '▼',        // L3: Speed down
                 '',         // L4: Empty
                 '◄',        // L5: Heading left
-                '', '', '', '', '',  // C1-C5: Empty
+                '', '', '', '', 'HDG',  // C1-C4: Empty, C5: Heading (keyboard entry)
                 '▲',        // R1: Depth up (shallower)
                 'DEP',      // R2: Depth (keyboard entry)
                 '▼',        // R3: Depth down (deeper)
@@ -39,7 +39,8 @@ class HelmPage {
                 () => this.adjustSpeed(mfd, -5),          // L3: -5 knots
                 null,                                      // L4
                 () => this.adjustHeading(mfd, -5),        // L5: -5 degrees
-                null, null, null, null, null,             // C1-C5
+                null, null, null, null,                   // C1-C4
+                () => this.requestHeadingInput(mfd),      // C5: Heading keyboard entry
                 () => this.adjustDepth(mfd, -10),         // R1: -10m (shallower)
                 () => this.requestDepthInput(mfd),        // R2: Keyboard entry
                 () => this.adjustDepth(mfd, 10),          // R3: +10m (deeper)
@@ -75,6 +76,8 @@ class HelmPage {
     // Heading adjustment methods
     static adjustHeading(mfd, delta) {
         const currentTarget = gameStateInstance.getProperty('helm.targetHeading') || 0;
+        console.log(`Helm: Adjusting heading from ${currentTarget}° by ${delta}°`);
+
         let newHeading = currentTarget + delta;
 
         // Wrap heading: 0-360 degrees

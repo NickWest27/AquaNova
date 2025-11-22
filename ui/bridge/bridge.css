@@ -534,6 +534,152 @@ body {
     background: rgba(100, 255, 218, 0.2);
 }
 
+/* ============================================
+   NAVIGATION HOTSPOTS
+   ============================================ */
+
+/* Quarters hotspot - bottom left of bridge frame */
+.quarters-hotspot {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(var(--scale));
+    transform-origin: center center;
+    width: 1920px;
+    height: 1080px;
+    z-index: 4;
+    pointer-events: none;
+}
+
+.quarters-hotspot::before {
+    content: '';
+    position: absolute;
+    left: 2%;
+    bottom: 2%;
+    width: 8%;
+    height: 12%;
+    cursor: pointer;
+    border: calc(2px * var(--scale)) solid transparent;
+    border-radius: calc(8px * var(--scale));
+    transition: all 0.3s ease;
+    background: rgba(100, 255, 218, 0.1);
+    pointer-events: auto;
+    animation: pulse 3s infinite;
+}
+
+.quarters-hotspot:hover::before {
+    border-color: #64ffda;
+    box-shadow: 0 0 calc(20px * var(--scale)) rgba(100, 255, 218, 0.5);
+    background: rgba(100, 255, 218, 0.2);
+}
+
+/* Sensors hotspot - left side, below left display */
+.sensors-hotspot {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(var(--scale));
+    transform-origin: center center;
+    width: 1920px;
+    height: 1080px;
+    z-index: 4;
+    pointer-events: none;
+}
+
+.sensors-hotspot::before {
+    content: '';
+    position: absolute;
+    left: 11%;
+    top: 58%;
+    width: 8%;
+    height: 12%;
+    cursor: pointer;
+    border: calc(2px * var(--scale)) solid transparent;
+    border-radius: calc(8px * var(--scale));
+    transition: all 0.3s ease;
+    background: rgba(100, 255, 218, 0.1);
+    pointer-events: auto;
+    animation: pulse 3s infinite;
+}
+
+.sensors-hotspot:hover::before {
+    border-color: #64ffda;
+    box-shadow: 0 0 calc(20px * var(--scale)) rgba(100, 255, 218, 0.5);
+    background: rgba(100, 255, 218, 0.2);
+}
+
+/* Engineering hotspot - right side, below right display */
+.engineering-hotspot {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(var(--scale));
+    transform-origin: center center;
+    width: 1920px;
+    height: 1080px;
+    z-index: 4;
+    pointer-events: none;
+}
+
+.engineering-hotspot::before {
+    content: '';
+    position: absolute;
+    right: 11%;
+    top: 58%;
+    width: 8%;
+    height: 12%;
+    cursor: pointer;
+    border: calc(2px * var(--scale)) solid transparent;
+    border-radius: calc(8px * var(--scale));
+    transition: all 0.3s ease;
+    background: rgba(100, 255, 218, 0.1);
+    pointer-events: auto;
+    animation: pulse 3s infinite;
+}
+
+.engineering-hotspot:hover::before {
+    border-color: #64ffda;
+    box-shadow: 0 0 calc(20px * var(--scale)) rgba(100, 255, 218, 0.5);
+    background: rgba(100, 255, 218, 0.2);
+}
+
+/* Hotspot tooltips */
+.quarters-hotspot .tooltip,
+.sensors-hotspot .tooltip,
+.engineering-hotspot .tooltip {
+    position: absolute;
+    bottom: -35px;
+    left: 50%;
+    transform: translateX(-50%) scale(calc(1 / var(--scale)));
+    background: rgba(0, 0, 0, 0.9);
+    color: #64ffda;
+    padding: calc(5px * var(--scale)) calc(10px * var(--scale));
+    border-radius: calc(4px * var(--scale));
+    font-size: calc(12px * var(--scale));
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+    border: calc(1px * var(--scale)) solid #64ffda;
+    z-index: 10;
+}
+
+.quarters-hotspot:hover .tooltip,
+.sensors-hotspot:hover .tooltip,
+.engineering-hotspot:hover .tooltip {
+    opacity: 1;
+}
+
+/* Pulse animation for hotspots */
+@keyframes pulse {
+    0%, 100% {
+        box-shadow: 0 0 calc(5px * var(--scale)) rgba(100, 255, 218, 0.3);
+    }
+    50% {
+        box-shadow: 0 0 calc(15px * var(--scale)) rgba(100, 255, 218, 0.6);
+    }
+}
+
 /* High DPI display fixes */
 @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
     #navigation-canvas {

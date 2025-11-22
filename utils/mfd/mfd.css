@@ -11,6 +11,7 @@
   bottom: 0;
   pointer-events: none; /* Let display content handle events */
   z-index: 10; /* Above display content */
+  padding: calc(8px * var(--scale));
 }
 
 /* Enable pointer events for interactive elements */
@@ -18,43 +19,14 @@
   pointer-events: auto;
 }
 
-/* Left soft keys positioned on left edge */
-.mfd-soft-keys.mfd-left-keys {
-  position: absolute;
-  left: calc(8px * var(--scale));
-  top: calc(8px * var(--scale));
-  bottom: calc(8px * var(--scale));
-  display: flex;
-  flex-direction: column;
+/* Simple 3-column x 5-row grid layout */
+.mfd-button-grid {
+  display: grid;
+  grid-template-columns: calc(60px * var(--scale)) 1fr calc(60px * var(--scale));
+  grid-template-rows: repeat(5, 1fr);
   gap: calc(8px * var(--scale));
-  width: calc(60px * var(--scale));
-  justify-content: space-evenly;
-}
-
-/* Center soft keys positioned at bottom center */
-.mfd-soft-keys.mfd-center-keys {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  bottom: calc(8px * var(--scale));
-  display: flex;
-  flex-direction: row;
-  gap: calc(8px * var(--scale));
-  height: calc(40px * var(--scale));
-  justify-content: center;
-}
-
-/* Right soft keys positioned on right edge */
-.mfd-soft-keys.mfd-right-keys {
-  position: absolute;
-  right: calc(8px * var(--scale));
-  top: calc(8px * var(--scale));
-  bottom: calc(8px * var(--scale));
-  display: flex;
-  flex-direction: column;
-  gap: calc(8px * var(--scale));
-  width: calc(60px * var(--scale));
-  justify-content: space-evenly;
+  width: 100%;
+  height: 100%;
 }
 
 /* Soft key styling */
@@ -71,7 +43,6 @@
   transition: all 0.2s ease;
   text-align: center;
   text-transform: uppercase;
-  flex: 1; /* Allow buttons to grow and fill available space */
   line-height: 1.2;
   backdrop-filter: blur(4px);
   user-select: none;
@@ -79,7 +50,7 @@
   align-items: center;
   justify-content: center;
   flex-direction: column;
-  writing-mode: horizontal-tb;
+  min-height: 0; /* Allow grid to control height */
 }
 
 /* Triangle symbols for range controls */

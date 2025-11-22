@@ -3,6 +3,7 @@
 // Aviation-style artificial horizon with speed tape, heading tape, and depth tape
 
 import gameStateInstance from '/game/state.js';
+import autopilot from '/game/systems/autopilot/autopilot.js';
 
 export function drawPFD(container) {
     if (!container) {
@@ -31,6 +32,9 @@ export function drawPFD(container) {
     const pitch = gameStateInstance.getProperty('helm.pitch') || 0;
     const roll = gameStateInstance.getProperty('helm.roll') || 0;
 
+    // Get trend values from autopilot
+    const trends = autopilot.getTrendValues();
+
     // Clear canvas
     ctx.fillStyle = '#001122';
     ctx.fillRect(0, 0, rect.width, rect.height);
@@ -39,13 +43,13 @@ export function drawPFD(container) {
     drawArtificialHorizon(ctx, rect.width, rect.height, pitch, roll);
 
     // Draw speed tape (left side)
-    drawSpeedTape(ctx, rect.height, currentSpeed, targetSpeed);
+    drawSpeedTape(ctx, rect.height, currentSpeed, targetSpeed, trends.speedTrend);
 
     // Draw depth tape (right side)
-    drawDepthTape(ctx, rect.width, rect.height, currentDepth, targetDepth);
+    drawDepthTape(ctx, rect.width, rect.height, currentDepth, targetDepth, trends.depthTrend);
 
     // Draw heading tape (bottom)
-    drawHeadingTape(ctx, rect.width, rect.height, currentHeading, targetHeading);
+    drawHeadingTape(ctx, rect.width, rect.height, currentHeading, targetHeading, trends.headingTrend);
 
     // Clear SVG overlay
     if (svg) {
@@ -203,7 +207,7 @@ function drawRollIndicator(ctx, centerX, centerY, radius, roll) {
     ctx.restore();
 }
 
-function drawSpeedTape(ctx, height, currentSpeed, targetSpeed) {
+function drawSpeedTape(ctx, height, currentSpeed, targetSpeed, trendSpeed) {
     const tapeX = 10;
     const tapeY = height / 2;
     const tapeWidth = 60;
@@ -271,6 +275,30 @@ function drawSpeedTape(ctx, height, currentSpeed, targetSpeed) {
         }
     }
 
+    // Draw trend vector (magenta arrow showing where speed will be in 10 seconds)
+    if (trendSpeed !== undefined && Math.abs(trendSpeed - currentSpeed) > 0.5) {
+        const trendY = tapeY - (trendSpeed - currentSpeed) * pixelsPerKnot;
+
+        if (trendY >= tapeY - tapeHeight / 2 && trendY <= tapeY + tapeHeight / 2) {
+            ctx.strokeStyle = '#FF00FF';  // Magenta
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(tapeX + tapeWidth + 2, tapeY);
+            ctx.lineTo(tapeX + tapeWidth + 2, trendY);
+            ctx.stroke();
+
+            // Arrow head
+            ctx.fillStyle = '#FF00FF';
+            const arrowDir = Math.sign(trendY - tapeY);
+            ctx.beginPath();
+            ctx.moveTo(tapeX + tapeWidth + 2, trendY);
+            ctx.lineTo(tapeX + tapeWidth - 1, trendY - arrowDir * 5);
+            ctx.lineTo(tapeX + tapeWidth + 5, trendY - arrowDir * 5);
+            ctx.closePath();
+            ctx.fill();
+        }
+    }
+
     // Label
     ctx.fillStyle = '#64ffda';
     ctx.font = 'bold 10px "Courier New", monospace';
@@ -279,7 +307,7 @@ function drawSpeedTape(ctx, height, currentSpeed, targetSpeed) {
     ctx.fillText('KTS', tapeX + tapeWidth / 2, tapeY + tapeHeight / 2 + 15);
 }
 
-function drawDepthTape(ctx, width, height, currentDepth, targetDepth) {
+function drawDepthTape(ctx, width, height, currentDepth, targetDepth, trendDepth) {
     const tapeWidth = 70;
     const tapeX = width - tapeWidth - 10;
     const tapeY = height / 2;
@@ -349,6 +377,30 @@ function drawDepthTape(ctx, width, height, currentDepth, targetDepth) {
         }
     }
 
+    // Draw trend vector (magenta arrow showing where depth will be in 10 seconds)
+    if (trendDepth !== undefined && Math.abs(trendDepth - currentDepth) > 0.5) {
+        const trendY = tapeY + (trendDepth - currentDepth) * pixelsPerMeter;
+
+        if (trendY >= tapeY - tapeHeight / 2 && trendY <= tapeY + tapeHeight / 2) {
+            ctx.strokeStyle = '#FF00FF';  // Magenta
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(tapeX - 2, tapeY);
+            ctx.lineTo(tapeX - 2, trendY);
+            ctx.stroke();
+
+            // Arrow head
+            ctx.fillStyle = '#FF00FF';
+            const arrowDir = Math.sign(trendY - tapeY);
+            ctx.beginPath();
+            ctx.moveTo(tapeX - 2, trendY);
+            ctx.lineTo(tapeX + 1, trendY - arrowDir * 5);
+            ctx.lineTo(tapeX - 5, trendY - arrowDir * 5);
+            ctx.closePath();
+            ctx.fill();
+        }
+    }
+
     // Label
     ctx.fillStyle = '#64ffda';
     ctx.font = 'bold 10px "Courier New", monospace';
@@ -357,7 +409,7 @@ function drawDepthTape(ctx, width, height, currentDepth, targetDepth) {
     ctx.fillText('METERS', tapeX + tapeWidth / 2, tapeY + tapeHeight / 2 + 15);
 }
 
-function drawHeadingTape(ctx, width, height, currentHeading, targetHeading) {
+function drawHeadingTape(ctx, width, height, currentHeading, targetHeading, trendHeading) {
     const tapeHeight = 40;
     const tapeY = height - tapeHeight - 10;
     const tapeX = width / 2;
@@ -436,6 +488,37 @@ function drawHeadingTape(ctx, width, height, currentHeading, targetHeading) {
             ctx.lineTo(targetX + 5, tapeY - 8);
             ctx.closePath();
             ctx.fill();
+        }
+    }
+
+    // Draw trend vector (magenta arrow showing where heading will be in 10 seconds)
+    if (trendHeading !== undefined) {
+        let trendDiff = trendHeading - currentHeading;
+        // Normalize to shortest path
+        if (trendDiff > 180) trendDiff -= 360;
+        if (trendDiff < -180) trendDiff += 360;
+
+        if (Math.abs(trendDiff) > 0.5) {
+            const trendX = tapeX + trendDiff * pixelsPerDegree;
+
+            if (trendX >= tapeX - tapeWidth / 2 && trendX <= tapeX + tapeWidth / 2) {
+                ctx.strokeStyle = '#FF00FF';  // Magenta
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(tapeX, tapeY - 2);
+                ctx.lineTo(trendX, tapeY - 2);
+                ctx.stroke();
+
+                // Arrow head
+                ctx.fillStyle = '#FF00FF';
+                const arrowDir = Math.sign(trendX - tapeX);
+                ctx.beginPath();
+                ctx.moveTo(trendX, tapeY - 2);
+                ctx.lineTo(trendX - arrowDir * 5, tapeY + 1);
+                ctx.lineTo(trendX - arrowDir * 5, tapeY - 5);
+                ctx.closePath();
+                ctx.fill();
+            }
         }
     }
 

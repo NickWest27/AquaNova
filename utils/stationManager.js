@@ -57,6 +57,12 @@ class StationManager {
         this.mfdSystem = mfdSystem;
         this.centerDisplay = centerDisplay;
 
+        // Sync with game state if it exists
+        const savedStation = gameStateInstance.getProperty('bridge.activeStation');
+        if (savedStation && this.stations[savedStation]) {
+            this.currentStation = savedStation;
+        }
+
         console.log('Station Manager initialized');
     }
 

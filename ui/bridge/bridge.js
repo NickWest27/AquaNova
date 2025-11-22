@@ -10,9 +10,9 @@ import { drawNavigationDisplay } from '/game/systems/navComputer/navComputer.js'
 import MFDCore from '/utils/mfd/mfdCore.js';
 import stationManager from '/utils/stationManager.js';
 import { drawPFD } from '/game/systems/pfd/pfdRenderer.js';
+import autopilot from '/game/systems/autopilot/autopilot.js';
 
 const gameState = gameStateInstance;
-let lastState = null;
 let animationId = null;
 let keyboardUnit = null;
 let mfdSystem = null;
@@ -135,10 +135,23 @@ function initializeStationManager() {
     drawPFD(centerDisplay);
   });
 
+  // Initialize to current station (sync buttons, MFD, and display)
+  const currentStation = stationManager.getCurrentStation();
+  const stationInfo = stationManager.getStationInfo(currentStation);
+
+  // Set MFD page for current station
+  if (mfdSystem && stationInfo && stationInfo.mfdPage) {
+    mfdSystem.setActivePage(stationInfo.mfdPage);
+  }
+
+  // Update UI
+  stationManager.updateStationButtons();
+  stationManager.updateCenterDisplay();
+
   // Make station manager globally accessible for debugging
   window.stationManager = stationManager;
 
-  console.log('Station manager initialized');
+  console.log('Station manager initialized on station:', currentStation);
 }
 
 function initializeKeyboardUnit() {
@@ -206,6 +219,38 @@ function handleKeyboardData(data) {
 }
 
 function setupEventListeners() {
+  // Navigation hotspots
+  const quartersHotspot = document.getElementById('quarters-hotspot');
+  const sensorsHotspot = document.getElementById('sensors-hotspot');
+  const engineeringHotspot = document.getElementById('engineering-hotspot');
+
+  if (quartersHotspot) {
+    quartersHotspot.addEventListener('click', () => {
+      console.log('Navigating to Captain\'s Quarters...');
+      window.exitToQuarters();
+    });
+  }
+
+  if (sensorsHotspot) {
+    sensorsHotspot.addEventListener('click', () => {
+      console.log('Navigating to Sensors Station...');
+      stopAnimation();
+      if (keyboardUnit) keyboardUnit.destroy();
+      if (mfdSystem) mfdSystem.destroy();
+      window.location.href = '../sensors/sensors.html';
+    });
+  }
+
+  if (engineeringHotspot) {
+    engineeringHotspot.addEventListener('click', () => {
+      console.log('Navigating to Engineering Station...');
+      stopAnimation();
+      if (keyboardUnit) keyboardUnit.destroy();
+      if (mfdSystem) mfdSystem.destroy();
+      window.location.href = '../engineering/engineering.html';
+    });
+  }
+
   // Range selector
   if (rangeSelect) {
     rangeSelect.addEventListener('change', (e) => {
@@ -356,32 +401,11 @@ function getCurrentDisplayType() {
 function startAnimation() {
   function animate() {
     try {
-      // Get current active station
-      const activeStation = stationManager.getCurrentStation();
+      // Update autopilot physics
+      autopilot.update();
 
-      // Update display based on active station
-      const currentState = JSON.stringify({
-        station: activeStation,
-        range: gameState.getProperty("displaySettings.navDisplayRange"),
-        course: gameState.getProperty("navigation.course"),
-        heading: gameState.getProperty("navigation.heading"),
-        displayMode: mfdSystem?.getPageState('navigation')?.displayMode,
-        overlays: mfdSystem?.getPageState('navigation')?.overlaysVisible,
-        helmSpeed: gameState.getProperty("helm.currentSpeed"),
-        helmHeading: gameState.getProperty("helm.currentHeading"),
-        helmDepth: gameState.getProperty("helm.currentDepth"),
-        helmTargetSpeed: gameState.getProperty("helm.targetSpeed"),
-        helmTargetHeading: gameState.getProperty("helm.targetHeading"),
-        helmTargetDepth: gameState.getProperty("helm.targetDepth"),
-        helmPitch: gameState.getProperty("helm.pitch"),
-        helmRoll: gameState.getProperty("helm.roll")
-      });
-
-      if (currentState !== lastState) {
-        // Update the current station's display
-        stationManager.updateCenterDisplay();
-        lastState = currentState;
-      }
+      // Always update the current station's display (let the renderer decide if redraw is needed)
+      stationManager.updateCenterDisplay();
 
       // Update MFD overlay if needed
       if (mfdSystem && mfdSystem.needsUpdate()) {
