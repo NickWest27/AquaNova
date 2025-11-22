@@ -72,7 +72,16 @@ export function drawNavigationDisplay(canvas, svg, state, displayType = 'centerD
 
   // Make rings almost fill available area (leave margin for readouts)
   const margin = Math.max(20, Math.min(cssWidth, cssHeight) * 0.04);
-  const maxRadius = Math.min(cssWidth, cssHeight) * 0.9 - margin;
+  let maxRadius;
+
+  if (displayMode === 'PLAN' || displayMode === 'ROSE') {
+    // For centered 360° views, smaller margin for labels
+    const labelMargin = 25; // Space for compass labels
+    maxRadius = (Math.min(cssWidth, cssHeight) / 2) - labelMargin;
+  } else {
+    // ARC view uses more of the space since it's bottom-biased
+    maxRadius = Math.min(cssWidth, cssHeight) * 0.9 - margin;
+  }
 
   // Draw the navigation content based on display mode
   if (displayMode === 'PLAN') {
@@ -212,29 +221,29 @@ function drawBearingLines(ctx, cx, cy, maxRadius) {
 function drawOwnshipSymbol(ctx, cx, cy, heading) {
   ctx.save();
   ctx.translate(cx, cy);
-  
-  // Ownship triangle pointing up (track-up-oriented)
+
+  // Ownship triangle pointing up - tip at ship position
   ctx.strokeStyle = "#ffffff";
   ctx.fillStyle = "#000000"; // Black fill for hollow effect
   ctx.lineWidth = 2;
-  
-  // Ownship Triangle shape
+
+  // Ownship Triangle shape - tip at (0,0), base extends down
   const size = 12;
   ctx.beginPath();
-  ctx.moveTo(0, -size);      // Top point
-  ctx.lineTo(-size/2, size/2); // Bottom left
-  ctx.lineTo(size/2, size/2);   // Bottom right
+  ctx.moveTo(0, 0);              // Tip at ship position
+  ctx.lineTo(-size/2, size * 1.5); // Left base point
+  ctx.lineTo(size/2, size * 1.5);  // Right base point
   ctx.closePath();
-  
+
   ctx.fill();   // Fill with black first
   ctx.stroke(); // Then stroke with white
-  
-  // Add small white dot in center
+
+  // Add small white dot at tip (ship position)
   ctx.fillStyle = "#ffffff";
   ctx.beginPath();
   ctx.arc(0, 0, 2, 0, Math.PI * 2);
   ctx.fill();
-  
+
   ctx.restore();
 }
 
@@ -451,6 +460,55 @@ function drawFullCompassRose(ctx, cx, cy, maxRadius) {
   }
 }
 
+function drawFullCompassRoseTrackUp(ctx, cx, cy, maxRadius, currentTrack) {
+  const radius = maxRadius * 0.95;
+
+  // Draw all compass markings (0-360) track-up like ARC view
+  for (let bearing = 0; bearing < 360; bearing += 10) {
+    // Calculate angle relative to track (same logic as ARC view compass)
+    const angle = toRadians(bearing);
+    const isMajor = bearing % 30 === 0;
+    const isCardinal = bearing % 90 === 0;
+
+    const outerRadius = radius + (isMajor ? 8 : 4);
+    const innerRadius = radius;
+
+    const x1 = cx + outerRadius * Math.cos(angle);
+    const y1 = cy + outerRadius * Math.sin(angle);
+    const x2 = cx + innerRadius * Math.cos(angle);
+    const y2 = cy + innerRadius * Math.sin(angle);
+
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = isMajor ? 2 : 1;
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+
+    // Labels for major headings
+    if (isMajor) {
+      ctx.fillStyle = "#ffffff";
+      ctx.font = "12px Arial";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+
+      const labelRadius = radius + 20;
+      const labelX = cx + labelRadius * Math.cos(angle);
+      const labelY = cy + labelRadius * Math.sin(angle);
+
+      let label;
+      if (isCardinal) {
+        const cardinals = { 0: "N", 90: "E", 180: "S", 270: "W" };
+        label = cardinals[bearing];
+      } else {
+        label = String(Math.round(bearing / 10)).padStart(2, '0');
+      }
+
+      ctx.fillText(label, labelX, labelY);
+    }
+  }
+}
+
 function drawFullBearingLines(ctx, cx, cy, maxRadius) {
   ctx.strokeStyle = "rgba(255, 255, 255, 0.2)";
   ctx.lineWidth = 1;
@@ -477,22 +535,22 @@ function drawOwnshipSymbolRotated(ctx, cx, cy, heading) {
   ctx.translate(cx, cy);
   ctx.rotate(toRadians(heading));  // Rotate to heading
 
-  // White hollow triangle
+  // White hollow triangle - tip at (0,0), base extends down
   ctx.strokeStyle = "#ffffff";
   ctx.fillStyle = "#000000";
   ctx.lineWidth = 2;
 
   const size = 12;
   ctx.beginPath();
-  ctx.moveTo(0, -size);
-  ctx.lineTo(-size/2, size/2);
-  ctx.lineTo(size/2, size/2);
+  ctx.moveTo(0, 0);              // Tip at ship position
+  ctx.lineTo(-size/2, size * 1.5); // Left base point
+  ctx.lineTo(size/2, size * 1.5);  // Right base point
   ctx.closePath();
 
   ctx.fill();
   ctx.stroke();
 
-  // Center dot
+  // Center dot at tip (ship position)
   ctx.fillStyle = "#ffffff";
   ctx.beginPath();
   ctx.arc(0, 0, 2, 0, Math.PI * 2);
@@ -536,33 +594,157 @@ function drawTrackIndicator(ctx, cx, cy, maxRadius, state) {
 }
 
 // ============================================================================
+// LAT/LON GRID FOR PLAN VIEW
+// ============================================================================
+
+function drawLatLonGrid(ctx, cx, cy, maxRadius, state) {
+  const range = state.range || 10; // Nautical miles
+  const [shipLon, shipLat] = state.ownshipPosition || [-70.6709, 41.5223];
+
+  // Calculate appropriate grid spacing based on range
+  // Grid intervals in minutes (1 minute = 1 nautical mile latitude)
+  let gridInterval;
+  if (range <= 5) {
+    gridInterval = 1;  // 1 minute grid
+  } else if (range <= 10) {
+    gridInterval = 2;  // 2 minute grid
+  } else if (range <= 20) {
+    gridInterval = 5;  // 5 minute grid
+  } else if (range <= 40) {
+    gridInterval = 10; // 10 minute grid
+  } else {
+    gridInterval = 15; // 15 minute grid
+  }
+
+  // Scale factor: pixels per nautical mile
+  const scale = maxRadius / range;
+
+  // Convert lat/lon to minutes
+  const shipLatMinutes = shipLat * 60;  // Latitude in minutes
+  const shipLonMinutes = shipLon * 60;  // Longitude in minutes
+
+  // Calculate grid start positions (round to nearest grid interval)
+  const latGridStart = Math.floor(shipLatMinutes / gridInterval) * gridInterval;
+  const lonGridStart = Math.floor(shipLonMinutes / gridInterval) * gridInterval;
+
+  // Draw grid lines
+  ctx.strokeStyle = "rgba(0, 255, 255, 0.3)"; // Cyan with transparency
+  ctx.lineWidth = 1;
+
+  // Calculate grid bounds (in nautical miles from center)
+  const gridRange = range * 1.2; // Slightly larger than display range
+
+  // Vertical lines (longitude lines - run north-south)
+  for (let offset = -gridRange; offset <= gridRange; offset += gridInterval) {
+    const lonMinutes = lonGridStart + offset;
+    const deltaMinutes = lonMinutes - shipLonMinutes;
+    const x = cx + (deltaMinutes * scale);
+
+    // Only draw if within canvas bounds
+    if (x >= 0 && x <= ctx.canvas.width) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, ctx.canvas.height);
+      ctx.stroke();
+
+      // Label with actual longitude
+      const lonDegrees = lonMinutes / 60;
+      const lonLabel = formatLongitude(lonDegrees);
+      ctx.fillStyle = "rgba(0, 255, 255, 0.6)";
+      ctx.font = "10px Arial";
+      ctx.textAlign = "center";
+      ctx.fillText(lonLabel, x, 15);
+    }
+  }
+
+  // Horizontal lines (latitude lines - run east-west)
+  for (let offset = -gridRange; offset <= gridRange; offset += gridInterval) {
+    const latMinutes = latGridStart + offset;
+    const deltaMinutes = latMinutes - shipLatMinutes;
+    const y = cy - (deltaMinutes * scale); // Subtract because canvas Y increases downward
+
+    // Only draw if within canvas bounds
+    if (y >= 0 && y <= ctx.canvas.height) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(ctx.canvas.width, y);
+      ctx.stroke();
+
+      // Label with actual latitude
+      const latDegrees = latMinutes / 60;
+      const latLabel = formatLatitude(latDegrees);
+      ctx.fillStyle = "rgba(0, 255, 255, 0.6)";
+      ctx.font = "10px Arial";
+      ctx.textAlign = "left";
+      ctx.fillText(latLabel, 5, y - 3);
+    }
+  }
+
+  // Draw center crosshair
+  ctx.strokeStyle = "rgba(0, 255, 255, 0.8)";
+  ctx.lineWidth = 2;
+  const crosshairSize = 20;
+
+  // Vertical center line
+  ctx.beginPath();
+  ctx.moveTo(cx, cy - crosshairSize);
+  ctx.lineTo(cx, cy + crosshairSize);
+  ctx.stroke();
+
+  // Horizontal center line
+  ctx.beginPath();
+  ctx.moveTo(cx - crosshairSize, cy);
+  ctx.lineTo(cx + crosshairSize, cy);
+  ctx.stroke();
+
+  // Center label with ship position
+  ctx.fillStyle = "#00ffff";
+  ctx.font = "12px Arial";
+  ctx.textAlign = "center";
+  const shipPosLabel = `${formatLatitude(shipLat)} ${formatLongitude(shipLon)}`;
+  ctx.fillText(shipPosLabel, cx, cy - 25);
+}
+
+// Helper functions to format lat/lon
+function formatLatitude(lat) {
+  const degrees = Math.floor(Math.abs(lat));
+  const minutes = Math.abs((lat - Math.floor(lat)) * 60);
+  const dir = lat >= 0 ? 'N' : 'S';
+  return `${degrees}°${minutes.toFixed(1)}'${dir}`;
+}
+
+function formatLongitude(lon) {
+  const degrees = Math.floor(Math.abs(lon));
+  const minutes = Math.abs((lon - Math.floor(lon)) * 60);
+  const dir = lon >= 0 ? 'E' : 'W';
+  return `${degrees}°${minutes.toFixed(1)}'${dir}`;
+}
+
+// ============================================================================
 // PLAN VIEW RENDERER (North up, ownship centered, 360° view)
 // ============================================================================
 
 function drawPlanContent(ctx, cx, cy, maxRadius, state, canvasWidth, canvasHeight) {
   console.log(`Drawing PLAN view at center(${cx}, ${cy}) with radius ${maxRadius}`);
+  console.log('PLAN view overlays:', state.overlays);
 
   // 1. Clear background with black
   ctx.fillStyle = "#000000";
   ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 
-  // 2. Full 360° range rings
-  drawFullRangeRings(ctx, cx, cy, maxRadius);
+  // 2. Draw lat/lon grid if enabled
+  if (state.overlays && state.overlays.latLonGrid) {
+    console.log('Drawing lat/lon grid...');
+    drawLatLonGrid(ctx, cx, cy, maxRadius, state);
+  } else {
+    console.log('Lat/lon grid NOT drawing - overlays:', state.overlays);
+  }
 
-  // 3. Full compass rose (north up)
-  drawFullCompassRose(ctx, cx, cy, maxRadius);
-
-  // 4. Bearing lines (every 30°, full circle)
-  drawFullBearingLines(ctx, cx, cy, maxRadius);
-
-  // 5. Ownship at center, rotated to heading
+  // 3. Ownship at center, rotated to heading
   drawOwnshipSymbolRotated(ctx, cx, cy, state.selectedHeading || 0);
 
-  // 6. Track direction indicator (yellow arrow)
+  // 4. Track direction indicator (yellow arrow)
   drawTrackIndicator(ctx, cx, cy, maxRadius, state);
-
-  // 7. Range labels
-  drawRangeLabels(ctx, cx, cy, maxRadius, state.range || 10);
 }
 
 // ============================================================================
@@ -577,39 +759,19 @@ function drawRoseContent(ctx, cx, cy, maxRadius, state, canvasWidth, canvasHeigh
   ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 
   const track = state.ownshipTrack || 0;
+  const heading = state.selectedHeading || 0;
 
-  // 2. Save context for rotation (track-up orientation)
-  ctx.save();
-  ctx.translate(cx, cy);
-  ctx.rotate(-toRadians(track));  // Rotate display to track-up
-  ctx.translate(-cx, -cy);
-
-  // 3. Draw rotated content (compass and rings rotate with track)
+  // 2. Draw full 360° compass rose and range rings (track-up, same as ARC but 360°)
+  drawFullCompassRoseTrackUp(ctx, cx, cy, maxRadius, track);
   drawFullRangeRings(ctx, cx, cy, maxRadius);
-  drawFullCompassRose(ctx, cx, cy, maxRadius);
   drawFullBearingLines(ctx, cx, cy, maxRadius);
 
-  ctx.restore();
+  // 3. Ownship at center pointing up (same as ARC view - no rotation)
+  drawOwnshipSymbol(ctx, cx, cy, heading);
 
-  // 4. Ownship at center (shows heading offset from track)
-  const headingOffset = (state.selectedHeading || 0) - track;
-  drawOwnshipSymbolRotated(ctx, cx, cy, headingOffset);
+  // 4. Draw heading line (cyan) and course line (yellow) like ARC view
+  drawHeadingAndCourse(ctx, cx, cy, maxRadius, state);
 
-  // 5. Heading bug (cyan line) if different from track
-  if (Math.abs(headingOffset) > 2) {
-    ctx.save();
-    ctx.translate(cx, cy);
-    ctx.strokeStyle = "#00ffff";
-    ctx.lineWidth = 2;
-    const bugAngle = toRadians(headingOffset);
-    const bugLength = maxRadius * 0.8;
-    ctx.beginPath();
-    ctx.moveTo(0, 0);
-    ctx.lineTo(bugLength * Math.cos(bugAngle), bugLength * Math.sin(bugAngle));
-    ctx.stroke();
-    ctx.restore();
-  }
-
-  // 6. Range labels
+  // 5. Range labels
   drawRangeLabels(ctx, cx, cy, maxRadius, state.range || 10);
 }

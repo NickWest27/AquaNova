@@ -15,7 +15,8 @@ class NavigationPage {
                 waypoints: true,
                 contours: false,
                 hazards: true,
-                traffic: false
+                traffic: false,
+                latLonGrid: true  // Lat/lon grid for PLAN view
             },
             selectedOverlay: null,
             routeView: {
@@ -61,17 +62,18 @@ class NavigationPage {
     }
 
     static getOverlaySoftKeys(mfd, state) {
+        console.log('[NAV] getOverlaySoftKeys called');
         return {
-            labels: ['ROUTE', 'WAYPTS', 'CONTOUR', '', 'SHOW', 'HAZARDS', 'TRAFFIC', '', 'ALL ON', 'ALL OFF'],
+            labels: ['ROUTE', 'WAYPTS', 'CONTOUR', 'LAT/LON', 'SHOW', 'HAZARDS', 'TRAFFIC', '', 'ALL ON', 'ALL OFF'],
             actions: [
                 () => this.toggleOverlay(mfd, 'route'),     // L1: ROUTE
                 () => this.toggleOverlay(mfd, 'waypoints'), // L2: WAYPTS
                 () => this.toggleOverlay(mfd, 'contours'),  // L3: CONTOUR
-                null,                                       // L4: empty
+                () => this.toggleOverlay(mfd, 'latLonGrid'), // L4: LAT/LON
                 () => this.backToMap(mfd),                  // L5: SHOW
                 () => this.toggleOverlay(mfd, 'hazards'),   // R1: HAZARDS
                 () => this.toggleOverlay(mfd, 'traffic'),   // R2: TRAFFIC
-                null,                                       // R3: empty 
+                null,                                       // R3: empty
                 () => this.allOverlaysOn(mfd),              // R4: ALL ON
                 () => this.allOverlaysOff(mfd)              // R5: ALL OFF
             ]

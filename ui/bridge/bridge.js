@@ -284,12 +284,14 @@ function updateNavigationDisplay() {
   };
 
   // Get current navigation state from game state
+  const location = gameState.getProperty("navigation.location");
   const navState = {
     range: gameState.getProperty("displaySettings.navDisplayRange") || 10,
     ownshipTrack: gameState.getProperty("navigation.course") || 0,
     selectedHeading: gameState.getProperty("navigation.heading") || 0,
     displayMode: displayMode,
-    overlays: overlays
+    overlays: overlays,
+    ownshipPosition: location?.geometry?.coordinates || [-70.6709, 41.5223] // [lon, lat]
   };
 
   // Draw navigation content using navComputer
@@ -324,7 +326,8 @@ function startAnimation() {
         range: gameState.getProperty("displaySettings.navDisplayRange"),
         course: gameState.getProperty("navigation.course"),
         heading: gameState.getProperty("navigation.heading"),
-        displayMode: mfdSystem?.getPageState('navigation')?.displayMode
+        displayMode: mfdSystem?.getPageState('navigation')?.displayMode,
+        overlays: mfdSystem?.getPageState('navigation')?.overlaysVisible
       });
 
       if (currentState !== lastState) {
