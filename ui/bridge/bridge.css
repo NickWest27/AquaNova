@@ -187,16 +187,16 @@ body {
 /* Console containers */
 .left-console {
     position: absolute;
-    top: 74.5%;
-    left: 25.2%;
-    width: 9.7%;
-    height: 14.9%;
+    top: 72.7%;
+    left: 23%;
+    width: 10.2%;
+    height: 16%;
     border: 2px solid transparent;
     border-radius: 8px;
     transition: all 0.3s ease;
     background: var(--primary-blue);
     opacity: 1;
-    transform: rotateX(64deg);
+    transform: rotateX(62deg);
     transform-origin: center center !important;
     display: flex;
     align-items: center;
@@ -223,7 +223,7 @@ body {
     border-radius: calc(4px * var(--scale));
     color: var(--text-gray);
     font-family: 'Courier New', monospace;
-    font-size: calc(12px * var(--scale));
+    font-size: calc(14px * var(--scale));
     font-weight: bold;
     cursor: pointer;
     transition: all 0.2s ease;

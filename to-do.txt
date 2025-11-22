@@ -2,26 +2,9 @@ Claude and I can use this to keep notes on what we are woring on (to-do) and iss
 Items can be marked as complete or resolved. This document should be constantly updated.
 /////////////////////////////////////////////////////////////
 
-Overall to-dos:
-Ensure initialization, loading, saving and reverting is still working correctly via logbooks.
-Ensure reverting to a logbook entry correctly reverts the ship state and removes future logbook entries.
-Ensure ship state is being correctly used as the single source of truth.
-Ensure other all other UI pages, systems, utils, etc are correctly pulling and pushing data to ship state.
-
 Bridge to-dos:
-Correct styling of station buttons in left-console to be more centeredand not to the right.
+Correct styling of station buttons in left-console to be more centered and not to the right.
 Increase readability of all button labels. font size, padding or border is making text small compared to button size.
-Ensure ship state and bridge interact correctly. Ship state is the source of truth.
-Ensure ship state is updating the brige and changes at the bridge then update the ship state so other systems like navComputer are working with correct data. 
-Ensure that a change at the helmPage, update navComputer via ship state.
-Ensure navComputer shows changes in state. eg, see track change on compass.
-
-
-NavComputer to-dos:
-Remove small white dot at ship position.
-Remove "navigationReadouts".  
-Make an info box in the top left that is hidden until relevan. It's a basic 3 line data box that is context sensitive. eg, a waypoint is selected, show name, bearing, distance.  
-Correct "fullBearingLines()", currently they are only drawn to the left.
 
 Big jobs:
 Implement correct lat/lon grid using ship state to display on navigation pages.
