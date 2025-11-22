@@ -1,206 +1,32 @@
-AQUA NOVA BRIDGE - MULTI-STATION IMPLEMENTATION
-===============================================
+Claude and I can use this to keep notes on what we are woring on (to-do) and issues (bugs).
+Items can be marked as complete or resolved. This document should be constantly updated.
+/////////////////////////////////////////////////////////////
 
-✅ COMPLETED - STATION SELECTOR & MULTI-STATION BRIDGE
-------------------------------------------------------
+Overall to-dos:
+Ensure initialization, loading, saving and reverting is still working correctly via logbooks.
+Ensure reverting to a logbook entry correctly reverts the ship state and removes future logbook entries.
+Ensure ship state is being correctly used as the single source of truth.
+Ensure other all other UI pages, systems, utils, etc are correctly pulling and pushing data to ship state.
 
-Architecture:
-- Left-console: 6 station buttons (NAV/HELM/ENG/COMM/SENSORS/SCIENCE)
-- Center-display: Station-specific content (PFD for HELM, Nav map for NAV)
-- Center-console: Keyboard unit (shared across all stations)
-- Right-console: MFD with 15 soft keys (L1-L5, C1-C5, R1-R5)
+Bridge to-dos:
+Correct styling of station buttons in left-console to be more centeredand not to the right.
+Increase readability of all button labels. font size, padding or border is making text small compared to button size.
+Ensure ship state and bridge interact correctly. Ship state is the source of truth.
+Ensure ship state is updating the brige and changes at the bridge then update the ship state so other systems like navComputer are working with correct data. 
+Ensure that a change at the helmPage, update navComputer via ship state.
+Ensure navComputer shows changes in state. eg, see track change on compass.
 
-Implemented Components:
-1. ✓ MFD Core System (15 buttons)
-   - Center column buttons working (C1-C5)
-   - Brighter active/selected state highlighting
-   - Fixed CSS width issue for center keys
 
-2. ✓ Station Management System
-   - utils/stationManager.js coordinates all stations
-   - Smooth station switching
-   - Display renderer registration system
+NavComputer to-dos:
+Remove small white dot at ship position.
+Remove "navigationReadouts".  
+Make an info box in the top left that is hidden until relevan. It's a basic 3 line data box that is context sensitive. eg, a waypoint is selected, show name, bearing, distance.  
+Correct "fullBearingLines()", currently they are only drawn to the left.
 
-3. ✓ HELM Station (Full PFD + Autopilot)
-   - PFD with artificial horizon (blue sky/brown ground)
-   - Speed tape (left): current speed, target bug, trend vector
-   - Depth tape (right): current depth, target bug, trend vector
-   - Heading tape (bottom): current heading, target bug, trend vector
-   - Pitch ladder and roll indicator
-   - MFD controls: ▲/▼ arrows for speed/depth, ◄/► for heading
-   - Keyboard entry for SPD/HDG/DEP via C5/L2/R2 buttons
-
-4. ✓ Physics-Based Autopilot (game/systems/autopilot/autopilot.js)
-   - Speed: Accelerates/decelerates toward target (0.5/0.8 kts/sec)
-   - Heading: Turn rate scales with speed (1-3°/sec)
-   - Depth: Pitch-based at speed, ballast at low speed
-   - Pitch: Auto-adjusts based on depth error (max ±30°)
-   - Roll: Banks into turns (max ±25°)
-   - Trend vectors: Show predicted position in 10 seconds (magenta)
-
-5. ✓ Other Stations (Placeholders)
-   - NAV, ENG, COMM, SENSORS, SCIENCE pages created
-   - Placeholder displays show "STATION OFFLINE"
-
-Control Specifications:
-- Speed: -15 to 160 knots (±5 kts increments)
-- Heading: 0-360° (±5° increments, wraps around)
-- Depth: 0-10,000m (±10m increments, 0=surface, +down)
-- Pitch dynamics: Depth rate = pitch × speed × 0.05 m/s
-- Roll dynamics: Banking during turns based on speed
-- Low-speed mode: Ballast control below 3 knots
-
-Files Created:
-- utils/stationManager.js
-- utils/mfd/pages/helmPage.js
-- utils/mfd/pages/engineeringPage.js
-- utils/mfd/pages/communicationsPage.js
-- utils/mfd/pages/sensorsPage.js
-- utils/mfd/pages/sciencePage.js
-- game/systems/pfd/pfdRenderer.js
-- game/systems/autopilot/autopilot.js
-
-Files Modified:
-- utils/mfd/mfdCore.js (15-button support)
-- utils/mfd/mfd.css (center keys + brighter active states)
-- utils/mfd/pages/navigationPage.js (15-button layout)
-- ui/bridge/bridge.html (station selector buttons)
-- ui/bridge/bridge.css (station button styling)
-- ui/bridge/bridge.js (autopilot integration)
-- game/state.js (helm + bridge state)
-
-===============================================================
-
-NEXT PRIORITIES
----------------
-
-High Priority:
-1. Engineering Station Display
-   - Reactor power levels and health
-   - Electrical distribution
-   - Life support monitoring
-   - Ballast/trim controls visualization
-
-2. Sensors Station Display
-   - Sonar display (passive/active)
-   - Contacts tracking
-   - WSKR status and control
-   - Camera feeds
-
-3. Communications Station Display
-   - Radio panel (VHF/UHF/HF)
-   - Message log
-   - Quantum comm status
-   - Contact list integration
-
-Medium Priority:
-4. Science Station Display
-   - Sample collection interface
-   - Research data display
-   - Environmental sensors
-   - Discovery logging
-
-5. Enhanced Helm Features
-   - Manual control mode (disable autopilot)
-   - Full helm.html page with control surfaces
-   - Throttle, rudder, planes, ballast direct control
-   - Speed/depth/heading hold modes
-
-6. Mission Integration
-   - Waypoint navigation on PFD
-   - Route following with autopilot
-   - Mission objectives on displays
-   - Auto-depth for waypoints
-
-Low Priority:
-7. Advanced Physics
-   - Water currents affecting position
-   - Submarine inertia and momentum
-   - Crush depth warnings
-   - Emergency blow system
-
-8. Visual Enhancements
-   - Smooth animations for transitions
-   - Sound effects for controls
-   - Warning indicators
-   - Status messages
-
-✅ FIXED - MFD LAYOUT SIMPLIFIED TO CSS GRID (2025-11-21):
------------------------------------------------------------
-Issue: Center column buttons (C1-C5) were positioned incorrectly, appearing off to the right
-
-Root Cause: Complex absolute positioning with three separate flex containers was causing layout conflicts
-
-Solution: Restructured MFD to use simple CSS Grid (3 columns x 5 rows)
-- [mfdCore.js] Changed HTML from 3 separate containers to single grid container
-- [mfd.css] Replaced absolute positioning with CSS Grid layout
-  - grid-template-columns: 60px 1fr 60px (left, center, right)
-  - grid-template-rows: repeat(5, 1fr) (5 equal-height rows)
-  - Removed flex:1 from .soft-key, added min-height:0
-- Result: Perfect 3x5 grid with center column properly centered
-
-CURRENT ISSUES BEING INVESTIGATED:
------------------------------------
-1. Left heading turn not working (L5 button with ◄ symbol)
-   - Button configuration verified correct: L5 calls adjustHeading(mfd, -5)
-   - Added enhanced debug logging to track button clicks
-   - Heading wrap logic verified (0-360 degrees)
-   - Test with browser console to see if L5 button clicks are registering
-
-Previous Changes (2025-11-21):
-- [mfdCore.js] Removed `.active` class from all labeled buttons
-- [mfdCore.js] Enhanced debug logging in handleSoftKey
-- [helmPage.js] Added debug logging to adjustHeading function
-
-✅ NAVIGATION HOTSPOTS ADDED (2025-11-21):
--------------------------------------------
-Added three clickable navigation hotspots to bridge.html:
-
-1. **Quarters Hotspot** (bottom left of bridge frame)
-   - Position: left: 2%, bottom: 2%
-   - Navigates to: Captain's Quarters (../captains-quarters/quarters.html)
-   - Uses existing exitToQuarters() function
-
-2. **Sensors Hotspot** (left side, below left display)
-   - Position: left: 11%, top: 58%
-   - Navigates to: Sensors Station (../sensors/sensors.html)
-   - Created placeholder sensors station with return-to-bridge hotspot
-
-3. **Engineering Hotspot** (right side, below right display)
-   - Position: right: 11%, top: 58%
-   - Navigates to: Engineering Station (../engineering/engineering.html)
-   - Created placeholder engineering station with return-to-bridge hotspot
-
-Implementation:
-- [bridge.html] Added 3 hotspot div elements with tooltips
-- [bridge.css] Added hotspot styling with pulsing animation (using ::before pseudo-elements)
-- [bridge.js] Added click event listeners in setupEventListeners()
-- [sensors/*] Created placeholder sensors station (HTML, CSS, JS)
-- [engineering/*] Created placeholder engineering station (HTML, CSS, JS)
-
-Styling Features:
-- Subtle pulsing glow animation (3s cycle)
-- Cyan border and glow on hover
-- Tooltips appear on hover
-- Semi-transparent background (rgba 0.1 normal, 0.2 on hover)
-- Scales with var(--scale) for responsive design
-- z-index: 4 (above bridge frame)
-
-===============================================================
-
-BACKLOG (Previous Items):
-  Change info displays (splashscreens) do that title is one font, and data is another.
-    This might help show the difference between static and dynamic data.
-
-move logbook loading to splash (main.js) resume, load, export, import
-
-make PDA glass with console view, menus game settings, crew bios....
-
-make communicator, "c" to bring it up.
- Make a contacts list, with communicator true/false
-
-Make console or bit test screen, viewable on diffrent display.
-
-Get Claude code working with me.
-
-Hello World
+Big jobs:
+Implement correct lat/lon grid using ship state to display on navigation pages.
+Implement the upper-display. A context sensitive display to give updates on events. Eg. Ships state (Speed, track, depth), incomming communication alerts, approaching sea floor, etc.
+Implement the main-screen. A situation display. 
+  -left 30% show summary of whats going on around you so Communication and sensors summary.
+  -center 60% shows big picture, so situation view (PLAN view), or communication message, or forward synthetic vision.
+  -right 30% show summary of whats going on on the ship, so engineering, and ship state summary.   
