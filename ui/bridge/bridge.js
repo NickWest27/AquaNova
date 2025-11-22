@@ -99,6 +99,10 @@ async function initializeMFDOverlay() {
     if (centerEl) {
       if (!centerEl.id) centerEl.id = 'right-console';
       mfdSystem = new MFDCore(centerEl.id, keyboardUnit);
+
+      // Wait for MFD to finish loading pages before continuing
+      await mfdSystem.initPromise;
+
       console.log('MFD initialized in right-console');
       window.mfdSystem = mfdSystem;
     } else {
@@ -284,11 +288,11 @@ function setupEventListeners() {
     }
   });
 
-  // Game state observer - updates both navigation content and MFD overlay
+  // Game state observer - updates MFD overlay and current station display
   gameState.addObserver(() => {
-    // Update navigation display
-    updateNavigationDisplay();
-    
+    // Update the current station's display via stationManager
+    stationManager.updateCenterDisplay();
+
     // Update MFD overlay
     if (mfdSystem) {
       mfdSystem.updateOverlay();
@@ -399,15 +403,24 @@ function getCurrentDisplayType() {
 }
 
 function startAnimation() {
+  let lastDisplayUpdate = 0;
+  const DISPLAY_UPDATE_INTERVAL = 100; // Update display every 100ms (10fps) instead of 60fps
+
   function animate() {
     try {
-      // Update autopilot physics
+      const now = Date.now();
+
+      // Update autopilot physics every frame (needs smooth updates)
       autopilot.update();
 
-      // Always update the current station's display (let the renderer decide if redraw is needed)
-      stationManager.updateCenterDisplay();
+      // Throttle display updates to reduce unnecessary redraws
+      if (now - lastDisplayUpdate >= DISPLAY_UPDATE_INTERVAL) {
+        // Update the current station's display
+        stationManager.updateCenterDisplay();
+        lastDisplayUpdate = now;
+      }
 
-      // Update MFD overlay if needed
+      // Update MFD overlay if needed (has its own change detection)
       if (mfdSystem && mfdSystem.needsUpdate()) {
         mfdSystem.updateOverlay();
       }

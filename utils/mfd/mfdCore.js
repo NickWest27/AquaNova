@@ -12,25 +12,26 @@ class MFDCore {
         this.pages = new Map();
         this.softKeyLabels = Array(15).fill('');  // 15 keys: L1-L5, C1-C5, R1-R5
         this.softKeyActions = Array(15).fill(null);  // 15 keys: L1-L5, C1-C5, R1-R5
-        
+
         // Overlay elements (not display content)
         this.overlayContainer = null;
         this.softKeyElements = [];
-        
+
         // Event listeners for cleanup
         this.eventListeners = new Map();
-        
+
         // Page state management
         this.pendingStateChange = false;
         this.lastPageState = null;
         this.pageState = new Map();
-        
+
         // Change detection
         this.lastRenderState = null;
         this.needsRedraw = true;
         this.renderCount = 0;
-        
-        this.init();
+
+        // Store init promise for awaiting
+        this.initPromise = this.init();
     }
 
     async init() {
@@ -153,12 +154,15 @@ class MFDCore {
 
         // Update soft key labels and states
         this.updateSoftKeyLabels();
-        
+
         this.updateLastRenderState();
         this.needsRedraw = false;
         this.renderCount++;
-        
-        console.log(`MFD Overlay updated #${this.renderCount}`);
+
+        // Only log every 100 updates to reduce console spam
+        if (this.renderCount % 100 === 0) {
+            console.log(`MFD Overlay updated #${this.renderCount}`);
+        }
     }
 
     // Page Management
@@ -207,8 +211,19 @@ class MFDCore {
     }
 
     updateSoftKeyLabels() {
-        this.softKeyElements.forEach((element, index) => {
-            const label = this.softKeyLabels[index] || '';
+        // Map labels from column-based indexing (L1-L5, C1-C5, R1-R5)
+        // to DOM order (L1, C1, R1, L2, C2, R2, ...)
+        const domOrderMapping = [
+            0, 5, 10,   // Row 1: L1, C1, R1
+            1, 6, 11,   // Row 2: L2, C2, R2
+            2, 7, 12,   // Row 3: L3, C3, R3
+            3, 8, 13,   // Row 4: L4, C4, R4
+            4, 9, 14    // Row 5: L5, C5, R5
+        ];
+
+        this.softKeyElements.forEach((element, domIndex) => {
+            const labelIndex = domOrderMapping[domIndex];
+            const label = this.softKeyLabels[labelIndex] || '';
             element.textContent = label;
             element.style.visibility = label ? 'visible' : 'hidden';
 
