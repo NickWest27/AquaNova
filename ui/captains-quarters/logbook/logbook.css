@@ -368,10 +368,17 @@ main {
   border-radius: calc(4px * var(--scale));
   color: var(--primary-cyan);
   padding: calc(10px * var(--scale));
-  margin-bottom: calc(10px * var(--scale));
+  margin-bottom: calc(5px * var(--scale));
   resize: vertical;
   font-family: inherit;
   transition: all 0.3s ease;
+}
+
+.char-count {
+  text-align: right;
+  font-size: calc(0.85em * var(--scale));
+  color: var(--text-gray);
+  margin-bottom: calc(10px * var(--scale));
 }
 
 .log-textarea:focus {

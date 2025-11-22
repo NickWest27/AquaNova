@@ -11,7 +11,10 @@ const eventListeners = new Map();
 
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('Quarters loading...');
-    
+
+    // Initialize display system FIRST (for proper scaling)
+    await displayManager.init();
+
     // Initialize mission system if not already done
     if (!missionManager.initialized) {
         console.log('Initializing mission system...');
@@ -84,3 +87,7 @@ function cleanup() {
     });
     eventListeners.clear();
 }
+
+// Cleanup on page unload
+window.addEventListener('beforeunload', cleanup);
+window.addEventListener('pagehide', cleanup);

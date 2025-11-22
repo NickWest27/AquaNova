@@ -22,6 +22,9 @@ class LogbookSystem {
 
   async initialize() {
     try {
+      // Initialize display system FIRST (for proper scaling)
+      await displayManager.init();
+
       // SaveManager handles all initialization now
       const initialized = await saveManager.init(gameStateInstance);
       
@@ -166,16 +169,11 @@ updateCurrentEntryId() {
   renderExistingEntries() {
     const main = document.getElementById('log-entries');
     if (!main) return;
-    
-    // Clear existing dynamic entries (keep the template)
+
+    // Clear all existing entries - we'll re-render from data
     const existingEntries = main.querySelectorAll('.log-entry');
-    existingEntries.forEach(entry => {
-      // Keep template entries, remove dynamic ones
-      if (!entry.querySelector('.entry-id')?.textContent.includes('M.LOG-0001')) {
-        entry.remove();
-      }
-    });
-    
+    existingEntries.forEach(entry => entry.remove());
+
     // Render entries from active logbook
     const activeLogbook = saveManager.getActiveLogbook();
     if (activeLogbook?.entries && activeLogbook.entries.length > 0) {
@@ -244,7 +242,7 @@ updateCurrentEntryId() {
     
     const revertBtn = section.querySelector('.revert-btn');
     this.addEventListenerWithCleanup(revertBtn, 'click', () => {
-      this.revertToEntry(logEntry.id);
+      this.revertToEntry(logEntry.entryId);
     });
     
     main.appendChild(section);
@@ -638,14 +636,6 @@ updateCurrentEntryId() {
     textarea.addEventListener('input', () => {
       const count = textarea.value.length;
       charCount.textContent = `${count} / 2000`;
-      
-      if (count > 1900) {
-        charCount.style.color = 'var(--error-red)';
-      } else if (count > 1500) {
-        charCount.style.color = 'var(--accent-orange)';
-      } else {
-        charCount.style.color = 'var(--text-gray)';
-      }
     });
 
     // Bind buttons
