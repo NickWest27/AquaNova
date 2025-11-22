@@ -19,7 +19,16 @@
             <div class="main-screen">main-screen...<br>OFFLINE</div>
             <div class="left-display">left-display...<br>OFFLINE</div>
             <div class="right-display">right-display...<br>OFFLINE</div>
-            <div class="left-console">left-console...<br>OFFLINE</div>
+            <div class="left-console" id="left-console">
+                <div class="station-selector">
+                    <button class="station-btn selected" data-station="nav" id="station-nav">NAV</button>
+                    <button class="station-btn" data-station="helm" id="station-helm">HELM</button>
+                    <button class="station-btn" data-station="eng" id="station-eng">ENG</button>
+                    <button class="station-btn" data-station="comm" id="station-comm">COMM</button>
+                    <button class="station-btn" data-station="sensors" id="station-sensors">SENSORS</button>
+                    <button class="station-btn" data-station="science" id="station-science">SCIENCE</button>
+                </div>
+            </div>
             <div class="center-console" id="center-console">
                 <div id="keyboard-unit-container"></div>
             </div>

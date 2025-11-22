@@ -1,4 +1,92 @@
-  Change info displays (splashscreens) do that title is one font, and data is another. 
+STATION SELECTOR & MULTI-STATION BRIDGE IMPLEMENTATION
+======================================================
+
+Architecture Overview:
+- Left-console: Station selector buttons (HELM/NAV/ENG/COMM/SENSORS/SCIENCE)
+- Center-display: Shows station-specific content (PFD for HELM, Nav map for NAV, etc.)
+- Center-console: Keyboard unit for data entry (shared across all stations)
+- Right-console: MFD with station-specific control pages
+
+Implementation Tasks:
+1. ✓ Enhance MFD Core System
+   - Add center column buttons (C1-C5) to soft key system (15 total buttons)
+   - Update button highlighting: active state = brighter background
+   - Modify mfdCore.js to support 15 keys instead of 10
+
+2. Create Station Management System
+   - New file: utils/stationManager.js
+   - Coordinates between: left-console selector, center-display content, MFD pages
+   - Manages active station state
+   - Handles switching between stations
+
+3. Left-Console Station Selector
+   - Create HTML structure for 6 station buttons
+   - Style buttons with active state highlighting
+   - Wire up click handlers to stationManager
+
+4. Helm Station Implementation
+   a. Game State Extensions
+      - Add ship.helm.currentSpeed/targetSpeed (knots: -15 to 160)
+      - Add ship.helm.currentHeading/targetHeading (degrees: 0-360)
+      - Add ship.helm.currentDepth/targetDepth (meters: 0-10000, positive = down)
+      - Add ship.helm.pitch, ship.helm.roll for artificial horizon
+
+   b. PFD Renderer (game/systems/pfd/pfdRenderer.js)
+      - Artificial horizon (blue sky/brown ground)
+      - Speed tape (left) with current speed box + target speed bug
+      - Depth tape (right) with current depth box + target depth bug
+      - Heading tape (bottom) with current heading box + target heading bug
+      - Pitch/roll indicators
+      - Continuously update from game state
+
+   c. Helm MFD Page (utils/mfd/pages/helmPage.js)
+      - 15 button layout with center column:
+        L1:▲  C1:--- R1:▲
+        L2:SPD C2:--- R2:DEP
+        L3:▼  C3:--- R3:▼
+        L4:--- C4:--- R4:---
+        L5:◄  C5:HDG R5:►
+      - Arrow buttons: increment/decrement targets (SPD±5kts, HDG±5°, DEP±10m)
+      - SPD/HDG/DEP buttons: trigger keyboard input with prompts
+
+   d. Keyboard Integration
+      - Helm page requests input via keyboardUnit
+      - Shows "SPEED:", "HEADING:", "DEPTH:" prompts
+      - User types value and presses ENTER
+      - Updates target values in game state
+
+5. Placeholder Station Pages
+   - utils/mfd/pages/engineeringPage.js (stub)
+   - utils/mfd/pages/communicationsPage.js (stub)
+   - utils/mfd/pages/sensorsPage.js (stub)
+   - utils/mfd/pages/sciencePage.js (stub)
+   - Each shows "COMING SOON" message
+
+6. Center-Display Content Renderers
+   - Helm: PFD (artificial horizon)
+   - Nav: Navigation map (existing)
+   - Others: Placeholder "STATION OFFLINE" displays
+
+Control Flow:
+User clicks HELM on left-console
+  → stationManager.switchToStation('helm')
+    → Updates center-display to show PFD
+    → Switches MFD to helmPage
+    → Highlights HELM button on left-console
+    → PFD starts rendering from game state
+
+User clicks SPD on MFD
+  → helmPage requests keyboard input
+    → Keyboard shows "SPEED:" prompt
+      → User types "25" and presses ENTER
+        → Updates ship.helm.targetSpeed = 25
+          → PFD speed bug moves to 25 knots
+          → Autopilot gradually adjusts throttle
+
+===============================================================
+
+BACKLOG (Previous Items):
+  Change info displays (splashscreens) do that title is one font, and data is another.
     This might help show the difference between static and dynamic data.
 
 move logbook loading to splash (main.js) resume, load, export, import

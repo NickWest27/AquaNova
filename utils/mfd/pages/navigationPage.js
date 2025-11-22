@@ -48,15 +48,26 @@ class NavigationPage {
     const displayMode = state.displayMode || 'ARC';
     console.log(`[NAV] getMapSoftKeys - displayMode: ${displayMode}`);
     return {
-        labels: ['▲', `${range}`, '▼', displayMode, 'SHOW', 'ROUTE', '', '', '', ''],
+        // L1-L5, C1-C5, R1-R5 (15 buttons)
+        labels: [
+            '▲',           // L1: Range up
+            `${range}`,    // L2: Range display
+            '▼',           // L3: Range down
+            displayMode,   // L4: Display mode
+            'SHOW',        // L5: Show overlays
+            '', '', '', '', '',  // C1-C5: Empty for nav page
+            'ROUTE',       // R1: Route menu
+            '', '', '', ''       // R2-R5: Empty
+        ],
         actions: [
-        () => this.changeRange(mfd, 1),   // Unified range handler
-        null,
-        () => this.changeRange(mfd, -1),
-        () => this.cycleDisplayMode(mfd),  // L4: MODE button
-        () => this.setMode(mfd, 'overlays'),
-        () => this.setMode(mfd, 'route'),
-        null, null, null, null
+            () => this.changeRange(mfd, 1),        // L1
+            null,                                   // L2
+            () => this.changeRange(mfd, -1),       // L3
+            () => this.cycleDisplayMode(mfd),      // L4
+            () => this.setMode(mfd, 'overlays'),   // L5
+            null, null, null, null, null,          // C1-C5
+            () => this.setMode(mfd, 'route'),      // R1
+            null, null, null, null                 // R2-R5
         ]
     };
     }
@@ -64,36 +75,64 @@ class NavigationPage {
     static getOverlaySoftKeys(mfd, state) {
         console.log('[NAV] getOverlaySoftKeys called');
         return {
-            labels: ['ROUTE', 'WAYPTS', 'CONTOUR', 'LAT/LON', 'SHOW', 'HAZARDS', 'TRAFFIC', '', 'ALL ON', 'ALL OFF'],
+            // L1-L5, C1-C5, R1-R5 (15 buttons)
+            labels: [
+                'ROUTE',    // L1
+                'WAYPTS',   // L2
+                'CONTOUR',  // L3
+                'LAT/LON',  // L4
+                'SHOW',     // L5
+                '', '', '', '', '',  // C1-C5: Empty
+                'HAZARDS',  // R1
+                'TRAFFIC',  // R2
+                '',         // R3
+                'ALL ON',   // R4
+                'ALL OFF'   // R5
+            ],
             actions: [
-                () => this.toggleOverlay(mfd, 'route'),     // L1: ROUTE
-                () => this.toggleOverlay(mfd, 'waypoints'), // L2: WAYPTS
-                () => this.toggleOverlay(mfd, 'contours'),  // L3: CONTOUR
-                () => this.toggleOverlay(mfd, 'latLonGrid'), // L4: LAT/LON
-                () => this.backToMap(mfd),                  // L5: SHOW
-                () => this.toggleOverlay(mfd, 'hazards'),   // R1: HAZARDS
-                () => this.toggleOverlay(mfd, 'traffic'),   // R2: TRAFFIC
-                null,                                       // R3: empty
-                () => this.allOverlaysOn(mfd),              // R4: ALL ON
-                () => this.allOverlaysOff(mfd)              // R5: ALL OFF
+                () => this.toggleOverlay(mfd, 'route'),     // L1
+                () => this.toggleOverlay(mfd, 'waypoints'), // L2
+                () => this.toggleOverlay(mfd, 'contours'),  // L3
+                () => this.toggleOverlay(mfd, 'latLonGrid'), // L4
+                () => this.backToMap(mfd),                  // L5
+                null, null, null, null, null,               // C1-C5
+                () => this.toggleOverlay(mfd, 'hazards'),   // R1
+                () => this.toggleOverlay(mfd, 'traffic'),   // R2
+                null,                                       // R3
+                () => this.allOverlaysOn(mfd),              // R4
+                () => this.allOverlaysOff(mfd)              // R5
             ]
         };
     }
 
     static getRouteSoftKeys(mfd, state) {
         return {
-            labels: ['ADD', 'EDIT', 'DELETE', '', '', 'ROUTE', 'DOWN', 'EXEC', 'BACK', 'DIRECT'],
+            // L1-L5, C1-C5, R1-R5 (15 buttons)
+            labels: [
+                'ADD',      // L1
+                'EDIT',     // L2
+                'DELETE',   // L3
+                '',         // L4
+                'BACK',     // L5
+                '', '', '', '', '',  // C1-C5: Empty
+                'UP',       // R1
+                'DOWN',     // R2
+                'EXEC',     // R3
+                '',         // R4
+                'DIRECT'    // R5
+            ],
             actions: [
-                () => this.addWaypoint(mfd),            // L1: ADD
-                () => this.editWaypoint(mfd),           // L2: EDIT
-                () => this.deleteWaypoint(mfd),         // L3: DELETE
-                null,                                   // L4: empty
-                null,                                   // L5: empty
-                () => this.backToMap(mfd),              // R1: ROUTE
-                () => this.moveWaypointUp(mfd),         // R1: UP
-                () => this.moveWaypointDown(mfd),       // R2: DOWN
-                () => this.executeRoute(mfd),           // R3: EXEC
-                () => this.directToWaypoint(mfd)        // R4: DIRECT
+                () => this.addWaypoint(mfd),         // L1
+                () => this.editWaypoint(mfd),        // L2
+                () => this.deleteWaypoint(mfd),      // L3
+                null,                                // L4
+                () => this.backToMap(mfd),           // L5
+                null, null, null, null, null,        // C1-C5
+                () => this.moveWaypointUp(mfd),      // R1
+                () => this.moveWaypointDown(mfd),    // R2
+                () => this.executeRoute(mfd),        // R3
+                null,                                // R4
+                () => this.directToWaypoint(mfd)     // R5
             ]
         };
     }

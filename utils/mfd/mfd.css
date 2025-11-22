@@ -31,6 +31,19 @@
   justify-content: space-evenly;
 }
 
+/* Center soft keys positioned at bottom center */
+.mfd-soft-keys.mfd-center-keys {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(8px * var(--scale));
+  display: flex;
+  flex-direction: row;
+  gap: calc(8px * var(--scale));
+  height: calc(40px * var(--scale));
+  justify-content: center;
+}
+
 /* Right soft keys positioned on right edge */
 .mfd-soft-keys.mfd-right-keys {
   position: absolute;
@@ -84,11 +97,13 @@
   margin-bottom: calc(2px * var(--scale));
 }
 
-.soft-key.active {
-  background-color: rgba(100, 255, 218, 0.2);
+/* Active/selected state - brighter background */
+.soft-key.active,
+.soft-key.selected {
+  background-color: rgba(100, 255, 218, 0.4);  /* Brighter than default */
   border-color: var(--primary-cyan);
   color: var(--primary-cyan);
-  box-shadow: 0 0 calc(5px * var(--scale)) rgba(100, 255, 218, 0.3);
+  box-shadow: 0 0 calc(8px * var(--scale)) rgba(100, 255, 218, 0.5);
 }
 
 .soft-key:empty,
@@ -96,9 +111,15 @@
   visibility: hidden;
 }
 
-.soft-key:hover {
+.soft-key:hover:not(.active):not(.selected) {
   border-color: var(--primary-cyan);
-  background-color: rgba(100, 255, 218, 0.1);
+  background-color: rgba(100, 255, 218, 0.15);
+}
+
+/* Pressed state flash */
+.soft-key.pressed {
+  background-color: rgba(100, 255, 218, 0.6);
+  transform: scale(0.95);
 }
 
 /* Page indicator positioned in top-left corner */

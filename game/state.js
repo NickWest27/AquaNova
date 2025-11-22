@@ -46,6 +46,23 @@ class GameState {
                 }
             },
 
+            // Helm control (current and target values for autopilot)
+            helm: {
+                currentSpeed: 0,      // knots (-15 to 160)
+                targetSpeed: 0,       // knots
+                currentHeading: 0,    // degrees (0-360)
+                targetHeading: 0,     // degrees
+                currentDepth: 0,      // meters (0-10000, positive = down)
+                targetDepth: 0,       // meters
+                pitch: 0,             // degrees (-90 to 90, positive = nose up)
+                roll: 0               // degrees (-180 to 180, positive = right roll)
+            },
+
+            // Bridge station state
+            bridge: {
+                activeStation: 'nav'
+            },
+
             // Ship systems
             shipSystems: {
                 hull: {

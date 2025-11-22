@@ -8,6 +8,8 @@ import { initCommunicatorOverlay } from '/utils/communicatorOverlay.js';
 import KeyboardUnit from '/utils/keyboardUnit/keyboardUnit.js';
 import { drawNavigationDisplay } from '/game/systems/navComputer/navComputer.js';
 import MFDCore from '/utils/mfd/mfdCore.js';
+import stationManager from '/utils/stationManager.js';
+import { drawPFD } from '/game/systems/pfd/pfdRenderer.js';
 
 const gameState = gameStateInstance;
 let lastState = null;
@@ -23,7 +25,7 @@ const trackInput = document.getElementById("track-input");
 const headingInput = document.getElementById("heading-input");
 
 async function initializeBridge() {
-  
+
   if (!missionManager.initialized) {
     console.log('Initializing mission system...');
     await missionManager.init();
@@ -32,22 +34,25 @@ async function initializeBridge() {
   // Initialize overlays
   initPDAOverlay();
   initCommunicatorOverlay();
-  
+
   // Initialize Keyboard Unit
   initializeKeyboardUnit();
-  
+
   // Initialize navigation display (content system)
   await initializeNavigationDisplay();
-  
+
   // Initialize MFD overlay system
   await initializeMFDOverlay();
-  
+
+  // Initialize station management system
+  initializeStationManager();
+
   // Set up event listeners
   setupEventListeners();
-  
+
   // Initialize game state properties
   initializeGameStateProperties();
-  
+
   // Start animation loop
   startAnimation();
 }
@@ -89,7 +94,7 @@ async function initializeNavigationDisplay() {
 async function initializeMFDOverlay() {
   try {
     console.log('Initializing MFD overlay system...');
-    
+
     const centerEl = document.querySelector('.right-console');
     if (centerEl) {
       if (!centerEl.id) centerEl.id = 'right-console';
@@ -99,11 +104,41 @@ async function initializeMFDOverlay() {
     } else {
       console.error('right-console element not found. MFD could not initialize.');
     }
-    
+
   } catch (error) {
     console.error('Failed to initialize MFD overlay system:', error);
     console.error('Error stack:', error.stack);
   }
+}
+
+function initializeStationManager() {
+  console.log('Initializing station manager...');
+
+  const centerDisplay = document.getElementById('navigation-container');
+
+  // Initialize the station manager with MFD and center display
+  stationManager.init(mfdSystem, centerDisplay);
+
+  // Register station selector buttons
+  const stationButtons = document.querySelectorAll('.station-btn');
+  stationButtons.forEach(button => {
+    const stationId = button.dataset.station;
+    stationManager.registerStationButton(stationId, button);
+  });
+
+  // Register display renderers for each station
+  stationManager.registerDisplayRenderer('navigation', () => {
+    updateNavigationDisplay();
+  });
+
+  stationManager.registerDisplayRenderer('pfd', () => {
+    drawPFD(centerDisplay);
+  });
+
+  // Make station manager globally accessible for debugging
+  window.stationManager = stationManager;
+
+  console.log('Station manager initialized');
 }
 
 function initializeKeyboardUnit() {
@@ -321,20 +356,33 @@ function getCurrentDisplayType() {
 function startAnimation() {
   function animate() {
     try {
-      // Update navigation display if state changed
+      // Get current active station
+      const activeStation = stationManager.getCurrentStation();
+
+      // Update display based on active station
       const currentState = JSON.stringify({
+        station: activeStation,
         range: gameState.getProperty("displaySettings.navDisplayRange"),
         course: gameState.getProperty("navigation.course"),
         heading: gameState.getProperty("navigation.heading"),
         displayMode: mfdSystem?.getPageState('navigation')?.displayMode,
-        overlays: mfdSystem?.getPageState('navigation')?.overlaysVisible
+        overlays: mfdSystem?.getPageState('navigation')?.overlaysVisible,
+        helmSpeed: gameState.getProperty("helm.currentSpeed"),
+        helmHeading: gameState.getProperty("helm.currentHeading"),
+        helmDepth: gameState.getProperty("helm.currentDepth"),
+        helmTargetSpeed: gameState.getProperty("helm.targetSpeed"),
+        helmTargetHeading: gameState.getProperty("helm.targetHeading"),
+        helmTargetDepth: gameState.getProperty("helm.targetDepth"),
+        helmPitch: gameState.getProperty("helm.pitch"),
+        helmRoll: gameState.getProperty("helm.roll")
       });
 
       if (currentState !== lastState) {
-        updateNavigationDisplay();
+        // Update the current station's display
+        stationManager.updateCenterDisplay();
         lastState = currentState;
       }
-      
+
       // Update MFD overlay if needed
       if (mfdSystem && mfdSystem.needsUpdate()) {
         mfdSystem.updateOverlay();
@@ -342,10 +390,10 @@ function startAnimation() {
     } catch (error) {
       console.error('Animation error:', error);
     }
-    
+
     animationId = requestAnimationFrame(animate);
   }
-  
+
   animate();
 }
 

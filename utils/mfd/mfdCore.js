@@ -10,8 +10,8 @@ class MFDCore {
         this.keyboardUnit = keyboardUnit;
         this.currentPage = 'navigation';
         this.pages = new Map();
-        this.softKeyLabels = Array(10).fill('');  // 10 keys: L1-L5, R1-R5
-        this.softKeyActions = Array(10).fill(null);  // 10 keys: L1-L5, R1-R5
+        this.softKeyLabels = Array(15).fill('');  // 15 keys: L1-L5, C1-C5, R1-R5
+        this.softKeyActions = Array(15).fill(null);  // 15 keys: L1-L5, C1-C5, R1-R5
         
         // Overlay elements (not display content)
         this.overlayContainer = null;
@@ -61,7 +61,16 @@ class MFDCore {
                 <button class="soft-key" data-key="L4" id="soft-key-L4"></button>
                 <button class="soft-key" data-key="L5" id="soft-key-L5"></button>
             </div>
-            
+
+            <!-- Center soft keys -->
+            <div class="mfd-soft-keys mfd-center-keys">
+                <button class="soft-key" data-key="C1" id="soft-key-C1"></button>
+                <button class="soft-key" data-key="C2" id="soft-key-C2"></button>
+                <button class="soft-key" data-key="C3" id="soft-key-C3"></button>
+                <button class="soft-key" data-key="C4" id="soft-key-C4"></button>
+                <button class="soft-key" data-key="C5" id="soft-key-C5"></button>
+            </div>
+
             <!-- Right soft keys -->
             <div class="mfd-soft-keys mfd-right-keys">
                 <button class="soft-key" data-key="R1" id="soft-key-R1"></button>
@@ -215,8 +224,9 @@ class MFDCore {
 
     handleSoftKey(keyId) {
         const keyMap = {
-            'L1': 0, 'L2': 1, 'L3': 2, 'L4': 3, 'L5': 4, 
-            'R1': 5, 'R2': 6, 'R3': 7, 'R4': 8, 'R5': 9
+            'L1': 0, 'L2': 1, 'L3': 2, 'L4': 3, 'L5': 4,
+            'C1': 5, 'C2': 6, 'C3': 7, 'C4': 8, 'C5': 9,
+            'R1': 10, 'R2': 11, 'R3': 12, 'R4': 13, 'R5': 14
         };
 
         const index = keyMap[keyId];
@@ -316,8 +326,23 @@ class MFDCore {
         try {
             const { default: NavigationPage } = await import('./pages/navigationPage.js');
             this.registerPage('navigation', NavigationPage);
-            
-            console.log('MFD: Default pages loaded');
+
+            const { default: HelmPage } = await import('./pages/helmPage.js');
+            this.registerPage('helm', HelmPage);
+
+            const { default: EngineeringPage } = await import('./pages/engineeringPage.js');
+            this.registerPage('engineering', EngineeringPage);
+
+            const { default: CommunicationsPage } = await import('./pages/communicationsPage.js');
+            this.registerPage('communications', CommunicationsPage);
+
+            const { default: SensorsPage } = await import('./pages/sensorsPage.js');
+            this.registerPage('sensors', SensorsPage);
+
+            const { default: SciencePage } = await import('./pages/sciencePage.js');
+            this.registerPage('science', SciencePage);
+
+            console.log('MFD: All pages loaded');
         } catch (error) {
             console.error('MFD: Failed to load pages:', error);
         }

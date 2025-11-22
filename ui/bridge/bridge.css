@@ -191,7 +191,6 @@ body {
     left: 25.2%;
     width: 9.7%;
     height: 14.9%;
-    cursor: pointer;
     border: 2px solid transparent;
     border-radius: 8px;
     transition: all 0.3s ease;
@@ -199,6 +198,56 @@ body {
     opacity: 1;
     transform: rotateX(64deg);
     transform-origin: center center !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Station selector container */
+.station-selector {
+    width: 92%;
+    height: 92%;
+    display: flex;
+    flex-direction: column;
+    gap: calc(3px * var(--scale));
+    padding: calc(4px * var(--scale));
+    transform-style: flat;
+}
+
+/* Station selector buttons */
+.station-btn {
+    flex: 1;
+    background-color: rgba(17, 34, 64, 0.85);
+    border: calc(1px * var(--scale)) solid var(--text-gray);
+    border-radius: calc(3px * var(--scale));
+    color: var(--text-gray);
+    font-family: 'Courier New', monospace;
+    font-size: calc(10px * var(--scale));
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+}
+
+.station-btn:hover:not(.selected) {
+    background-color: rgba(100, 255, 218, 0.15);
+    border-color: var(--primary-cyan);
+}
+
+/* Selected/active station - brighter background */
+.station-btn.selected {
+    background-color: rgba(100, 255, 218, 0.4);
+    border-color: var(--primary-cyan);
+    color: var(--primary-cyan);
+    box-shadow: 0 0 calc(8px * var(--scale)) rgba(100, 255, 218, 0.5);
+}
+
+.station-btn:active {
+    transform: scale(0.95);
 }
 
 .right-console {
