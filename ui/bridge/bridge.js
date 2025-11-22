@@ -27,7 +27,7 @@ const headingInput = document.getElementById("heading-input");
 async function initializeBridge() {
 
   if (!missionManager.initialized) {
-    console.log('Initializing mission system...');
+    console.log('MISSION COMPUTER.....ONLINE');
     await missionManager.init();
   }
 
@@ -72,29 +72,23 @@ function initializeGameStateProperties() {
 }
 
 async function initializeNavigationDisplay() {
-  console.log('Initializing navigation display content...');
-  
   // Create navigation display elements in container
   const container = document.getElementById('navigation-container');
   if (!container) {
     console.error('Navigation container not found!');
     return;
   }
-  
+
   // Get references
   navigationCanvas = document.getElementById('navigation-canvas');
   navigationSVG = document.getElementById('navigation-overlay');
-  
+
   // Set up proper canvas sizing
   resizeNavigationDisplay();
-  
-  console.log('Navigation display content initialized');
 }
 
 async function initializeMFDOverlay() {
   try {
-    console.log('Initializing MFD overlay system...');
-
     const centerEl = document.querySelector('.right-console');
     if (centerEl) {
       if (!centerEl.id) centerEl.id = 'right-console';
@@ -103,7 +97,7 @@ async function initializeMFDOverlay() {
       // Wait for MFD to finish loading pages before continuing
       await mfdSystem.initPromise;
 
-      console.log('MFD initialized in right-console');
+      console.log('MFD SYSTEM.....ONLINE');
       window.mfdSystem = mfdSystem;
     } else {
       console.error('right-console element not found. MFD could not initialize.');
@@ -116,8 +110,6 @@ async function initializeMFDOverlay() {
 }
 
 function initializeStationManager() {
-  console.log('Initializing station manager...');
-
   const centerDisplay = document.getElementById('navigation-container');
 
   // Initialize the station manager with MFD and center display
@@ -155,12 +147,10 @@ function initializeStationManager() {
   // Make station manager globally accessible for debugging
   window.stationManager = stationManager;
 
-  console.log('Station manager initialized on station:', currentStation);
+  console.log(`STATION SYSTEMS.....ONLINE [${currentStation.toUpperCase()}]`);
 }
 
 function initializeKeyboardUnit() {
-  console.log('Initializing keyboard unit...');
-  
   const consoleContainer = document.getElementById('center-console');
   const keyboardContainer = document.getElementById('keyboard-unit-container');
 
@@ -168,17 +158,16 @@ function initializeKeyboardUnit() {
     console.error('Keyboard Unit container not found in center console!');
     return;
   }
-  
+
   try {
     keyboardUnit = new KeyboardUnit('keyboard-unit-container');
-    
+
     // Listen for keyboard unit data (scratchpad ENTER)
     document.addEventListener('keyboard-data-sent', (e) => {
-      console.log('Keyboard data event received:', e.detail);
       handleKeyboardData(e.detail);
     });
-    
-    console.log('Keyboard Unit initialized successfully in center console');
+
+    console.log('KEYBOARD UNIT.....ONLINE');
     
   } catch (error) {
     console.error('Failed to initialize Keyboard Unit:', error);
@@ -187,38 +176,22 @@ function initializeKeyboardUnit() {
 }
 
 function handleKeyboardData(data) {
-  console.log('Bridge received keyboard data:', data);
-  
   // Route to MFD system first if available
   if (mfdSystem) {
     mfdSystem.handleKeyboardInput(data);
   }
-  
+
   // Handle bridge-specific contexts
-  const { prompt, input, context } = data;
-  
+  const { input, context } = data;
+
   switch (context) {
-    case 'latitude':
-    case 'latitude_input':
-      console.log(`Latitude entered: ${input}`);
-      break;
-    case 'longitude':
-    case 'longitude_input':
-      console.log(`Longitude entered: ${input}`);
-      break;
-    case 'waypoint':
-    case 'waypoint_name':
-      console.log(`Waypoint name entered: ${input}`);
-      break;
     case 'speed':
     case 'speed_input':
-      console.log(`Speed entered: ${input}`);
       if (!isNaN(parseFloat(input))) {
         gameState.updateProperty("navigation.speed", parseFloat(input));
+        console.log(`SPEED SET: ${parseFloat(input)} KNOTS`);
       }
       break;
-    default:
-      console.log(`Unknown input context: ${context}, data: ${input}`);
   }
 }
 
@@ -230,14 +203,12 @@ function setupEventListeners() {
 
   if (quartersHotspot) {
     quartersHotspot.addEventListener('click', () => {
-      console.log('Navigating to Captain\'s Quarters...');
       window.exitToQuarters();
     });
   }
 
   if (sensorsHotspot) {
     sensorsHotspot.addEventListener('click', () => {
-      console.log('Navigating to Sensors Station...');
       stopAnimation();
       if (keyboardUnit) keyboardUnit.destroy();
       if (mfdSystem) mfdSystem.destroy();
@@ -247,7 +218,6 @@ function setupEventListeners() {
 
   if (engineeringHotspot) {
     engineeringHotspot.addEventListener('click', () => {
-      console.log('Navigating to Engineering Station...');
       stopAnimation();
       if (keyboardUnit) keyboardUnit.destroy();
       if (mfdSystem) mfdSystem.destroy();
@@ -293,10 +263,11 @@ function setupEventListeners() {
     // Update the current station's display via stationManager
     stationManager.updateCenterDisplay();
 
-    // Update MFD overlay
-    if (mfdSystem) {
-      mfdSystem.updateOverlay();
-    }
+    // MFD overlay updates are now handled by direct calls after button presses
+    // No need to update on every game state change (autopilot updates every frame)
+    // if (mfdSystem) {
+    //   mfdSystem.updateOverlay();
+    // }
   });
 
   // Keyboard shortcuts for quick range changes
@@ -340,14 +311,12 @@ function resizeNavigationDisplay() {
   // Scale canvas context to account for device pixel ratio
   const ctx = navigationCanvas.getContext('2d');
   ctx.scale(dpr, dpr);
-  
+
   // Update SVG viewBox to match the CSS size (not pixel size)
   navigationSVG.setAttribute('viewBox', `0 0 ${rect.width} ${rect.height}`);
   navigationSVG.style.width = '100%';
   navigationSVG.style.height = '100%';
-  
-  console.log(`Navigation display resized: CSS(${rect.width}x${rect.height}) Buffer(${navigationCanvas.width}x${navigationCanvas.height}) DPR(${dpr})`);
-  
+
   // Redraw navigation content
   updateNavigationDisplay();
 }
@@ -420,10 +389,11 @@ function startAnimation() {
         lastDisplayUpdate = now;
       }
 
-      // Update MFD overlay if needed (has its own change detection)
-      if (mfdSystem && mfdSystem.needsUpdate()) {
-        mfdSystem.updateOverlay();
-      }
+      // MFD overlay updates are now handled by direct calls after button presses
+      // No need to update every frame
+      // if (mfdSystem && mfdSystem.needsUpdate()) {
+      //   mfdSystem.updateOverlay();
+      // }
     } catch (error) {
       console.error('Animation error:', error);
     }
@@ -514,25 +484,24 @@ window.debugBridge = {
   resizeDisplay: resizeNavigationDisplay
 };
 
-document.addEventListener('keyboard-function-pressed', (e) => {
-  console.log('Function key pressed:', e.detail);
-  // if (mfdSystem && typeof mfdSystem.handleFunctionKey === 'function') {
-  //   mfdSystem.handleFunctionKey(e.detail);
-  // }
+document.addEventListener('keyboard-function-pressed', () => {
+  // Function key handling
 });
 
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', async () => {
-  console.log('DOM loaded, initializing bridge...');
+  console.log('BRIDGE SYSTEMS.....INITIALIZING');
   await initializeBridge();
-  
+
   // Update debug object after initialization
   setTimeout(() => {
     window.debugBridge.keyboardUnit = keyboardUnit;
     window.debugBridge.mfdSystem = mfdSystem;
     window.debugBridge.navigationCanvas = navigationCanvas;
     window.debugBridge.navigationSVG = navigationSVG;
-    console.log('Bridge initialization complete');
+    console.log('═══════════════════════════════════════════');
+    console.log('BRIDGE ONLINE - ALL SYSTEMS OPERATIONAL');
+    console.log('═══════════════════════════════════════════');
   }, 100);
 });
 

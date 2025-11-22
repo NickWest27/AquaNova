@@ -63,7 +63,7 @@ class StationManager {
             this.currentStation = savedStation;
         }
 
-        console.log('Station Manager initialized');
+        // Station manager initialized
     }
 
     registerStationButton(stationId, buttonElement) {
@@ -77,7 +77,7 @@ class StationManager {
 
     registerDisplayRenderer(rendererId, rendererFunction) {
         this.displayRenderers.set(rendererId, rendererFunction);
-        console.log(`Display renderer registered: ${rendererId}`);
+        // Display renderer registered
     }
 
     switchToStation(stationId) {
@@ -87,9 +87,6 @@ class StationManager {
         }
 
         const station = this.stations[stationId];
-        const previousStation = this.currentStation;
-
-        console.log(`Switching from ${previousStation} to ${stationId}`);
 
         // Update current station
         this.currentStation = stationId;
@@ -108,7 +105,7 @@ class StationManager {
         // Store in game state
         gameStateInstance.updateProperty('bridge.activeStation', stationId);
 
-        console.log(`Active station: ${stationId.toUpperCase()}`);
+        console.log(`STATION: ${stationId.toUpperCase()}`);
     }
 
     updateStationButtons() {

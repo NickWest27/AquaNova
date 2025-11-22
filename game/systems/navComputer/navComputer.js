@@ -98,7 +98,7 @@ export function drawNavigationDisplay(canvas, svg, state, displayType = 'centerD
 }
 
 function drawNavContent(ctx, cx, cy, maxRadius, state, canvasWidth, canvasHeight) {
-  console.log(`Drawing nav at center(${cx}, ${cy}) with radius ${maxRadius}`);
+  // console.log(`Drawing nav at center(${cx}, ${cy}) with radius ${maxRadius}`);
   
   // 1. Clear background with black (like real ND)
   ctx.fillStyle = "#000000";
@@ -725,8 +725,8 @@ function formatLongitude(lon) {
 // ============================================================================
 
 function drawPlanContent(ctx, cx, cy, maxRadius, state, canvasWidth, canvasHeight) {
-  console.log(`Drawing PLAN view at center(${cx}, ${cy}) with radius ${maxRadius}`);
-  console.log('PLAN view overlays:', state.overlays);
+  // console.log(`Drawing PLAN view at center(${cx}, ${cy}) with radius ${maxRadius}`);
+  // console.log('PLAN view overlays:', state.overlays);
 
   // 1. Clear background with black
   ctx.fillStyle = "#000000";
@@ -734,10 +734,7 @@ function drawPlanContent(ctx, cx, cy, maxRadius, state, canvasWidth, canvasHeigh
 
   // 2. Draw lat/lon grid if enabled
   if (state.overlays && state.overlays.latLonGrid) {
-    console.log('Drawing lat/lon grid...');
     drawLatLonGrid(ctx, cx, cy, maxRadius, state);
-  } else {
-    console.log('Lat/lon grid NOT drawing - overlays:', state.overlays);
   }
 
   // 3. Ownship at center, rotated to heading
@@ -752,7 +749,7 @@ function drawPlanContent(ctx, cx, cy, maxRadius, state, canvasWidth, canvasHeigh
 // ============================================================================
 
 function drawRoseContent(ctx, cx, cy, maxRadius, state, canvasWidth, canvasHeight) {
-  console.log(`Drawing ROSE view at center(${cx}, ${cy}) with radius ${maxRadius}`);
+  // console.log(`Drawing ROSE view at center(${cx}, ${cy}) with radius ${maxRadius}`);
 
   // 1. Clear background with black
   ctx.fillStyle = "#000000";

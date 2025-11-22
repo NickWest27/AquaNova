@@ -26,7 +26,7 @@ class NavigationPage {
         };
         
         mfd.setPageState(defaultState, 'navigation');
-        console.log('Navigation page initialized');
+        console.log('NAV COMPUTER.....ONLINE');
     }
 
     static getSoftKeys(mfd) {
@@ -46,7 +46,7 @@ class NavigationPage {
     static getMapSoftKeys(mfd, state) {
     const range = gameStateInstance.getProperty("displaySettings.navDisplayRange") || 10;
     const displayMode = state.displayMode || 'ARC';
-    console.log(`[NAV] getMapSoftKeys - displayMode: ${displayMode}`);
+    // Get soft keys for map mode
     return {
         // L1-L5, C1-C5, R1-R5 (15 buttons)
         labels: [
@@ -68,12 +68,21 @@ class NavigationPage {
             null, null, null, null, null,          // C1-C5
             () => this.setMode(mfd, 'route'),      // R1
             null, null, null, null                 // R2-R5
+        ],
+        states: [
+            { type: 'momentary', selected: false },  // L1: Range up arrow
+            null,                                     // L2: Range display (no button state)
+            { type: 'momentary', selected: false },  // L3: Range down arrow
+            { type: 'momentary', selected: false },  // L4: Display mode cycle
+            { type: 'momentary', selected: false },  // L5: SHOW overlays menu
+            null, null, null, null, null,            // C1-C5
+            { type: 'momentary', selected: false },  // R1: ROUTE menu
+            null, null, null, null                   // R2-R5
         ]
     };
     }
 
     static getOverlaySoftKeys(mfd, state) {
-        console.log('[NAV] getOverlaySoftKeys called');
         return {
             // L1-L5, C1-C5, R1-R5 (15 buttons)
             labels: [
@@ -101,6 +110,19 @@ class NavigationPage {
                 null,                                       // R3
                 () => this.allOverlaysOn(mfd),              // R4
                 () => this.allOverlaysOff(mfd)              // R5
+            ],
+            states: [
+                { type: 'toggle', selected: state.overlaysVisible.route },      // L1
+                { type: 'toggle', selected: state.overlaysVisible.waypoints },  // L2
+                { type: 'toggle', selected: state.overlaysVisible.contours },   // L3
+                { type: 'toggle', selected: state.overlaysVisible.latLonGrid }, // L4
+                { type: 'momentary', selected: false },                         // L5: SHOW (back button)
+                null, null, null, null, null,                                   // C1-C5
+                { type: 'toggle', selected: state.overlaysVisible.hazards },    // R1
+                { type: 'toggle', selected: state.overlaysVisible.traffic },    // R2
+                null,                                                            // R3
+                { type: 'momentary', selected: false },                         // R4: ALL ON
+                { type: 'momentary', selected: false }                          // R5: ALL OFF
             ]
         };
     }
@@ -133,6 +155,19 @@ class NavigationPage {
                 () => this.executeRoute(mfd),        // R3
                 null,                                // R4
                 () => this.directToWaypoint(mfd)     // R5
+            ],
+            states: [
+                { type: 'momentary', selected: false },  // L1: ADD
+                { type: 'momentary', selected: false },  // L2: EDIT
+                { type: 'momentary', selected: false },  // L3: DELETE
+                null,                                     // L4
+                { type: 'momentary', selected: false },  // L5: BACK
+                null, null, null, null, null,            // C1-C5
+                { type: 'momentary', selected: false },  // R1: UP
+                { type: 'momentary', selected: false },  // R2: DOWN
+                { type: 'momentary', selected: false },  // R3: EXEC
+                null,                                     // R4
+                { type: 'momentary', selected: false }   // R5: DIRECT
             ]
         };
     }
@@ -328,7 +363,7 @@ class NavigationPage {
         const newRange = ranges[newIndex];
         gameStateInstance.updateProperty("displaySettings.navDisplayRange", newRange);
         mfd.needsRedraw = true; // Force redraw
-        console.log(`Navigation: Range changed to ${newRange}nm`);
+        // Range updated
     }
 
     static setMode(mfd, newMode) {
@@ -337,7 +372,7 @@ class NavigationPage {
         mfd.setPageState(state, 'navigation');
         mfd.setupPageSoftKeys('navigation');
         mfd.needsRedraw = true; // Force redraw
-        console.log(`Navigation: Mode changed to ${newMode}`);
+        // Mode switched
     }
 
     static cycleDisplayMode(mfd) {
@@ -350,7 +385,7 @@ class NavigationPage {
         mfd.setPageState(state, 'navigation');
         mfd.setupPageSoftKeys('navigation');  // Update button labels
         mfd.needsRedraw = true;  // Force redraw
-        console.log(`Navigation: Display mode changed to ${state.displayMode}`);
+        console.log(`NAV DISPLAY: ${state.displayMode} MODE`);
     }
 
     static showOverlays(mfd) {
@@ -358,8 +393,7 @@ class NavigationPage {
         state.mode = 'overlays';
         mfd.setPageState(state, 'navigation');
         mfd.setupPageSoftKeys('navigation');
-        mfd.updateDisplay();
-        console.log('Navigation: Showing overlays menu');
+        // Display updates are handled by station manager
     }
 
     static showRoute(mfd) {
@@ -367,23 +401,19 @@ class NavigationPage {
         state.mode = 'route';
         mfd.setPageState(state, 'navigation');
         mfd.setupPageSoftKeys('navigation');
-        mfd.updateDisplay();
-        console.log('Navigation: Showing route menu');
+        // Display updates are handled by station manager
     }
 
     static showMenu(mfd) {
         // Could show main menu or switch to different MFD page
-        console.log('Navigation: Main menu requested');
     }
 
     static toggleZoom(mfd) {
         // Toggle between different zoom levels or display modes
-        console.log('Navigation: Zoom toggle');
     }
 
     static showInfo(mfd) {
         // Show navigation information panel
-        console.log('Navigation: Info panel');
     }
 
     static backToMap(mfd) {
@@ -391,8 +421,7 @@ class NavigationPage {
         state.mode = 'map';
         mfd.setPageState(state, 'navigation');
         mfd.setupPageSoftKeys('navigation');
-        mfd.updateDisplay();
-        console.log('Navigation: Back to map view');
+        // Display updates are handled by station manager
     }
 
     // Overlay Control Methods
@@ -400,8 +429,8 @@ class NavigationPage {
         const state = mfd.getPageState('navigation');
         state.overlaysVisible[overlayName] = !state.overlaysVisible[overlayName];
         mfd.setPageState(state, 'navigation');
-        mfd.updateDisplay();
-        console.log(`Navigation: Toggled ${overlayName} overlay ${state.overlaysVisible[overlayName] ? 'ON' : 'OFF'}`);
+        // Display updates are handled by station manager
+        console.log(`OVERLAY [${overlayName.toUpperCase()}]: ${state.overlaysVisible[overlayName] ? 'ENABLED' : 'DISABLED'}`);
     }
 
     static allOverlaysOn(mfd) {
@@ -410,8 +439,8 @@ class NavigationPage {
             state.overlaysVisible[key] = true;
         });
         mfd.setPageState(state, 'navigation');
-        mfd.updateDisplay();
-        console.log('Navigation: All overlays ON');
+        // Display updates are handled by station manager
+        console.log('ALL OVERLAYS: ENABLED');
     }
 
     static allOverlaysOff(mfd) {
@@ -420,27 +449,25 @@ class NavigationPage {
             state.overlaysVisible[key] = false;
         });
         mfd.setPageState(state, 'navigation');
-        mfd.updateDisplay();
-        console.log('Navigation: All overlays OFF');
+        // Display updates are handled by station manager
+        console.log('ALL OVERLAYS: DISABLED');
     }
 
     // Route Management Methods
     static addWaypoint(mfd) {
         mfd.requestKeyboardInput('WPT NAME: ', 'waypoint_add', 8);
-        console.log('Navigation: Add waypoint requested');
     }
 
     static editWaypoint(mfd) {
         const state = mfd.getPageState('navigation');
         const selectedIndex = state.routeView.selectedWaypoint;
         mfd.requestKeyboardInput('EDIT WPT: ', `waypoint_edit_${selectedIndex}`, 8);
-        console.log('Navigation: Edit waypoint requested');
     }
 
     static deleteWaypoint(mfd) {
         const state = mfd.getPageState('navigation');
         const selectedIndex = state.routeView.selectedWaypoint;
-        console.log(`Navigation: Delete waypoint ${selectedIndex} requested`);
+        console.log(`WAYPOINT ${selectedIndex + 1}: DELETED`);
         // Implementation would remove waypoint from mission computer
     }
 
@@ -449,9 +476,7 @@ class NavigationPage {
         if (state.routeView.selectedWaypoint > 0) {
             state.routeView.selectedWaypoint--;
             mfd.setPageState(state, 'navigation');
-            mfd.updateDisplay();
         }
-        console.log('Navigation: Move waypoint selection up');
     }
 
     static moveWaypointDown(mfd) {
@@ -461,35 +486,29 @@ class NavigationPage {
         if (state.routeView.selectedWaypoint < maxWaypoints - 1) {
             state.routeView.selectedWaypoint++;
             mfd.setPageState(state, 'navigation');
-            mfd.updateDisplay();
         }
-        console.log('Navigation: Move waypoint selection down');
     }
 
     static executeRoute(mfd) {
-        console.log('Navigation: Execute route requested');
+        console.log('ROUTE: EXECUTING');
         // Implementation would tell mission computer to activate route
     }
 
     static directToWaypoint(mfd) {
         const state = mfd.getPageState('navigation');
         const selectedIndex = state.routeView.selectedWaypoint;
-        console.log(`Navigation: Direct to waypoint ${selectedIndex} requested`);
+        console.log(`DIRECT TO: WAYPOINT ${selectedIndex + 1}`);
         // Implementation would set direct course to selected waypoint
     }
 
     // Keyboard Input Handler
     static handleKeyboardInput(mfd, data) {
-        console.log('Navigation page received keyboard input:', data);
-        
         if (data.context === 'waypoint_add') {
-            // Add waypoint with the entered name
-            console.log(`Adding waypoint: ${data.input}`);
+            console.log(`WAYPOINT ADDED: ${data.input}`);
             // Implementation would add to mission computer
         } else if (data.context.startsWith('waypoint_edit_')) {
-            // Edit waypoint
-            const index = data.context.split('_')[2];
-            console.log(`Editing waypoint ${index}: ${data.input}`);
+            const index = parseInt(data.context.split('_')[2]);
+            console.log(`WAYPOINT ${index + 1} UPDATED: ${data.input}`);
             // Implementation would update waypoint in mission computer
         }
     }

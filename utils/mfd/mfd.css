@@ -68,13 +68,31 @@
   margin-bottom: calc(2px * var(--scale));
 }
 
-/* Active/selected state - brighter background */
-.soft-key.active,
+/* Toggle/Selected state - for persistent selections (overlays, modes, etc.) */
 .soft-key.selected {
   background-color: rgba(100, 255, 218, 0.4);  /* Brighter than default */
   border-color: var(--primary-cyan);
   color: var(--primary-cyan);
   box-shadow: 0 0 calc(8px * var(--scale)) rgba(100, 255, 218, 0.5);
+}
+
+/* Active state - legacy support */
+.soft-key.active {
+  background-color: rgba(100, 255, 218, 0.4);
+  border-color: var(--primary-cyan);
+  color: var(--primary-cyan);
+  box-shadow: 0 0 calc(8px * var(--scale)) rgba(100, 255, 218, 0.5);
+}
+
+/* Momentary/action button - no persistent state, just flash on press */
+.soft-key.momentary {
+  /* Default styling - same as normal soft-key */
+  /* Only shows pressed state when clicked */
+}
+
+.soft-key.momentary:hover {
+  border-color: var(--primary-cyan);
+  background-color: rgba(100, 255, 218, 0.15);
 }
 
 .soft-key:empty,

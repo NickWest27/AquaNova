@@ -46,6 +46,20 @@ class HelmPage {
                 () => this.adjustDepth(mfd, 10),          // R3: +10m (deeper)
                 null,                                      // R4
                 () => this.adjustHeading(mfd, 5)          // R5: +5 degrees
+            ],
+            states: [
+                { type: 'momentary', selected: false },  // L1: Speed up arrow
+                { type: 'momentary', selected: false },  // L2: SPD (keyboard entry)
+                { type: 'momentary', selected: false },  // L3: Speed down arrow
+                null,                                     // L4: Empty
+                { type: 'momentary', selected: false },  // L5: Heading left arrow
+                null, null, null, null,                  // C1-C4
+                { type: 'momentary', selected: false },  // C5: HDG (keyboard entry)
+                { type: 'momentary', selected: false },  // R1: Depth up arrow
+                { type: 'momentary', selected: false },  // R2: DEP (keyboard entry)
+                { type: 'momentary', selected: false },  // R3: Depth down arrow
+                null,                                     // R4: Empty
+                { type: 'momentary', selected: false }   // R5: Heading right arrow
             ]
         };
     }

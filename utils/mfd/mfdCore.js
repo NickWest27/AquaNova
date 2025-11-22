@@ -12,6 +12,7 @@ class MFDCore {
         this.pages = new Map();
         this.softKeyLabels = Array(15).fill('');  // 15 keys: L1-L5, C1-C5, R1-R5
         this.softKeyActions = Array(15).fill(null);  // 15 keys: L1-L5, C1-C5, R1-R5
+        this.softKeyStates = Array(15).fill(null);  // Button state metadata: {type: 'toggle'|'momentary', selected: boolean}
 
         // Overlay elements (not display content)
         this.overlayContainer = null;
@@ -48,7 +49,7 @@ class MFDCore {
         // Don't set initial page here - let station manager control it
         // this.setActivePage('navigation');
 
-        console.log('MFD Overlay initialized');
+        // console.log('MFD Overlay initialized');
     }
 
     createOverlayStructure() {
@@ -117,7 +118,7 @@ class MFDCore {
     // Update overlay positioning (called on resize)
     updateOverlayPositions() {
         // Overlay positions are handled by CSS, but trigger any needed recalculations
-        console.log('MFD Overlay positions updated');
+        // console.log('MFD Overlay positions updated');
     }
 
     // Check if overlay needs updating
@@ -160,16 +161,16 @@ class MFDCore {
         this.renderCount++;
 
         // Only log every 100 updates to reduce console spam
-        if (this.renderCount % 100 === 0) {
-            console.log(`MFD Overlay updated #${this.renderCount}`);
-        }
+        // if (this.renderCount % 100 === 0) {
+        //     console.log(`MFD Overlay updated #${this.renderCount}`);
+        // }
     }
 
     // Page Management
     registerPage(pageId, pageClass) {
         this.pages.set(pageId, pageClass);
         this.pageState.set(pageId, {});
-        console.log(`MFD Page registered: ${pageId}`);
+        // console.log(`MFD Page registered: ${pageId}`);
     }
 
     setActivePage(pageId) {
@@ -193,7 +194,7 @@ class MFDCore {
         this.needsRedraw = true;
         this.updateOverlay(true);
         
-        console.log(`MFD Active page: ${pageId}`);
+        // console.log(`MFD Active page: ${pageId}`);
     }
 
     setupPageSoftKeys(pageId) {
@@ -201,10 +202,12 @@ class MFDCore {
         if (!pageClass || typeof pageClass.getSoftKeys !== 'function') {
             this.softKeyLabels.fill('');
             this.softKeyActions.fill(null);
+            this.softKeyStates.fill(null);
         } else {
             const softKeyConfig = pageClass.getSoftKeys(this);
             this.softKeyLabels = [...softKeyConfig.labels];
             this.softKeyActions = [...softKeyConfig.actions];
+            this.softKeyStates = softKeyConfig.states ? [...softKeyConfig.states] : Array(15).fill(null);
         }
 
         this.updateSoftKeyLabels();
@@ -224,11 +227,32 @@ class MFDCore {
         this.softKeyElements.forEach((element, domIndex) => {
             const labelIndex = domOrderMapping[domIndex];
             const label = this.softKeyLabels[labelIndex] || '';
+            const state = this.softKeyStates[labelIndex];
+
             element.textContent = label;
             element.style.visibility = label ? 'visible' : 'hidden';
 
-            // Don't add 'active' class here - it's for selected state only
-            // Buttons are visible/hidden based on whether they have a label
+            // Remove all state classes first
+            element.classList.remove('selected', 'momentary', 'active');
+
+            // Remove data attribute
+            delete element.dataset.buttonType;
+
+            // Apply button type and initial state
+            if (state) {
+                // Set data attribute for button type (used in click handler)
+                element.dataset.buttonType = state.type;
+
+                if (state.type === 'toggle') {
+                    // Sync toggle button visual state with data state
+                    if (state.selected) {
+                        element.classList.add('selected');
+                    }
+                } else if (state.type === 'momentary') {
+                    // Momentary buttons get the class for styling
+                    element.classList.add('momentary');
+                }
+            }
         });
     }
 
@@ -247,19 +271,28 @@ class MFDCore {
 
         const action = this.softKeyActions[index];
         if (!action) {
-            console.log(`MFD: No action for key ${keyId} (index ${index})`);
+            // console.log(`MFD: No action for key ${keyId} (index ${index})`);
             return;
         }
 
-        console.log(`MFD Soft key pressed: ${keyId} (index: ${index}, label: "${this.softKeyLabels[index]}")`);
+        // Get button element for visual feedback
+        const element = document.getElementById(`soft-key-${keyId}`);
 
-        this.flashSoftKey(keyId);
+        // Flash momentary buttons
+        if (element.dataset.buttonType !== 'toggle') {
+            this.flashSoftKey(keyId);
+        }
 
+        // Execute the action (this will update state)
         if (typeof action === 'function') {
             action(this);
         } else if (typeof action === 'string') {
             this.handleStringAction(action);
         }
+
+        // Immediately regenerate soft keys to reflect new state
+        // This ensures toggle buttons show their new state instantly
+        this.setupPageSoftKeys(this.currentPage);
     }
 
     handleStringAction(action) {
@@ -297,7 +330,7 @@ class MFDCore {
         if (pageClass && typeof pageClass.handleKeyboardInput === 'function') {
             pageClass.handleKeyboardInput(this, data);
         } else {
-            console.log(`MFD: No keyboard handler for page ${this.currentPage}`, data);
+            // console.log(`MFD: No keyboard handler for page ${this.currentPage}`, data);
         }
     }
 
@@ -311,8 +344,11 @@ class MFDCore {
         const targetPage = pageId || this.currentPage;
         const currentState = this.pageState.get(targetPage) || {};
         this.pageState.set(targetPage, { ...currentState, ...newState });
-        
+
         this.needsRedraw = true;
+
+        // Display updates are handled by the animation loop calling stationManager.updateCenterDisplay()
+        // We just need to set the needsRedraw flag so the next animation frame will update
     }
 
     // Utility Methods
@@ -358,7 +394,7 @@ class MFDCore {
             const { default: SciencePage } = await import('./pages/sciencePage.js');
             this.registerPage('science', SciencePage);
 
-            console.log('MFD: All pages loaded');
+            // console.log('MFD: All pages loaded');
         } catch (error) {
             console.error('MFD: Failed to load pages:', error);
         }
@@ -395,7 +431,7 @@ class MFDCore {
             this.overlayContainer.parentNode.removeChild(this.overlayContainer);
         }
         
-        console.log('MFD Overlay destroyed');
+        // MFD system shutdown
     }
 
     // Debug methods
