@@ -205,24 +205,25 @@ body {
 
 /* Station selector container */
 .station-selector {
-    width: 92%;
-    height: 92%;
+    width: 100%;
+    height: 100%;
     display: flex;
     flex-direction: column;
     gap: calc(3px * var(--scale));
     padding: calc(4px * var(--scale));
     transform-style: flat;
+    box-sizing: border-box;
 }
 
 /* Station selector buttons */
 .station-btn {
     flex: 1;
     background-color: rgba(17, 34, 64, 0.85);
-    border: calc(1px * var(--scale)) solid var(--text-gray);
-    border-radius: calc(3px * var(--scale));
+    border: calc(2px * var(--scale)) solid var(--text-gray);
+    border-radius: calc(4px * var(--scale));
     color: var(--text-gray);
     font-family: 'Courier New', monospace;
-    font-size: calc(10px * var(--scale));
+    font-size: calc(12px * var(--scale));
     font-weight: bold;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -230,6 +231,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
+    padding: calc(2px * var(--scale));
     user-select: none;
 }
 

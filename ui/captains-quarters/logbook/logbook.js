@@ -731,25 +731,11 @@ updateCurrentEntryId() {
 
   revertToEntry(entryId) {
     console.log(`Attempting to revert to entry: ${entryId}`);
-    
-    // Handle the hardcoded first entry (special case)
-    if (entryId === 'M.LOG-0001') {
-      console.log('Reverting to initial mission state');
-      const confirmRevert = confirm('This will reset the game to the initial mission state. Continue?');
-      if (confirmRevert) {
-        // Use GameState to reset to initial state
-        gameStateInstance.reset();
-        this.showMessage('Game reset to initial mission state');
-        // Reload to reflect changes
-        setTimeout(() => window.location.reload(), 1000);
-      }
-      return;
-    }
-    
+
     try {
-      // Use SaveManager to handle the revert
+      // Use SaveManager to handle ALL reverts (including first entry)
       const success = saveManager.revertToEntry(entryId);
-      
+
       if (success) {
         this.showMessage(`Reverted to entry ${entryId}`);
         // Update UI to reflect the reverted state

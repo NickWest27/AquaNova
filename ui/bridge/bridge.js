@@ -413,7 +413,6 @@ function stopAnimation() {
 
 // Force redraw function
 window.forceNavRedraw = function() {
-  lastState = null;
   updateNavigationDisplay();
   if (mfdSystem) {
     mfdSystem.forceRedraw();

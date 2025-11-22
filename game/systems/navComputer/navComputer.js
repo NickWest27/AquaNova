@@ -197,19 +197,22 @@ function drawCompassRose(ctx, cx, cy, maxRadius, currentHeading) {
 function drawBearingLines(ctx, cx, cy, maxRadius) {
   ctx.strokeStyle = "rgba(255, 255, 255, 0.2)";
   ctx.lineWidth = 1;
-  
-  // Only draw lines in forward arc, every 30 degrees
+
+  // Draw lines in forward arc every 30 degrees
+  // Forward arc is 270° through 0° to 90° (or -90° to +90° in screen coords)
   for (let bearing = 0; bearing < 360; bearing += 30) {
     const angle = toRadians(bearing);
     const startRadius = maxRadius * 0.1;
-    
+
     const startX = cx + startRadius * Math.cos(angle);
     const startY = cy + startRadius * Math.sin(angle);
     const endX = cx + maxRadius * Math.cos(angle);
     const endY = cy + maxRadius * Math.sin(angle);
-    
-    // Only draw if in forward view
-    if (angle >= Math.PI && angle <= Math.PI * 2) {
+
+    // Draw lines in forward arc (270° to 90° in navigation bearings)
+    // In navigation: 0° = North (up), angles increase clockwise
+    // Forward arc: bearings from 270° through 0° to 90°
+    if (bearing <= 90 || bearing >= 270) {
       ctx.beginPath();
       ctx.moveTo(startX, startY);
       ctx.lineTo(endX, endY);
@@ -237,12 +240,6 @@ function drawOwnshipSymbol(ctx, cx, cy, heading) {
 
   ctx.fill();   // Fill with black first
   ctx.stroke(); // Then stroke with white
-
-  // Add small white dot at tip (ship position)
-  ctx.fillStyle = "#ffffff";
-  ctx.beginPath();
-  ctx.arc(0, 0, 2, 0, Math.PI * 2);
-  ctx.fill();
 
   ctx.restore();
 }
@@ -304,17 +301,18 @@ function drawRangeLabels(ctx, cx, cy, maxRadius, range) {
   });
 }
 
-function setupSVGOverlay(svg, cx, cy, maxRadius, state, width, height) {
+function setupSVGOverlay(svg, _cx, _cy, _maxRadius, state, width, height) {
   if (!svg) return;
-  
+
   // Clear existing SVG content
   svg.innerHTML = '';
-  
+
   // Set SVG dimensions to match canvas
   svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
-  
-  // Add navigation readouts in corners
-  drawNavigationReadouts(svg, cx, cy, maxRadius, state, width, height);
+
+  // Navigation readouts removed per user request
+  // Add context-sensitive info box if relevant data exists
+  drawContextInfoBox(svg, state);
 }
 
 function drawNavigationReadouts(svg, cx, cy, maxRadius, state, width, height) {
@@ -391,6 +389,89 @@ function drawNavigationReadouts(svg, cx, cy, maxRadius, state, width, height) {
   modeText.setAttribute("font-weight", "bold");
   modeText.textContent = state.displayMode || "ARC";
   svg.appendChild(modeText);
+}
+
+function drawContextInfoBox(svg, state) {
+  // Context-sensitive info box in top left
+  // Shows relevant information based on what's selected or active
+
+  let title = null;
+  let line1 = null;
+  let line2 = null;
+  let line3 = null;
+
+  // Check for selected waypoint (if waypoint data exists in state)
+  if (state.selectedWaypoint) {
+    title = state.selectedWaypoint.name || "WAYPOINT";
+    line1 = `BRG: ${Math.round(state.selectedWaypoint.bearing || 0)}°`;
+    line2 = `DST: ${(state.selectedWaypoint.distance || 0).toFixed(1)} NM`;
+    line3 = state.selectedWaypoint.type ? `TYPE: ${state.selectedWaypoint.type}` : null;
+  }
+  // Check for destination
+  else if (state.destination) {
+    title = state.destination.name || "DESTINATION";
+    line1 = `BRG: ${Math.round(state.destination.bearing || 0)}°`;
+    line2 = `DST: ${(state.destination.distance || 0).toFixed(1)} NM`;
+    line3 = state.destination.eta ? `ETA: ${state.destination.eta}` : null;
+  }
+  // Check for active route
+  else if (state.activeRoute) {
+    title = "ACTIVE ROUTE";
+    line1 = `${state.activeRoute.name || "Route"}`;
+    line2 = `WPT: ${state.activeRoute.currentWaypoint || 1}/${state.activeRoute.totalWaypoints || 1}`;
+    line3 = `DST: ${(state.activeRoute.remainingDistance || 0).toFixed(1)} NM`;
+  }
+
+  // Only draw if we have content
+  if (!title) return;
+
+  const x = 10;
+  const y = 10;
+  const boxWidth = 180;
+  const lineHeight = 18;
+  const lines = [line1, line2, line3].filter(l => l !== null);
+  const boxHeight = 25 + (lines.length * lineHeight);
+
+  // Create container group
+  const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
+  group.setAttribute("class", "context-info-box");
+
+  // Background box with semi-transparent fill
+  const bg = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+  bg.setAttribute("x", x);
+  bg.setAttribute("y", y);
+  bg.setAttribute("width", boxWidth);
+  bg.setAttribute("height", boxHeight);
+  bg.setAttribute("fill", "rgba(0, 20, 40, 0.85)");
+  bg.setAttribute("stroke", "#00ffff");
+  bg.setAttribute("stroke-width", "2");
+  bg.setAttribute("rx", "4");
+  group.appendChild(bg);
+
+  // Title text
+  const titleText = document.createElementNS("http://www.w3.org/2000/svg", "text");
+  titleText.setAttribute("x", x + 10);
+  titleText.setAttribute("y", y + 18);
+  titleText.setAttribute("fill", "#00ffff");
+  titleText.setAttribute("font-size", "13");
+  titleText.setAttribute("font-family", "Arial, sans-serif");
+  titleText.setAttribute("font-weight", "bold");
+  titleText.textContent = title;
+  group.appendChild(titleText);
+
+  // Data lines
+  lines.forEach((line, index) => {
+    const lineText = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    lineText.setAttribute("x", x + 10);
+    lineText.setAttribute("y", y + 38 + (index * lineHeight));
+    lineText.setAttribute("fill", "#ffffff");
+    lineText.setAttribute("font-size", "12");
+    lineText.setAttribute("font-family", "Courier New, monospace");
+    lineText.textContent = line;
+    group.appendChild(lineText);
+  });
+
+  svg.appendChild(group);
 }
 
 // ============================================================================
@@ -549,12 +630,6 @@ function drawOwnshipSymbolRotated(ctx, cx, cy, heading) {
 
   ctx.fill();
   ctx.stroke();
-
-  // Center dot at tip (ship position)
-  ctx.fillStyle = "#ffffff";
-  ctx.beginPath();
-  ctx.arc(0, 0, 2, 0, Math.PI * 2);
-  ctx.fill();
 
   ctx.restore();
 }

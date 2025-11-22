@@ -20,34 +20,34 @@ class SplashScreen {
 
     async initialize() {
         console.log('Initializing Aqua Nova...');
-        this.updateConsole('⚡ Power systems online...');
+        this.updateConsole('Power systems online...');
 
         // Initialize display system FIRST
         await displayManager.init();
         await this.delay(400);
 
-        this.updateConsole('🖥️ Display systems calibrated...');
+        this.updateConsole('Display systems calibrated...');
         this.createBubbles();
         this.startBubbleGeneration();
         await this.delay(400);
 
         // Initialize systems
-        this.updateConsole('📊 Loading ship systems...');
+        this.updateConsole('Loading ship systems...');
         await this.initializeSystems();
         await this.delay(400);
 
-        this.updateConsole('🎮 Initializing control systems...');
+        this.updateConsole('Initializing control systems...');
         this.bindControls();
         await this.delay(400);
 
         // Initialize overlays
-        this.updateConsole('📱 PDA systems online...');
+        this.updateConsole('PDA systems online...');
         initPDAOverlay();
         initCommunicatorOverlay();
         await this.delay(400);
 
         // Initialize mission system
-        this.updateConsole('🎯 Mission protocols loading...');
+        this.updateConsole('Mission protocols loading...');
         await missionManager.init();
         console.log('Mission system initialized');
         await this.delay(400);
@@ -55,7 +55,7 @@ class SplashScreen {
         // Interactive elements are auto-initialized
         console.log('Interactive elements ready');
 
-        this.updateConsole('✅ All systems operational');
+        this.updateConsole('All systems OPERATIONAL');
         this.initialized = true;
         await this.delay(800);
         this.updateConsole('Press ENTER to board or I to import logbook');
