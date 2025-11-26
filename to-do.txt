@@ -3,7 +3,6 @@ Items can be marked as complete or resolved. This document should be constantly 
 /////////////////////////////////////////////////////////////
 
 Bridge to-dos:
-Correct styling of station buttons in left-console to be more centered and not to the right.
 Increase readability of all button labels. font size, padding or border is making text small compared to button size.
 
 Big jobs:

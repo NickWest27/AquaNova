@@ -188,8 +188,11 @@ function handleKeyboardData(data) {
     case 'speed':
     case 'speed_input':
       if (!isNaN(parseFloat(input))) {
-        gameState.updateProperty("navigation.speed", parseFloat(input));
-        console.log(`SPEED SET: ${parseFloat(input)} KNOTS`);
+        const speed = parseFloat(input);
+        // Clamp to valid range: -15 to 160 knots
+        const clampedSpeed = Math.max(-15, Math.min(160, speed));
+        gameState.updateProperty("helm.targetSpeed", clampedSpeed);
+        console.log(`TARGET SPEED SET: ${clampedSpeed} KNOTS`);
       }
       break;
   }
@@ -233,20 +236,21 @@ function setupEventListeners() {
     });
   }
 
-  // Track/Course input (display only)
+  // Track/Course input (display only - set by autopilot)
   if (trackInput) {
     trackInput.disabled = true;
-    trackInput.addEventListener('change', (e) => {
-      const newCourse = parseInt(e.target.value);
-      gameState.updateProperty('navigation.course', newCourse);
-    });
+    // No event handler - this is display only, updated by autopilot
   }
 
-  // Heading input
+  // Heading input - sets target heading
   if (headingInput) {
     headingInput.addEventListener('change', (e) => {
-      const newHeading = parseInt(e.target.value);
-      gameState.updateProperty('navigation.heading', newHeading);
+      let newHeading = parseInt(e.target.value);
+      // Wrap heading: 0-360 degrees
+      if (newHeading < 0) newHeading += 360;
+      if (newHeading >= 360) newHeading -= 360;
+      gameState.updateProperty('helm.targetHeading', newHeading);
+      console.log(`TARGET HEADING SET: ${newHeading}°`);
     });
   }
 
@@ -340,8 +344,8 @@ function updateNavigationDisplay() {
   const location = gameState.getProperty("navigation.location");
   const navState = {
     range: gameState.getProperty("displaySettings.navDisplayRange") || 10,
-    ownshipTrack: gameState.getProperty("navigation.course") || 0,
-    selectedHeading: gameState.getProperty("navigation.heading") || 0,
+    ownshipTrack: gameState.getProperty("helm.currentHeading") || 0,
+    selectedHeading: gameState.getProperty("helm.targetHeading") || 0,
     displayMode: displayMode,
     overlays: overlays,
     ownshipPosition: location?.geometry?.coordinates || [-70.6709, 41.5223] // [lon, lat]

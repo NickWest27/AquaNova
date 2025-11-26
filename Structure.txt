@@ -2,7 +2,10 @@ AquaNova2/
 │
 ├── index.html               # Main entry point (loads to the logbook in the Captains Quarters)
 ├── main.js                  # Bootstraps the game and sorts and syncs game saves in cache, json, and state to the latest version
-├── style.css                # Global styles (can be split later per module)
+├── style.css                # Global styles
+├── to-do.txt                # Development task list
+├── structure.txt            # This file - project structure documentation
+│
 ├── assets/                  # Images, audio, fonts
 │   ├── images/              # Images used for frames or other
 │   ├── audio/
@@ -10,86 +13,97 @@ AquaNova2/
 │   └── fonts/
 │
 ├── data/                    # Static game data
+│   ├── bathymetry/          # Bathymetric depth data for ocean floor rendering [Implemented]
+│   │   ├── northAtlantic/   # North Atlantic region bathymetry tiles
+│   │   └── *.geojson        # GeoJSON files at various resolutions (10m, 100m, 500m, 1000m)
 │   ├── logbooks/
-│   │   ├── MaidenVoyage.json # A placeholder second campaign used for testing bookshelf functionality.            
+│   │   ├── MaidenVoyage.json # A placeholder second campaign used for testing bookshelf functionality
 │   │   └── SeaTrials.json   # First campaign logbook, Sea Trials of the Aqua Nova
 │   ├── missions/
-│   │   ├── index.json      # Lists all mission files 
+│   │   ├── index.json       # Lists all mission files
 │   │   └── meetTheCrew.json # First mission, meet the crew and explore the ship
 │   ├── contacts.json        # Character profiles, ranks, bios, contacts, etc.
-│   ├── missions.json        # Mission storage, communications, locations, etc. [To Come]
-│   ├── locations.json       # Stores known geographic points of interest such as docks, reefs, and trenches.
-│   └── logbook.json         # Saved log entries and game states
+│   ├── locations.json       # Stores known geographic points of interest such as docks, reefs, and trenches
+│   ├── logbook.json         # Saved log entries and game states
+│   └── readme.txt           # Data directory documentation
 │
 ├── game/                    # Core game logic and state
 │   ├── state.js             # Tracks ship status, location, player state, contacts, etc.
+│   ├── saveManager.js       # Handles game save/load functionality [Implemented]
 │   ├── procedural/          # Procedural generation modules [Not Implemented]
 │   │   ├── generator.js     # Map generation, seafloor, anomalies
 │   │   └── nameGenerator.js
-│   └── systems/             # Modular ship systems [Implemented]
-│       ├── missionComputer/    # Similar to FMC/MCDU of modern airliner
-│       │   └── missionComputer.js     # Handles calculation (drift, routing between waypoints, etc.) pulls from ship state, passes to navComputer 
-│       ├── navComputer/        # Navigation display
+│   └── systems/             # Modular ship systems
+│       ├── autopilot/       # Autopilot system [Implemented]
+│       │   └── autopilot.js # Automated navigation and ship control
+│       ├── bathymetry/      # Bathymetric data processing system [Implemented]
+│       │   ├── bathymetryLoader.js    # Loads bathymetric GeoJSON data
+│       │   ├── bathymetryUtils.js     # Utility functions for bathymetry processing
+│       │   └── bathymetryRenderer.js  # Renders ocean floor depth data
+│       ├── missionComputer/ # Similar to FMC/MCDU of modern airliner [Implemented]
+│       │   └── missionComputer.js     # Handles calculation (drift, routing between waypoints, etc.) pulls from ship state, passes to navComputer
+│       ├── navComputer/     # Navigation display [Implemented]
 │       │   ├── navComputer.js     # Handles calculations on how to draw navigation display (canvas with SVG overlay)
 │       │   └── navComputer.css    # Styling of navigation display
-│       ├── missionManager.js   # Main mission engine
-│       ├── propulsion.js
-│       ├── lifeSupport.js
-│       ├── power.js
-│       ├── sensors.js
-│       └── repairManager.js
+│       ├── pfd/             # Primary Flight Display system [Implemented]
+│       │   └── pfdRenderer.js     # Renders ship attitude, depth, speed indicators
+│       ├── missionManager.js      # Main mission engine [Implemented]
+│       ├── propulsion.js          # Propulsion system controls [Implemented]
+│       ├── lifeSupport.js         # Life support system monitoring [Implemented]
+│       └── sensors.js             # Sensor systems (sonar, etc.) [Implemented]
 │
-├── ui/                      # UI Components and station screens [Implemented]
-│   ├── bridge/              # Bridge station
-│   │   ├── bridge.html      # Bridge frame with cutouts for various displays, place orders for ship control and see results on screens 
-│   │   ├── bridge.js        # Control of the buttons, and displays
-│   │   └── bridge.css       # Style and tilt displays to fit in the bridge frame giving a 3D perspective.
+├── ui/                      # UI Components and station screens
+│   ├── bridge/              # Bridge station [Implemented]
+│   │   ├── bridge.html      # Bridge frame with cutouts for various displays, place orders for ship control and see results on screens
+│   │   ├── bridge.js        # Control of the buttons and displays
+│   │   └── bridge.css       # Style and tilt displays to fit in the bridge frame giving a 3D perspective
 │   │
-│   ├── helm/               # Helm station for ship control such as ballast, trim, thrust, etc ...
-│   │   ├── helm.html
-│   │   ├── helm.js
-│   │   └── helm.css
+│   ├── helm/                # Helm station for ship control such as ballast, trim, thrust, etc ... [Directory exists]
 │   │
-│   ├── sensors/            # Sensors station such as sonar etc ...
+│   ├── sensors/             # Sensors station such as sonar etc ... [Implemented]
 │   │   ├── sensors.html
 │   │   ├── sensors.js
 │   │   └── sensors.css
 │   │
-│   ├── communications/     # Communications for radio, data, satellite etc... [Implemented]
-│   │   ├── comms.html
-│   │   ├── comms.js
-│   │   └── comms.css
+│   ├── communications/      # Communications for radio, data, satellite etc... [Directory exists]
 │   │
-│   ├── science/           # Science station for research and medical bay [To Come]
-│   │   ├── science.html
-│   │   ├── science.js
-│   │   └── science.css
+│   ├── science/             # Science station for research and medical bay [Directory exists]
 │   │
-│   ├── engineering/        # Engineering for ship systems like life support, electrical, fuel, hydraulics, propulsion,... [Implemented]
+│   ├── engineering/         # Engineering for ship systems like life support, electrical, fuel, hydraulics, propulsion [Implemented]
 │   │   ├── engineering.html
 │   │   ├── engineering.js
 │   │   └── engineering.css
 │   │
-│   └── captains-quarters/  # Handles game settings
-│       ├── quarters.html   # Captains room UI
+│   └── captains-quarters/   # Captain's quarters and game settings [Implemented]
+│       ├── quarters.html    # Captain's room UI
 │       ├── quarters.js
 │       ├── quarters.css
-│       └── logbook/        # Handles the ships logbook for taking notes and save/revert function
-│           ├── logbook.html     # The digital logbook UI
-│           ├── logbook.js  # Handles logbook entries and logbook shelf for managing campaigns.
+│       └── logbook/         # Handles the ship's logbook for taking notes and save/revert function
+│           ├── logbook.html # The digital logbook UI
+│           ├── logbook.js   # Handles logbook entries and logbook shelf for managing campaigns
 │           └── logbook.css
 │
-└── utils/                  # Reusable helpers, Utility functions (time, date, formatting) [Implemented]
-    ├── displayManager.js   # Unified display management system combining scaling and settings
-    ├── pdaOverlay.js       # Generates the global PDA for menu options and displaying crew bios, contacts, tasks...
-    ├── communicatorOverlay.js   # Communicator logic for crew dialogue
-    ├── interactiveElements.js  # Interactive element spawner
-    ├── keyboardUnit/       # Keyboard Unit
-    │       ├── logbook.css
-    │       ├── keyboard.css    # 
-    │       └── keyboard.js     #
-    └── mfd/     
-        ├── mfdCore.js      # Main MFD engine
-        ├── mfd.css         # MFD styling
-        └── pages/
-            └── navigationPage.js   # Navigation map display
+├── utils/                   # Reusable helpers and utility functions [Implemented]
+│   ├── displayManager.js    # Unified display management system combining scaling and settings
+│   ├── stationManager.js    # Manages navigation between different ship stations
+│   ├── pdaOverlay.js        # Generates the global PDA for menu options and displaying crew bios, contacts, tasks
+│   ├── communicatorOverlay.js    # Communicator logic for crew dialogue
+│   ├── interactiveElements.js    # Interactive element spawner
+│   ├── transformTuner.js    # Transform adjustment utility for display positioning
+│   ├── keyboardUnit/        # Keyboard Unit for text input
+│   │   ├── keyboardUnit.js
+│   │   └── keyboardUnit.css
+│   └── mfd/                 # Multi-Function Display system
+│       ├── mfdCore.js       # Main MFD engine
+│       ├── mfd.css          # MFD styling
+│       └── pages/           # Individual MFD page implementations
+│           ├── navigationPage.js      # Navigation map display
+│           ├── helmPage.js            # Helm control page
+│           ├── engineeringPage.js     # Engineering systems page
+│           ├── communicationsPage.js  # Communications page
+│           ├── sensorsPage.js         # Sensors display page
+│           └── sciencePage.js         # Science station page
+│
+├── Guides/                  # Documentation and guides
+│
+└── temp_backup/             # Temporary backup files

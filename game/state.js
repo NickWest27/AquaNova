@@ -43,6 +43,15 @@ class GameState {
                 destination: null,
                 displaySettings: {
                     navDisplayRange: 10,  // Default range in nautical miles
+                    displayMode: 'ARC',   // 'ARC', 'PLAN', 'ROSE'
+                    overlaysVisible: {
+                        route: true,
+                        waypoints: true,
+                        contours: false,
+                        hazards: true,
+                        traffic: false,
+                        latLonGrid: true
+                    }
                 }
             },
 

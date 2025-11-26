@@ -2,6 +2,192 @@
 // Enhanced Navigation Computer for Aqua Nova Bridge
 // Properly handles canvas scaling with displayManager and virtual resolutions
 
+import { bathymetryLoader } from '../bathymetry/bathymetryLoader.js';
+import { drawBathymetryContours } from '../bathymetry/bathymetryRenderer.js';
+
+// Bathymetry data cache
+let bathymetryData = null;
+let bathymetryLoadPromise = null;
+let currentTile = null;
+let currentResolution = null;
+let lastPositionCheck = { lon: null, lat: null, range: null };
+
+/**
+ * Get the appropriate bathymetry tile for a lat/lon position
+ * @param {number} lon - Longitude
+ * @param {number} lat - Latitude
+ * @returns {string} Tile name (e.g., 'n40s30w-80e-70')
+ */
+function getTileForPosition(lon, lat) {
+  // Available tiles (10° x 10° coverage)
+  const tiles = [
+    { name: 'n40s30w-80e-70', bounds: { n: 40, s: 30, w: -80, e: -70 } },
+    { name: 'n40s30w-70e-60', bounds: { n: 40, s: 30, w: -70, e: -60 } },
+    { name: 'n40s30w-60e-50', bounds: { n: 40, s: 30, w: -60, e: -50 } },
+    { name: 'n45s40w-75e-70', bounds: { n: 45, s: 40, w: -75, e: -70 } }
+  ];
+
+  // Find tile containing the position
+  for (const tile of tiles) {
+    if (lat >= tile.bounds.s && lat <= tile.bounds.n &&
+        lon >= tile.bounds.w && lon <= tile.bounds.e) {
+      return tile.name;
+    }
+  }
+
+  // Default to first tile if position not in any tile
+  console.warn(`BATHYMETRY: Position (${lon}, ${lat}) not in any tile, using default`);
+  return tiles[0].name;
+}
+
+/**
+ * Determine appropriate resolution based on range (LOD system)
+ * @param {number} range - Display range in nautical miles
+ * @returns {string} Resolution level: '10m', '100m', '500m', or '1000m'
+ */
+function getResolutionForRange(range) {
+  if (range <= 5) {
+    return '10m';   // High detail for very close zoom
+  } else if (range <= 20) {
+    return '100m';  // Medium detail for close zoom
+  } else if (range <= 80) {
+    return '500m';  // Lower detail for medium zoom
+  } else {
+    return '1000m'; // Lowest detail for far zoom
+  }
+}
+
+/**
+ * Update bathymetry data based on current position and range
+ * Intelligently loads/unloads tiles and adjusts resolution
+ * @param {number} lon - Current longitude
+ * @param {number} lat - Current latitude
+ * @param {number} range - Display range in nautical miles
+ */
+async function updateBathymetry(lon, lat, range) {
+  // Determine which tile we need
+  const neededTile = getTileForPosition(lon, lat);
+  const neededResolution = getResolutionForRange(range);
+
+  // Check if we need to update (tile changed or resolution changed)
+  const needsUpdate =
+    currentTile !== neededTile ||
+    currentResolution !== neededResolution ||
+    lastPositionCheck.lon === null;
+
+  if (!needsUpdate) {
+    return bathymetryData;
+  }
+
+  // Update tracking variables
+  lastPositionCheck = { lon, lat, range };
+
+  // Log the change
+  if (currentTile !== neededTile) {
+    console.log(`BATHYMETRY: Tile change detected: ${currentTile} → ${neededTile}`);
+  }
+  if (currentResolution !== neededResolution) {
+    console.log(`BATHYMETRY: Resolution change detected: ${currentResolution} → ${neededResolution} (range: ${range}nm)`);
+  }
+
+  // Clear old cache if changing tiles (to free memory)
+  if (currentTile && currentTile !== neededTile) {
+    const oldCacheKey = `${currentTile}_${currentResolution}`;
+    bathymetryLoader.clearCache(oldCacheKey);
+    console.log(`BATHYMETRY: Unloaded old tile: ${oldCacheKey}`);
+  }
+
+  // Update current state
+  currentTile = neededTile;
+  currentResolution = neededResolution;
+
+  // Load new data
+  try {
+    bathymetryLoadPromise = bathymetryLoader.loadRegion(neededTile, neededResolution);
+    bathymetryData = await bathymetryLoadPromise;
+    console.log(`BATHYMETRY: Now using ${neededTile} at ${neededResolution} (${bathymetryData.features.length} contours)`);
+    return bathymetryData;
+  } catch (error) {
+    console.warn(`BATHYMETRY: Failed to load ${neededTile} at ${neededResolution}:`, error);
+    bathymetryData = null;
+    return null;
+  }
+}
+
+// Initialize bathymetry data loading with default position
+async function initBathymetry() {
+  const woodsHole = [-70.6709, 41.5223];
+  const defaultRange = 10;
+  await updateBathymetry(woodsHole[0], woodsHole[1], defaultRange);
+}
+
+// Start loading bathymetry data immediately
+initBathymetry();
+
+/**
+ * Get depth at a specific lat/lon position from bathymetry data
+ * @param {number} lon - Longitude
+ * @param {number} lat - Latitude
+ * @returns {number|null} Depth in meters (negative), or null if no data
+ */
+export function getDepthAtPosition(lon, lat) {
+  if (!bathymetryData || !bathymetryData.features) {
+    return null;
+  }
+
+  // Find the nearest contour to this position
+  let nearestDepth = null;
+  let nearestDistance = Infinity;
+
+  bathymetryData.features.forEach(feature => {
+    if (!feature.geometry || !feature.geometry.coordinates) return;
+
+    const depth = feature.properties?.ELEV ?? null;
+    if (depth === null) return;
+
+    // Check distance to any point in this feature
+    const coords = feature.geometry.type === 'Polygon'
+      ? feature.geometry.coordinates[0]
+      : feature.geometry.coordinates;
+
+    coords.forEach(([fLon, fLat]) => {
+      // Simple Euclidean distance (good enough for small areas)
+      const distance = Math.sqrt(
+        Math.pow((fLon - lon) * Math.cos(lat * Math.PI / 180), 2) +
+        Math.pow(fLat - lat, 2)
+      );
+
+      if (distance < nearestDistance) {
+        nearestDistance = distance;
+        nearestDepth = depth;
+      }
+    });
+  });
+
+  return nearestDepth;
+}
+
+/**
+ * Get approximate size of bathymetry data in memory (MB)
+ * @returns {string} Cache size in MB (formatted)
+ */
+function getBathymetryCacheSize() {
+  if (!bathymetryData || !bathymetryData.features) {
+    return "0.0";
+  }
+
+  // Rough estimate: stringify the data and measure length
+  // This is approximate but gives a good indication of memory usage
+  try {
+    const jsonString = JSON.stringify(bathymetryData);
+    const bytes = new Blob([jsonString]).size;
+    const megabytes = bytes / (1024 * 1024);
+    return megabytes.toFixed(1);
+  } catch (e) {
+    return "ERR";
+  }
+}
+
 // Display configuration presets - adjusted for proper scaling
 const DISPLAY_CONFIGS = {
   centerDisplay: {
@@ -33,6 +219,13 @@ export function drawNavigationDisplay(canvas, svg, state, displayType = 'centerD
     console.warn(`Unknown display type: ${displayType}, using centerDisplay`);
     return drawNavigationDisplay(canvas, svg, state, 'centerDisplay');
   }
+
+  // Update bathymetry based on current position and range
+  const [lon, lat] = state.ownshipPosition || [-70.6709, 41.5223];
+  const range = state.range || 10;
+  updateBathymetry(lon, lat, range).catch(err => {
+    console.warn('BATHYMETRY: Update failed:', err);
+  });
 
   const ctx = canvas.getContext('2d');
 
@@ -99,7 +292,7 @@ export function drawNavigationDisplay(canvas, svg, state, displayType = 'centerD
 
 function drawNavContent(ctx, cx, cy, maxRadius, state, canvasWidth, canvasHeight) {
   // console.log(`Drawing nav at center(${cx}, ${cy}) with radius ${maxRadius}`);
-  
+
   // 1. Clear background with black (like real ND)
   ctx.fillStyle = "#000000";
   ctx.fillRect(0, 0, canvasWidth, canvasHeight);
@@ -107,19 +300,27 @@ function drawNavContent(ctx, cx, cy, maxRadius, state, canvasWidth, canvasHeight
   // 2. Draw forward arc range rings (only front 180 degrees)
   drawRangeRings(ctx, cx, cy, maxRadius);
 
-  // 3. Draw compass rose on outer ring
+  // 3. Draw tile coverage borders
+  drawTileCoverageBorders(ctx, cx, cy, maxRadius, state);
+
+  // 4. Draw bathymetry contours if enabled
+  if (state.overlays && state.overlays.contours && bathymetryData) {
+    drawBathymetryContours(ctx, cx, cy, maxRadius, state, bathymetryData);
+  }
+
+  // 5. Draw compass rose on outer ring
   drawCompassRose(ctx, cx, cy, maxRadius, state.selectedHeading || 0);
 
-  // 4. Draw bearing lines (every 30 degrees, forward arc only)
+  // 5. Draw bearing lines (every 30 degrees, forward arc only)
   drawBearingLines(ctx, cx, cy, maxRadius);
 
-  // 5. Draw ownship symbol (white hollow triangle at bottom)
+  // 6. Draw ownship symbol (white hollow triangle at bottom)
   drawOwnshipSymbol(ctx, cx, cy, state.selectedHeading || 0);
 
-  // 6. Draw heading bug and course line
+  // 7. Draw heading bug and course line
   drawHeadingAndCourse(ctx, cx, cy, maxRadius, state);
 
-  // 7. Draw range labels
+  // 8. Draw range labels
   drawRangeLabels(ctx, cx, cy, maxRadius, state.range || 10);
 }
 
@@ -301,6 +502,34 @@ function drawRangeLabels(ctx, cx, cy, maxRadius, range) {
   });
 }
 
+function drawPlanRangeLabels(ctx, cx, cy, maxRadius, range) {
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "11px Arial";
+  ctx.textBaseline = "middle";
+  ctx.textAlign = "center";
+
+  // Label each ring at the top position (0 degrees / North)
+  [0.25, 0.5, 0.75, 1.0].forEach((fraction, idx) => {
+    const r = maxRadius * fraction;
+    const value = Math.round((idx + 1) * range / 4);
+
+    // Top of the circle (North = 0 degrees = -90 degrees in canvas coords)
+    const angle = -Math.PI / 2;
+
+    // Position label just above the ring
+    const labelX = cx + r * Math.cos(angle);
+    const labelY = cy + r * Math.sin(angle) - 8; // -8 pixels to sit above the ring
+
+    // Draw with background for visibility
+    ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
+    const textWidth = ctx.measureText(`${value}nm`).width;
+    ctx.fillRect(labelX - textWidth/2 - 3, labelY - 8, textWidth + 6, 14);
+
+    ctx.fillStyle = "#ffffff";
+    ctx.fillText(`${value}nm`, labelX, labelY);
+  });
+}
+
 function setupSVGOverlay(svg, _cx, _cy, _maxRadius, state, width, height) {
   if (!svg) return;
 
@@ -313,6 +542,9 @@ function setupSVGOverlay(svg, _cx, _cy, _maxRadius, state, width, height) {
   // Navigation readouts removed per user request
   // Add context-sensitive info box if relevant data exists
   drawContextInfoBox(svg, state);
+
+  // Add right-side info box for position and depth
+  drawPositionInfoBox(svg, state, width);
 }
 
 function drawNavigationReadouts(svg, cx, cy, maxRadius, state, width, height) {
@@ -466,6 +698,62 @@ function drawContextInfoBox(svg, state) {
     lineText.setAttribute("y", y + 38 + (index * lineHeight));
     lineText.setAttribute("fill", "#ffffff");
     lineText.setAttribute("font-size", "12");
+    lineText.setAttribute("font-family", "Courier New, monospace");
+    lineText.textContent = line;
+    group.appendChild(lineText);
+  });
+
+  svg.appendChild(group);
+}
+
+function drawPositionInfoBox(svg, state, width) {
+  // Right-side info box for present position and depth
+  // Always shows current position and depth under keel
+
+  const [lon, lat] = state.ownshipPosition || [-70.6709, 41.5223];
+  const depth = getDepthAtPosition(lon, lat);
+
+  // Calculate cache size
+  const cacheSizeMB = getBathymetryCacheSize();
+
+  const line1 = `PPOS: ${formatLatitude(lat)}`;
+  const line2 = `      ${formatLongitude(lon)}`;
+  const line3 = depth !== null ? `DPTH: ${Math.abs(depth)}m` : "DPTH: ---";
+  const line4 = `CACHE: ${cacheSizeMB}MB`;
+  const line5 = currentTile ? `TILE: ${currentTile}` : "TILE: ---";
+  const line6 = currentResolution ? `RES: ${currentResolution}` : "RES: ---";
+
+  const boxWidth = 150;
+  const lineHeight = 10;
+  const lines = [line1, line2, line3, line4, line5, line6];
+  const boxHeight = 8 + (lines.length * lineHeight);
+
+  const x = width - boxWidth - 10; // 10px from right edge
+  const y = 10;
+
+  // Create container group
+  const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
+  group.setAttribute("class", "position-info-box");
+
+  // Background box with semi-transparent fill
+  const bg = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+  bg.setAttribute("x", x);
+  bg.setAttribute("y", y);
+  bg.setAttribute("width", boxWidth);
+  bg.setAttribute("height", boxHeight);
+  bg.setAttribute("fill", "rgba(0, 20, 40, 0.85)");
+  bg.setAttribute("stroke", "#00ff00");
+  bg.setAttribute("stroke-width", "1");
+  bg.setAttribute("rx", "3");
+  group.appendChild(bg);
+
+  // Data lines (no title)
+  lines.forEach((line, index) => {
+    const lineText = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    lineText.setAttribute("x", x + 5);
+    lineText.setAttribute("y", y + 10 + (index * lineHeight));
+    lineText.setAttribute("fill", "#00ff00");
+    lineText.setAttribute("font-size", "8");
     lineText.setAttribute("font-family", "Courier New, monospace");
     lineText.textContent = line;
     group.appendChild(lineText);
@@ -677,55 +965,81 @@ function drawLatLonGrid(ctx, cx, cy, maxRadius, state) {
   const [shipLon, shipLat] = state.ownshipPosition || [-70.6709, 41.5223];
 
   // Calculate appropriate grid spacing based on range
-  // Grid intervals in minutes (1 minute = 1 nautical mile latitude)
+  // Grid intervals in minutes - aligned to degree/half-degree boundaries
   let gridInterval;
-  if (range <= 5) {
-    gridInterval = 1;  // 1 minute grid
-  } else if (range <= 10) {
-    gridInterval = 2;  // 2 minute grid
-  } else if (range <= 20) {
-    gridInterval = 5;  // 5 minute grid
+  if (range <= 10) {
+    gridInterval = 30;   // 30 minute grid (0.5 degree / 30 NM)
   } else if (range <= 40) {
-    gridInterval = 10; // 10 minute grid
+    gridInterval = 30;   // 30 minute grid (0.5 degree / 30 NM)
+  } else if (range <= 80) {
+    gridInterval = 60;   // 1 degree grid (60 NM)
+  } else if (range <= 160) {
+    gridInterval = 60;   // 1 degree grid (60 NM)
+  } else if (range <= 320) {
+    gridInterval = 120;  // 2 degree grid (120 NM)
+  } else if (range <= 640) {
+    gridInterval = 300;  // 5 degree grid (300 NM)
   } else {
-    gridInterval = 15; // 15 minute grid
+    gridInterval = 600;  // 10 degree grid (600 NM)
   }
 
   // Scale factor: pixels per nautical mile
   const scale = maxRadius / range;
 
+  // Longitude scale correction factor (1 minute of longitude = cos(latitude) nautical miles)
+  const lonScale = scale * Math.cos(shipLat * Math.PI / 180);
+
   // Convert lat/lon to minutes
   const shipLatMinutes = shipLat * 60;  // Latitude in minutes
   const shipLonMinutes = shipLon * 60;  // Longitude in minutes
 
-  // Calculate grid start positions (round to nearest grid interval)
+  // Calculate grid start positions - align to grid interval boundaries
+  // This ensures grid lines fall on degree or half-degree boundaries
   const latGridStart = Math.floor(shipLatMinutes / gridInterval) * gridInterval;
   const lonGridStart = Math.floor(shipLonMinutes / gridInterval) * gridInterval;
 
-  // Draw grid lines
-  ctx.strokeStyle = "rgba(0, 255, 255, 0.3)"; // Cyan with transparency
-  ctx.lineWidth = 1;
+  // Draw grid lines - thin and light grey
+  ctx.strokeStyle = "rgba(150, 150, 150, 0.25)"; // Light grey with low opacity
+  ctx.lineWidth = 0.5; // Thin lines
 
-  // Calculate grid bounds (in nautical miles from center)
-  const gridRange = range * 1.2; // Slightly larger than display range
+  // Calculate grid bounds based on canvas dimensions, not circular range
+  // This ensures we fill the entire rectangular canvas appropriately
+  const canvasWidth = ctx.canvas.width;
+  const canvasHeight = ctx.canvas.height;
+
+  // Calculate how many NM from center to edge in each direction
+  // Since cx/cy might not be centered, use the larger of left/right, top/bottom
+  const nmToLeft = cx / scale;
+  const nmToRight = (canvasWidth - cx) / scale;
+  const nmToTop = cy / scale;
+  const nmToBottom = (canvasHeight - cy) / scale;
+
+  // For longitude, we need to account for the longitude scale correction
+  const nmToLeftLon = cx / lonScale;
+  const nmToRightLon = (canvasWidth - cx) / lonScale;
+
+  // Add 20% buffer to ensure we cover the edges
+  const latRangeMinutes = Math.max(nmToTop, nmToBottom) * 1.2;
+  const lonRangeMinutes = Math.max(nmToLeftLon, nmToRightLon) * 1.2;
 
   // Vertical lines (longitude lines - run north-south)
-  for (let offset = -gridRange; offset <= gridRange; offset += gridInterval) {
+  for (let offset = -lonRangeMinutes; offset <= lonRangeMinutes; offset += gridInterval) {
     const lonMinutes = lonGridStart + offset;
     const deltaMinutes = lonMinutes - shipLonMinutes;
-    const x = cx + (deltaMinutes * scale);
+    // Use longitude-corrected scale for horizontal positioning
+    const x = cx + (deltaMinutes * lonScale);
 
     // Only draw if within canvas bounds
-    if (x >= 0 && x <= ctx.canvas.width) {
+    if (x >= 0 && x <= canvasWidth) {
       ctx.beginPath();
       ctx.moveTo(x, 0);
-      ctx.lineTo(x, ctx.canvas.height);
+      ctx.lineTo(x, canvasHeight);
       ctx.stroke();
 
       // Label with actual longitude
       const lonDegrees = lonMinutes / 60;
       const lonLabel = formatLongitude(lonDegrees);
-      ctx.fillStyle = "rgba(0, 255, 255, 0.6)";
+      ctx.fillStyle = "rgba(150, 150, 150, 0.6)"; // Light grey labels
       ctx.font = "10px Arial";
       ctx.textAlign = "center";
       ctx.fillText(lonLabel, x, 15);
@@ -733,66 +1047,101 @@ function drawLatLonGrid(ctx, cx, cy, maxRadius, state) {
   }
 
   // Horizontal lines (latitude lines - run east-west)
-  for (let offset = -gridRange; offset <= gridRange; offset += gridInterval) {
+  for (let offset = -latRangeMinutes; offset <= latRangeMinutes; offset += gridInterval) {
     const latMinutes = latGridStart + offset;
     const deltaMinutes = latMinutes - shipLatMinutes;
+    // Use regular scale for vertical positioning (1 minute lat = 1 NM)
     const y = cy - (deltaMinutes * scale); // Subtract because canvas Y increases downward
 
     // Only draw if within canvas bounds
-    if (y >= 0 && y <= ctx.canvas.height) {
+    if (y >= 0 && y <= canvasHeight) {
       ctx.beginPath();
       ctx.moveTo(0, y);
-      ctx.lineTo(ctx.canvas.width, y);
+      ctx.lineTo(canvasWidth, y);
       ctx.stroke();
 
       // Label with actual latitude
       const latDegrees = latMinutes / 60;
       const latLabel = formatLatitude(latDegrees);
-      ctx.fillStyle = "rgba(0, 255, 255, 0.6)";
+      ctx.fillStyle = "rgba(150, 150, 150, 0.6)"; // Light grey labels
       ctx.font = "10px Arial";
       ctx.textAlign = "left";
       ctx.fillText(latLabel, 5, y - 3);
     }
   }
-
-  // Draw center crosshair
-  ctx.strokeStyle = "rgba(0, 255, 255, 0.8)";
-  ctx.lineWidth = 2;
-  const crosshairSize = 20;
-
-  // Vertical center line
-  ctx.beginPath();
-  ctx.moveTo(cx, cy - crosshairSize);
-  ctx.lineTo(cx, cy + crosshairSize);
-  ctx.stroke();
-
-  // Horizontal center line
-  ctx.beginPath();
-  ctx.moveTo(cx - crosshairSize, cy);
-  ctx.lineTo(cx + crosshairSize, cy);
-  ctx.stroke();
-
-  // Center label with ship position
-  ctx.fillStyle = "#00ffff";
-  ctx.font = "12px Arial";
-  ctx.textAlign = "center";
-  const shipPosLabel = `${formatLatitude(shipLat)} ${formatLongitude(shipLon)}`;
-  ctx.fillText(shipPosLabel, cx, cy - 25);
 }
 
 // Helper functions to format lat/lon
-function formatLatitude(lat) {
+export function formatLatitude(lat) {
   const degrees = Math.floor(Math.abs(lat));
   const minutes = Math.abs((lat - Math.floor(lat)) * 60);
   const dir = lat >= 0 ? 'N' : 'S';
   return `${degrees}°${minutes.toFixed(1)}'${dir}`;
 }
 
-function formatLongitude(lon) {
+export function formatLongitude(lon) {
   const degrees = Math.floor(Math.abs(lon));
   const minutes = Math.abs((lon - Math.floor(lon)) * 60);
   const dir = lon >= 0 ? 'E' : 'W';
   return `${degrees}°${minutes.toFixed(1)}'${dir}`;
+}
+
+/**
+ * Draw tile coverage borders to show charted vs uncharted areas
+ */
+function drawTileCoverageBorders(ctx, cx, cy, maxRadius, state) {
+  const range = state.range || 10;
+  const [shipLon, shipLat] = state.ownshipPosition || [-70.6709, 41.5223];
+
+  // Scale factor: pixels per nautical mile
+  const scale = maxRadius / range;
+  const lonScale = scale * Math.cos(shipLat * Math.PI / 180);
+
+  // Available tiles (should match getTileForPosition)
+  const tiles = [
+    { name: 'n40s30w-80e-70', bounds: { n: 40, s: 30, w: -80, e: -70 } },
+    { name: 'n40s30w-70e-60', bounds: { n: 40, s: 30, w: -70, e: -60 } },
+    { name: 'n40s30w-60e-50', bounds: { n: 40, s: 30, w: -60, e: -50 } },
+    { name: 'n45s40w-75e-70', bounds: { n: 45, s: 40, w: -75, e: -70 } }
+  ];
+
+  ctx.save();
+  ctx.strokeStyle = "rgba(255, 255, 100, 0.6)"; // Light yellow
+  ctx.lineWidth = 2;
+  ctx.setLineDash([5, 5]); // Dashed line
+
+  tiles.forEach(tile => {
+    const { n, s, w, e } = tile.bounds;
+
+    // Convert tile corners to canvas coordinates
+    const corners = [
+      { lat: n, lon: w }, // NW
+      { lat: n, lon: e }, // NE
+      { lat: s, lon: e }, // SE
+      { lat: s, lon: w }  // SW
+    ];
+
+    ctx.beginPath();
+    corners.forEach((corner, i) => {
+      // Convert lat/lon to minutes from ship position
+      const deltaLon = (corner.lon - shipLon) * 60;
+      const deltaLat = (corner.lat - shipLat) * 60;
+
+      // Convert to canvas coordinates
+      const x = cx + (deltaLon * lonScale);
+      const y = cy - (deltaLat * scale);
+
+      if (i === 0) {
+        ctx.moveTo(x, y);
+      } else {
+        ctx.lineTo(x, y);
+      }
+    });
+    ctx.closePath();
+    ctx.stroke();
+  });
+
+  ctx.restore();
 }
 
 // ============================================================================
@@ -807,15 +1156,23 @@ function drawPlanContent(ctx, cx, cy, maxRadius, state, canvasWidth, canvasHeigh
   ctx.fillStyle = "#000000";
   ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 
-  // 2. Draw lat/lon grid if enabled
+  // 2. Draw tile coverage borders
+  drawTileCoverageBorders(ctx, cx, cy, maxRadius, state);
+
+  // 3. Draw bathymetry contours if enabled
+  if (state.overlays && state.overlays.contours && bathymetryData) {
+    drawBathymetryContours(ctx, cx, cy, maxRadius, state, bathymetryData);
+  }
+
+  // 4. Draw lat/lon grid if enabled
   if (state.overlays && state.overlays.latLonGrid) {
     drawLatLonGrid(ctx, cx, cy, maxRadius, state);
   }
 
-  // 3. Ownship at center, rotated to heading
+  // 4. Ownship at center, rotated to heading
   drawOwnshipSymbolRotated(ctx, cx, cy, state.selectedHeading || 0);
 
-  // 4. Track direction indicator (yellow arrow)
+  // 5. Track direction indicator (yellow arrow)
   drawTrackIndicator(ctx, cx, cy, maxRadius, state);
 }
 
@@ -838,12 +1195,21 @@ function drawRoseContent(ctx, cx, cy, maxRadius, state, canvasWidth, canvasHeigh
   drawFullRangeRings(ctx, cx, cy, maxRadius);
   drawFullBearingLines(ctx, cx, cy, maxRadius);
 
-  // 3. Ownship at center pointing up (same as ARC view - no rotation)
+  // 3. Draw tile coverage borders
+  drawTileCoverageBorders(ctx, cx, cy, maxRadius, state);
+
+  // 4. Draw bathymetry contours if enabled
+  if (state.overlays && state.overlays.contours && bathymetryData) {
+    drawBathymetryContours(ctx, cx, cy, maxRadius, state, bathymetryData);
+  }
+
+  // 4. Ownship at center pointing up (same as ARC view - no rotation)
   drawOwnshipSymbol(ctx, cx, cy, heading);
 
-  // 4. Draw heading line (cyan) and course line (yellow) like ARC view
+  // 5. Draw heading line (cyan) and course line (yellow) like ARC view
   drawHeadingAndCourse(ctx, cx, cy, maxRadius, state);
 
-  // 5. Range labels
+  // 6. Range labels
   drawRangeLabels(ctx, cx, cy, maxRadius, state.range || 10);
 }
+

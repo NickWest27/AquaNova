@@ -6,25 +6,29 @@ import gameStateInstance from '/game/state.js';
 
 class NavigationPage {
     static init(mfd) {
-        // Initialize navigation page state
+        // Load persistent settings from game state
+        const savedDisplayMode = gameStateInstance.getProperty('navigation.displaySettings.displayMode') || 'ARC';
+        const savedOverlays = gameStateInstance.getProperty('navigation.displaySettings.overlaysVisible') || {
+            route: true,
+            waypoints: true,
+            contours: false,
+            hazards: true,
+            traffic: false,
+            latLonGrid: true
+        };
+
+        // Initialize navigation page state with saved settings
         const defaultState = {
             mode: 'map', // 'map', 'overlays', 'route'
-            displayMode: 'ARC', // 'ARC', 'PLAN', 'ROSE'
-            overlaysVisible: {
-                route: true,
-                waypoints: true,
-                contours: false,
-                hazards: true,
-                traffic: false,
-                latLonGrid: true  // Lat/lon grid for PLAN view
-            },
+            displayMode: savedDisplayMode,
+            overlaysVisible: savedOverlays,
             selectedOverlay: null,
             routeView: {
                 selectedWaypoint: 0,
                 editMode: false
             }
         };
-        
+
         mfd.setPageState(defaultState, 'navigation');
         console.log('NAV COMPUTER.....ONLINE');
     }
@@ -42,7 +46,7 @@ class NavigationPage {
         }
     }
 
-    // Group related actions together
+    // Main menu. Basic map controls and submenu access 
     static getMapSoftKeys(mfd, state) {
     const range = gameStateInstance.getProperty("displaySettings.navDisplayRange") || 10;
     const displayMode = state.displayMode || 'ARC';
@@ -51,15 +55,15 @@ class NavigationPage {
         // L1-L5, C1-C5, R1-R5 (15 buttons)
         labels: [
             '▲',           // L1: Range up
-            `${range}`,    // L2: Range display
+            `${range}`,    // L2: Display range selected
             '▼',           // L3: Range down
-            displayMode,   // L4: Display mode
-            'SHOW',        // L5: Show overlays
+            displayMode,   // L4: Display mode ARC/PLAN/ROSE
+            'SHOW',        // L5: Overlays selection
             '', '', '', '', '',  // C1-C5: Empty for nav page
-            'ROUTE',       // R1: Route menu
+            'ROUTE',       // R1: Route menu for waypoint management
             '', '', '', ''       // R2-R5: Empty
         ],
-        actions: [
+        actions: [ // Not sure if this is still used
             () => this.changeRange(mfd, 1),        // L1
             null,                                   // L2
             () => this.changeRange(mfd, -1),       // L3
@@ -69,7 +73,7 @@ class NavigationPage {
             () => this.setMode(mfd, 'route'),      // R1
             null, null, null, null                 // R2-R5
         ],
-        states: [
+        states: [ // Not sure if this is still used
             { type: 'momentary', selected: false },  // L1: Range up arrow
             null,                                     // L2: Range display (no button state)
             { type: 'momentary', selected: false },  // L3: Range down arrow
@@ -82,18 +86,19 @@ class NavigationPage {
     };
     }
 
+    // Overlay managment menu for toggling different map overlays
     static getOverlaySoftKeys(mfd, state) {
         return {
             // L1-L5, C1-C5, R1-R5 (15 buttons)
             labels: [
-                'ROUTE',    // L1
-                'WAYPTS',   // L2
-                'CONTOUR',  // L3
-                'LAT/LON',  // L4
-                'SHOW',     // L5
+                'ROUTE',    // L1 shows route lines and route waypoints
+                'WAYPTS',   // L2 shows all navigation waypoints (Should be moved to R1)
+                'CONTOUR',  // L3 shows terrain contours
+                'LAT/LON',  // L4 shows lat/lon grid (for PLAN view)
+                'SHOW',     // L5 back to main menu
                 '', '', '', '', '',  // C1-C5: Empty
-                'HAZARDS',  // R1
-                'TRAFFIC',  // R2
+                'HAZARDS',  // R1 shows all science waypoints (move to R2 and rename)
+                'TRAFFIC',  // R2 show all traffic or biological hazards (move to R3 and rename)
                 '',         // R3
                 'ALL ON',   // R4
                 'ALL OFF'   // R5
@@ -187,6 +192,7 @@ class NavigationPage {
             range: currentGameState.range,
             ownshipTrack: currentGameState.course,
             selectedHeading: currentGameState.heading,
+            ownshipPosition: currentGameState.location?.geometry?.coordinates || [-70.6709, 41.5223],
             overlays: state.overlaysVisible,
             displayMode: state.displayMode || 'ARC'
         };
@@ -348,9 +354,10 @@ class NavigationPage {
 
     static changeRange(mfd, direction) {
         const currentRange = gameStateInstance.getProperty("displaySettings.navDisplayRange") || 10;
-        const ranges = [5, 10, 20, 40, 80];
+        // Range sequence: Each step doubles the previous (5, 10, 20, 40, 80, 160, 320, 640, 1280, 2560)
+        const ranges = [5, 10, 20, 40, 80, 160, 320, 640, 1280, 2560];
         const currentIndex = ranges.indexOf(currentRange);
-        
+
         let newIndex;
         if (direction > 0) {
             // Increase range
@@ -359,11 +366,11 @@ class NavigationPage {
             // Decrease range
             newIndex = currentIndex > 0 ? currentIndex - 1 : 0;
         }
-        
+
         const newRange = ranges[newIndex];
         gameStateInstance.updateProperty("displaySettings.navDisplayRange", newRange);
         mfd.needsRedraw = true; // Force redraw
-        // Range updated
+        console.log(`NAV RANGE: ${newRange} NM`);
     }
 
     static setMode(mfd, newMode) {
@@ -383,6 +390,13 @@ class NavigationPage {
 
         state.displayMode = modes[nextIndex];
         mfd.setPageState(state, 'navigation');
+
+        // Save to game state for persistence
+        gameStateInstance.updateProperty(
+            'navigation.displaySettings.displayMode',
+            state.displayMode
+        );
+
         mfd.setupPageSoftKeys('navigation');  // Update button labels
         mfd.needsRedraw = true;  // Force redraw
         console.log(`NAV DISPLAY: ${state.displayMode} MODE`);
@@ -429,6 +443,13 @@ class NavigationPage {
         const state = mfd.getPageState('navigation');
         state.overlaysVisible[overlayName] = !state.overlaysVisible[overlayName];
         mfd.setPageState(state, 'navigation');
+
+        // Save to game state for persistence
+        gameStateInstance.updateProperty(
+            `navigation.displaySettings.overlaysVisible.${overlayName}`,
+            state.overlaysVisible[overlayName]
+        );
+
         // Display updates are handled by station manager
         console.log(`OVERLAY [${overlayName.toUpperCase()}]: ${state.overlaysVisible[overlayName] ? 'ENABLED' : 'DISABLED'}`);
     }
@@ -439,6 +460,13 @@ class NavigationPage {
             state.overlaysVisible[key] = true;
         });
         mfd.setPageState(state, 'navigation');
+
+        // Save to game state for persistence
+        gameStateInstance.updateProperty(
+            'navigation.displaySettings.overlaysVisible',
+            state.overlaysVisible
+        );
+
         // Display updates are handled by station manager
         console.log('ALL OVERLAYS: ENABLED');
     }
@@ -449,6 +477,13 @@ class NavigationPage {
             state.overlaysVisible[key] = false;
         });
         mfd.setPageState(state, 'navigation');
+
+        // Save to game state for persistence
+        gameStateInstance.updateProperty(
+            'navigation.displaySettings.overlaysVisible',
+            state.overlaysVisible
+        );
+
         // Display updates are handled by station manager
         console.log('ALL OVERLAYS: DISABLED');
     }
