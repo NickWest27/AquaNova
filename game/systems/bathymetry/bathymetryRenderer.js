@@ -18,8 +18,9 @@ import {
  * @param {number} maxRadius - Maximum radius of display
  * @param {Object} state - Navigation state object
  * @param {Object} bathymetryData - GeoJSON FeatureCollection
+ * @param {number} rotationAngle - Rotation angle in degrees (0 = north-up, heading for heading-up)
  */
-export function drawBathymetryContours(ctx, cx, cy, maxRadius, state, bathymetryData) {
+export function drawBathymetryContours(ctx, cx, cy, maxRadius, state, bathymetryData, rotationAngle = 0) {
     if (!bathymetryData || !bathymetryData.features || bathymetryData.features.length === 0) {
         return;
     }
@@ -66,7 +67,7 @@ export function drawBathymetryContours(ctx, cx, cy, maxRadius, state, bathymetry
 
             // Fill all features at this depth
             features.forEach(feature => {
-                drawContourFeature(ctx, feature, cx, cy, shipLon, shipLat, scale, lonScale, true);
+                drawContourFeature(ctx, feature, cx, cy, shipLon, shipLat, scale, lonScale, rotationAngle, true);
             });
         }
     });
@@ -82,7 +83,7 @@ export function drawBathymetryContours(ctx, cx, cy, maxRadius, state, bathymetry
 
         // Draw all contours of this depth
         features.forEach(feature => {
-            drawContourFeature(ctx, feature, cx, cy, shipLon, shipLat, scale, lonScale, false);
+            drawContourFeature(ctx, feature, cx, cy, shipLon, shipLat, scale, lonScale, rotationAngle, false);
         });
     });
 
@@ -93,7 +94,7 @@ export function drawBathymetryContours(ctx, cx, cy, maxRadius, state, bathymetry
  * Draw a single contour feature
  * @private
  */
-function drawContourFeature(ctx, feature, cx, cy, shipLon, shipLat, scale, lonScale, fillOnly = false) {
+function drawContourFeature(ctx, feature, cx, cy, shipLon, shipLat, scale, lonScale, rotationAngle = 0, fillOnly = false) {
     const geometry = feature.geometry;
 
     if (!geometry || !geometry.coordinates) {
@@ -105,6 +106,11 @@ function drawContourFeature(ctx, feature, cx, cy, shipLon, shipLat, scale, lonSc
         ? geometry.coordinates
         : [geometry.coordinates];
 
+    // Pre-calculate rotation if needed
+    const rotationRad = rotationAngle * Math.PI / 180;
+    const cosRot = Math.cos(rotationRad);
+    const sinRot = Math.sin(rotationRad);
+
     rings.forEach(ring => {
         if (ring.length < 2) return;
 
@@ -114,14 +120,24 @@ function drawContourFeature(ctx, feature, cx, cy, shipLon, shipLat, scale, lonSc
             const [lon, lat] = coord;
 
             // Convert lon/lat to nautical miles from ship position
-            // Then to pixels with longitude correction
             const deltaLon = (lon - shipLon) * 60; // degrees to minutes
             const deltaLat = (lat - shipLat) * 60;
 
-            // Use longitude-corrected scale for horizontal positioning
-            const x = cx + (deltaLon * lonScale);
-            // Use regular scale for vertical positioning (1 minute lat = 1 NM)
-            const y = cy - (deltaLat * scale); // Invert Y axis
+            // Apply rotation if needed (for heading-up displays)
+            // Rotate the map opposite to heading so it appears to turn with the ship
+            let rotatedDeltaLon, rotatedDeltaLat;
+            if (rotationAngle !== 0) {
+                // Rotation matrix: negate angle to rotate map opposite to heading
+                rotatedDeltaLon = deltaLon * cosRot - deltaLat * sinRot;
+                rotatedDeltaLat = deltaLon * sinRot + deltaLat * cosRot;
+            } else {
+                rotatedDeltaLon = deltaLon;
+                rotatedDeltaLat = deltaLat;
+            }
+
+            // Convert to pixels with longitude correction
+            const x = cx + (rotatedDeltaLon * lonScale);
+            const y = cy - (rotatedDeltaLat * scale); // Invert Y axis
 
             if (i === 0) {
                 ctx.moveTo(x, y);

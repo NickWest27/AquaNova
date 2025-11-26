@@ -303,13 +303,14 @@ function drawNavContent(ctx, cx, cy, maxRadius, state, canvasWidth, canvasHeight
   // 3. Draw tile coverage borders
   drawTileCoverageBorders(ctx, cx, cy, maxRadius, state);
 
-  // 4. Draw bathymetry contours if enabled
+  // 4. Draw bathymetry contours if enabled (rotated for heading-up display)
   if (state.overlays && state.overlays.contours && bathymetryData) {
-    drawBathymetryContours(ctx, cx, cy, maxRadius, state, bathymetryData);
+    const rotationAngle = state.ownshipTrack || 0;
+    drawBathymetryContours(ctx, cx, cy, maxRadius, state, bathymetryData, rotationAngle);
   }
 
-  // 5. Draw compass rose on outer ring
-  drawCompassRose(ctx, cx, cy, maxRadius, state.selectedHeading || 0);
+  // 5. Draw compass rose on outer ring (rotates with current heading)
+  drawCompassRose(ctx, cx, cy, maxRadius, state.ownshipTrack || 0);
 
   // 5. Draw bearing lines (every 30 degrees, forward arc only)
   drawBearingLines(ctx, cx, cy, maxRadius);
@@ -343,20 +344,22 @@ function drawRangeRings(ctx, cx, cy, maxRadius) {
 
 function drawCompassRose(ctx, cx, cy, maxRadius, currentHeading) {
   const radius = maxRadius * 0.95;
-  
+
   // Draw compass markings every 10 degrees
   for (let bearing = 0; bearing < 360; bearing += 10) {
-    const angle = toRadians(bearing);
+    // Rotate the compass based on current heading (heading-up display)
+    const rotatedBearing = bearing - currentHeading;
+    const angle = toRadians(rotatedBearing);
     const isMajor = bearing % 30 === 0;
     const isCardinal = bearing % 90 === 0;
-    
+
     // Only draw markings in the forward arc (roughly 120 degrees each side)
     const relativeAngle = (bearing - currentHeading + 360) % 360;
     if (relativeAngle > 120 && relativeAngle < 240) continue;
-    
+
     const outerRadius = radius + (isMajor ? 8 : 4);
     const innerRadius = radius;
-    
+
     const x1 = cx + outerRadius * Math.cos(angle);
     const y1 = cy + outerRadius * Math.sin(angle);
     const x2 = cx + innerRadius * Math.cos(angle);
@@ -448,32 +451,36 @@ function drawOwnshipSymbol(ctx, cx, cy, heading) {
 function drawHeadingAndCourse(ctx, cx, cy, maxRadius, state) {
   const selectedHeading = state.selectedHeading || 0;
   const currentTrack = state.ownshipTrack || selectedHeading;
-  
-  // Heading bug (yellow/cyan line)
-  ctx.strokeStyle = "#00ffff";
+
+  // In heading-up displays (ARC/ROSE), the display rotates with the ship
+  // So we need to draw lines relative to current heading
+  const headingOffset = selectedHeading - currentTrack; // Target heading relative to current
+
+  // Course line (current track) - always points straight up in heading-up mode
+  ctx.strokeStyle = "#ffff00"; // Yellow for current course
   ctx.lineWidth = 2;
-  const headingAngle = toRadians(selectedHeading);
-  const headingEndX = cx + (maxRadius * 0.9) * Math.cos(headingAngle);
-  const headingEndY = cy + (maxRadius * 0.9) * Math.sin(headingAngle);
-  
+  const courseAngle = toRadians(0); // Straight up (ship's current direction)
+  const courseEndX = cx + (maxRadius * 0.9) * Math.cos(courseAngle);
+  const courseEndY = cy + (maxRadius * 0.9) * Math.sin(courseAngle);
+
   ctx.beginPath();
   ctx.moveTo(cx, cy);
-  ctx.lineTo(headingEndX, headingEndY);
+  ctx.lineTo(courseEndX, courseEndY);
   ctx.stroke();
-  
-  // Course line (if different from heading)
-  if (Math.abs(currentTrack - selectedHeading) > 2) {
-    ctx.strokeStyle = "#ffff00";
-    ctx.lineWidth = 1;
+
+  // Heading bug (target heading) - drawn relative to current track
+  if (Math.abs(headingOffset) > 2) {
+    ctx.strokeStyle = "#ff00ff"; // Magenta for target heading
+    ctx.lineWidth = 2;
     ctx.setLineDash([10, 5]);
-    
-    const courseAngle = toRadians(currentTrack);
-    const courseEndX = cx + (maxRadius * 0.7) * Math.cos(courseAngle);
-    const courseEndY = cy + (maxRadius * 0.7) * Math.sin(courseAngle);
-    
+
+    const headingAngle = toRadians(headingOffset);
+    const headingEndX = cx + (maxRadius * 0.7) * Math.cos(headingAngle);
+    const headingEndY = cy + (maxRadius * 0.7) * Math.sin(headingAngle);
+
     ctx.beginPath();
     ctx.moveTo(cx, cy);
-    ctx.lineTo(courseEndX, courseEndY);
+    ctx.lineTo(headingEndX, headingEndY);
     ctx.stroke();
     ctx.setLineDash([]);
   }
@@ -723,13 +730,13 @@ function drawPositionInfoBox(svg, state, width) {
   const line5 = currentTile ? `TILE: ${currentTile}` : "TILE: ---";
   const line6 = currentResolution ? `RES: ${currentResolution}` : "RES: ---";
 
-  const boxWidth = 150;
+  const boxWidth = 90;
   const lineHeight = 10;
   const lines = [line1, line2, line3, line4, line5, line6];
   const boxHeight = 8 + (lines.length * lineHeight);
 
-  const x = width - boxWidth - 10; // 10px from right edge
-  const y = 10;
+  const x = width - boxWidth - 5; // 5px from right edge
+  const y = 5;
 
   // Create container group
   const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
@@ -742,9 +749,9 @@ function drawPositionInfoBox(svg, state, width) {
   bg.setAttribute("width", boxWidth);
   bg.setAttribute("height", boxHeight);
   bg.setAttribute("fill", "rgba(0, 20, 40, 0.85)");
-  bg.setAttribute("stroke", "#00ff00");
-  bg.setAttribute("stroke-width", "1");
-  bg.setAttribute("rx", "3");
+  bg.setAttribute("stroke", "#00ffff");
+  bg.setAttribute("stroke-width", "2");
+  bg.setAttribute("rx", "4");
   group.appendChild(bg);
 
   // Data lines (no title)
@@ -752,7 +759,7 @@ function drawPositionInfoBox(svg, state, width) {
     const lineText = document.createElementNS("http://www.w3.org/2000/svg", "text");
     lineText.setAttribute("x", x + 5);
     lineText.setAttribute("y", y + 10 + (index * lineHeight));
-    lineText.setAttribute("fill", "#00ff00");
+    lineText.setAttribute("fill", "#ffffff");
     lineText.setAttribute("font-size", "8");
     lineText.setAttribute("font-family", "Courier New, monospace");
     lineText.textContent = line;
@@ -834,8 +841,9 @@ function drawFullCompassRoseTrackUp(ctx, cx, cy, maxRadius, currentTrack) {
 
   // Draw all compass markings (0-360) track-up like ARC view
   for (let bearing = 0; bearing < 360; bearing += 10) {
-    // Calculate angle relative to track (same logic as ARC view compass)
-    const angle = toRadians(bearing);
+    // Rotate the compass based on current track (track-up display)
+    const rotatedBearing = bearing - currentTrack;
+    const angle = toRadians(rotatedBearing);
     const isMajor = bearing % 30 === 0;
     const isCardinal = bearing % 90 === 0;
 
@@ -902,18 +910,24 @@ function drawFullBearingLines(ctx, cx, cy, maxRadius) {
 function drawOwnshipSymbolRotated(ctx, cx, cy, heading) {
   ctx.save();
   ctx.translate(cx, cy);
-  ctx.rotate(toRadians(heading));  // Rotate to heading
 
-  // White hollow triangle - tip at (0,0), base extends down
+  // Convert heading to radians for canvas rotation
+  // Heading 0° = North (up), 90° = East (right), etc.
+  // Canvas rotation: 0° = right, need to rotate by (heading - 90) to align
+  const rotationRad = (heading - 90) * Math.PI / 180;
+  ctx.rotate(rotationRad);
+
+  // White hollow triangle - tip at ship position (same geometry as ARC/ROSE mode)
+  // Triangle tip at (0,0), base extends to the left in canvas coords, then rotated
   ctx.strokeStyle = "#ffffff";
   ctx.fillStyle = "#000000";
   ctx.lineWidth = 2;
 
   const size = 12;
   ctx.beginPath();
-  ctx.moveTo(0, 0);              // Tip at ship position
-  ctx.lineTo(-size/2, size * 1.5); // Left base point
-  ctx.lineTo(size/2, size * 1.5);  // Right base point
+  ctx.moveTo(0, 0);                   // Tip at ship position (center)
+  ctx.lineTo(-size * 1.5, -size/2);  // Top base point (pointing left before rotation)
+  ctx.lineTo(-size * 1.5, size/2);   // Bottom base point
   ctx.closePath();
 
   ctx.fill();
@@ -1159,9 +1173,9 @@ function drawPlanContent(ctx, cx, cy, maxRadius, state, canvasWidth, canvasHeigh
   // 2. Draw tile coverage borders
   drawTileCoverageBorders(ctx, cx, cy, maxRadius, state);
 
-  // 3. Draw bathymetry contours if enabled
+  // 3. Draw bathymetry contours if enabled (north-up, no rotation)
   if (state.overlays && state.overlays.contours && bathymetryData) {
-    drawBathymetryContours(ctx, cx, cy, maxRadius, state, bathymetryData);
+    drawBathymetryContours(ctx, cx, cy, maxRadius, state, bathymetryData, 0);
   }
 
   // 4. Draw lat/lon grid if enabled
@@ -1169,8 +1183,8 @@ function drawPlanContent(ctx, cx, cy, maxRadius, state, canvasWidth, canvasHeigh
     drawLatLonGrid(ctx, cx, cy, maxRadius, state);
   }
 
-  // 4. Ownship at center, rotated to heading
-  drawOwnshipSymbolRotated(ctx, cx, cy, state.selectedHeading || 0);
+  // 4. Ownship at center, rotated to current heading
+  drawOwnshipSymbolRotated(ctx, cx, cy, state.ownshipTrack || 0);
 
   // 5. Track direction indicator (yellow arrow)
   drawTrackIndicator(ctx, cx, cy, maxRadius, state);
@@ -1198,9 +1212,10 @@ function drawRoseContent(ctx, cx, cy, maxRadius, state, canvasWidth, canvasHeigh
   // 3. Draw tile coverage borders
   drawTileCoverageBorders(ctx, cx, cy, maxRadius, state);
 
-  // 4. Draw bathymetry contours if enabled
+  // 4. Draw bathymetry contours if enabled (rotated for track-up display)
   if (state.overlays && state.overlays.contours && bathymetryData) {
-    drawBathymetryContours(ctx, cx, cy, maxRadius, state, bathymetryData);
+    const rotationAngle = track || 0;
+    drawBathymetryContours(ctx, cx, cy, maxRadius, state, bathymetryData, rotationAngle);
   }
 
   // 4. Ownship at center pointing up (same as ARC view - no rotation)

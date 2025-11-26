@@ -11,6 +11,7 @@ import MFDCore from '/utils/mfd/mfdCore.js';
 import stationManager from '/utils/stationManager.js';
 import { drawPFD } from '/game/systems/pfd/pfdRenderer.js';
 import autopilot from '/game/systems/autopilot/autopilot.js';
+import missionComputer from '/game/systems/missionComputer/missionComputer.js';
 
 const gameState = gameStateInstance;
 let animationId = null;
@@ -377,7 +378,9 @@ function getCurrentDisplayType() {
 
 function startAnimation() {
   let lastDisplayUpdate = 0;
+  let lastPositionUpdate = 0;
   const DISPLAY_UPDATE_INTERVAL = 100; // Update display every 100ms (10fps) instead of 60fps
+  const POSITION_UPDATE_INTERVAL = 100; // Update position every 100ms (10fps) - sufficient for smooth navigation
 
   function animate() {
     try {
@@ -385,6 +388,12 @@ function startAnimation() {
 
       // Update autopilot physics every frame (needs smooth updates)
       autopilot.update();
+
+      // Update position integration (throttled to 10fps for efficiency)
+      if (now - lastPositionUpdate >= POSITION_UPDATE_INTERVAL) {
+        missionComputer.update();
+        lastPositionUpdate = now;
+      }
 
       // Throttle display updates to reduce unnecessary redraws
       if (now - lastDisplayUpdate >= DISPLAY_UPDATE_INTERVAL) {
