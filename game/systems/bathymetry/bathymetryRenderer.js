@@ -19,11 +19,15 @@ import {
  * @param {Object} state - Navigation state object
  * @param {Object} bathymetryData - GeoJSON FeatureCollection
  * @param {number} rotationAngle - Rotation angle in degrees (0 = north-up, heading for heading-up)
+ * @param {Object} tileBounds - Optional tile bounds {n, s, w, e} for coastline fill closure
  */
-export function drawBathymetryContours(ctx, cx, cy, maxRadius, state, bathymetryData, rotationAngle = 0) {
+export function drawBathymetryContours(ctx, cx, cy, maxRadius, state, bathymetryData, rotationAngle = 0, tileBounds = null) {
     if (!bathymetryData || !bathymetryData.features || bathymetryData.features.length === 0) {
+        console.log('RENDER: No bathymetry data to draw');
         return;
     }
+
+    console.log(`RENDER: Drawing ${bathymetryData.features.length} contours at rotation ${rotationAngle}°`);
 
     const range = state.range || 10;
     const [shipLon, shipLat] = state.ownshipPosition || [-70.6709, 41.5223];
@@ -67,7 +71,7 @@ export function drawBathymetryContours(ctx, cx, cy, maxRadius, state, bathymetry
 
             // Fill all features at this depth
             features.forEach(feature => {
-                drawContourFeature(ctx, feature, cx, cy, shipLon, shipLat, scale, lonScale, rotationAngle, true);
+                drawContourFeature(ctx, feature, cx, cy, shipLon, shipLat, scale, lonScale, rotationAngle, true, tileBounds);
             });
         }
     });
@@ -83,7 +87,7 @@ export function drawBathymetryContours(ctx, cx, cy, maxRadius, state, bathymetry
 
         // Draw all contours of this depth
         features.forEach(feature => {
-            drawContourFeature(ctx, feature, cx, cy, shipLon, shipLat, scale, lonScale, rotationAngle, false);
+            drawContourFeature(ctx, feature, cx, cy, shipLon, shipLat, scale, lonScale, rotationAngle, false, tileBounds);
         });
     });
 
@@ -94,12 +98,16 @@ export function drawBathymetryContours(ctx, cx, cy, maxRadius, state, bathymetry
  * Draw a single contour feature
  * @private
  */
-function drawContourFeature(ctx, feature, cx, cy, shipLon, shipLat, scale, lonScale, rotationAngle = 0, fillOnly = false) {
+function drawContourFeature(ctx, feature, cx, cy, shipLon, shipLat, scale, lonScale, rotationAngle = 0, fillOnly = false, tileBounds = null) {
     const geometry = feature.geometry;
 
     if (!geometry || !geometry.coordinates) {
         return;
     }
+
+    // Get depth to identify coastlines
+    const depth = feature.properties?.ELEV ?? feature.properties?.depth_min ?? feature.properties?.depth ?? 0;
+    const isCoastline = depth === 0;
 
     // Handle both LineString and Polygon geometries
     const rings = geometry.type === 'Polygon'
@@ -116,7 +124,8 @@ function drawContourFeature(ctx, feature, cx, cy, shipLon, shipLat, scale, lonSc
 
         ctx.beginPath();
 
-        ring.forEach((coord, i) => {
+        // Convert all coordinates to screen space
+        const screenCoords = ring.map(coord => {
             const [lon, lat] = coord;
 
             // Convert lon/lat to nautical miles from ship position
@@ -124,10 +133,8 @@ function drawContourFeature(ctx, feature, cx, cy, shipLon, shipLat, scale, lonSc
             const deltaLat = (lat - shipLat) * 60;
 
             // Apply rotation if needed (for heading-up displays)
-            // Rotate the map opposite to heading so it appears to turn with the ship
             let rotatedDeltaLon, rotatedDeltaLat;
             if (rotationAngle !== 0) {
-                // Rotation matrix: negate angle to rotate map opposite to heading
                 rotatedDeltaLon = deltaLon * cosRot - deltaLat * sinRot;
                 rotatedDeltaLat = deltaLon * sinRot + deltaLat * cosRot;
             } else {
@@ -137,18 +144,144 @@ function drawContourFeature(ctx, feature, cx, cy, shipLon, shipLat, scale, lonSc
 
             // Convert to pixels with longitude correction
             const x = cx + (rotatedDeltaLon * lonScale);
-            const y = cy - (rotatedDeltaLat * scale); // Invert Y axis
+            const y = cy - (rotatedDeltaLat * scale);
 
+            return { x, y, lon, lat };
+        });
+
+        // Draw the main path
+        screenCoords.forEach((coord, i) => {
             if (i === 0) {
-                ctx.moveTo(x, y);
+                ctx.moveTo(coord.x, coord.y);
             } else {
-                ctx.lineTo(x, y);
+                ctx.lineTo(coord.x, coord.y);
             }
         });
 
-        // For fill mode, always close the path to create a filled area
-        // This works for both Polygons and LineStrings
-        if (fillOnly) {
+        // For fill mode with LineString coastlines, extend to tile boundaries instead of closing directly
+        if (fillOnly && geometry.type === 'LineString' && isCoastline && tileBounds) {
+            // Get first and last points in geo coords
+            const firstGeo = ring[0];
+            const lastGeo = ring[ring.length - 1];
+
+            // Helper function to convert lat/lon to screen coords
+            const geoToScreen = (lon, lat) => {
+                const deltaLon = (lon - shipLon) * 60;
+                const deltaLat = (lat - shipLat) * 60;
+
+                let rotatedDeltaLon, rotatedDeltaLat;
+                if (rotationAngle !== 0) {
+                    const rotationRad = rotationAngle * Math.PI / 180;
+                    const cosRot = Math.cos(rotationRad);
+                    const sinRot = Math.sin(rotationRad);
+                    rotatedDeltaLon = deltaLon * cosRot - deltaLat * sinRot;
+                    rotatedDeltaLat = deltaLon * sinRot + deltaLat * cosRot;
+                } else {
+                    rotatedDeltaLon = deltaLon;
+                    rotatedDeltaLat = deltaLat;
+                }
+
+                return {
+                    x: cx + (rotatedDeltaLon * lonScale),
+                    y: cy - (rotatedDeltaLat * scale)
+                };
+            };
+
+            // Determine which tile boundary each endpoint is on or closest to
+            // Tile boundaries: north (n), south (s), west (w), east (e)
+            const { n, s, w, e } = tileBounds;
+
+            // Check if last point is on a boundary (within 0.001 degrees)
+            const tolerance = 0.001;
+            const [lastLon, lastLat] = lastGeo;
+            const [firstLon, firstLat] = firstGeo;
+
+            // Determine which boundaries the points are on
+            const lastOnNorth = Math.abs(lastLat - n) < tolerance;
+            const lastOnSouth = Math.abs(lastLat - s) < tolerance;
+            const lastOnWest = Math.abs(lastLon - w) < tolerance;
+            const lastOnEast = Math.abs(lastLon - e) < tolerance;
+
+            const firstOnNorth = Math.abs(firstLat - n) < tolerance;
+            const firstOnSouth = Math.abs(firstLat - s) < tolerance;
+            const firstOnWest = Math.abs(firstLon - w) < tolerance;
+            const firstOnEast = Math.abs(firstLon - e) < tolerance;
+
+            // Trace along tile boundaries to connect last point to first point
+            // We need to go around the tile edge clockwise or counterclockwise
+
+            // Convert tile corners to screen coords for reference
+            const nw = geoToScreen(w, n);
+            const ne = geoToScreen(e, n);
+            const se = geoToScreen(e, s);
+            const sw = geoToScreen(w, s);
+
+            // Trace tile boundary from last point to first point
+            // Start from last point, go to nearest corner, then trace boundary to first point
+            if (lastOnNorth) {
+                // Last point on north boundary
+                if (firstOnNorth) {
+                    // Both on north - just close
+                    ctx.closePath();
+                } else if (firstOnEast) {
+                    // Go to NE corner, then south along east boundary
+                    ctx.lineTo(ne.x, ne.y);
+                } else if (firstOnWest) {
+                    // Go to NW corner, then south along west boundary
+                    ctx.lineTo(nw.x, nw.y);
+                } else {
+                    // Go to nearest corner and around
+                    ctx.lineTo(lastLon > (w + e) / 2 ? ne.x : nw.x, lastLon > (w + e) / 2 ? ne.y : nw.y);
+                    ctx.lineTo(se.x, se.y);
+                    ctx.lineTo(sw.x, sw.y);
+                }
+            } else if (lastOnSouth) {
+                // Last point on south boundary
+                if (firstOnSouth) {
+                    ctx.closePath();
+                } else if (firstOnEast) {
+                    ctx.lineTo(se.x, se.y);
+                } else if (firstOnWest) {
+                    ctx.lineTo(sw.x, sw.y);
+                } else {
+                    ctx.lineTo(lastLon > (w + e) / 2 ? se.x : sw.x, lastLon > (w + e) / 2 ? se.y : sw.y);
+                    ctx.lineTo(ne.x, ne.y);
+                    ctx.lineTo(nw.x, nw.y);
+                }
+            } else if (lastOnWest) {
+                // Last point on west boundary
+                if (firstOnWest) {
+                    ctx.closePath();
+                } else if (firstOnNorth) {
+                    ctx.lineTo(nw.x, nw.y);
+                } else if (firstOnSouth) {
+                    ctx.lineTo(sw.x, sw.y);
+                } else {
+                    ctx.lineTo(lastLat > (s + n) / 2 ? nw.x : sw.x, lastLat > (s + n) / 2 ? nw.y : sw.y);
+                    ctx.lineTo(ne.x, ne.y);
+                    ctx.lineTo(se.x, se.y);
+                }
+            } else if (lastOnEast) {
+                // Last point on east boundary
+                if (firstOnEast) {
+                    ctx.closePath();
+                } else if (firstOnNorth) {
+                    ctx.lineTo(ne.x, ne.y);
+                } else if (firstOnSouth) {
+                    ctx.lineTo(se.x, se.y);
+                } else {
+                    ctx.lineTo(lastLat > (s + n) / 2 ? ne.x : se.x, lastLat > (s + n) / 2 ? ne.y : se.y);
+                    ctx.lineTo(nw.x, nw.y);
+                    ctx.lineTo(sw.x, sw.y);
+                }
+            } else {
+                // Point not on boundary - just close path normally
+                ctx.closePath();
+            }
+
+            ctx.fill();
+        } else if (fillOnly) {
+            // For Polygons or non-coastline fills, close normally
             ctx.closePath();
             ctx.fill();
         } else {

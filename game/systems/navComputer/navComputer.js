@@ -2,123 +2,46 @@
 // Enhanced Navigation Computer for Aqua Nova Bridge
 // Properly handles canvas scaling with displayManager and virtual resolutions
 
-import { bathymetryLoader } from '../bathymetry/bathymetryLoader.js';
+import { bathymetryTileManager, TILES } from '../bathymetry/bathymetryTileManager.js';
 import { drawBathymetryContours } from '../bathymetry/bathymetryRenderer.js';
 
 // Bathymetry data cache
 let bathymetryData = null;
-let bathymetryLoadPromise = null;
-let currentTile = null;
-let currentResolution = null;
-let lastPositionCheck = { lon: null, lat: null, range: null };
 
 /**
- * Get the appropriate bathymetry tile for a lat/lon position
- * @param {number} lon - Longitude
- * @param {number} lat - Latitude
- * @returns {string} Tile name (e.g., 'n40s30w-80e-70')
+ * Get tile bounds for a specific tile name
+ * @param {string} tileName - Tile name (e.g., 'n40s30w-80e-70')
+ * @returns {Object|null} Tile bounds {n, s, w, e} or null if not found
  */
-function getTileForPosition(lon, lat) {
-  // Available tiles (10° x 10° coverage)
-  const tiles = [
-    { name: 'n40s30w-80e-70', bounds: { n: 40, s: 30, w: -80, e: -70 } },
-    { name: 'n40s30w-70e-60', bounds: { n: 40, s: 30, w: -70, e: -60 } },
-    { name: 'n40s30w-60e-50', bounds: { n: 40, s: 30, w: -60, e: -50 } },
-    { name: 'n45s40w-75e-70', bounds: { n: 45, s: 40, w: -75, e: -70 } }
-  ];
-
-  // Find tile containing the position
-  for (const tile of tiles) {
-    if (lat >= tile.bounds.s && lat <= tile.bounds.n &&
-        lon >= tile.bounds.w && lon <= tile.bounds.e) {
-      return tile.name;
-    }
-  }
-
-  // Default to first tile if position not in any tile
-  console.warn(`BATHYMETRY: Position (${lon}, ${lat}) not in any tile, using default`);
-  return tiles[0].name;
-}
-
-/**
- * Determine appropriate resolution based on range (LOD system)
- * @param {number} range - Display range in nautical miles
- * @returns {string} Resolution level: '10m', '100m', '500m', or '1000m'
- */
-function getResolutionForRange(range) {
-  if (range <= 5) {
-    return '10m';   // High detail for very close zoom
-  } else if (range <= 20) {
-    return '100m';  // Medium detail for close zoom
-  } else if (range <= 80) {
-    return '500m';  // Lower detail for medium zoom
-  } else {
-    return '1000m'; // Lowest detail for far zoom
-  }
+function getTileBounds(tileName) {
+  return bathymetryTileManager.getTileBounds(tileName);
 }
 
 /**
  * Update bathymetry data based on current position and range
- * Intelligently loads/unloads tiles and adjusts resolution
+ * Intelligently loads/unloads tiles based on viewport visibility
+ * This is called synchronously - tile manager handles debouncing
  * @param {number} lon - Current longitude
  * @param {number} lat - Current latitude
  * @param {number} range - Display range in nautical miles
  */
-async function updateBathymetry(lon, lat, range) {
-  // Determine which tile we need
-  const neededTile = getTileForPosition(lon, lat);
-  const neededResolution = getResolutionForRange(range);
-
-  // Check if we need to update (tile changed or resolution changed)
-  const needsUpdate =
-    currentTile !== neededTile ||
-    currentResolution !== neededResolution ||
-    lastPositionCheck.lon === null;
-
-  if (!needsUpdate) {
-    return bathymetryData;
-  }
-
-  // Update tracking variables
-  lastPositionCheck = { lon, lat, range };
-
-  // Log the change
-  if (currentTile !== neededTile) {
-    console.log(`BATHYMETRY: Tile change detected: ${currentTile} → ${neededTile}`);
-  }
-  if (currentResolution !== neededResolution) {
-    console.log(`BATHYMETRY: Resolution change detected: ${currentResolution} → ${neededResolution} (range: ${range}nm)`);
-  }
-
-  // Clear old cache if changing tiles (to free memory)
-  if (currentTile && currentTile !== neededTile) {
-    const oldCacheKey = `${currentTile}_${currentResolution}`;
-    bathymetryLoader.clearCache(oldCacheKey);
-    console.log(`BATHYMETRY: Unloaded old tile: ${oldCacheKey}`);
-  }
-
-  // Update current state
-  currentTile = neededTile;
-  currentResolution = neededResolution;
-
-  // Load new data
-  try {
-    bathymetryLoadPromise = bathymetryLoader.loadRegion(neededTile, neededResolution);
-    bathymetryData = await bathymetryLoadPromise;
-    console.log(`BATHYMETRY: Now using ${neededTile} at ${neededResolution} (${bathymetryData.features.length} contours)`);
-    return bathymetryData;
-  } catch (error) {
-    console.warn(`BATHYMETRY: Failed to load ${neededTile} at ${neededResolution}:`, error);
-    bathymetryData = null;
-    return null;
-  }
+function updateBathymetry(lon, lat, range) {
+  // Tile manager handles all debouncing and caching
+  // Just call update and let it handle the async loading internally
+  bathymetryTileManager.update(lon, lat, range)
+    .then(data => {
+      bathymetryData = data;
+    })
+    .catch(err => {
+      console.warn('BATHYMETRY: Update failed:', err);
+    });
 }
 
 // Initialize bathymetry data loading with default position
-async function initBathymetry() {
+function initBathymetry() {
   const woodsHole = [-70.6709, 41.5223];
   const defaultRange = 10;
-  await updateBathymetry(woodsHole[0], woodsHole[1], defaultRange);
+  updateBathymetry(woodsHole[0], woodsHole[1], defaultRange);
 }
 
 // Start loading bathymetry data immediately
@@ -167,27 +90,6 @@ export function getDepthAtPosition(lon, lat) {
   return nearestDepth;
 }
 
-/**
- * Get approximate size of bathymetry data in memory (MB)
- * @returns {string} Cache size in MB (formatted)
- */
-function getBathymetryCacheSize() {
-  if (!bathymetryData || !bathymetryData.features) {
-    return "0.0";
-  }
-
-  // Rough estimate: stringify the data and measure length
-  // This is approximate but gives a good indication of memory usage
-  try {
-    const jsonString = JSON.stringify(bathymetryData);
-    const bytes = new Blob([jsonString]).size;
-    const megabytes = bytes / (1024 * 1024);
-    return megabytes.toFixed(1);
-  } catch (e) {
-    return "ERR";
-  }
-}
-
 // Display configuration presets - adjusted for proper scaling
 const DISPLAY_CONFIGS = {
   centerDisplay: {
@@ -223,9 +125,7 @@ export function drawNavigationDisplay(canvas, svg, state, displayType = 'centerD
   // Update bathymetry based on current position and range
   const [lon, lat] = state.ownshipPosition || [-70.6709, 41.5223];
   const range = state.range || 10;
-  updateBathymetry(lon, lat, range).catch(err => {
-    console.warn('BATHYMETRY: Update failed:', err);
-  });
+  updateBathymetry(lon, lat, range);
 
   const ctx = canvas.getContext('2d');
 
@@ -300,13 +200,17 @@ function drawNavContent(ctx, cx, cy, maxRadius, state, canvasWidth, canvasHeight
   // 2. Draw forward arc range rings (only front 180 degrees)
   drawRangeRings(ctx, cx, cy, maxRadius);
 
-  // 3. Draw tile coverage borders
-  drawTileCoverageBorders(ctx, cx, cy, maxRadius, state);
+  // 3. Draw tile coverage borders (rotated for heading-up display)
+  const rotationAngle = state.ownshipTrack || 0;
+  drawTileCoverageBorders(ctx, cx, cy, maxRadius, state, rotationAngle);
 
   // 4. Draw bathymetry contours if enabled (rotated for heading-up display)
+  console.log('NAV DRAW: overlays?', !!state.overlays, 'contours?', !!state.overlays?.contours, 'data?', !!bathymetryData, 'features?', bathymetryData?.features?.length);
   if (state.overlays && state.overlays.contours && bathymetryData) {
-    const rotationAngle = state.ownshipTrack || 0;
-    drawBathymetryContours(ctx, cx, cy, maxRadius, state, bathymetryData, rotationAngle);
+    const primaryTile = bathymetryTileManager.primaryTile;
+    const tileBounds = primaryTile ? getTileBounds(primaryTile) : null;
+    console.log('NAV DRAW: Calling drawBathymetryContours with', bathymetryData.features.length, 'features, primaryTile:', primaryTile, 'tileBounds:', tileBounds);
+    drawBathymetryContours(ctx, cx, cy, maxRadius, state, bathymetryData, rotationAngle, tileBounds);
   }
 
   // 5. Draw compass rose on outer ring (rotates with current heading)
@@ -720,19 +624,21 @@ function drawPositionInfoBox(svg, state, width) {
   const [lon, lat] = state.ownshipPosition || [-70.6709, 41.5223];
   const depth = getDepthAtPosition(lon, lat);
 
-  // Calculate cache size
-  const cacheSizeMB = getBathymetryCacheSize();
+  // Get tile manager stats
+  const stats = bathymetryTileManager.getStats();
+  const cacheSizeMB = bathymetryTileManager.getMemoryUsage();
 
   const line1 = `PPOS: ${formatLatitude(lat)}`;
   const line2 = `      ${formatLongitude(lon)}`;
   const line3 = depth !== null ? `DPTH: ${Math.abs(depth)}m` : "DPTH: ---";
   const line4 = `CACHE: ${cacheSizeMB}MB`;
-  const line5 = currentTile ? `TILE: ${currentTile}` : "TILE: ---";
-  const line6 = currentResolution ? `RES: ${currentResolution}` : "RES: ---";
+  const line5 = stats.primaryTile ? `TILE: ${stats.primaryTile}` : "TILE: ---";
+  const line6 = stats.currentResolution ? `RES: ${stats.currentResolution}` : "RES: ---";
+  const line7 = `TILES: ${stats.uniqueTileCount} loaded`;
 
   const boxWidth = 90;
   const lineHeight = 10;
-  const lines = [line1, line2, line3, line4, line5, line6];
+  const lines = [line1, line2, line3, line4, line5, line6, line7];
   const boxHeight = 8 + (lines.length * lineHeight);
 
   const x = width - boxWidth - 5; // 5px from right edge
@@ -1103,7 +1009,7 @@ export function formatLongitude(lon) {
 /**
  * Draw tile coverage borders to show charted vs uncharted areas
  */
-function drawTileCoverageBorders(ctx, cx, cy, maxRadius, state) {
+function drawTileCoverageBorders(ctx, cx, cy, maxRadius, state, rotationAngle = 0) {
   const range = state.range || 10;
   const [shipLon, shipLat] = state.ownshipPosition || [-70.6709, 41.5223];
 
@@ -1111,20 +1017,17 @@ function drawTileCoverageBorders(ctx, cx, cy, maxRadius, state) {
   const scale = maxRadius / range;
   const lonScale = scale * Math.cos(shipLat * Math.PI / 180);
 
-  // Available tiles (should match getTileForPosition)
-  const tiles = [
-    { name: 'n40s30w-80e-70', bounds: { n: 40, s: 30, w: -80, e: -70 } },
-    { name: 'n40s30w-70e-60', bounds: { n: 40, s: 30, w: -70, e: -60 } },
-    { name: 'n40s30w-60e-50', bounds: { n: 40, s: 30, w: -60, e: -50 } },
-    { name: 'n45s40w-75e-70', bounds: { n: 45, s: 40, w: -75, e: -70 } }
-  ];
+  // Pre-calculate rotation if needed
+  const rotationRad = rotationAngle * Math.PI / 180;
+  const cosRot = Math.cos(rotationRad);
+  const sinRot = Math.sin(rotationRad);
 
   ctx.save();
   ctx.strokeStyle = "rgba(255, 255, 100, 0.6)"; // Light yellow
   ctx.lineWidth = 2;
   ctx.setLineDash([5, 5]); // Dashed line
 
-  tiles.forEach(tile => {
+  TILES.forEach(tile => {
     const { n, s, w, e } = tile.bounds;
 
     // Convert tile corners to canvas coordinates
@@ -1141,9 +1044,19 @@ function drawTileCoverageBorders(ctx, cx, cy, maxRadius, state) {
       const deltaLon = (corner.lon - shipLon) * 60;
       const deltaLat = (corner.lat - shipLat) * 60;
 
-      // Convert to canvas coordinates
-      const x = cx + (deltaLon * lonScale);
-      const y = cy - (deltaLat * scale);
+      // Apply rotation if needed (for heading-up displays)
+      let rotatedDeltaLon, rotatedDeltaLat;
+      if (rotationAngle !== 0) {
+        rotatedDeltaLon = deltaLon * cosRot - deltaLat * sinRot;
+        rotatedDeltaLat = deltaLon * sinRot + deltaLat * cosRot;
+      } else {
+        rotatedDeltaLon = deltaLon;
+        rotatedDeltaLat = deltaLat;
+      }
+
+      // Convert to canvas coordinates with longitude correction
+      const x = cx + (rotatedDeltaLon * lonScale);
+      const y = cy - (rotatedDeltaLat * scale);
 
       if (i === 0) {
         ctx.moveTo(x, y);
@@ -1175,7 +1088,9 @@ function drawPlanContent(ctx, cx, cy, maxRadius, state, canvasWidth, canvasHeigh
 
   // 3. Draw bathymetry contours if enabled (north-up, no rotation)
   if (state.overlays && state.overlays.contours && bathymetryData) {
-    drawBathymetryContours(ctx, cx, cy, maxRadius, state, bathymetryData, 0);
+    const primaryTile = bathymetryTileManager.primaryTile;
+    const tileBounds = primaryTile ? getTileBounds(primaryTile) : null;
+    drawBathymetryContours(ctx, cx, cy, maxRadius, state, bathymetryData, 0, tileBounds);
   }
 
   // 4. Draw lat/lon grid if enabled
@@ -1209,13 +1124,15 @@ function drawRoseContent(ctx, cx, cy, maxRadius, state, canvasWidth, canvasHeigh
   drawFullRangeRings(ctx, cx, cy, maxRadius);
   drawFullBearingLines(ctx, cx, cy, maxRadius);
 
-  // 3. Draw tile coverage borders
-  drawTileCoverageBorders(ctx, cx, cy, maxRadius, state);
+  // 3. Draw tile coverage borders (rotated for track-up display)
+  const rotationAngle = track || 0;
+  drawTileCoverageBorders(ctx, cx, cy, maxRadius, state, rotationAngle);
 
   // 4. Draw bathymetry contours if enabled (rotated for track-up display)
   if (state.overlays && state.overlays.contours && bathymetryData) {
-    const rotationAngle = track || 0;
-    drawBathymetryContours(ctx, cx, cy, maxRadius, state, bathymetryData, rotationAngle);
+    const primaryTile = bathymetryTileManager.primaryTile;
+    const tileBounds = primaryTile ? getTileBounds(primaryTile) : null;
+    drawBathymetryContours(ctx, cx, cy, maxRadius, state, bathymetryData, rotationAngle, tileBounds);
   }
 
   // 4. Ownship at center pointing up (same as ARC view - no rotation)

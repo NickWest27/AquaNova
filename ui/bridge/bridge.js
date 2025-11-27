@@ -336,7 +336,7 @@ function updateNavigationDisplay() {
   const overlays = mfdSystem?.getPageState('navigation')?.overlaysVisible || {
     route: true,
     waypoints: true,
-    contours: false,
+    contours: true,
     hazards: true,
     traffic: false
   };

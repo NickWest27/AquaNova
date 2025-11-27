@@ -11,7 +11,7 @@ class NavigationPage {
         const savedOverlays = gameStateInstance.getProperty('navigation.displaySettings.overlaysVisible') || {
             route: true,
             waypoints: true,
-            contours: false,
+            contours: true,
             hazards: true,
             traffic: false,
             latLonGrid: true
