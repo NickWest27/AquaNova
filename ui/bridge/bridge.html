@@ -15,8 +15,24 @@
     <div class="bridge-container">
         <div class="bridge-background"></div>
         <div class="bridge-overlay">
-            <div class="upper-display">upper-display... STANDBY</div>
-            <div class="main-screen">main-screen...<br>OFFLINE</div>
+            <div class="upper-display">
+                <canvas id="upper-display-canvas"></canvas>
+                <svg id="upper-display-overlay"></svg>
+            </div>
+            <div class="main-screen">
+                <div class="main-screen-panel left-panel">
+                    <canvas id="left-panel-canvas"></canvas>
+                    <svg id="left-panel-overlay"></svg>
+                </div>
+                <div class="main-screen-panel center-panel">
+                    <canvas id="center-panel-canvas"></canvas>
+                    <svg id="center-panel-overlay"></svg>
+                </div>
+                <div class="main-screen-panel right-panel">
+                    <canvas id="right-panel-canvas"></canvas>
+                    <svg id="right-panel-overlay"></svg>
+                </div>
+            </div>
             <div class="left-display">left-display...<br>OFFLINE</div>
             <div class="right-display">right-display...<br>OFFLINE</div>
             <div class="left-console" id="left-console">

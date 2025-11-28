@@ -205,11 +205,9 @@ function drawNavContent(ctx, cx, cy, maxRadius, state, canvasWidth, canvasHeight
   drawTileCoverageBorders(ctx, cx, cy, maxRadius, state, rotationAngle);
 
   // 4. Draw bathymetry contours if enabled (rotated for heading-up display)
-  console.log('NAV DRAW: overlays?', !!state.overlays, 'contours?', !!state.overlays?.contours, 'data?', !!bathymetryData, 'features?', bathymetryData?.features?.length);
   if (state.overlays && state.overlays.contours && bathymetryData) {
     const primaryTile = bathymetryTileManager.primaryTile;
     const tileBounds = primaryTile ? getTileBounds(primaryTile) : null;
-    console.log('NAV DRAW: Calling drawBathymetryContours with', bathymetryData.features.length, 'features, primaryTile:', primaryTile, 'tileBounds:', tileBounds);
     drawBathymetryContours(ctx, cx, cy, maxRadius, state, bathymetryData, rotationAngle, tileBounds);
   }
 

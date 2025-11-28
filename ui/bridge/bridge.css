@@ -89,6 +89,21 @@ body {
     transform: rotateX(-58deg);
     /* uses parent perspective; no local perspective() */
     transform-origin: bottom center;
+    transform-style: preserve-3d;
+    overflow: hidden;
+}
+
+/* Upper display canvas and SVG layers */
+#upper-display-canvas,
+#upper-display-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    image-rendering: auto;
+    /* Flatten content inside 3D container */
+    transform-style: flat;
 }
 
 .main-screen {
@@ -105,6 +120,46 @@ body {
     transform: rotateX(0deg);
     /* uses parent perspective; no local perspective() */
     transform-origin: center center;
+
+    /* Three-panel layout */
+    display: flex;
+    gap: calc(8px * var(--scale));
+    padding: calc(8px * var(--scale));
+    transform-style: preserve-3d;
+}
+
+/* Main screen panels - three columns */
+.main-screen-panel {
+    position: relative;
+    background: rgba(10, 25, 47, 0.8);
+    border: 1px solid rgba(100, 255, 218, 0.3);
+    border-radius: calc(4px * var(--scale));
+    overflow: hidden;
+    /* Flatten content inside 3D container */
+    transform-style: flat;
+}
+
+.left-panel {
+    flex: 0 0 30%;
+}
+
+.center-panel {
+    flex: 0 0 60%;
+}
+
+.right-panel {
+    flex: 0 0 30%;
+}
+
+/* Canvas and SVG layers for each panel */
+.main-screen-panel canvas,
+.main-screen-panel svg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    image-rendering: auto;
 }
 
 .left-display {

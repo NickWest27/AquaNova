@@ -23,11 +23,8 @@ import {
  */
 export function drawBathymetryContours(ctx, cx, cy, maxRadius, state, bathymetryData, rotationAngle = 0, tileBounds = null) {
     if (!bathymetryData || !bathymetryData.features || bathymetryData.features.length === 0) {
-        console.log('RENDER: No bathymetry data to draw');
         return;
     }
-
-    console.log(`RENDER: Drawing ${bathymetryData.features.length} contours at rotation ${rotationAngle}°`);
 
     const range = state.range || 10;
     const [shipLon, shipLat] = state.ownshipPosition || [-70.6709, 41.5223];

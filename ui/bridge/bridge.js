@@ -12,6 +12,8 @@ import stationManager from '/utils/stationManager.js';
 import { drawPFD } from '/game/systems/pfd/pfdRenderer.js';
 import autopilot from '/game/systems/autopilot/autopilot.js';
 import missionComputer from '/game/systems/missionComputer/missionComputer.js';
+import { initMainScreen, updateMainScreen } from './mainScreen.js';
+import { initUpperDisplay, updateUpperDisplay } from '/game/systems/upperDisplay/upperDisplayRenderer.js';
 
 const gameState = gameStateInstance;
 let animationId = null;
@@ -41,6 +43,12 @@ async function initializeBridge() {
 
   // Initialize navigation display (content system)
   await initializeNavigationDisplay();
+
+  // Initialize upper display (context-sensitive info)
+  initUpperDisplay();
+
+  // Initialize main screen three-panel display
+  initMainScreen();
 
   // Initialize MFD overlay system
   await initializeMFDOverlay();
@@ -97,7 +105,6 @@ async function initializeMFDOverlay() {
 
       // Wait for MFD to finish loading pages before continuing
       await mfdSystem.initPromise;
-
       console.log('MFD SYSTEM.....ONLINE');
       window.mfdSystem = mfdSystem;
     } else {
@@ -169,7 +176,7 @@ function initializeKeyboardUnit() {
     });
 
     console.log('KEYBOARD UNIT.....ONLINE');
-    
+
   } catch (error) {
     console.error('Failed to initialize Keyboard Unit:', error);
     console.error('Error stack:', error.stack);
@@ -193,7 +200,6 @@ function handleKeyboardData(data) {
         // Clamp to valid range: -15 to 160 knots
         const clampedSpeed = Math.max(-15, Math.min(160, speed));
         gameState.updateProperty("helm.targetSpeed", clampedSpeed);
-        console.log(`TARGET SPEED SET: ${clampedSpeed} KNOTS`);
       }
       break;
   }
@@ -251,7 +257,6 @@ function setupEventListeners() {
       if (newHeading < 0) newHeading += 360;
       if (newHeading >= 360) newHeading -= 360;
       gameState.updateProperty('helm.targetHeading', newHeading);
-      console.log(`TARGET HEADING SET: ${newHeading}°`);
     });
   }
 
@@ -397,8 +402,15 @@ function startAnimation() {
 
       // Throttle display updates to reduce unnecessary redraws
       if (now - lastDisplayUpdate >= DISPLAY_UPDATE_INTERVAL) {
+        // Update upper display (context-sensitive info)
+        updateUpperDisplay(now);
+
         // Update the current station's display
         stationManager.updateCenterDisplay();
+
+        // Update main screen three-panel display
+        updateMainScreen(now);
+
         lastDisplayUpdate = now;
       }
 
