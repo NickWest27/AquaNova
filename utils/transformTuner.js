@@ -25,18 +25,21 @@
   const style = document.createElement('style');
   style.textContent = `
     #tuner-panel {
-      position: fixed; right: 16px; top: 16px; z-index: ${z};
+      position: fixed; left: 16px; top: 16px; z-index: ${z};
       width: 360px; max-height: calc(100vh - 32px); overflow: auto;
       background: rgba(10,20,35,.95); border: 1px solid rgba(100,255,218,.35);
       border-radius: 8px; padding: 12px; font: 12px/1.3 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
       color: #e6f1ff; box-shadow: 0 6px 30px rgba(0,0,0,.45);
+      cursor: move;
     }
-    #tuner-panel h3 { margin: 0 0 8px; font-size: 14px; color: #64ffda; }
+    #tuner-panel.dragging { cursor: grabbing; opacity: 0.9; }
+    #tuner-panel h3 { margin: 0 0 8px; font-size: 14px; color: #64ffda; cursor: grab; }
+    #tuner-panel h3:active { cursor: grabbing; }
     #tuner-panel .row { display: grid; grid-template-columns: 1fr 58px 58px; gap: 6px; align-items: center; margin: 6px 0; }
     #tuner-panel label { opacity: .9; }
-    #tuner-panel input[type="range"] { width: 100%; }
+    #tuner-panel input[type="range"] { width: 100%; cursor: pointer; }
     #tuner-panel input[type="number"] { width: 56px; padding: 4px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.15); color: #e6f1ff; border-radius: 4px; }
-    #tuner-panel select { width: 100%; padding: 4px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.15); color: #e6f1ff; border-radius: 4px; }
+    #tuner-panel select { width: 100%; padding: 4px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.15); color: #e6f1ff; border-radius: 4px; cursor: pointer; }
     #tuner-panel .btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
     #tuner-panel button { padding: 8px; background: rgba(17,34,64,.9); color: #64ffda; border: 1px solid #64ffda55; border-radius: 6px; cursor: pointer; }
     #tuner-panel button:hover { background: rgba(17,34,64,1); }
@@ -48,6 +51,7 @@
   // Build panel
   const panel = document.createElement('div');
   panel.id = 'tuner-panel';
+  panel.style.display = 'none'; // Start hidden - enable via PDA Scanner page
   panel.innerHTML = `
     <h3>Bridge Transform Tuner (temp)</h3>
     <div class="row" style="grid-template-columns: 1fr;">
@@ -302,6 +306,86 @@
   if (targets.length) {
     const el = currentEl();
     const st = read(el);
-    writeInputs(st); apply(el, st); save(el, st);
+    writeInputs(st);
+    // Don't apply on init - only apply when user makes changes
+    // apply(el, st); save(el, st);
   }
+
+  // Make panel draggable
+  let isDragging = false;
+  let currentX, currentY, initialX, initialY;
+  let xOffset = 0, yOffset = 0;
+
+  // Load saved position
+  const savedPos = JSON.parse(localStorage.getItem('tuner:panel:position') || 'null');
+  if (savedPos) {
+    panel.style.left = savedPos.x + 'px';
+    panel.style.top = savedPos.y + 'px';
+    xOffset = savedPos.x - 16;
+    yOffset = savedPos.y - 16;
+  }
+
+  const dragStart = (e) => {
+    // Only drag from header or non-interactive areas
+    if (e.target.tagName === 'INPUT' ||
+        e.target.tagName === 'SELECT' ||
+        e.target.tagName === 'BUTTON') return;
+
+    initialX = e.clientX - xOffset;
+    initialY = e.clientY - yOffset;
+
+    if (e.target === panel || e.target.tagName === 'H3' || e.target.tagName === 'LABEL') {
+      isDragging = true;
+      panel.classList.add('dragging');
+    }
+  };
+
+  const dragEnd = () => {
+    initialX = currentX;
+    initialY = currentY;
+    isDragging = false;
+    panel.classList.remove('dragging');
+
+    // Save position
+    const rect = panel.getBoundingClientRect();
+    localStorage.setItem('tuner:panel:position', JSON.stringify({
+      x: rect.left,
+      y: rect.top
+    }));
+  };
+
+  const drag = (e) => {
+    if (!isDragging) return;
+    e.preventDefault();
+
+    currentX = e.clientX - initialX;
+    currentY = e.clientY - initialY;
+
+    xOffset = currentX;
+    yOffset = currentY;
+
+    // Constrain to viewport
+    const rect = panel.getBoundingClientRect();
+    const maxX = window.innerWidth - rect.width;
+    const maxY = window.innerHeight - rect.height;
+
+    const newX = Math.max(0, Math.min(currentX + 16, maxX));
+    const newY = Math.max(0, Math.min(currentY + 16, maxY));
+
+    panel.style.left = newX + 'px';
+    panel.style.top = newY + 'px';
+    panel.style.right = 'auto'; // Override right positioning
+  };
+
+  panel.addEventListener('mousedown', dragStart);
+  document.addEventListener('mousemove', drag);
+  document.addEventListener('mouseup', dragEnd);
+
+  // Add target selection change handler
+  targetSel.addEventListener('change', () => {
+    const el = currentEl();
+    if (!el) return;
+    const st = read(el);
+    writeInputs(st);
+  });
 })();

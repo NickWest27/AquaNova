@@ -235,6 +235,20 @@ function handleAction(action) {
   }
 
   switch(action) {
+    // Developer tools
+    case 'toggle-tuner': {
+      const tunerPanel = document.getElementById('tuner-panel');
+      if (tunerPanel) {
+        const isVisible = tunerPanel.style.display !== 'none';
+        tunerPanel.style.display = isVisible ? 'none' : 'block';
+        renderCurrentPage();
+        showMessage(isVisible ? 'Transform Tuner hidden' : 'Transform Tuner enabled');
+      } else {
+        showMessage('Transform Tuner not available on this page');
+      }
+      break;
+    }
+
     // New settings cases
     case 'apply-custom-resolution': {
       const width = parseInt(document.getElementById('custom-width').value);
@@ -733,6 +747,8 @@ function renderContactDetailPage(contentEl) {
 
 function renderScannerPage(contentEl) {
   const ambient = getAmbientData();
+  const tunerEnabled = document.getElementById('tuner-panel')?.style.display !== 'none';
+
   contentEl.innerHTML = `
     <div class="pda-page">
       <div class="pda-page-header">Environmental Scanner</div>
@@ -773,6 +789,14 @@ function renderScannerPage(contentEl) {
         <div class="pda-section-title">Debug Console</div>
         <div class="pda-console-logs">
           ${renderConsoleLogs()}
+        </div>
+      </div>
+      <div class="pda-scanner-section">
+        <div class="pda-section-title">Developer Tools</div>
+        <div class="pda-dev-tools">
+          <button class="pda-action-btn ${tunerEnabled ? 'btn-on' : 'btn-selectable'}" data-action="toggle-tuner">
+            ${tunerEnabled ? '✓ Transform Tuner' : 'Transform Tuner'}
+          </button>
         </div>
       </div>
       <button class="pda-back-btn">← Back to Main Menu</button>
