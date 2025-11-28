@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Enable Contours</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            background: #000;
+            color: #0f0;
+            padding: 20px;
+        }
+        .status {
+            margin: 10px 0;
+            padding: 10px;
+            border: 1px solid #0f0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Enable Bathymetry Contours</h1>
+    <div id="status"></div>
+
+    <script>
+        const statusDiv = document.getElementById('status');
+
+        function log(msg) {
+            statusDiv.innerHTML += `<div class="status">${msg}</div>`;
+            console.log(msg);
+        }
+
+        // Fix the localStorage directly
+        try {
+            // Get current aquaNova state
+            const stateKey = 'aquaNova_gameState';
+            const rawState = localStorage.getItem(stateKey);
+
+            if (!rawState) {
+                log('❌ No game state found in localStorage');
+            } else {
+                const state = JSON.parse(rawState);
+                log('✓ Current game state loaded');
+
+                // Navigate to navigation settings
+                if (!state.navigation) state.navigation = {};
+                if (!state.navigation.displaySettings) state.navigation.displaySettings = {};
+                if (!state.navigation.displaySettings.overlaysVisible) {
+                    state.navigation.displaySettings.overlaysVisible = {};
+                }
+
+                // Show current state
+                log(`Current contours setting: ${state.navigation.displaySettings.overlaysVisible.contours}`);
+
+                // Set contours to true
+                state.navigation.displaySettings.overlaysVisible.contours = true;
+
+                // Save back to localStorage
+                localStorage.setItem(stateKey, JSON.stringify(state));
+                log('✓ Updated contours to TRUE in game state');
+                log(`New contours setting: ${state.navigation.displaySettings.overlaysVisible.contours}`);
+            }
+
+            // Also fix MFD page state if it exists
+            const mfdKey = 'aquaNova_mfd_navigation';
+            const rawMFD = localStorage.getItem(mfdKey);
+
+            if (rawMFD) {
+                const mfdState = JSON.parse(rawMFD);
+                log('✓ MFD navigation state found');
+                log(`Current MFD contours: ${mfdState.overlaysVisible?.contours}`);
+
+                if (!mfdState.overlaysVisible) mfdState.overlaysVisible = {};
+                mfdState.overlaysVisible.contours = true;
+
+                localStorage.setItem(mfdKey, JSON.stringify(mfdState));
+                log('✓ Updated MFD contours to TRUE');
+            }
+
+            log('');
+            log('======================');
+            log('✓ DONE! Reload the main game page (bridge.html)');
+            log('======================');
+
+        } catch (error) {
+            log(`❌ Error: ${error.message}`);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Toggle Contours via Console</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            background: #000;
+            color: #0f0;
+            padding: 20px;
+        }
+        .instructions {
+            margin: 20px 0;
+            padding: 15px;
+            border: 2px solid #0f0;
+            background: #001100;
+        }
+        code {
+            background: #003300;
+            padding: 2px 5px;
+            display: block;
+            margin: 10px 0;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <h1>Enable Contours via Console</h1>
+
+    <div class="instructions">
+        <h2>Instructions:</h2>
+        <ol>
+            <li>Go to your bridge page (bridge.html)</li>
+            <li>Open the browser console (F12)</li>
+            <li>Copy and paste this code into the console:</li>
+        </ol>
+        <code>// Find the MFD system
+const mfdSystem = window.mfdSystem || document.querySelector('.right-console')?.__mfd;
+if (mfdSystem) {
+    const state = mfdSystem.getPageState('navigation');
+    if (state && state.overlaysVisible) {
+        console.log('Current contours:', state.overlaysVisible.contours);
+        state.overlaysVisible.contours = true;
+        mfdSystem.setPageState(state, 'navigation');
+        console.log('✓ Contours enabled!');
+        console.log('New contours:', state.overlaysVisible.contours);
+    } else {
+        console.log('❌ Navigation state not found');
+    }
+} else {
+    console.log('❌ MFD system not found');
+}</code>
+        <ol start="4">
+            <li>Press Enter</li>
+            <li>You should see "✓ Contours enabled!" in the console</li>
+            <li>The contours should now appear on the navigation display!</li>
+        </ol>
+    </div>
+
+    <div class="instructions">
+        <h2>OR: Use the MFD Buttons</h2>
+        <ol>
+            <li>On the bridge, look at the MFD (right console)</li>
+            <li>Press the <strong>L5</strong> button (labeled "SHOW")</li>
+            <li>Press the <strong>L3</strong> button (labeled "CONTOUR")</li>
+            <li>The button should light up green, and contours will appear!</li>
+        </ol>
+    </div>
+
+</body>
+</html>

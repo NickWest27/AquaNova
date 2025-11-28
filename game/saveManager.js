@@ -195,7 +195,6 @@ class SaveManager {
 
         const entry = logbook.entries[entryIndex];
         if (!entry.gameSnapshot) throw new Error('Entry has no snapshot');
-        if (entry.metadata?.canRevert === false) throw new Error('Entry is non-revertible');
 
         // Revert GameState to this snapshot
         this.gameState.loadFromSnapshot(entry.gameSnapshot);

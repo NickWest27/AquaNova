@@ -8,20 +8,38 @@ class NavigationPage {
     static init(mfd) {
         // Load persistent settings from game state
         const savedDisplayMode = gameStateInstance.getProperty('navigation.displaySettings.displayMode') || 'ARC';
-        const savedOverlays = gameStateInstance.getProperty('navigation.displaySettings.overlaysVisible') || {
+
+        // Default overlay settings
+        const defaultOverlays = {
             route: true,
             waypoints: true,
-            contours: true,
+            contours: true,  // ALWAYS default to true
             hazards: true,
             traffic: false,
             latLonGrid: true
         };
 
+        // Get saved overlays from game state
+        const savedOverlays = gameStateInstance.getProperty('navigation.displaySettings.overlaysVisible');
+
+        // Merge: use saved values if they exist, otherwise use defaults
+        // Special handling: contours should default to true unless explicitly saved as false by user
+        let overlaysVisible;
+        if (savedOverlays) {
+            overlaysVisible = { ...defaultOverlays, ...savedOverlays };
+            // If this is the first load and contours wasn't explicitly set, default to true
+            if (savedOverlays.contours === undefined) {
+                overlaysVisible.contours = true;
+            }
+        } else {
+            overlaysVisible = defaultOverlays;
+        }
+
         // Initialize navigation page state with saved settings
         const defaultState = {
             mode: 'map', // 'map', 'overlays', 'route'
             displayMode: savedDisplayMode,
-            overlaysVisible: savedOverlays,
+            overlaysVisible: overlaysVisible,
             selectedOverlay: null,
             routeView: {
                 selectedWaypoint: 0,
@@ -31,6 +49,7 @@ class NavigationPage {
 
         mfd.setPageState(defaultState, 'navigation');
         console.log('NAV COMPUTER.....ONLINE');
+        console.log('Overlays initialized:', overlaysVisible);
     }
 
     static getSoftKeys(mfd) {

@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Fix Contours - Final</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            background: #000;
+            color: #0f0;
+            padding: 20px;
+        }
+        .status {
+            margin: 10px 0;
+            padding: 10px;
+            border: 1px solid #0f0;
+        }
+        button {
+            background: #0f0;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            font-family: 'Courier New', monospace;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #0c0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Fix Bathymetry Contours</h1>
+    <div id="status"></div>
+    <button onclick="showAllKeys()">1. Show All localStorage Keys</button>
+    <button onclick="fixContours()">2. Fix Contours Setting</button>
+    <button onclick="window.location.href='bridge.html'">3. Go to Bridge</button>
+
+    <script>
+        const statusDiv = document.getElementById('status');
+
+        function log(msg) {
+            statusDiv.innerHTML += `<div class="status">${msg}</div>`;
+            console.log(msg);
+        }
+
+        function clear() {
+            statusDiv.innerHTML = '';
+        }
+
+        function showAllKeys() {
+            clear();
+            log('=== ALL localStorage KEYS ===');
+
+            const keys = Object.keys(localStorage);
+            if (keys.length === 0) {
+                log('❌ No keys found in localStorage');
+            } else {
+                keys.forEach(key => {
+                    const value = localStorage.getItem(key);
+                    const preview = value.length > 100 ? value.substring(0, 100) + '...' : value;
+                    log(`Key: ${key}`);
+                    log(`  Length: ${value.length} chars`);
+                    log(`  Preview: ${preview}`);
+                    log('---');
+                });
+            }
+        }
+
+        function fixContours() {
+            clear();
+            log('=== FIXING CONTOURS ===');
+
+            // Find all keys that might contain navigation state
+            const keys = Object.keys(localStorage);
+            let fixed = false;
+
+            keys.forEach(key => {
+                try {
+                    const value = localStorage.getItem(key);
+
+                    // Try to parse as JSON
+                    const data = JSON.parse(value);
+
+                    // Check if this looks like navigation state
+                    if (data.overlaysVisible || (data.navigation?.displaySettings?.overlaysVisible)) {
+                        log(`Found navigation state in key: ${key}`);
+
+                        // Fix overlaysVisible at root level
+                        if (data.overlaysVisible) {
+                            log(`  Current overlaysVisible.contours: ${data.overlaysVisible.contours}`);
+                            data.overlaysVisible.contours = true;
+                            localStorage.setItem(key, JSON.stringify(data));
+                            log(`  ✓ Set to TRUE`);
+                            fixed = true;
+                        }
+
+                        // Fix nested navigation.displaySettings.overlaysVisible
+                        if (data.navigation?.displaySettings?.overlaysVisible) {
+                            log(`  Current navigation.displaySettings.overlaysVisible.contours: ${data.navigation.displaySettings.overlaysVisible.contours}`);
+                            data.navigation.displaySettings.overlaysVisible.contours = true;
+                            localStorage.setItem(key, JSON.stringify(data));
+                            log(`  ✓ Set to TRUE`);
+                            fixed = true;
+                        }
+                    }
+                } catch (e) {
+                    // Not JSON, skip
+                }
+            });
+
+            if (fixed) {
+                log('');
+                log('======================');
+                log('✓ FIXED! Click "Go to Bridge" button above');
+                log('======================');
+            } else {
+                log('');
+                log('❌ No navigation state found to fix');
+                log('Try clicking "Show All localStorage Keys" first');
+            }
+        }
+    </script>
+</body>
+</html>

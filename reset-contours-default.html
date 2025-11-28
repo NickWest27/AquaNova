@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Reset Contours to Default</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            background: #000;
+            color: #0f0;
+            padding: 20px;
+        }
+        .status {
+            margin: 10px 0;
+            padding: 10px;
+            border: 1px solid #0f0;
+        }
+        button {
+            background: #0f0;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            font-family: 'Courier New', monospace;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #0c0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Reset Contours to Default (TRUE)</h1>
+    <div id="status"></div>
+    <button onclick="resetContours()">Reset Contours Setting</button>
+    <button onclick="window.location.href='bridge.html'">Go to Bridge</button>
+
+    <script type="module">
+        import gameStateInstance from '/game/state.js';
+
+        window.resetContours = function() {
+            const statusDiv = document.getElementById('status');
+            statusDiv.innerHTML = '';
+
+            function log(msg) {
+                statusDiv.innerHTML += `<div class="status">${msg}</div>`;
+                console.log(msg);
+            }
+
+            log('=== RESETTING CONTOURS TO DEFAULT ===');
+
+            // Get current saved overlays
+            const current = gameStateInstance.getProperty('navigation.displaySettings.overlaysVisible');
+
+            if (current) {
+                log('Current overlays:');
+                log(JSON.stringify(current, null, 2));
+                log('Current contours value: ' + current.contours);
+            } else {
+                log('No saved overlays found');
+            }
+
+            // Delete the saved overlaysVisible property entirely
+            // This will force it to use the default (contours: true)
+            gameStateInstance.updateProperty('navigation.displaySettings.overlaysVisible', null);
+
+            log('');
+            log('✓ Deleted saved overlays - will use defaults on next load');
+            log('✓ Default contours value is: TRUE');
+            log('');
+            log('Now click "Go to Bridge" to reload with defaults');
+        };
+    </script>
+</body>
+</html>
