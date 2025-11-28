@@ -4,6 +4,7 @@
 
 import { drawNavigationDisplay } from '../../game/systems/navComputer/navComputer.js';
 import gameStateInstance from '../../game/state.js';
+import { drawArtificialHorizon } from '../../game/systems/pfd/pfdComponents.js';
 
 // Panel canvas and SVG references
 let leftCanvas, leftSvg;
@@ -241,99 +242,98 @@ function renderRightPanel() {
   const power = gameStateInstance.getProperty('power') || {};
   const hull = gameStateInstance.getProperty('hull') || {};
 
-  // Draw panel header
-  ctx.fillStyle = '#64ffda';
-  ctx.font = 'bold 14px "Courier New", monospace';
-  ctx.textAlign = 'center';
-  ctx.fillText('HELM & ENGINEERING', cssWidth / 2, 20);
-
-  // Draw divider line
-  ctx.strokeStyle = 'rgba(100, 255, 218, 0.3)';
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(10, 30);
-  ctx.lineTo(cssWidth - 10, 30);
-  ctx.stroke();
-
-  // Draw helm status
-  ctx.font = '12px "Courier New", monospace';
-  ctx.textAlign = 'left';
-
-  let y = 50;
-  ctx.fillStyle = '#8892b0';
-  ctx.fillText('SPEED:', 10, y);
-  ctx.fillStyle = '#64ffda';
-  ctx.textAlign = 'right';
-  ctx.fillText(`${Math.round(helm.currentSpeed || 0)} kts`, cssWidth - 10, y);
-
-  y += 18;
-  ctx.textAlign = 'left';
-  ctx.fillStyle = '#8892b0';
-  ctx.fillText('HEADING:', 10, y);
-  ctx.fillStyle = '#64ffda';
-  ctx.textAlign = 'right';
-  ctx.fillText(`${Math.round(helm.currentHeading || 0)}°`, cssWidth - 10, y);
-
-  y += 18;
-  ctx.textAlign = 'left';
-  ctx.fillStyle = '#8892b0';
-  ctx.fillText('DEPTH:', 10, y);
-  ctx.fillStyle = '#64ffda';
-  ctx.textAlign = 'right';
-  ctx.fillText(`${Math.round(helm.currentDepth || 0)} m`, cssWidth - 10, y);
-
-  // Draw pitch and roll
-  y += 18;
-  ctx.textAlign = 'left';
-  ctx.fillStyle = '#8892b0';
-  ctx.fillText('PITCH:', 10, y);
-  ctx.fillStyle = '#64ffda';
-  ctx.textAlign = 'right';
+  const speed = helm.currentSpeed || 0;
+  const heading = helm.currentHeading || 0;
+  const depth = helm.currentDepth || 0;
   const pitch = helm.pitch || 0;
-  ctx.fillText(`${pitch > 0 ? '+' : ''}${pitch.toFixed(1)}°`, cssWidth - 10, y);
-
-  y += 18;
-  ctx.textAlign = 'left';
-  ctx.fillStyle = '#8892b0';
-  ctx.fillText('ROLL:', 10, y);
-  ctx.fillStyle = '#64ffda';
-  ctx.textAlign = 'right';
   const roll = helm.roll || 0;
-  ctx.fillText(`${roll > 0 ? '+' : ''}${roll.toFixed(1)}°`, cssWidth - 10, y);
 
-  // Draw engineering status
-  y += 30;
-  ctx.textAlign = 'left';
+  // === MAIN SECTION: Artificial Horizon with Readouts (65% of height) ===
+  const horizonSectionHeight = cssHeight * 0.65;
+  const horizonCenterY = horizonSectionHeight / 2;
+
+  // Draw artificial horizon (scaled smaller to fit with readouts)
+  ctx.save();
+  ctx.translate(0, 0);
+  drawArtificialHorizon(ctx, cssWidth, horizonSectionHeight, pitch, roll);
+  ctx.restore();
+
+  // Speed readout (left side of horizon)
+  ctx.textAlign = 'center';
+  ctx.font = 'bold 8px "Courier New", monospace';
   ctx.fillStyle = '#8892b0';
-  ctx.fillText('ENGINEERING:', 10, y);
+  ctx.fillText('SPD', cssWidth * 0.15, horizonCenterY - 20);
+
+  ctx.font = 'bold 11px "Courier New", monospace';
+  ctx.fillStyle = '#64ffda';
+  ctx.fillText(Math.abs(Math.round(speed)).toString().padStart(3, '0'), cssWidth * 0.15, horizonCenterY - 5);
+
+  ctx.font = '7px "Courier New", monospace';
+  ctx.fillStyle = '#8892b0';
+  ctx.fillText('KTS', cssWidth * 0.15, horizonCenterY + 8);
+
+  // Depth readout (right side of horizon)
+  ctx.textAlign = 'center';
+  ctx.font = 'bold 8px "Courier New", monospace';
+  ctx.fillStyle = '#8892b0';
+  ctx.fillText('DEP', cssWidth * 0.85, horizonCenterY - 20);
+
+  ctx.font = 'bold 11px "Courier New", monospace';
+  ctx.fillStyle = '#64ffda';
+  ctx.fillText(Math.round(depth).toString(), cssWidth * 0.85, horizonCenterY - 5);
+
+  ctx.font = '7px "Courier New", monospace';
+  ctx.fillStyle = '#8892b0';
+  ctx.fillText('M', cssWidth * 0.85, horizonCenterY + 8);
+
+  // Heading readout (below horizon)
+  ctx.textAlign = 'center';
+  ctx.font = 'bold 8px "Courier New", monospace';
+  ctx.fillStyle = '#8892b0';
+  ctx.fillText('HDG', cssWidth / 2, horizonSectionHeight - 20);
+
+  ctx.font = 'bold 11px "Courier New", monospace';
+  ctx.fillStyle = '#64ffda';
+  ctx.fillText(Math.round(heading).toString().padStart(3, '0') + '°', cssWidth / 2, horizonSectionHeight - 7);
+
+  // === BOTTOM SECTION: Engineering Status (35% of height) ===
+  const engY = horizonSectionHeight;
+
+  ctx.font = '8px "Courier New", monospace';
+  ctx.textAlign = 'left';
+
+  let y = engY + 12;
+  ctx.fillStyle = '#8892b0';
+  ctx.fillText('ENGINEERING', 10, y);
 
   // Hull integrity
-  y += 20;
+  y += 12;
   ctx.fillStyle = '#64ffda';
-  ctx.fillText('Hull', 15, y);
-  drawStatusBar(ctx, cssWidth - 60, y - 8, 50, 8, hull.integrity || 100);
+  ctx.font = '8px "Courier New", monospace';
+  ctx.fillText('Hull', 10, y);
+  drawStatusBar(ctx, cssWidth - 50, y - 5, 40, 5, hull.integrity || 100);
 
   // Reactor status
-  y += 18;
+  y += 11;
   ctx.fillStyle = '#64ffda';
-  ctx.fillText('Port Reactor', 15, y);
-  drawStatusBar(ctx, cssWidth - 60, y - 8, 50, 8, power.leftReactorHealth || 100);
+  ctx.fillText('P.Rct', 10, y);
+  drawStatusBar(ctx, cssWidth - 50, y - 5, 40, 5, power.leftReactorHealth || 100);
 
-  y += 18;
+  y += 11;
   ctx.fillStyle = '#64ffda';
-  ctx.fillText('Stbd Reactor', 15, y);
-  drawStatusBar(ctx, cssWidth - 60, y - 8, 50, 8, power.rightReactorHealth || 100);
+  ctx.fillText('S.Rct', 10, y);
+  drawStatusBar(ctx, cssWidth - 50, y - 5, 40, 5, power.rightReactorHealth || 100);
 
   // Drivetrain status
-  y += 18;
+  y += 11;
   ctx.fillStyle = '#64ffda';
-  ctx.fillText('Port Drive', 15, y);
-  drawStatusBar(ctx, cssWidth - 60, y - 8, 50, 8, helm.leftDrivetrainHealth || 100);
+  ctx.fillText('P.Drv', 10, y);
+  drawStatusBar(ctx, cssWidth - 50, y - 5, 40, 5, helm.leftDrivetrainHealth || 100);
 
-  y += 18;
+  y += 11;
   ctx.fillStyle = '#64ffda';
-  ctx.fillText('Stbd Drive', 15, y);
-  drawStatusBar(ctx, cssWidth - 60, y - 8, 50, 8, helm.rightDrivetrainHealth || 100);
+  ctx.fillText('S.Drv', 10, y);
+  drawStatusBar(ctx, cssWidth - 50, y - 5, 40, 5, helm.rightDrivetrainHealth || 100);
 }
 
 /**

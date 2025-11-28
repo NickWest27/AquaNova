@@ -140,7 +140,7 @@ body {
 }
 
 .left-panel {
-    flex: 0 0 30%;
+    flex: 0 0 20%;
 }
 
 .center-panel {
@@ -148,7 +148,7 @@ body {
 }
 
 .right-panel {
-    flex: 0 0 30%;
+    flex: 0 0 20%;
 }
 
 /* Canvas and SVG layers for each panel */
