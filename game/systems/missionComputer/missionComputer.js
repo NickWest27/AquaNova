@@ -3,6 +3,7 @@
 // Pulls data from ship state (helm), calculates position updates, passes to navComputer
 
 import gameStateInstance from '/game/state.js';
+import { validateCoordinates } from '/utils/coordinates.js';
 
 class MissionComputer {
     constructor() {
@@ -239,6 +240,303 @@ class MissionComputer {
             bearing,
             eta
         };
+    }
+
+    // ========================================
+    // WAYPOINT MANAGEMENT METHODS
+    // ========================================
+
+    /**
+     * Waypoint type definitions by category
+     */
+    getWaypointTypes() {
+        return {
+            NAV: ['HARBOUR', 'ANCHORAGE', 'CHANNEL', 'TURNING_POINT'],
+            SCI: ['SAMPLE_SITE', 'RESEARCH_AREA', 'SURVEY_POINT', 'WRECK'],
+            HAZ: ['ROCK', 'SHALLOW', 'OBSTRUCTION', 'RESTRICTED_AREA'],
+            POI: ['LANDMARK', 'REFERENCE', 'CUSTOM']
+        };
+    }
+
+    /**
+     * Get current ship position and depth
+     * @returns {object} {lat, lon, depth}
+     */
+    getCurrentPosition() {
+        const location = gameStateInstance.getProperty('navigation.location');
+        const [lon, lat] = location.geometry.coordinates;
+        const depth = gameStateInstance.getProperty('navigation.depth');
+
+        return { lat, lon, depth };
+    }
+
+    /**
+     * Create a new waypoint
+     * @param {object} waypointData - Waypoint data
+     * @returns {object} {success: boolean, waypoint: object|null, error: string|null}
+     */
+    createWaypoint(waypointData) {
+        // Validate required fields
+        if (!waypointData.name || waypointData.name.trim() === '') {
+            return { success: false, waypoint: null, error: 'Waypoint name is required' };
+        }
+
+        // Validate name length (5 characters max)
+        if (waypointData.name.length > 5) {
+            return { success: false, waypoint: null, error: 'Name must be 5 characters or less' };
+        }
+
+        // Validate name is alphanumeric
+        if (!/^[A-Z0-9]+$/i.test(waypointData.name)) {
+            return { success: false, waypoint: null, error: 'Name must be alphanumeric only' };
+        }
+
+        // Check for duplicate names
+        const existingWaypoints = gameStateInstance.getAllWaypoints();
+        if (existingWaypoints.some(wpt => wpt.name.toUpperCase() === waypointData.name.toUpperCase())) {
+            return { success: false, waypoint: null, error: 'Waypoint name already exists' };
+        }
+
+        // Validate coordinates
+        const validation = validateCoordinates(waypointData.lat, waypointData.lon);
+        if (!validation.valid) {
+            return { success: false, waypoint: null, error: validation.error };
+        }
+
+        // Validate category
+        const validCategories = ['NAV', 'SCI', 'HAZ', 'POI'];
+        if (!validCategories.includes(waypointData.category)) {
+            return { success: false, waypoint: null, error: 'Invalid category' };
+        }
+
+        // Validate type within category
+        const types = this.getWaypointTypes();
+        if (!types[waypointData.category].includes(waypointData.type)) {
+            return { success: false, waypoint: null, error: 'Invalid type for category' };
+        }
+
+        // Validate depth (reasonable range for submarine: 0 to 11000 meters)
+        const depth = waypointData.depth || 0;
+        if (depth < 0 || depth > 11000) {
+            return { success: false, waypoint: null, error: 'Depth must be between 0 and 11000 meters' };
+        }
+
+        // Create waypoint object
+        const waypoint = {
+            id: `wpt-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
+            name: waypointData.name.toUpperCase(),
+            category: waypointData.category,
+            type: waypointData.type,
+            geometry: {
+                type: "Point",
+                coordinates: [waypointData.lon, waypointData.lat]
+            },
+            depth: depth,
+            notes: waypointData.notes || '',
+            created: new Date().toISOString(),
+            source: 'user'
+        };
+
+        // Add to state
+        gameStateInstance.addWaypoint(waypoint);
+
+        console.log(`Mission Computer: Waypoint created - ${waypoint.name} at ${waypoint.geometry.coordinates}`);
+
+        return { success: true, waypoint, error: null };
+    }
+
+    /**
+     * Update an existing waypoint
+     * @param {string} id - Waypoint ID
+     * @param {object} updates - Fields to update
+     * @returns {object} {success: boolean, error: string|null}
+     */
+    updateWaypoint(id, updates) {
+        const waypoint = gameStateInstance.getWaypoint(id);
+        if (!waypoint) {
+            return { success: false, error: 'Waypoint not found' };
+        }
+
+        // Validate updates
+        if (updates.name !== undefined) {
+            if (updates.name.length > 5) {
+                return { success: false, error: 'Name must be 5 characters or less' };
+            }
+            if (!/^[A-Z0-9]+$/i.test(updates.name)) {
+                return { success: false, error: 'Name must be alphanumeric only' };
+            }
+
+            // Check for duplicate names (excluding current waypoint)
+            const existingWaypoints = gameStateInstance.getAllWaypoints();
+            if (existingWaypoints.some(wpt => wpt.id !== id && wpt.name.toUpperCase() === updates.name.toUpperCase())) {
+                return { success: false, error: 'Waypoint name already exists' };
+            }
+
+            updates.name = updates.name.toUpperCase();
+        }
+
+        if (updates.lat !== undefined || updates.lon !== undefined) {
+            const lat = updates.lat !== undefined ? updates.lat : waypoint.geometry.coordinates[1];
+            const lon = updates.lon !== undefined ? updates.lon : waypoint.geometry.coordinates[0];
+
+            const validation = validateCoordinates(lat, lon);
+            if (!validation.valid) {
+                return { success: false, error: validation.error };
+            }
+
+            updates.geometry = {
+                type: "Point",
+                coordinates: [lon, lat]
+            };
+            delete updates.lat;
+            delete updates.lon;
+        }
+
+        if (updates.depth !== undefined) {
+            if (updates.depth < 0 || updates.depth > 11000) {
+                return { success: false, error: 'Depth must be between 0 and 11000 meters' };
+            }
+        }
+
+        if (updates.category !== undefined) {
+            const validCategories = ['NAV', 'SCI', 'HAZ', 'POI'];
+            if (!validCategories.includes(updates.category)) {
+                return { success: false, error: 'Invalid category' };
+            }
+        }
+
+        if (updates.type !== undefined) {
+            const category = updates.category || waypoint.category;
+            const types = this.getWaypointTypes();
+            if (!types[category].includes(updates.type)) {
+                return { success: false, error: 'Invalid type for category' };
+            }
+        }
+
+        // Apply updates
+        gameStateInstance.updateWaypoint(id, updates);
+
+        console.log(`Mission Computer: Waypoint updated - ${id}`);
+
+        return { success: true, error: null };
+    }
+
+    /**
+     * Delete a waypoint
+     * @param {string} id - Waypoint ID
+     * @returns {object} {success: boolean, error: string|null}
+     */
+    deleteWaypoint(id) {
+        const waypoint = gameStateInstance.getWaypoint(id);
+        if (!waypoint) {
+            return { success: false, error: 'Waypoint not found' };
+        }
+
+        // Prevent deletion of location.json waypoints
+        if (waypoint.source !== 'user') {
+            return { success: false, error: 'Cannot delete system waypoint' };
+        }
+
+        gameStateInstance.deleteWaypoint(id);
+
+        console.log(`Mission Computer: Waypoint deleted - ${waypoint.name}`);
+
+        return { success: true, error: null };
+    }
+
+    /**
+     * Get waypoint with calculated navigation data
+     * @param {string} id - Waypoint ID
+     * @returns {object|null} Waypoint with bearing, distance, eta
+     */
+    getWaypointWithNavData(id) {
+        const waypoint = gameStateInstance.getWaypoint(id);
+        if (!waypoint) return null;
+
+        const [lon, lat] = waypoint.geometry.coordinates;
+        const navData = this.calculateETA(lon, lat);
+
+        return {
+            ...waypoint,
+            bearing: navData.bearing,
+            distance: navData.distance,
+            eta: navData.eta
+        };
+    }
+
+    /**
+     * Get all waypoints with calculated navigation data
+     * @returns {array} Array of waypoints with nav data
+     */
+    getAllWaypointsWithNavData() {
+        const waypoints = gameStateInstance.getAllWaypoints();
+        return waypoints.map(wpt => {
+            const [lon, lat] = wpt.geometry.coordinates;
+            const navData = this.calculateETA(lon, lat);
+            return {
+                ...wpt,
+                bearing: navData.bearing,
+                distance: navData.distance,
+                eta: navData.eta
+            };
+        });
+    }
+
+    /**
+     * Load waypoints from locations.json
+     * @param {array} locations - Array of location features
+     */
+    loadLocationsAsWaypoints(locations) {
+        if (!locations || !Array.isArray(locations)) return;
+
+        locations.forEach(location => {
+            if (location.type !== 'Feature' || !location.geometry || !location.properties) return;
+
+            const waypoint = {
+                id: `loc-${location.properties.name.toLowerCase().replace(/\s+/g, '-')}`,
+                name: location.properties.name.substring(0, 5).toUpperCase(),
+                category: this.mapLocationTypeToCategory(location.properties.type),
+                type: this.mapLocationTypeToWaypointType(location.properties.type),
+                geometry: location.geometry,
+                depth: 0,
+                notes: location.properties.description || '',
+                created: new Date().toISOString(),
+                source: 'location'
+            };
+
+            // Check if already exists (by ID)
+            if (!gameStateInstance.getWaypoint(waypoint.id)) {
+                gameStateInstance.addWaypoint(waypoint);
+            }
+        });
+
+        console.log(`Mission Computer: Loaded ${locations.length} locations as waypoints`);
+    }
+
+    /**
+     * Map location type to waypoint category
+     */
+    mapLocationTypeToCategory(locationType) {
+        const mapping = {
+            'dock': 'NAV',
+            'research': 'SCI',
+            'hazard': 'HAZ',
+            'landmark': 'POI'
+        };
+        return mapping[locationType] || 'POI';
+    }
+
+    /**
+     * Map location type to waypoint type
+     */
+    mapLocationTypeToWaypointType(locationType) {
+        const mapping = {
+            'dock': 'HARBOUR',
+            'research': 'RESEARCH_AREA',
+            'hazard': 'OBSTRUCTION',
+            'landmark': 'LANDMARK'
+        };
+        return mapping[locationType] || 'CUSTOM';
     }
 }
 

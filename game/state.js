@@ -41,9 +41,29 @@ class GameState {
                 course: 0,
                 speed: 0,
                 destination: null,
+
+                // Waypoint and route management
+                waypoints: [],  // User-created waypoints
+                routes: [],     // User-created routes
+                activeRoute: {
+                    id: null,
+                    currentWaypointIndex: 0,
+                    executing: false
+                },
+
+                // Waypoint construction state (multi-step input process)
+                waypointConstruction: {
+                    active: false,
+                    mode: null,  // 'add', 'edit', 'delete'
+                    step: 0,     // Current step in construction process
+                    editingId: null,  // ID of waypoint being edited
+                    data: {}     // Temporary data during construction
+                },
+
                 displaySettings: {
                     navDisplayRange: 10,  // Default range in nautical miles
                     displayMode: 'ARC',   // 'ARC', 'PLAN', 'ROSE'
+                    showWaypointNames: true,  // Toggle waypoint name labels
                     overlaysVisible: {
                         route: true,
                         waypoints: true,
@@ -555,6 +575,84 @@ class GameState {
     reset() {
         this.state = this.getDefaultState();
         this.notifyObservers();
+    }
+
+    // Waypoint management methods
+    addWaypoint(waypoint) {
+        const waypoints = [...this.state.navigation.waypoints, waypoint];
+        this.updateProperty('navigation.waypoints', waypoints);
+        return waypoint.id;
+    }
+
+    updateWaypoint(id, updates) {
+        const waypoints = this.state.navigation.waypoints.map(wpt =>
+            wpt.id === id ? { ...wpt, ...updates } : wpt
+        );
+        this.updateProperty('navigation.waypoints', waypoints);
+    }
+
+    deleteWaypoint(id) {
+        const waypoints = this.state.navigation.waypoints.filter(wpt => wpt.id !== id);
+        this.updateProperty('navigation.waypoints', waypoints);
+
+        // Remove from any routes that contain this waypoint
+        const routes = this.state.navigation.routes.map(route => ({
+            ...route,
+            waypoints: route.waypoints.filter(wptId => wptId !== id)
+        }));
+        this.updateProperty('navigation.routes', routes);
+    }
+
+    getWaypoint(id) {
+        return this.state.navigation.waypoints.find(wpt => wpt.id === id);
+    }
+
+    getAllWaypoints() {
+        return [...this.state.navigation.waypoints];
+    }
+
+    // Route management methods
+    addRoute(route) {
+        const routes = [...this.state.navigation.routes, route];
+        this.updateProperty('navigation.routes', routes);
+        return route.id;
+    }
+
+    updateRoute(id, updates) {
+        const routes = this.state.navigation.routes.map(route =>
+            route.id === id ? { ...route, ...updates } : route
+        );
+        this.updateProperty('navigation.routes', routes);
+    }
+
+    deleteRoute(id) {
+        const routes = this.state.navigation.routes.filter(route => route.id !== id);
+        this.updateProperty('navigation.routes', routes);
+
+        // Deactivate if this was the active route
+        if (this.state.navigation.activeRoute.id === id) {
+            this.updateProperty('navigation.activeRoute', {
+                id: null,
+                currentWaypointIndex: 0,
+                executing: false
+            });
+        }
+    }
+
+    getRoute(id) {
+        return this.state.navigation.routes.find(route => route.id === id);
+    }
+
+    getAllRoutes() {
+        return [...this.state.navigation.routes];
+    }
+
+    setActiveRoute(id) {
+        this.updateProperty('navigation.activeRoute', {
+            id: id,
+            currentWaypointIndex: 0,
+            executing: false
+        });
     }
 
     // Debug info

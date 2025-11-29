@@ -52,7 +52,7 @@ class KeyboardUnit {
                             ${this.createKeyRow(['A','S','D','F','G','H','J','K','L','ENTER'])}
                         </div>
                         <div class="key-row">
-                            ${this.createKeyRow(['','Z','X','C','V','B','N','M','CLR','',''])}
+                            ${this.createKeyRow(['','Z','X','C','V','B','N','M','CLR','PPOS',''])}
                         </div>
                         <!-- Space bar row (single key, styled wide) -->
                         <div class="key-row special-row">
@@ -136,7 +136,7 @@ class KeyboardUnit {
         if (key === 'SPACE') return 'special-key space-key';
         if (key === 'ENTER') return 'special-key enter-key';
 
-        if (['DEL', 'CLR', 'SIGN', '.', '+', '-'].includes(key)) {
+        if (['DEL', 'CLR', 'PPOS', 'SIGN', '.', '+', '-'].includes(key)) {
             return 'special-key';
         }
 
@@ -148,6 +148,7 @@ class KeyboardUnit {
             'SPACE': 'SPACE',
             'DEL': 'DEL',
             'CLR': 'CLR',
+            'PPOS': 'PPOS',
             'ARROW_UP': '↑',
             'ARROW_DOWN': '↓',
             'ARROW_LEFT': '←',
@@ -163,6 +164,7 @@ class KeyboardUnit {
             'SPACE': 'Space',
             'DEL': 'Delete Last Character',
             'CLR': 'Clear All Input',
+            'PPOS': 'Present Position - Capture current location and depth',
             'ARROW_UP': 'Cursor Up / Option Up',
             'ARROW_DOWN': 'Cursor Down / Option Down',
             'ARROW_LEFT': 'Cursor Left / Option Left',
@@ -210,6 +212,9 @@ class KeyboardUnit {
                 break;
             case 'CLR':
                 this.clearInput();
+                break;
+            case 'PPOS':
+                this.sendPPOS();
                 break;
             case 'SPACE':
                 this.addCharacter(' ');
@@ -302,27 +307,24 @@ class KeyboardUnit {
             return;
         }
 
-        if (this.scratchpadContent.trim() === '') {
-            this.showError('NO DATA TO SEND');
-            return;
-        }
+        // Allow empty input - let the receiving system decide if it's valid
+        // This enables "press ENTER to accept default" workflows
 
         // Send data to connected system
         this.sendData();
-        
-        // Clear input after successful send
+
+        // Clear the input content, but keep the prompt active
+        // The next requestInput() call will set up the new prompt
         this.clearInput();
-        this.currentPrompt = '';
-        this.currentContext = null;
-        this.isActive = false;
-        
         this.updateScratchpadDisplay();
         this.updateStatus('DATA SENT');
-        
-        // Return to ready state after a moment
+
+        // Brief status message
         setTimeout(() => {
-            this.updateStatus('READY');
-        }, 2000);
+            if (!this.isActive) {
+                this.updateStatus('READY');
+            }
+        }, 500);
     }
 
     sendData() {
@@ -371,6 +373,33 @@ class KeyboardUnit {
         });
         document.dispatchEvent(event);
         this.flashDataLink();
+    }
+
+    sendPPOS() {
+        // Send Present Position event
+        const event = new CustomEvent('keyboard-ppos-pressed', {
+            detail: {
+                context: this.currentContext,
+                timestamp: new Date().toISOString()
+            }
+        });
+        document.dispatchEvent(event);
+        this.flashDataLink();
+        this.updateStatus('PPOS CAPTURED');
+
+        // Return to ready state after a moment
+        setTimeout(() => {
+            this.updateStatus('READY');
+        }, 1500);
+    }
+
+    isGlobalKey(key) {
+        // Global keys work even when keyboard is not in active input mode
+        return (
+            key === 'PPOS' ||
+            /^F[0-9]{1,2}$/.test(key) ||
+            ['ARROW_UP','ARROW_DOWN','ARROW_LEFT','ARROW_RIGHT'].includes(key)
+        );
     }
 
     // Public API methods for external systems
@@ -521,13 +550,6 @@ class KeyboardUnit {
             scratchpadContent: this.scratchpadContent,
             currentContext: this.currentContext
         };
-    }
-
-    isGlobalKey(key) {
-        return (
-            /^F[0-9]{1,2}$/.test(key) ||
-            ['ARROW_UP','ARROW_DOWN','ARROW_LEFT','ARROW_RIGHT'].includes(key)
-        );
     }
 }
 

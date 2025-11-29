@@ -4,6 +4,8 @@
 
 import { bathymetryTileManager, TILES } from '../bathymetry/bathymetryTileManager.js';
 import { drawBathymetryContours } from '../bathymetry/bathymetryRenderer.js';
+import gameStateInstance from '/game/state.js';
+import missionComputer from '/game/systems/missionComputer/missionComputer.js';
 
 // Bathymetry data cache
 let bathymetryData = null;
@@ -209,6 +211,11 @@ function drawNavContent(ctx, cx, cy, maxRadius, state, canvasWidth, canvasHeight
     const primaryTile = bathymetryTileManager.primaryTile;
     const tileBounds = primaryTile ? getTileBounds(primaryTile) : null;
     drawBathymetryContours(ctx, cx, cy, maxRadius, state, bathymetryData, rotationAngle, tileBounds);
+  }
+
+  // 4.5. Draw waypoints if enabled (rotated for heading-up display)
+  if (state.overlays && state.overlays.waypoints) {
+    drawWaypoints(ctx, cx, cy, maxRadius, state, rotationAngle);
   }
 
   // 5. Draw compass rose on outer ring (rotates with current heading)
@@ -540,9 +547,47 @@ function drawContextInfoBox(svg, state) {
   let line1 = null;
   let line2 = null;
   let line3 = null;
+  let line4 = null;
 
+  // Check for waypoint construction in progress
+  const construction = gameStateInstance.getProperty('navigation.waypointConstruction');
+  if (construction && construction.active) {
+    const data = construction.data || {};
+    const step = construction.step || 0;
+    const modeLabel = construction.mode === 'add' ? 'NEW' : construction.mode === 'edit' ? 'EDIT' : 'DELETE';
+    title = `${modeLabel} WAYPOINT`;
+
+    // Show data only after user has confirmed it (based on step)
+    // Step 0: entering name
+    // Step 1: entering lat (name confirmed)
+    // Step 2: entering lon (lat confirmed)
+    // Step 3: entering depth (lon confirmed)
+    // Step 4+: selecting category/type (depth confirmed)
+
+    line1 = (step >= 1 && data.name) ? `NAME: ${data.name}` : 'NAME: _____';
+
+    if (step >= 2 && data.lat !== undefined) {
+      const latStr = formatLatitude(data.lat);
+      line2 = `LAT:  ${latStr}`;
+    } else {
+      line2 = 'LAT:  ___________';
+    }
+
+    if (step >= 3 && data.lon !== undefined) {
+      const lonStr = formatLongitude(data.lon);
+      line3 = `LON:  ${lonStr}`;
+    } else {
+      line3 = 'LON:  ___________';
+    }
+
+    if (step >= 4 && data.depth !== undefined) {
+      line4 = `DPTH: ${data.depth}m`;
+    } else {
+      line4 = 'DPTH: ____m';
+    }
+  }
   // Check for selected waypoint (if waypoint data exists in state)
-  if (state.selectedWaypoint) {
+  else if (state.selectedWaypoint) {
     title = state.selectedWaypoint.name || "WAYPOINT";
     line1 = `BRG: ${Math.round(state.selectedWaypoint.bearing || 0)}°`;
     line2 = `DST: ${(state.selectedWaypoint.distance || 0).toFixed(1)} NM`;
@@ -570,7 +615,7 @@ function drawContextInfoBox(svg, state) {
   const y = 10;
   const boxWidth = 180;
   const lineHeight = 18;
-  const lines = [line1, line2, line3].filter(l => l !== null);
+  const lines = [line1, line2, line3, line4].filter(l => l !== null);
   const boxHeight = 25 + (lines.length * lineHeight);
 
   // Create container group
@@ -875,6 +920,171 @@ function drawTrackIndicator(ctx, cx, cy, maxRadius, state) {
 }
 
 // ============================================================================
+// WAYPOINT RENDERING
+// ============================================================================
+
+/**
+ * Draw waypoints on the navigation display
+ * @param {CanvasRenderingContext2D} ctx - Canvas context
+ * @param {number} cx - Center X
+ * @param {number} cy - Center Y
+ * @param {number} maxRadius - Maximum display radius
+ * @param {object} state - Navigation state
+ * @param {number} rotationAngle - Rotation angle for heading-up displays (0 for north-up)
+ */
+function drawWaypoints(ctx, cx, cy, maxRadius, state, rotationAngle = 0) {
+  // Get waypoints from game state
+  const waypoints = gameStateInstance.getAllWaypoints();
+  if (!waypoints || waypoints.length === 0) return;
+
+  const [shipLon, shipLat] = state.ownshipPosition || [-70.6709, 41.5223];
+  const range = state.range || 10;
+  const showNames = gameStateInstance.getProperty('navigation.displaySettings.showWaypointNames');
+
+  // Waypoint colors by category
+  const categoryColors = {
+    NAV: '#00FFFF',    // Cyan
+    SCI: '#00FF00',    // Green
+    HAZ: '#FF0000',    // Red
+    POI: '#FFFF00'     // Yellow
+  };
+
+  // Waypoint symbols by type (within each category)
+  const typeSymbols = {
+    // NAV types
+    HARBOUR: 'circle',
+    ANCHORAGE: 'square',
+    CHANNEL: 'diamond',
+    TURNING_POINT: 'triangle',
+    // SCI types
+    SAMPLE_SITE: 'cross',
+    RESEARCH_AREA: 'circle',
+    SURVEY_POINT: 'square',
+    WRECK: 'x',
+    // HAZ types
+    ROCK: 'x',
+    SHALLOW: 'square',
+    OBSTRUCTION: 'diamond',
+    RESTRICTED_AREA: 'circle',
+    // POI types
+    LANDMARK: 'star',
+    REFERENCE: 'circle',
+    CUSTOM: 'circle'
+  };
+
+  waypoints.forEach(waypoint => {
+    const [wptLon, wptLat] = waypoint.geometry.coordinates;
+
+    // Calculate distance and bearing to waypoint
+    const distance = missionComputer.calculateDistance(shipLon, shipLat, wptLon, wptLat);
+
+    // Skip if waypoint is outside display range
+    if (distance > range) return;
+
+    const bearing = missionComputer.calculateBearing(shipLon, shipLat, wptLon, wptLat);
+
+    // Adjust bearing for rotation (heading-up or track-up displays)
+    const adjustedBearing = bearing - rotationAngle;
+    const angle = toRadians(adjustedBearing);
+
+    // Calculate screen position
+    const screenDistance = (distance / range) * maxRadius;
+    const x = cx + screenDistance * Math.cos(angle);
+    const y = cy + screenDistance * Math.sin(angle);
+
+    // Get color and symbol
+    const color = categoryColors[waypoint.category] || '#FFFFFF';
+    const symbol = typeSymbols[waypoint.type] || 'circle';
+
+    // Draw waypoint symbol
+    ctx.save();
+    ctx.strokeStyle = color;
+    ctx.fillStyle = color;
+    ctx.lineWidth = 2;
+
+    const size = 8;
+
+    switch (symbol) {
+      case 'circle':
+        ctx.beginPath();
+        ctx.arc(x, y, size, 0, Math.PI * 2);
+        ctx.stroke();
+        break;
+
+      case 'square':
+        ctx.strokeRect(x - size, y - size, size * 2, size * 2);
+        break;
+
+      case 'diamond':
+        ctx.beginPath();
+        ctx.moveTo(x, y - size);
+        ctx.lineTo(x + size, y);
+        ctx.lineTo(x, y + size);
+        ctx.lineTo(x - size, y);
+        ctx.closePath();
+        ctx.stroke();
+        break;
+
+      case 'triangle':
+        ctx.beginPath();
+        ctx.moveTo(x, y - size);
+        ctx.lineTo(x + size, y + size);
+        ctx.lineTo(x - size, y + size);
+        ctx.closePath();
+        ctx.stroke();
+        break;
+
+      case 'cross':
+        ctx.beginPath();
+        ctx.moveTo(x - size, y);
+        ctx.lineTo(x + size, y);
+        ctx.moveTo(x, y - size);
+        ctx.lineTo(x, y + size);
+        ctx.stroke();
+        break;
+
+      case 'x':
+        ctx.beginPath();
+        ctx.moveTo(x - size, y - size);
+        ctx.lineTo(x + size, y + size);
+        ctx.moveTo(x + size, y - size);
+        ctx.lineTo(x - size, y + size);
+        ctx.stroke();
+        break;
+
+      case 'star':
+        // 5-pointed star
+        ctx.beginPath();
+        for (let i = 0; i < 5; i++) {
+          const starAngle = (i * 4 * Math.PI / 5) - Math.PI / 2;
+          const radius = i % 2 === 0 ? size : size / 2;
+          const px = x + radius * Math.cos(starAngle);
+          const py = y + radius * Math.sin(starAngle);
+          if (i === 0) {
+            ctx.moveTo(px, py);
+          } else {
+            ctx.lineTo(px, py);
+          }
+        }
+        ctx.closePath();
+        ctx.stroke();
+        break;
+    }
+
+    // Draw waypoint name if enabled
+    if (showNames && waypoint.name) {
+      ctx.fillStyle = color;
+      ctx.font = '10px monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      ctx.fillText(waypoint.name, x, y + size + 3);
+    }
+
+    ctx.restore();
+  });
+}
+
+// ============================================================================
 // LAT/LON GRID FOR PLAN VIEW
 // ============================================================================
 
@@ -1091,6 +1301,11 @@ function drawPlanContent(ctx, cx, cy, maxRadius, state, canvasWidth, canvasHeigh
     drawBathymetryContours(ctx, cx, cy, maxRadius, state, bathymetryData, 0, tileBounds);
   }
 
+  // 3.5. Draw waypoints if enabled (north-up, no rotation)
+  if (state.overlays && state.overlays.waypoints) {
+    drawWaypoints(ctx, cx, cy, maxRadius, state, 0);
+  }
+
   // 4. Draw lat/lon grid if enabled
   if (state.overlays && state.overlays.latLonGrid) {
     drawLatLonGrid(ctx, cx, cy, maxRadius, state);
@@ -1131,6 +1346,11 @@ function drawRoseContent(ctx, cx, cy, maxRadius, state, canvasWidth, canvasHeigh
     const primaryTile = bathymetryTileManager.primaryTile;
     const tileBounds = primaryTile ? getTileBounds(primaryTile) : null;
     drawBathymetryContours(ctx, cx, cy, maxRadius, state, bathymetryData, rotationAngle, tileBounds);
+  }
+
+  // 4.5. Draw waypoints if enabled (rotated for track-up display)
+  if (state.overlays && state.overlays.waypoints) {
+    drawWaypoints(ctx, cx, cy, maxRadius, state, rotationAngle);
   }
 
   // 4. Ownship at center pointing up (same as ARC view - no rotation)

@@ -1,8 +1,10 @@
 // utils/mfd/pages/navigationPage.js
-// 
+//
 
 import { drawNavigationDisplay } from '/game/systems/navComputer/navComputer.js';
 import gameStateInstance from '/game/state.js';
+import missionComputer from '/game/systems/missionComputer/missionComputer.js';
+import { formatLatitude, formatLongitude, parseCoordinateInput } from '/utils/coordinates.js';
 
 class NavigationPage {
     static init(mfd) {
@@ -54,10 +56,12 @@ class NavigationPage {
 
     static getSoftKeys(mfd) {
         const state = mfd.getPageState('navigation');
-        
+
         switch (state.mode) {
             case 'overlays':
                 return this.getOverlaySoftKeys(mfd, state);
+            case 'waypoint':
+                return this.getWaypointSoftKeys(mfd, state);
             case 'route':
                 return this.getRouteSoftKeys(mfd, state);
             default: // 'map'
@@ -65,7 +69,7 @@ class NavigationPage {
         }
     }
 
-    // Main menu. Basic map controls and submenu access 
+    // Main menu. Basic map controls and submenu access
     static getMapSoftKeys(mfd, state) {
     const range = gameStateInstance.getProperty("displaySettings.navDisplayRange") || 10;
     const displayMode = state.displayMode || 'ARC';
@@ -79,7 +83,7 @@ class NavigationPage {
             displayMode,   // L4: Display mode ARC/PLAN/ROSE
             'SHOW',        // L5: Overlays selection
             '', '', '', '', '',  // C1-C5: Empty for nav page
-            'ROUTE',       // R1: Route menu for waypoint management
+            'WYPT',        // R1: Waypoint management menu
             '', '', '', ''       // R2-R5: Empty
         ],
         actions: [ // Not sure if this is still used
@@ -89,7 +93,7 @@ class NavigationPage {
             () => this.cycleDisplayMode(mfd),      // L4
             () => this.setMode(mfd, 'overlays'),   // L5
             null, null, null, null, null,          // C1-C5
-            () => this.setMode(mfd, 'route'),      // R1
+            () => this.setMode(mfd, 'waypoint'),   // R1
             null, null, null, null                 // R2-R5
         ],
         states: [ // Not sure if this is still used
@@ -148,6 +152,176 @@ class NavigationPage {
                 { type: 'momentary', selected: false },                         // R4: ALL ON
                 { type: 'momentary', selected: false }                          // R5: ALL OFF
             ]
+        };
+    }
+
+    static getWaypointSoftKeys(mfd, state) {
+        const construction = gameStateInstance.getProperty('navigation.waypointConstruction');
+
+        // If in construction mode, show context-specific soft keys
+        if (construction && construction.active) {
+            return this.getWaypointConstructionSoftKeys(mfd, construction);
+        }
+
+        // Default waypoint management menu
+        return {
+            // L1-L5, C1-C5, R1-R5 (15 buttons)
+            labels: [
+                'ADD',      // L1: Add new waypoint
+                'EDIT',     // L2: Edit waypoint
+                'DELETE',   // L3: Delete waypoint
+                'LIST',     // L4: List all waypoints
+                'BACK',     // L5: Back to map
+                '', '', '', '', '',  // C1-C5: Empty
+                '',         // R1
+                '',         // R2
+                '',         // R3
+                '',         // R4
+                ''          // R5
+            ],
+            actions: [
+                () => this.startAddWaypoint(mfd),     // L1
+                () => this.startEditWaypoint(mfd),    // L2
+                () => this.startDeleteWaypoint(mfd),  // L3
+                () => this.showWaypointList(mfd),     // L4
+                () => this.backToMap(mfd),            // L5
+                null, null, null, null, null,         // C1-C5
+                null, null, null, null, null          // R1-R5
+            ],
+            states: [
+                { type: 'momentary', selected: false },  // L1: ADD
+                { type: 'momentary', selected: false },  // L2: EDIT
+                { type: 'momentary', selected: false },  // L3: DELETE
+                { type: 'momentary', selected: false },  // L4: LIST
+                { type: 'momentary', selected: false },  // L5: BACK
+                null, null, null, null, null,            // C1-C5
+                null, null, null, null, null             // R1-R5
+            ]
+        };
+    }
+
+    static getWaypointConstructionSoftKeys(mfd, construction) {
+        // Edit/Delete selection mode
+        if (construction.mode === 'edit_select' || construction.mode === 'delete_select') {
+            const isEdit = construction.mode === 'edit_select';
+            return {
+                labels: [
+                    'UP',       // L1: Previous waypoint
+                    'DOWN',     // L2: Next waypoint
+                    '',         // L3
+                    isEdit ? 'EDIT' : 'DELETE',  // L4: Confirm action
+                    'CANCEL',   // L5
+                    '', '', '', '', '',
+                    '', '', '', '', ''
+                ],
+                actions: [
+                    () => this.selectPreviousWaypoint(mfd),
+                    () => this.selectNextWaypoint(mfd),
+                    null,
+                    isEdit ? () => this.confirmEditSelection(mfd) : () => this.confirmDeleteSelection(mfd),
+                    () => this.cancelWaypointConstruction(mfd),
+                    null, null, null, null, null,
+                    null, null, null, null, null
+                ],
+                states: Array(15).fill({ type: 'momentary', selected: false })
+            };
+        }
+
+        // Category selection (step 4)
+        if (construction.step === 4) {
+            return {
+                labels: [
+                    'NAV',      // L1
+                    'SCI',      // L2
+                    'HAZ',      // L3
+                    'POI',      // L4
+                    'CANCEL',   // L5
+                    '', '', '', '', '',
+                    '', '', '', '', ''
+                ],
+                actions: [
+                    () => this.selectCategory(mfd, 'NAV'),
+                    () => this.selectCategory(mfd, 'SCI'),
+                    () => this.selectCategory(mfd, 'HAZ'),
+                    () => this.selectCategory(mfd, 'POI'),
+                    () => this.cancelWaypointConstruction(mfd),
+                    null, null, null, null, null,
+                    null, null, null, null, null
+                ],
+                states: Array(15).fill({ type: 'momentary', selected: false })
+            };
+        }
+
+        // Type selection (step 5)
+        if (construction.step === 5) {
+            const types = missionComputer.getWaypointTypes();
+            const categoryTypes = types[construction.data.category];
+
+            return {
+                labels: [
+                    categoryTypes[0] || '',
+                    categoryTypes[1] || '',
+                    categoryTypes[2] || '',
+                    categoryTypes[3] || '',
+                    'CANCEL',
+                    '', '', '', '', '',
+                    '', '', '', '', ''
+                ],
+                actions: [
+                    categoryTypes[0] ? () => this.selectType(mfd, categoryTypes[0]) : null,
+                    categoryTypes[1] ? () => this.selectType(mfd, categoryTypes[1]) : null,
+                    categoryTypes[2] ? () => this.selectType(mfd, categoryTypes[2]) : null,
+                    categoryTypes[3] ? () => this.selectType(mfd, categoryTypes[3]) : null,
+                    () => this.cancelWaypointConstruction(mfd),
+                    null, null, null, null, null,
+                    null, null, null, null, null
+                ],
+                states: Array(15).fill({ type: 'momentary', selected: false })
+            };
+        }
+
+        // Confirmation (step 6)
+        if (construction.step === 6) {
+            return {
+                labels: [
+                    'SAVE',     // L1
+                    '',         // L2
+                    '',         // L3
+                    '',         // L4
+                    'CANCEL',   // L5
+                    '', '', '', '', '',
+                    '', '', '', '', ''
+                ],
+                actions: [
+                    () => this.saveWaypoint(mfd),
+                    null, null, null,
+                    () => this.cancelWaypointConstruction(mfd),
+                    null, null, null, null, null,
+                    null, null, null, null, null
+                ],
+                states: Array(15).fill({ type: 'momentary', selected: false })
+            };
+        }
+
+        // Default: during keyboard input (steps 0-3)
+        return {
+            labels: [
+                'PPOS',     // L1: Capture present position
+                '',         // L2
+                '',         // L3
+                '',         // L4
+                'CANCEL',   // L5
+                '', '', '', '', '',
+                '', '', '', '', ''
+            ],
+            actions: [
+                () => this.handlePPOS(mfd),
+                null, null, null,
+                () => this.cancelWaypointConstruction(mfd),
+                null, null, null, null, null,
+                null, null, null, null, null
+            ],
+            states: Array(15).fill({ type: 'momentary', selected: false })
         };
     }
 
@@ -507,7 +681,502 @@ class NavigationPage {
         console.log('ALL OVERLAYS: DISABLED');
     }
 
-    // Route Management Methods
+    // ========================================
+    // WAYPOINT MANAGEMENT METHODS
+    // ========================================
+
+    /**
+     * Start the ADD waypoint workflow
+     * Step 1: Request waypoint name
+     */
+    static startAddWaypoint(mfd) {
+        // Get current position as defaults
+        const currentPos = missionComputer.getCurrentPosition();
+
+        // Initialize waypoint construction state
+        gameStateInstance.updateProperty('navigation.waypointConstruction', {
+            active: true,
+            mode: 'add',
+            step: 0,
+            data: {
+                lat: currentPos.lat,
+                lon: currentPos.lon,
+                depth: currentPos.depth,
+                category: 'NAV',
+                type: 'HARBOUR'
+            }
+        });
+
+        // Request name input
+        mfd.requestKeyboardInput('WPT NAME: ', 'waypoint_construct_name', 5);
+        mfd.needsRedraw = true;
+    }
+
+    /**
+     * Start EDIT waypoint workflow
+     */
+    static startEditWaypoint(mfd) {
+        const waypoints = gameStateInstance.getAllWaypoints();
+
+        if (waypoints.length === 0) {
+            console.log('NO WAYPOINTS TO EDIT');
+            return;
+        }
+
+        // Initialize edit selection state
+        gameStateInstance.updateProperty('navigation.waypointConstruction', {
+            active: true,
+            mode: 'edit_select',
+            step: 0,
+            editingId: null,
+            data: {
+                selectedIndex: 0,
+                waypoints: waypoints
+            }
+        });
+
+        mfd.setupPageSoftKeys('navigation');
+        mfd.needsRedraw = true;
+    }
+
+    /**
+     * Start DELETE waypoint workflow
+     */
+    static startDeleteWaypoint(mfd) {
+        const waypoints = gameStateInstance.getAllWaypoints();
+
+        if (waypoints.length === 0) {
+            console.log('NO WAYPOINTS TO DELETE');
+            return;
+        }
+
+        // Initialize delete selection state
+        gameStateInstance.updateProperty('navigation.waypointConstruction', {
+            active: true,
+            mode: 'delete_select',
+            step: 0,
+            data: {
+                selectedIndex: 0,
+                waypoints: waypoints
+            }
+        });
+
+        mfd.setupPageSoftKeys('navigation');
+        mfd.needsRedraw = true;
+    }
+
+    /**
+     * Show list of all waypoints
+     */
+    static showWaypointList(mfd) {
+        const waypoints = missionComputer.getAllWaypointsWithNavData();
+
+        if (waypoints.length === 0) {
+            console.log('NO WAYPOINTS');
+            return;
+        }
+
+        // Sort by distance
+        waypoints.sort((a, b) => a.distance - b.distance);
+
+        console.log('=== WAYPOINTS ===');
+        waypoints.forEach((wpt, index) => {
+            const dist = wpt.distance.toFixed(1);
+            const brg = Math.round(wpt.bearing);
+            console.log(`${index + 1}. ${wpt.name} - ${wpt.category}/${wpt.type} - ${dist}NM @ ${brg}°`);
+        });
+    }
+
+    /**
+     * Navigate waypoint list selection
+     */
+    static selectNextWaypoint(mfd) {
+        const construction = gameStateInstance.getProperty('navigation.waypointConstruction');
+        if (!construction || !construction.data.waypoints) return;
+
+        const maxIndex = construction.data.waypoints.length - 1;
+        if (construction.data.selectedIndex < maxIndex) {
+            construction.data.selectedIndex++;
+            gameStateInstance.updateProperty('navigation.waypointConstruction', construction);
+            mfd.needsRedraw = true;
+        }
+    }
+
+    static selectPreviousWaypoint(mfd) {
+        const construction = gameStateInstance.getProperty('navigation.waypointConstruction');
+        if (!construction || !construction.data.waypoints) return;
+
+        if (construction.data.selectedIndex > 0) {
+            construction.data.selectedIndex--;
+            gameStateInstance.updateProperty('navigation.waypointConstruction', construction);
+            mfd.needsRedraw = true;
+        }
+    }
+
+    /**
+     * Confirm edit waypoint selection
+     */
+    static confirmEditSelection(mfd) {
+        const construction = gameStateInstance.getProperty('navigation.waypointConstruction');
+        const waypoint = construction.data.waypoints[construction.data.selectedIndex];
+
+        // Set up edit mode with current waypoint data
+        construction.mode = 'edit';
+        construction.step = 0;
+        construction.editingId = waypoint.id;
+        construction.data = {
+            name: waypoint.name,
+            lat: waypoint.geometry.coordinates[1],
+            lon: waypoint.geometry.coordinates[0],
+            depth: waypoint.depth,
+            category: waypoint.category,
+            type: waypoint.type
+        };
+
+        gameStateInstance.updateProperty('navigation.waypointConstruction', construction);
+
+        // Start edit workflow with name input
+        mfd.requestKeyboardInput(`NAME [${waypoint.name}]: `, 'waypoint_construct_name', 5);
+        mfd.needsRedraw = true;
+    }
+
+    /**
+     * Confirm delete waypoint selection
+     */
+    static confirmDeleteSelection(mfd) {
+        const construction = gameStateInstance.getProperty('navigation.waypointConstruction');
+        const waypoint = construction.data.waypoints[construction.data.selectedIndex];
+
+        // Check if this is a system waypoint
+        if (waypoint.source !== 'user') {
+            console.log('ERROR: Cannot delete system waypoint');
+            return;
+        }
+
+        const result = missionComputer.deleteWaypoint(waypoint.id);
+
+        if (result.success) {
+            console.log(`WAYPOINT DELETED: ${waypoint.name}`);
+
+            // Clear construction state
+            gameStateInstance.updateProperty('navigation.waypointConstruction', {
+                active: false,
+                mode: null,
+                step: 0,
+                data: {}
+            });
+
+            // Return to waypoint menu
+            this.setMode(mfd, 'waypoint');
+        } else {
+            console.log(`ERROR: ${result.error}`);
+        }
+    }
+
+    /**
+     * Handle PPOS button press during waypoint construction
+     */
+    static handlePPOS(mfd) {
+        const construction = gameStateInstance.getProperty('navigation.waypointConstruction');
+
+        if (!construction || !construction.active) {
+            console.log('PPOS: No active waypoint construction');
+            return;
+        }
+
+        // Capture current position
+        const currentPos = missionComputer.getCurrentPosition();
+        construction.data.lat = currentPos.lat;
+        construction.data.lon = currentPos.lon;
+        construction.data.depth = currentPos.depth;
+
+        gameStateInstance.updateProperty('navigation.waypointConstruction', construction);
+
+        console.log(`PPOS CAPTURED: ${formatLatitude(currentPos.lat)}, ${formatLongitude(currentPos.lon)}, ${currentPos.depth}m`);
+        mfd.needsRedraw = true;
+    }
+
+    /**
+     * Handle keyboard input for waypoint construction
+     */
+    static handleKeyboardInput(mfd, data) {
+        const construction = gameStateInstance.getProperty('navigation.waypointConstruction');
+
+        if (!construction || !construction.active) return;
+
+        switch (data.context) {
+            case 'waypoint_construct_name':
+                this.handleNameInput(mfd, data.input);
+                break;
+            case 'waypoint_construct_lat':
+                this.handleLatitudeInput(mfd, data.input);
+                break;
+            case 'waypoint_construct_lon':
+                this.handleLongitudeInput(mfd, data.input);
+                break;
+            case 'waypoint_construct_depth':
+                this.handleDepthInput(mfd, data.input);
+                break;
+        }
+    }
+
+    /**
+     * Handle name input (Step 1)
+     */
+    static handleNameInput(mfd, name) {
+        const construction = gameStateInstance.getProperty('navigation.waypointConstruction');
+
+        if (!name || name.trim() === '') {
+            console.log('ERROR: Name cannot be empty');
+            return;
+        }
+
+        if (name.length > 5) {
+            console.log('ERROR: Name must be 5 characters or less');
+            return;
+        }
+
+        construction.data.name = name.toUpperCase();
+        construction.step = 1;
+        gameStateInstance.updateProperty('navigation.waypointConstruction', construction);
+
+        // Move to latitude input
+        const latStr = formatLatitude(construction.data.lat);
+        mfd.requestKeyboardInput(`LAT [${latStr}]: `, 'waypoint_construct_lat', 15);
+        mfd.needsRedraw = true;
+    }
+
+    /**
+     * Handle latitude input (Step 2)
+     */
+    static handleLatitudeInput(mfd, input) {
+        const construction = gameStateInstance.getProperty('navigation.waypointConstruction');
+
+        // If empty, keep current value
+        if (!input || input.trim() === '') {
+            construction.step = 2;
+            gameStateInstance.updateProperty('navigation.waypointConstruction', construction);
+
+            const lonStr = formatLongitude(construction.data.lon);
+            mfd.requestKeyboardInput(`LON [${lonStr}]: `, 'waypoint_construct_lon', 15);
+            mfd.needsRedraw = true;
+            return;
+        }
+
+        // Parse input
+        const lat = parseCoordinateInput(input, 'lat');
+        if (lat === null) {
+            console.log('ERROR: Invalid latitude format');
+            return;
+        }
+
+        if (lat < -90 || lat > 90) {
+            console.log('ERROR: Latitude must be between -90 and 90');
+            return;
+        }
+
+        construction.data.lat = lat;
+        construction.step = 2;
+        gameStateInstance.updateProperty('navigation.waypointConstruction', construction);
+
+        // Move to longitude input
+        const lonStr = formatLongitude(construction.data.lon);
+        mfd.requestKeyboardInput(`LON [${lonStr}]: `, 'waypoint_construct_lon', 15);
+        mfd.needsRedraw = true;
+    }
+
+    /**
+     * Handle longitude input (Step 3)
+     */
+    static handleLongitudeInput(mfd, input) {
+        const construction = gameStateInstance.getProperty('navigation.waypointConstruction');
+
+        // If empty, keep current value
+        if (!input || input.trim() === '') {
+            construction.step = 3;
+            gameStateInstance.updateProperty('navigation.waypointConstruction', construction);
+
+            mfd.requestKeyboardInput(`DEPTH [${construction.data.depth}m]: `, 'waypoint_construct_depth', 6);
+            mfd.needsRedraw = true;
+            return;
+        }
+
+        // Parse input
+        const lon = parseCoordinateInput(input, 'lon');
+        if (lon === null) {
+            console.log('ERROR: Invalid longitude format');
+            return;
+        }
+
+        if (lon < -180 || lon > 180) {
+            console.log('ERROR: Longitude must be between -180 and 180');
+            return;
+        }
+
+        construction.data.lon = lon;
+        construction.step = 3;
+        gameStateInstance.updateProperty('navigation.waypointConstruction', construction);
+
+        // Move to depth input
+        mfd.requestKeyboardInput(`DEPTH [${construction.data.depth}m]: `, 'waypoint_construct_depth', 6);
+        mfd.needsRedraw = true;
+    }
+
+    /**
+     * Handle depth input (Step 4)
+     */
+    static handleDepthInput(mfd, input) {
+        const construction = gameStateInstance.getProperty('navigation.waypointConstruction');
+
+        // If empty, keep current value
+        if (!input || input.trim() === '') {
+            construction.step = 4;
+            gameStateInstance.updateProperty('navigation.waypointConstruction', construction);
+            this.showCategorySelection(mfd);
+            return;
+        }
+
+        const depth = parseFloat(input);
+        if (isNaN(depth)) {
+            console.log('ERROR: Invalid depth value');
+            return;
+        }
+
+        if (depth < 0 || depth > 11000) {
+            console.log('ERROR: Depth must be between 0 and 11000 meters');
+            return;
+        }
+
+        construction.data.depth = depth;
+        construction.step = 4;
+        gameStateInstance.updateProperty('navigation.waypointConstruction', construction);
+
+        // Move to category selection
+        this.showCategorySelection(mfd);
+    }
+
+    /**
+     * Show category selection (Step 5)
+     */
+    static showCategorySelection(mfd) {
+        const construction = gameStateInstance.getProperty('navigation.waypointConstruction');
+        construction.step = 4;
+        gameStateInstance.updateProperty('navigation.waypointConstruction', construction);
+
+        // Update soft keys to show category options
+        mfd.setupPageSoftKeys('navigation');
+        mfd.needsRedraw = true;
+        console.log('SELECT CATEGORY: NAV/SCI/HAZ/POI');
+    }
+
+    /**
+     * Select waypoint category
+     */
+    static selectCategory(mfd, category) {
+        const construction = gameStateInstance.getProperty('navigation.waypointConstruction');
+        construction.data.category = category;
+
+        // Set default type for category
+        const types = missionComputer.getWaypointTypes();
+        construction.data.type = types[category][0];
+
+        construction.step = 5;
+        gameStateInstance.updateProperty('navigation.waypointConstruction', construction);
+
+        // Show type selection
+        this.showTypeSelection(mfd);
+    }
+
+    /**
+     * Show type selection (Step 6)
+     */
+    static showTypeSelection(mfd) {
+        mfd.setupPageSoftKeys('navigation');
+        mfd.needsRedraw = true;
+        console.log('SELECT TYPE');
+    }
+
+    /**
+     * Select waypoint type
+     */
+    static selectType(mfd, type) {
+        const construction = gameStateInstance.getProperty('navigation.waypointConstruction');
+        construction.data.type = type;
+        construction.step = 6;
+        gameStateInstance.updateProperty('navigation.waypointConstruction', construction);
+
+        // Show confirmation
+        this.showWaypointConfirmation(mfd);
+    }
+
+    /**
+     * Show confirmation (Step 7)
+     */
+    static showWaypointConfirmation(mfd) {
+        mfd.setupPageSoftKeys('navigation');
+        mfd.needsRedraw = true;
+        console.log('CONFIRM WAYPOINT');
+    }
+
+    /**
+     * Save the waypoint (handles both add and edit)
+     */
+    static saveWaypoint(mfd) {
+        const construction = gameStateInstance.getProperty('navigation.waypointConstruction');
+
+        let result;
+        if (construction.mode === 'edit' && construction.editingId) {
+            // Update existing waypoint
+            result = missionComputer.updateWaypoint(construction.editingId, construction.data);
+
+            if (result.success) {
+                const waypoint = gameStateInstance.getWaypoint(construction.editingId);
+                console.log(`WAYPOINT UPDATED: ${waypoint.name}`);
+            }
+        } else {
+            // Create new waypoint
+            result = missionComputer.createWaypoint(construction.data);
+
+            if (result.success) {
+                console.log(`WAYPOINT CREATED: ${result.waypoint.name}`);
+            }
+        }
+
+        if (result.success) {
+            // Clear construction state
+            gameStateInstance.updateProperty('navigation.waypointConstruction', {
+                active: false,
+                mode: null,
+                step: 0,
+                data: {}
+            });
+
+            // Return to waypoint menu
+            this.setMode(mfd, 'waypoint');
+        } else {
+            console.log(`ERROR: ${result.error}`);
+        }
+    }
+
+    /**
+     * Cancel waypoint construction
+     */
+    static cancelWaypointConstruction(mfd) {
+        gameStateInstance.updateProperty('navigation.waypointConstruction', {
+            active: false,
+            mode: null,
+            step: 0,
+            data: {}
+        });
+
+        this.setMode(mfd, 'waypoint');
+        console.log('WAYPOINT CONSTRUCTION: CANCELLED');
+    }
+
+    // ========================================
+    // ROUTE MANAGEMENT METHODS (Legacy - for routes feature)
+    // ========================================
+
     static addWaypoint(mfd) {
         mfd.requestKeyboardInput('WPT NAME: ', 'waypoint_add', 8);
     }
@@ -522,7 +1191,6 @@ class NavigationPage {
         const state = mfd.getPageState('navigation');
         const selectedIndex = state.routeView.selectedWaypoint;
         console.log(`WAYPOINT ${selectedIndex + 1}: DELETED`);
-        // Implementation would remove waypoint from mission computer
     }
 
     static moveWaypointUp(mfd) {
@@ -535,7 +1203,6 @@ class NavigationPage {
 
     static moveWaypointDown(mfd) {
         const state = mfd.getPageState('navigation');
-        // Mock limit - would use actual waypoint count
         const maxWaypoints = 4;
         if (state.routeView.selectedWaypoint < maxWaypoints - 1) {
             state.routeView.selectedWaypoint++;
@@ -545,26 +1212,12 @@ class NavigationPage {
 
     static executeRoute(mfd) {
         console.log('ROUTE: EXECUTING');
-        // Implementation would tell mission computer to activate route
     }
 
     static directToWaypoint(mfd) {
         const state = mfd.getPageState('navigation');
         const selectedIndex = state.routeView.selectedWaypoint;
         console.log(`DIRECT TO: WAYPOINT ${selectedIndex + 1}`);
-        // Implementation would set direct course to selected waypoint
-    }
-
-    // Keyboard Input Handler
-    static handleKeyboardInput(mfd, data) {
-        if (data.context === 'waypoint_add') {
-            console.log(`WAYPOINT ADDED: ${data.input}`);
-            // Implementation would add to mission computer
-        } else if (data.context.startsWith('waypoint_edit_')) {
-            const index = parseInt(data.context.split('_')[2]);
-            console.log(`WAYPOINT ${index + 1} UPDATED: ${data.input}`);
-            // Implementation would update waypoint in mission computer
-        }
     }
 }
 

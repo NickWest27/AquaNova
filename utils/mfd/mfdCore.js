@@ -107,12 +107,8 @@ class MFDCore {
             this.pendingStateChange = true;
         });
 
-        // Listen for keyboard unit data
-        if (this.keyboardUnit) {
-            this.addEventListenerWithCleanup(document, 'keyboard-data-sent', (e) => {
-                this.handleKeyboardInput(e.detail);
-            });
-        }
+        // Note: keyboard-data-sent event is handled by bridge.js which calls handleKeyboardInput
+        // Don't duplicate the event listener here
     }
 
     // Update overlay positioning (called on resize)
@@ -353,10 +349,12 @@ class MFDCore {
 
     // Utility Methods
     requestKeyboardInput(prompt, context, maxLength = 20) {
+        console.log(`MFD: Requesting keyboard input - "${prompt}" (context: ${context})`);
         if (this.keyboardUnit) {
+            console.log('MFD: Keyboard unit is connected, calling requestInput()');
             this.keyboardUnit.requestInput(prompt, context, maxLength);
         } else {
-            console.warn('MFD: No keyboard unit available for input');
+            console.error('MFD: No keyboard unit available for input - this.keyboardUnit is', this.keyboardUnit);
         }
     }
 
