@@ -539,129 +539,153 @@ function drawNavigationReadouts(svg, cx, cy, maxRadius, state, width, height) {
   svg.appendChild(modeText);
 }
 
-function drawContextInfoBox(svg, state) {
-  // Context-sensitive info box in top left
-  // Shows relevant information based on what's selected or active
-
-  let title = null;
-  let line1 = null;
-  let line2 = null;
-  let line3 = null;
-  let line4 = null;
-
+/**
+ * Get context info box configuration (data-driven approach)
+ * Returns { title, lines } or null if no context to display
+ */
+function getContextInfoConfig(state) {
   // Check for waypoint construction in progress
   const construction = gameStateInstance.getProperty('navigation.waypointConstruction');
   if (construction && construction.active) {
-    const data = construction.data || {};
-    const step = construction.step || 0;
-    const method = construction.method;
-    const modeLabel = construction.mode === 'add' ? 'NEW' : construction.mode === 'edit' ? 'EDIT' : 'DELETE';
-
-    // Show method in title if selected
-    if (method) {
-      title = `${modeLabel} WAYPOINT (${method === 'pbd' ? 'PBD' : 'LAT/LON'})`;
-    } else {
-      title = `${modeLabel} WAYPOINT`;
-    }
-
-    // Updated step numbering:
-    // Step 0: category selection
-    // Step 1: name entry
-    // Step 2: method selection (LAT/LON or PBD)
-    // LAT/LON: Step 3=lat, 4=lon, 5=depth, 5=type, 6=confirm
-    // PBD: Step 3=place, 4=bearing, 5=distance, 6=type, 7=confirm
-
-    line1 = (step >= 2 && data.name) ? `NAME: ${data.name}` : 'NAME: _____';
-
-    // Display based on method
-    if (method === 'pbd') {
-      // PBD mode: Show reference point, bearing, distance, then calculated coords
-      if (step >= 4 && data.refName) {
-        line2 = `FROM: ${data.refName}`;
-      } else {
-        line2 = 'FROM: ____';
-      }
-
-      if (step >= 5 && data.bearing !== undefined) {
-        line3 = `BRG:  ${String(Math.round(data.bearing)).padStart(3, '0')}°`;
-      } else {
-        line3 = 'BRG:  ___°';
-      }
-
-      if (step >= 6 && data.distance !== undefined) {
-        line4 = `DST:  ${data.distance.toFixed(1)} NM`;
-      } else {
-        line4 = 'DST:  ___ NM';
-      }
-
-      // After distance is entered, also show calculated position
-      if (step >= 6 && data.lat !== undefined && data.lon !== undefined) {
-        // We'll show the calculated coords in a second info section
-        // For now, keep the PBD parameters primary
-      }
-    } else if (method === 'latlon') {
-      // LAT/LON mode: Show coordinates directly
-      if (step >= 4 && data.lat !== undefined) {
-        const latStr = formatLatitude(data.lat);
-        line2 = `LAT:  ${latStr}`;
-      } else {
-        line2 = 'LAT:  ___________';
-      }
-
-      if (step >= 5 && data.lon !== undefined) {
-        const lonStr = formatLongitude(data.lon);
-        line3 = `LON:  ${lonStr}`;
-      } else {
-        line3 = 'LON:  ___________';
-      }
-
-      if (step >= 6 && data.depth !== undefined) {
-        line4 = `DPTH: ${data.depth}m`;
-      } else {
-        line4 = 'DPTH: ____m';
-      }
-    } else {
-      // No method selected yet (step 0-2)
-      line2 = null;
-      line3 = null;
-      line4 = null;
-    }
+    return getWaypointConstructionInfo(construction);
   }
-  // Check for selected waypoint (if waypoint data exists in state)
-  else if (state.selectedWaypoint) {
-    title = state.selectedWaypoint.name || "WAYPOINT";
-    line1 = `BRG: ${Math.round(state.selectedWaypoint.bearing || 0)}°`;
-    line2 = `DST: ${(state.selectedWaypoint.distance || 0).toFixed(1)} NM`;
-    line3 = state.selectedWaypoint.type ? `TYPE: ${state.selectedWaypoint.type}` : null;
+
+  // Check for selected waypoint
+  if (state.selectedWaypoint) {
+    return {
+      title: state.selectedWaypoint.name || "WAYPOINT",
+      lines: [
+        `BRG: ${Math.round(state.selectedWaypoint.bearing || 0)}°`,
+        `DST: ${(state.selectedWaypoint.distance || 0).toFixed(1)} NM`,
+        state.selectedWaypoint.type ? `TYPE: ${state.selectedWaypoint.type}` : null
+      ].filter(l => l !== null)
+    };
   }
+
   // Check for destination
-  else if (state.destination) {
-    title = state.destination.name || "DESTINATION";
-    line1 = `BRG: ${Math.round(state.destination.bearing || 0)}°`;
-    line2 = `DST: ${(state.destination.distance || 0).toFixed(1)} NM`;
-    line3 = state.destination.eta ? `ETA: ${state.destination.eta}` : null;
+  if (state.destination) {
+    return {
+      title: state.destination.name || "DESTINATION",
+      lines: [
+        `BRG: ${Math.round(state.destination.bearing || 0)}°`,
+        `DST: ${(state.destination.distance || 0).toFixed(1)} NM`,
+        state.destination.eta ? `ETA: ${state.destination.eta}` : null
+      ].filter(l => l !== null)
+    };
   }
+
   // Check for active route
-  else if (state.activeRoute) {
-    title = "ACTIVE ROUTE";
-    line1 = `${state.activeRoute.name || "Route"}`;
-    line2 = `WPT: ${state.activeRoute.currentWaypoint || 1}/${state.activeRoute.totalWaypoints || 1}`;
-    line3 = `DST: ${(state.activeRoute.remainingDistance || 0).toFixed(1)} NM`;
+  if (state.activeRoute) {
+    return {
+      title: "ACTIVE ROUTE",
+      lines: [
+        `${state.activeRoute.name || "Route"}`,
+        `WPT: ${state.activeRoute.currentWaypoint || 1}/${state.activeRoute.totalWaypoints || 1}`,
+        `DST: ${(state.activeRoute.remainingDistance || 0).toFixed(1)} NM`
+      ]
+    };
   }
 
-  // Only draw if we have content
-  if (!title) return;
+  return null;
+}
 
-  const x = 10;
-  const y = 10;
-  const boxWidth = 180;
-  const lineHeight = 18;
-  const lines = [line1, line2, line3, line4].filter(l => l !== null);
+/**
+ * Get waypoint construction info configuration
+ * Data-driven: only shows fields that have been set
+ */
+function getWaypointConstructionInfo(construction) {
+  // Check if using new builder-based system or old system
+  let data, method, mode, category, type;
+
+  if (construction.builder) {
+    // New builder-based system
+    const builder = construction.builder;
+    data = builder.data || {};
+    method = builder.method;
+    mode = builder.mode;
+    category = data.category;
+    type = data.type;
+  } else {
+    // Fallback to old system for backward compatibility
+    data = construction.data || {};
+    method = construction.method;
+    mode = construction.mode;
+    category = data.category;
+    type = data.type;
+  }
+
+  // Determine title
+  const modeLabel = mode === 'add' ? 'NEW' :
+                    mode === 'edit' ? 'EDIT' :
+                    mode === 'list' ? 'LIST' : 'DELETE';
+
+  const title = method
+    ? `${modeLabel} WAYPOINT (${method === 'pbd' ? 'PBD' : 'LAT/LON'})`
+    : `${modeLabel} WAYPOINT`;
+
+  // Build lines array - only show fields that have been set
+  const lines = [];
+
+  // Category and Type (show early for visual feedback)
+  if (category && type) {
+    lines.push(`▲ ${category}/${type}`);
+  } else if (category) {
+    lines.push(`▲ ${category}`);
+  }
+
+  // Name (show with icon)
+  if (data.name) {
+    lines.push(`NAME: ${data.name}`);
+  }
+
+  // Method-specific fields
+  if (method === 'pbd') {
+    // PBD mode: Show reference point, bearing, distance
+    if (data.refName) {
+      lines.push(`FROM: ${data.refName}`);
+    }
+    if (data.bearing !== undefined) {
+      lines.push(`BRG:  ${String(Math.round(data.bearing)).padStart(3, '0')}°`);
+    }
+    if (data.distance !== undefined) {
+      lines.push(`DST:  ${data.distance.toFixed(1)} NM`);
+    }
+  } else if (method === 'latlon') {
+    // LAT/LON mode: Show coordinates
+    if (data.lat !== undefined) {
+      const latStr = formatLatitude(data.lat);
+      lines.push(`LAT:  ${latStr}`);
+    }
+    if (data.lon !== undefined) {
+      const lonStr = formatLongitude(data.lon);
+      lines.push(`LON:  ${lonStr}`);
+    }
+    if (data.depth !== undefined) {
+      lines.push(`DPTH: ${data.depth}m`);
+    }
+  }
+
+  return { title, lines };
+}
+
+/**
+ * Render info box at specified position with given configuration
+ * Reusable component for consistent info box styling
+ */
+function renderInfoBox(svg, config, options = {}) {
+  if (!config || !config.title) return;
+
+  const x = options.x || 10;
+  const y = options.y || 10;
+  const boxWidth = options.width || 180;
+  const lineHeight = options.lineHeight || 18;
+
+  const lines = config.lines || [];
   const boxHeight = 25 + (lines.length * lineHeight);
 
   // Create container group
   const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
-  group.setAttribute("class", "context-info-box");
+  group.setAttribute("class", options.className || "context-info-box");
 
   // Background box with semi-transparent fill
   const bg = document.createElementNS("http://www.w3.org/2000/svg", "rect");
@@ -669,8 +693,8 @@ function drawContextInfoBox(svg, state) {
   bg.setAttribute("y", y);
   bg.setAttribute("width", boxWidth);
   bg.setAttribute("height", boxHeight);
-  bg.setAttribute("fill", "rgba(0, 20, 40, 0.85)");
-  bg.setAttribute("stroke", "#00ffff");
+  bg.setAttribute("fill", options.bgColor || "rgba(0, 20, 40, 0.85)");
+  bg.setAttribute("stroke", options.borderColor || "#00ffff");
   bg.setAttribute("stroke-width", "2");
   bg.setAttribute("rx", "4");
   group.appendChild(bg);
@@ -679,11 +703,11 @@ function drawContextInfoBox(svg, state) {
   const titleText = document.createElementNS("http://www.w3.org/2000/svg", "text");
   titleText.setAttribute("x", x + 10);
   titleText.setAttribute("y", y + 18);
-  titleText.setAttribute("fill", "#00ffff");
-  titleText.setAttribute("font-size", "13");
+  titleText.setAttribute("fill", options.titleColor || "#00ffff");
+  titleText.setAttribute("font-size", options.titleSize || "13");
   titleText.setAttribute("font-family", "Arial, sans-serif");
   titleText.setAttribute("font-weight", "bold");
-  titleText.textContent = title;
+  titleText.textContent = config.title;
   group.appendChild(titleText);
 
   // Data lines
@@ -691,14 +715,25 @@ function drawContextInfoBox(svg, state) {
     const lineText = document.createElementNS("http://www.w3.org/2000/svg", "text");
     lineText.setAttribute("x", x + 10);
     lineText.setAttribute("y", y + 38 + (index * lineHeight));
-    lineText.setAttribute("fill", "#ffffff");
-    lineText.setAttribute("font-size", "12");
+    lineText.setAttribute("fill", options.lineColor || "#ffffff");
+    lineText.setAttribute("font-size", options.lineSize || "12");
     lineText.setAttribute("font-family", "Courier New, monospace");
     lineText.textContent = line;
     group.appendChild(lineText);
   });
 
   svg.appendChild(group);
+}
+
+/**
+ * Draw context info box in top left
+ * Simplified, data-driven approach
+ */
+function drawContextInfoBox(svg, state) {
+  const config = getContextInfoConfig(state);
+  if (config) {
+    renderInfoBox(svg, config);
+  }
 }
 
 function drawPositionInfoBox(svg, state, width) {
@@ -996,20 +1031,20 @@ function drawWaypoints(ctx, cx, cy, maxRadius, state, rotationAngle = 0) {
     HARBOUR: 'circle',
     ANCHORAGE: 'square',
     CHANNEL: 'diamond',
-    TURNING_POINT: 'triangle',
+    TURNING_POINT: 'triangle', // default for NAV
     // SCI types
     SAMPLE_SITE: 'cross',
-    RESEARCH_AREA: 'circle',
+    RESEARCH_AREA: 'circle', // default
     SURVEY_POINT: 'square',
     WRECK: 'x',
     // HAZ types
     ROCK: 'x',
     SHALLOW: 'square',
-    OBSTRUCTION: 'diamond',
+    OBSTRUCTION: 'diamond', // default
     RESTRICTED_AREA: 'circle',
     // POI types
     LANDMARK: 'star',
-    REFERENCE: 'circle',
+    REFERENCE: 'circle', // default
     CUSTOM: 'circle'
   };
 

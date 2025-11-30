@@ -359,6 +359,13 @@ function updateNavigationDisplay() {
 
   // Draw navigation content using navComputer
   drawNavigationDisplay(navigationCanvas, navigationSVG, navState, getCurrentDisplayType());
+
+  // Add page-specific overlays (waypoint list, selection displays, etc.)
+  const pageClass = mfdSystem?.pages?.get('navigation');
+  if (pageClass && typeof pageClass.addPageOverlays === 'function') {
+    const pageState = mfdSystem.getPageState('navigation') || {};
+    pageClass.addPageOverlays(mfdSystem, pageState);
+  }
 }
 
 function getCurrentDisplayType() {

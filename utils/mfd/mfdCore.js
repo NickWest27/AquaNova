@@ -360,6 +360,12 @@ class MFDCore {
         }
     }
 
+    cancelKeyboardInput() {
+        if (this.keyboardUnit) {
+            this.keyboardUnit.cancelInput();
+        }
+    }
+
     // Get display elements (canvas/svg) from container
     getDisplayCanvas() {
         return this.container.querySelector('canvas');
