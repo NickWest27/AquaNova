@@ -25,6 +25,7 @@ class MFDCore {
         this.pendingStateChange = false;
         this.lastPageState = null;
         this.pageState = new Map();
+        this.initializedPages = new Set(); // Track which pages have been initialized
 
         // Change detection
         this.lastRenderState = null;
@@ -176,20 +177,21 @@ class MFDCore {
         }
 
         this.currentPage = pageId;
-        
-        // Initialize page if needed
+
+        // Initialize page only once (first time it's activated)
         const pageClass = this.pages.get(pageId);
-        if (typeof pageClass.init === 'function') {
+        if (!this.initializedPages.has(pageId) && typeof pageClass.init === 'function') {
             pageClass.init(this);
+            this.initializedPages.add(pageId);
         }
 
         // Setup soft keys for this page
         this.setupPageSoftKeys(pageId);
-        
+
         // Force overlay update
         this.needsRedraw = true;
         this.updateOverlay(true);
-        
+
         // console.log(`MFD Active page: ${pageId}`);
     }
 

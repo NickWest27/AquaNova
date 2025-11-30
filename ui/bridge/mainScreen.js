@@ -194,6 +194,17 @@ function renderCenterPanel() {
     return;
   }
 
+  // Get overlay settings from game state (set by MFD navigation page)
+  const savedOverlays = gameStateInstance.getProperty('navigation.displaySettings.overlaysVisible');
+  const overlays = savedOverlays || {
+    route: true,
+    waypoints: true,
+    contours: true,
+    hazards: true,
+    traffic: true,
+    latLonGrid: false
+  };
+
   // Build navigation state for display
   const navState = {
     ownshipPosition: location.geometry.coordinates,
@@ -201,14 +212,7 @@ function renderCenterPanel() {
     selectedHeading: gameStateInstance.getProperty('helm.targetHeading') || heading,
     range: range,
     displayMode: 'PLAN', // Force PLAN mode for main screen
-    overlays: {
-      route: true,
-      waypoints: true,
-      contours: true,
-      hazards: true,
-      traffic: true,
-      latlon: false
-    }
+    overlays: overlays
   };
 
   // Use existing navigation display renderer with 'mainScreen' config

@@ -703,7 +703,9 @@ class NavigationPage {
             state.overlaysVisible[overlayName]
         );
 
-        // Display updates are handled by station manager
+        // Force redraw
+        mfd.needsRedraw = true;
+
         console.log(`OVERLAY [${overlayName.toUpperCase()}]: ${state.overlaysVisible[overlayName] ? 'ENABLED' : 'DISABLED'}`);
     }
 
@@ -720,7 +722,9 @@ class NavigationPage {
             state.overlaysVisible
         );
 
-        // Display updates are handled by station manager
+        // Force redraw
+        mfd.needsRedraw = true;
+
         console.log('ALL OVERLAYS: ENABLED');
     }
 
@@ -737,7 +741,9 @@ class NavigationPage {
             state.overlaysVisible
         );
 
-        // Display updates are handled by station manager
+        // Force redraw
+        mfd.needsRedraw = true;
+
         console.log('ALL OVERLAYS: DISABLED');
     }
 
@@ -1142,7 +1148,7 @@ class NavigationPage {
         gameStateInstance.updateProperty('navigation.waypointConstruction', construction);
 
         // Request name input
-        mfd.requestKeyboardInput('WPT NAME (or ENTER): ', 'waypoint_construct_name', 5);
+        mfd.requestKeyboardInput('WPT NAME: ', 'waypoint_construct_name', 5);
         mfd.needsRedraw = true;
     }
 
@@ -1274,7 +1280,7 @@ class NavigationPage {
         construction.step = 4;  // Move to bearing input
         gameStateInstance.updateProperty('navigation.waypointConstruction', construction);
 
-        mfd.requestKeyboardInput('BEARING (000-360): ', 'waypoint_construct_bearing', 3);
+        mfd.requestKeyboardInput('BEARING: ', 'waypoint_construct_bearing', 3);
         mfd.needsRedraw = true;
     }
 
@@ -1299,7 +1305,7 @@ class NavigationPage {
         construction.step = 5;  // Move to distance input
         gameStateInstance.updateProperty('navigation.waypointConstruction', construction);
 
-        mfd.requestKeyboardInput('DISTANCE (NM): ', 'waypoint_construct_distance', 6);
+        mfd.requestKeyboardInput('DISTANCE: ', 'waypoint_construct_distance', 6);
         mfd.needsRedraw = true;
     }
 

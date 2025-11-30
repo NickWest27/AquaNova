@@ -67,7 +67,7 @@ class GameState {
                     overlaysVisible: {
                         route: true,
                         waypoints: true,
-                        contours: false,
+                        contours: true,
                         hazards: true,
                         traffic: false,
                         latLonGrid: true
