@@ -2,6 +2,7 @@ Claude and I can use this to keep notes on what we are woring on (to-do) and iss
 Items can be marked as complete or resolved. This document should be constantly updated.
 /////////////////////////////////////////////////////////////
 
+Check and update Structure.txt
 Incorperate locations.json as game data set the user can see and use
 get waypoint list function working
 Consider .png icon set for waypoints.

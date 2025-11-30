@@ -353,9 +353,9 @@ class MissionComputer {
     getWaypointTypes() {
         return {
             NAV: ['HARBOUR', 'ANCHORAGE', 'CHANNEL', 'TURNING_POINT'],
-            SCI: ['SAMPLE_SITE', 'RESEARCH_AREA', 'SURVEY_POINT', 'WRECK'],
+            SCI: ['SAMPLE_SITE', 'RESEARCH_AREA', 'SURVEY_POINT', 'REEF', 'TRENCH'],
             HAZ: ['ROCK', 'SHALLOW', 'OBSTRUCTION', 'RESTRICTED_AREA'],
-            POI: ['LANDMARK', 'REFERENCE', 'CUSTOM']
+            POI: ['LANDMARK', 'REFERENCE', 'CUSTOM', 'WRECK']
         };
     }
 
@@ -620,6 +620,9 @@ class MissionComputer {
     mapLocationTypeToCategory(locationType) {
         const mapping = {
             'dock': 'NAV',
+            'reef': 'SCI',
+            'trench': 'SCI',
+            'wreck': 'POI',
             'research': 'SCI',
             'hazard': 'HAZ',
             'landmark': 'POI'
@@ -633,6 +636,9 @@ class MissionComputer {
     mapLocationTypeToWaypointType(locationType) {
         const mapping = {
             'dock': 'HARBOUR',
+            'reef': 'REEF',
+            'trench': 'TRENCH',
+            'wreck': 'WRECK',
             'research': 'RESEARCH_AREA',
             'hazard': 'OBSTRUCTION',
             'landmark': 'LANDMARK'

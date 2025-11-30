@@ -10,6 +10,7 @@ import { initPDAOverlay } from '/utils/pdaOverlay.js';
 import { initCommunicatorOverlay } from '/utils/communicatorOverlay.js';
 import missionManager from '/game/systems/missionManager.js';
 import interactiveElementManager from '/utils/interactiveElements.js';
+import missionComputer from '/game/systems/missionComputer/missionComputer.js';
 
 
 class SplashScreen {
@@ -68,21 +69,42 @@ class SplashScreen {
     async initializeSystems() {
         try {
             this.updateConsole('Initializing game systems...');
-            
+
             // Initialize SaveManager with GameState
             const success = await saveManagerInstance.init(gameStateInstance);
             if (!success) throw new Error('System initialization failed');
-            
+
+            // Load locations from locations.json
+            await this.loadLocations();
+
             // Update display with current state
             this.updateDisplay();
-            
+
             const summary = saveManagerInstance.getSummary();
             this.updateConsole(`Loaded: ${summary.activeLogbook} (${summary.activeEntries} entries)`);
-            
+
         } catch (error) {
             console.error('Initialization error:', error);
             this.updateConsole('Error: System initialization failed');
             this.showError('Failed to initialize game systems');
+        }
+    }
+
+    async loadLocations() {
+        try {
+            const response = await fetch('/data/locations.json');
+            if (!response.ok) {
+                console.warn('Could not load locations.json');
+                return;
+            }
+
+            const locationsData = await response.json();
+            if (locationsData && locationsData.features) {
+                missionComputer.loadLocationsAsWaypoints(locationsData.features);
+                this.updateConsole(`Loaded ${locationsData.features.length} locations`);
+            }
+        } catch (error) {
+            console.warn('Error loading locations:', error);
         }
     }
 

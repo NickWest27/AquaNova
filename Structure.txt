@@ -37,16 +37,22 @@ AquaNova2/
 │       ├── autopilot/       # Autopilot system [Implemented]
 │       │   └── autopilot.js # Automated navigation and ship control
 │       ├── bathymetry/      # Bathymetric data processing system [Implemented]
-│       │   ├── bathymetryLoader.js    # Loads bathymetric GeoJSON data
-│       │   ├── bathymetryUtils.js     # Utility functions for bathymetry processing
-│       │   └── bathymetryRenderer.js  # Renders ocean floor depth data
+│       │   ├── bathymetryLoader.js       # Loads bathymetric GeoJSON data
+│       │   ├── bathymetryUtils.js        # Utility functions for bathymetry processing
+│       │   ├── bathymetryTileManager.js  # Manages bathymetric tile loading and caching
+│       │   └── bathymetryRenderer.js     # Renders ocean floor depth data
 │       ├── missionComputer/ # Similar to FMC/MCDU of modern airliner [Implemented]
 │       │   └── missionComputer.js     # Handles calculation (drift, routing between waypoints, etc.) pulls from ship state, passes to navComputer
 │       ├── navComputer/     # Navigation display [Implemented]
 │       │   ├── navComputer.js     # Handles calculations on how to draw navigation display (canvas with SVG overlay)
 │       │   └── navComputer.css    # Styling of navigation display
 │       ├── pfd/             # Primary Flight Display system [Implemented]
-│       │   └── pfdRenderer.js     # Renders ship attitude, depth, speed indicators
+│       │   ├── pfdRenderer.js     # Renders ship attitude, depth, speed indicators
+│       │   └── pfdComponents.js   # Individual PFD component renderers
+│       ├── upperDisplay/    # Upper display system [Implemented]
+│       │   ├── upperDisplayRenderer.js  # Main upper display renderer
+│       │   ├── displayFormatters.js     # Data formatting utilities
+│       │   └── alertManager.js          # Alert and notification management
 │       ├── missionManager.js      # Main mission engine [Implemented]
 │       ├── propulsion.js          # Propulsion system controls [Implemented]
 │       ├── lifeSupport.js         # Life support system monitoring [Implemented]
@@ -56,7 +62,8 @@ AquaNova2/
 │   ├── bridge/              # Bridge station [Implemented]
 │   │   ├── bridge.html      # Bridge frame with cutouts for various displays, place orders for ship control and see results on screens
 │   │   ├── bridge.js        # Control of the buttons and displays
-│   │   └── bridge.css       # Style and tilt displays to fit in the bridge frame giving a 3D perspective
+│   │   ├── bridge.css       # Style and tilt displays to fit in the bridge frame giving a 3D perspective
+│   │   └── mainScreen.js    # Main screen display logic
 │   │
 │   ├── helm/                # Helm station for ship control such as ballast, trim, thrust, etc ... [Directory exists]
 │   │
@@ -90,9 +97,12 @@ AquaNova2/
 │   ├── communicatorOverlay.js    # Communicator logic for crew dialogue
 │   ├── interactiveElements.js    # Interactive element spawner
 │   ├── transformTuner.js    # Transform adjustment utility for display positioning
+│   ├── coordinates.js       # Coordinate conversion and calculation utilities
 │   ├── keyboardUnit/        # Keyboard Unit for text input
 │   │   ├── keyboardUnit.js
 │   │   └── keyboardUnit.css
+│   ├── waypoints/           # Waypoint and route management [Implemented]
+│   │   └── routeBuilder.js       # Route and waypoint builder for creating waypoints and routes
 │   └── mfd/                 # Multi-Function Display system
 │       ├── mfdCore.js       # Main MFD engine
 │       ├── mfd.css          # MFD styling

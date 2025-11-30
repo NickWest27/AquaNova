@@ -1,6 +1,6 @@
-// utils/waypoints/waypointBuilder.js
-// Builder pattern for waypoint construction
-// Provides a fluent API for creating and editing waypoints
+// utils/waypoints/routeBuilder.js
+// Builder pattern for waypoint and route construction
+// Provides a fluent API for creating and editing waypoints and routes
 
 import gameStateInstance from '../../game/state.js';
 import missionComputer from '../../game/systems/missionComputer/missionComputer.js';
@@ -494,6 +494,246 @@ export class WaypointBuilder {
             depth: waypoint.depth
         });
 
+        return builder;
+    }
+}
+
+// ========================================
+// ROUTE BUILDER
+// ========================================
+
+/**
+ * RouteBuilder - Manages route construction and waypoint sequencing
+ * A route is an ordered collection of waypoints
+ */
+export class RouteBuilder {
+    constructor(name = '', waypoints = []) {
+        this.name = name || this.generateDefaultName();
+        this.waypoints = [...waypoints]; // Array of waypoint IDs
+        this.active = false;
+    }
+
+    /**
+     * Generate default route name
+     */
+    generateDefaultName() {
+        const routes = gameStateInstance.getProperty('navigation.routes') || [];
+        return `RTE${(routes.length + 1).toString().padStart(2, '0')}`;
+    }
+
+    /**
+     * Set route name
+     */
+    setName(name) {
+        if (!name || name.trim() === '') {
+            throw new Error('Route name cannot be empty');
+        }
+
+        const upperName = name.toUpperCase();
+        if (upperName.length > 10) {
+            throw new Error('Route name must be 10 characters or less');
+        }
+
+        this.name = upperName;
+        return this;
+    }
+
+    /**
+     * Add waypoint to route
+     */
+    addWaypoint(waypointId) {
+        // Validate waypoint exists
+        const waypoint = gameStateInstance.getWaypoint(waypointId);
+        if (!waypoint) {
+            throw new Error(`Waypoint not found: ${waypointId}`);
+        }
+
+        // Check if already in route
+        if (this.waypoints.includes(waypointId)) {
+            throw new Error(`Waypoint ${waypoint.name} already in route`);
+        }
+
+        this.waypoints.push(waypointId);
+        return this;
+    }
+
+    /**
+     * Remove waypoint from route by index
+     */
+    removeWaypoint(index) {
+        if (index < 0 || index >= this.waypoints.length) {
+            throw new Error('Invalid waypoint index');
+        }
+
+        this.waypoints.splice(index, 1);
+        return this;
+    }
+
+    /**
+     * Remove waypoint from route by ID
+     */
+    removeWaypointById(waypointId) {
+        const index = this.waypoints.indexOf(waypointId);
+        if (index === -1) {
+            throw new Error('Waypoint not found in route');
+        }
+
+        return this.removeWaypoint(index);
+    }
+
+    /**
+     * Move waypoint up in sequence (towards start)
+     */
+    moveWaypointUp(index) {
+        if (index <= 0 || index >= this.waypoints.length) {
+            throw new Error('Cannot move waypoint up');
+        }
+
+        [this.waypoints[index - 1], this.waypoints[index]] =
+        [this.waypoints[index], this.waypoints[index - 1]];
+
+        return this;
+    }
+
+    /**
+     * Move waypoint down in sequence (towards end)
+     */
+    moveWaypointDown(index) {
+        if (index < 0 || index >= this.waypoints.length - 1) {
+            throw new Error('Cannot move waypoint down');
+        }
+
+        [this.waypoints[index], this.waypoints[index + 1]] =
+        [this.waypoints[index + 1], this.waypoints[index]];
+
+        return this;
+    }
+
+    /**
+     * Insert waypoint at specific position
+     */
+    insertWaypoint(waypointId, index) {
+        const waypoint = gameStateInstance.getWaypoint(waypointId);
+        if (!waypoint) {
+            throw new Error(`Waypoint not found: ${waypointId}`);
+        }
+
+        if (index < 0 || index > this.waypoints.length) {
+            throw new Error('Invalid insert position');
+        }
+
+        this.waypoints.splice(index, 0, waypointId);
+        return this;
+    }
+
+    /**
+     * Clear all waypoints from route
+     */
+    clearWaypoints() {
+        this.waypoints = [];
+        return this;
+    }
+
+    /**
+     * Get route waypoints with full data
+     */
+    getWaypointsWithData() {
+        return this.waypoints.map(id => gameStateInstance.getWaypoint(id)).filter(wpt => wpt !== null);
+    }
+
+    /**
+     * Calculate total route distance
+     */
+    getTotalDistance() {
+        if (this.waypoints.length < 2) return 0;
+
+        let totalDistance = 0;
+        const waypointData = this.getWaypointsWithData();
+
+        for (let i = 0; i < waypointData.length - 1; i++) {
+            const wpt1 = waypointData[i];
+            const wpt2 = waypointData[i + 1];
+
+            const [lon1, lat1] = wpt1.geometry.coordinates;
+            const [lon2, lat2] = wpt2.geometry.coordinates;
+
+            totalDistance += this.calculateDistance(lat1, lon1, lat2, lon2);
+        }
+
+        return totalDistance;
+    }
+
+    /**
+     * Calculate distance between two points (haversine formula)
+     */
+    calculateDistance(lat1, lon1, lat2, lon2) {
+        const R = 3440.065; // Earth radius in nautical miles
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLon = (lon2 - lon1) * Math.PI / 180;
+
+        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                  Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                  Math.sin(dLon / 2) * Math.sin(dLon / 2);
+
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c;
+    }
+
+    /**
+     * Validate route (has at least 2 waypoints)
+     */
+    isValid() {
+        return this.waypoints.length >= 2;
+    }
+
+    /**
+     * Build route object for saving
+     */
+    build() {
+        if (!this.isValid()) {
+            throw new Error('Route must have at least 2 waypoints');
+        }
+
+        return {
+            id: `route-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
+            name: this.name,
+            waypoints: [...this.waypoints],
+            totalDistance: this.getTotalDistance(),
+            created: new Date().toISOString(),
+            active: this.active
+        };
+    }
+
+    /**
+     * Serialize for persistence
+     */
+    serialize() {
+        return {
+            name: this.name,
+            waypoints: [...this.waypoints],
+            active: this.active
+        };
+    }
+
+    /**
+     * Restore from serialized state
+     */
+    static deserialize(saved) {
+        if (!saved) {
+            throw new Error('Cannot deserialize null or undefined route');
+        }
+
+        const builder = new RouteBuilder(saved.name, saved.waypoints);
+        builder.active = saved.active || false;
+        return builder;
+    }
+
+    /**
+     * Create builder from existing route
+     */
+    static fromRoute(route) {
+        const builder = new RouteBuilder(route.name, route.waypoints);
+        builder.active = route.active || false;
         return builder;
     }
 }

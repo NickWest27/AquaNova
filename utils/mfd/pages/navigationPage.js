@@ -5,7 +5,7 @@ import { drawNavigationDisplay } from '/game/systems/navComputer/navComputer.js'
 import gameStateInstance from '/game/state.js';
 import missionComputer from '/game/systems/missionComputer/missionComputer.js';
 import { formatLatitude, formatLongitude, parseCoordinateInput } from '/utils/coordinates.js';
-import { WaypointBuilder, WORKFLOW_STAGES } from '/utils/waypoints/waypointBuilder.js';
+import { WaypointBuilder, RouteBuilder, WORKFLOW_STAGES } from '/utils/waypoints/routeBuilder.js';
 
 class NavigationPage {
     static init(mfd) {
@@ -789,8 +789,8 @@ class NavigationPage {
 
     static changeRange(mfd, direction) {
         const currentRange = gameStateInstance.getProperty("displaySettings.navDisplayRange") || 10;
-        // Range sequence: Each step doubles the previous (5, 10, 20, 40, 80, 160, 320, 640, 1280, 2560)
-        const ranges = [5, 10, 20, 40, 80, 160, 320, 640, 1280, 2560];
+        // Range sequence: 1, 2, 5, then doubles (10, 20, 40, 80, 160, 320, 640, 1280, 2560)
+        const ranges = [1, 2, 5, 10, 20, 40, 80, 160, 320, 640, 1280, 2560];
         const currentIndex = ranges.indexOf(currentRange);
 
         let newIndex;
