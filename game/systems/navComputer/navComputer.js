@@ -626,16 +626,30 @@ function getWaypointConstructionInfo(construction) {
   // Build lines array - only show fields that have been set
   const lines = [];
 
-  // Category and Type (show early for visual feedback)
-  if (category && type) {
-    lines.push(`▲ ${category}/${type}`);
-  } else if (category) {
-    lines.push(`▲ ${category}`);
-  }
+  // Get waypoint icon based on category/type
+  const getWaypointIcon = (cat, typ) => {
+    if (!cat) return '▲';  // Default triangle
 
-  // Name (show with icon)
+    if (cat === 'NAV') {
+      if (typ === 'HARBOUR' || typ === 'ANCHORAGE') return '◯';  // Circle for harbors
+      return '▲';  // Triangle for other nav points
+    } else if (cat === 'SCI') {
+      return '◇';  // Diamond for science
+    } else if (cat === 'HAZ') {
+      return '✕';  // X for hazards
+    } else if (cat === 'POI') {
+      return '★';  // Star for points of interest
+    }
+    return '▲';  // Default
+  };
+
+  const icon = getWaypointIcon(category, type);
+
+  // Show icon with name if name is set, otherwise just icon
   if (data.name) {
-    lines.push(`NAME: ${data.name}`);
+    lines.push(`${icon} ${data.name}`);
+  } else if (category) {
+    lines.push(icon);
   }
 
   // Method-specific fields

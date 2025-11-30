@@ -171,7 +171,14 @@ export class WaypointBuilder {
             throw new Error('Can only set reference point in PBD mode');
         }
 
-        // Validate reference point exists
+        // Special handling for PPOS (present position)
+        if (refPointId === 'ppos') {
+            this.data.refPointId = 'ppos';
+            this.data.refName = refName || 'PPOS';
+            return this;
+        }
+
+        // Validate waypoint reference point exists
         const refPoint = gameStateInstance.getWaypoint(refPointId);
         if (!refPoint) {
             throw new Error(`Reference point not found: ${refPointId}`);
@@ -238,8 +245,18 @@ export class WaypointBuilder {
             throw new Error('PBD data incomplete');
         }
 
-        const refPoint = gameStateInstance.getWaypoint(this.data.refPointId);
-        const [refLon, refLat] = refPoint.geometry.coordinates;
+        let refLat, refLon;
+
+        // Handle PPOS (present position) vs waypoint reference
+        if (this.data.refPointId === 'ppos') {
+            // Use stored PPOS coordinates from when it was selected
+            refLat = this.data.refLat;
+            refLon = this.data.refLon;
+        } else {
+            // Look up waypoint
+            const refPoint = gameStateInstance.getWaypoint(this.data.refPointId);
+            [refLon, refLat] = refPoint.geometry.coordinates;
+        }
 
         // Convert to radians
         const R = 3440.065;  // Earth radius in nautical miles

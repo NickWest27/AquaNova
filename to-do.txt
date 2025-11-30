@@ -2,13 +2,9 @@ Claude and I can use this to keep notes on what we are woring on (to-do) and iss
 Items can be marked as complete or resolved. This document should be constantly updated.
 /////////////////////////////////////////////////////////////
 
-Bridge to-dos:
-Increase readability of all button labels. font size, padding or border is making text small compared to button size.
-
-Big jobs:
-Implement correct lat/lon grid using ship state to display on navigation pages.
-Implement the upper-display. A context sensitive display to give updates on events. Eg. Ships state (Speed, track, depth), incomming communication alerts, approaching sea floor, etc.
-Implement the main-screen. A situation display. 
-  -left 30% show summary of whats going on around you so Communication and sensors summary.
-  -center 60% shows big picture, so situation view (PLAN view), or communication message, or forward synthetic vision.
-  -right 30% show summary of whats going on on the ship, so engineering, and ship state summary.   
+Incorperate locations.json as game data set the user can see and use
+get waypoint list function working
+Consider .png icon set for waypoints.
+Increase zoom/range level down to 1nm
+rename waypointBuilder to routeBuilder and correct all dipendancies
+Add a build route function to string waypoints.
