@@ -206,121 +206,181 @@ class NavigationPage {
             const isEdit = construction.mode === 'edit_select';
             return {
                 labels: [
-                    'UP',       // L1: Previous waypoint
-                    'DOWN',     // L2: Next waypoint
-                    '',         // L3
-                    isEdit ? 'EDIT' : 'DELETE',  // L4: Confirm action
-                    'CANCEL',   // L5
+                    'UP', 'DOWN', '', isEdit ? 'EDIT' : 'DELETE', '',
                     '', '', '', '', '',
-                    '', '', '', '', ''
+                    '', '', '', '', 'CANCEL'  // R5
                 ],
                 actions: [
                     () => this.selectPreviousWaypoint(mfd),
                     () => this.selectNextWaypoint(mfd),
                     null,
                     isEdit ? () => this.confirmEditSelection(mfd) : () => this.confirmDeleteSelection(mfd),
-                    () => this.cancelWaypointConstruction(mfd),
+                    null,
                     null, null, null, null, null,
-                    null, null, null, null, null
+                    null, null, null, null,
+                    () => this.cancelWaypointConstruction(mfd)  // R5
                 ],
                 states: Array(15).fill({ type: 'momentary', selected: false })
             };
         }
 
-        // Category selection (step 4)
-        if (construction.step === 4) {
+        // Step 0: Category selection (NEW - first step)
+        if (construction.step === 0) {
             return {
                 labels: [
-                    'NAV',      // L1
-                    'SCI',      // L2
-                    'HAZ',      // L3
-                    'POI',      // L4
-                    'CANCEL',   // L5
+                    'NAV', 'SCI', 'HAZ', 'POI', '',
                     '', '', '', '', '',
-                    '', '', '', '', ''
+                    '', '', '', '', 'CANCEL'  // R5
                 ],
                 actions: [
                     () => this.selectCategory(mfd, 'NAV'),
                     () => this.selectCategory(mfd, 'SCI'),
                     () => this.selectCategory(mfd, 'HAZ'),
                     () => this.selectCategory(mfd, 'POI'),
-                    () => this.cancelWaypointConstruction(mfd),
+                    null,
                     null, null, null, null, null,
-                    null, null, null, null, null
+                    null, null, null, null,
+                    () => this.cancelWaypointConstruction(mfd)  // R5
                 ],
                 states: Array(15).fill({ type: 'momentary', selected: false })
             };
         }
 
-        // Type selection (step 5)
-        if (construction.step === 5) {
+        // Step 2: Method selection (LAT/LON vs PBD)
+        if (construction.step === 2) {
+            return {
+                labels: [
+                    'LAT/LON', 'PBD', '', '', '',
+                    '', '', '', '', '',
+                    '', '', '', '', 'CANCEL'  // R5
+                ],
+                actions: [
+                    () => this.selectMethod(mfd, 'latlon'),
+                    () => this.selectMethod(mfd, 'pbd'),
+                    null, null, null,
+                    null, null, null, null, null,
+                    null, null, null, null,
+                    () => this.cancelWaypointConstruction(mfd)  // R5
+                ],
+                states: Array(15).fill({ type: 'momentary', selected: false })
+            };
+        }
+
+        // PBD Place Selection (step 3 in PBD mode)
+        if (construction.method === 'pbd' && construction.step === 3) {
+            return this.getPBDPlaceSelectionSoftKeys(mfd, construction);
+        }
+
+        // Type selection (last step before confirmation)
+        const typeSelectionStep = construction.method === 'pbd' ? 6 : 5;
+        if (construction.step === typeSelectionStep) {
             const types = missionComputer.getWaypointTypes();
             const categoryTypes = types[construction.data.category];
 
             return {
                 labels: [
-                    categoryTypes[0] || '',
-                    categoryTypes[1] || '',
-                    categoryTypes[2] || '',
-                    categoryTypes[3] || '',
-                    'CANCEL',
+                    categoryTypes[0] || '', categoryTypes[1] || '',
+                    categoryTypes[2] || '', categoryTypes[3] || '', '',
                     '', '', '', '', '',
-                    '', '', '', '', ''
+                    '', '', '', '', 'CANCEL'  // R5
                 ],
                 actions: [
                     categoryTypes[0] ? () => this.selectType(mfd, categoryTypes[0]) : null,
                     categoryTypes[1] ? () => this.selectType(mfd, categoryTypes[1]) : null,
                     categoryTypes[2] ? () => this.selectType(mfd, categoryTypes[2]) : null,
                     categoryTypes[3] ? () => this.selectType(mfd, categoryTypes[3]) : null,
-                    () => this.cancelWaypointConstruction(mfd),
+                    null,
                     null, null, null, null, null,
-                    null, null, null, null, null
+                    null, null, null, null,
+                    () => this.cancelWaypointConstruction(mfd)  // R5
                 ],
                 states: Array(15).fill({ type: 'momentary', selected: false })
             };
         }
 
-        // Confirmation (step 6)
-        if (construction.step === 6) {
+        // Confirmation (final step)
+        const confirmationStep = construction.method === 'pbd' ? 7 : 6;
+        if (construction.step === confirmationStep) {
             return {
                 labels: [
-                    'SAVE',     // L1
-                    '',         // L2
-                    '',         // L3
-                    '',         // L4
-                    'CANCEL',   // L5
+                    'SAVE', '', '', '', '',
                     '', '', '', '', '',
-                    '', '', '', '', ''
+                    '', '', '', '', 'CANCEL'  // R5
                 ],
                 actions: [
                     () => this.saveWaypoint(mfd),
-                    null, null, null,
-                    () => this.cancelWaypointConstruction(mfd),
+                    null, null, null, null,
                     null, null, null, null, null,
-                    null, null, null, null, null
+                    null, null, null, null,
+                    () => this.cancelWaypointConstruction(mfd)  // R5
                 ],
                 states: Array(15).fill({ type: 'momentary', selected: false })
             };
         }
 
-        // Default: during keyboard input (steps 0-3)
+        // Default: during keyboard input (name, lat, lon, depth, bearing, distance)
         return {
             labels: [
-                'PPOS',     // L1: Capture present position
-                '',         // L2
-                '',         // L3
-                '',         // L4
-                'CANCEL',   // L5
                 '', '', '', '', '',
-                '', '', '', '', ''
+                '', '', '', '', '',
+                '', '', '', '', 'CANCEL'  // R5
             ],
             actions: [
-                () => this.handlePPOS(mfd),
-                null, null, null,
-                () => this.cancelWaypointConstruction(mfd),
                 null, null, null, null, null,
-                null, null, null, null, null
+                null, null, null, null, null,
+                null, null, null, null,
+                () => this.cancelWaypointConstruction(mfd)  // R5
             ],
+            states: Array(15).fill({ type: 'momentary', selected: false })
+        };
+    }
+
+    /**
+     * Get soft keys for PBD place selection (waypoint picker)
+     */
+    static getPBDPlaceSelectionSoftKeys(mfd, construction) {
+        const currentPos = missionComputer.getCurrentPosition();
+        const nearbyWaypoints = missionComputer.getNearbyWaypoints(
+            currentPos.lat,
+            currentPos.lon,
+            construction.pickerPageSize + construction.pickerOffset
+        ).slice(construction.pickerOffset);
+
+        const labels = Array(15).fill('');
+        const actions = Array(15).fill(null);
+
+        // L1: PPOS (always available)
+        labels[0] = 'PPOS';
+        actions[0] = () => this.selectPBDPlace(mfd, 'ppos', null);
+
+        // L2-L4: Waypoints (up to 3)
+        nearbyWaypoints.slice(0, 3).forEach((wpt, index) => {
+            const btnIndex = index + 1;  // L2=1, L3=2, L4=3
+            labels[btnIndex] = wpt.name;
+            actions[btnIndex] = () => this.selectPBDPlace(mfd, 'waypoint', wpt.id);
+        });
+
+        // L5/R5: Navigation
+        const totalWaypoints = gameStateInstance.getAllWaypoints().length;
+        const hasMore = (construction.pickerOffset + construction.pickerPageSize) < totalWaypoints;
+        const hasPrevious = construction.pickerOffset > 0;
+
+        if (hasPrevious) {
+            labels[4] = 'UP';  // L5
+            actions[4] = () => this.pickerPageUp(mfd);
+        }
+
+        if (hasMore) {
+            labels[14] = 'DOWN';  // R5
+            actions[14] = () => this.pickerPageDown(mfd);
+        } else {
+            labels[14] = 'CANCEL';  // R5
+            actions[14] = () => this.cancelWaypointConstruction(mfd);
+        }
+
+        return {
+            labels,
+            actions,
             states: Array(15).fill({ type: 'momentary', selected: false })
         };
     }
@@ -687,7 +747,7 @@ class NavigationPage {
 
     /**
      * Start the ADD waypoint workflow
-     * Step 1: Request waypoint name
+     * Step 0: Select category first
      */
     static startAddWaypoint(mfd) {
         // Get current position as defaults
@@ -697,19 +757,24 @@ class NavigationPage {
         gameStateInstance.updateProperty('navigation.waypointConstruction', {
             active: true,
             mode: 'add',
-            step: 0,
+            method: null,  // 'latlon' or 'pbd' - selected after name
+            step: 0,       // Step 0: category selection
             data: {
                 lat: currentPos.lat,
                 lon: currentPos.lon,
                 depth: currentPos.depth,
-                category: 'NAV',
-                type: 'HARBOUR'
-            }
+                category: null,  // Will be selected first
+                type: null       // Will be selected based on category
+            },
+            // For waypoint picker (PBD mode)
+            pickerOffset: 0,
+            pickerPageSize: 3
         });
 
-        // Request name input
-        mfd.requestKeyboardInput('WPT NAME: ', 'waypoint_construct_name', 5);
+        // Show category selection
+        mfd.setupPageSoftKeys('navigation');
         mfd.needsRedraw = true;
+        console.log('SELECT CATEGORY: NAV/SCI/HAZ/POI');
     }
 
     /**
@@ -917,6 +982,12 @@ class NavigationPage {
             case 'waypoint_construct_depth':
                 this.handleDepthInput(mfd, data.input);
                 break;
+            case 'waypoint_construct_bearing':
+                this.handleBearingInput(mfd, data.input);
+                break;
+            case 'waypoint_construct_distance':
+                this.handleDistanceInput(mfd, data.input);
+                break;
         }
     }
 
@@ -926,35 +997,36 @@ class NavigationPage {
     static handleNameInput(mfd, name) {
         const construction = gameStateInstance.getProperty('navigation.waypointConstruction');
 
+        // Auto-generate name if blank
         if (!name || name.trim() === '') {
-            console.log('ERROR: Name cannot be empty');
-            return;
+            construction.data.name = missionComputer.generateWaypointName();
+            console.log(`Auto-generated waypoint name: ${construction.data.name}`);
+        } else {
+            if (name.length > 5) {
+                console.log('ERROR: Name must be 5 characters or less');
+                return;
+            }
+            construction.data.name = name.toUpperCase();
         }
 
-        if (name.length > 5) {
-            console.log('ERROR: Name must be 5 characters or less');
-            return;
-        }
-
-        construction.data.name = name.toUpperCase();
-        construction.step = 1;
+        construction.step = 2;  // Move to method selection
         gameStateInstance.updateProperty('navigation.waypointConstruction', construction);
 
-        // Move to latitude input
-        const latStr = formatLatitude(construction.data.lat);
-        mfd.requestKeyboardInput(`LAT [${latStr}]: `, 'waypoint_construct_lat', 15);
+        // Show method selection (LAT/LON vs PBD)
+        mfd.setupPageSoftKeys('navigation');
         mfd.needsRedraw = true;
+        console.log('SELECT METHOD: LAT/LON or PBD');
     }
 
     /**
-     * Handle latitude input (Step 2)
+     * Handle latitude input (Step 3 in LAT/LON path)
      */
     static handleLatitudeInput(mfd, input) {
         const construction = gameStateInstance.getProperty('navigation.waypointConstruction');
 
         // If empty, keep current value
         if (!input || input.trim() === '') {
-            construction.step = 2;
+            construction.step = 4;
             gameStateInstance.updateProperty('navigation.waypointConstruction', construction);
 
             const lonStr = formatLongitude(construction.data.lon);
@@ -976,7 +1048,7 @@ class NavigationPage {
         }
 
         construction.data.lat = lat;
-        construction.step = 2;
+        construction.step = 4;
         gameStateInstance.updateProperty('navigation.waypointConstruction', construction);
 
         // Move to longitude input
@@ -986,14 +1058,14 @@ class NavigationPage {
     }
 
     /**
-     * Handle longitude input (Step 3)
+     * Handle longitude input (Step 4 in LAT/LON path)
      */
     static handleLongitudeInput(mfd, input) {
         const construction = gameStateInstance.getProperty('navigation.waypointConstruction');
 
         // If empty, keep current value
         if (!input || input.trim() === '') {
-            construction.step = 3;
+            construction.step = 5;
             gameStateInstance.updateProperty('navigation.waypointConstruction', construction);
 
             mfd.requestKeyboardInput(`DEPTH [${construction.data.depth}m]: `, 'waypoint_construct_depth', 6);
@@ -1014,7 +1086,7 @@ class NavigationPage {
         }
 
         construction.data.lon = lon;
-        construction.step = 3;
+        construction.step = 5;
         gameStateInstance.updateProperty('navigation.waypointConstruction', construction);
 
         // Move to depth input
@@ -1023,16 +1095,16 @@ class NavigationPage {
     }
 
     /**
-     * Handle depth input (Step 4)
+     * Handle depth input (Step 5 in LAT/LON path - not used in PBD)
      */
     static handleDepthInput(mfd, input) {
         const construction = gameStateInstance.getProperty('navigation.waypointConstruction');
 
         // If empty, keep current value
         if (!input || input.trim() === '') {
-            construction.step = 4;
+            construction.step = 5;  // Move to type selection (latlon path)
             gameStateInstance.updateProperty('navigation.waypointConstruction', construction);
-            this.showCategorySelection(mfd);
+            this.showTypeSelection(mfd);
             return;
         }
 
@@ -1048,25 +1120,11 @@ class NavigationPage {
         }
 
         construction.data.depth = depth;
-        construction.step = 4;
+        construction.step = 5;  // Move to type selection (latlon path)
         gameStateInstance.updateProperty('navigation.waypointConstruction', construction);
 
-        // Move to category selection
-        this.showCategorySelection(mfd);
-    }
-
-    /**
-     * Show category selection (Step 5)
-     */
-    static showCategorySelection(mfd) {
-        const construction = gameStateInstance.getProperty('navigation.waypointConstruction');
-        construction.step = 4;
-        gameStateInstance.updateProperty('navigation.waypointConstruction', construction);
-
-        // Update soft keys to show category options
-        mfd.setupPageSoftKeys('navigation');
-        mfd.needsRedraw = true;
-        console.log('SELECT CATEGORY: NAV/SCI/HAZ/POI');
+        // Move to type selection
+        this.showTypeSelection(mfd);
     }
 
     /**
@@ -1080,11 +1138,12 @@ class NavigationPage {
         const types = missionComputer.getWaypointTypes();
         construction.data.type = types[category][0];
 
-        construction.step = 5;
+        construction.step = 1;  // Move to name entry
         gameStateInstance.updateProperty('navigation.waypointConstruction', construction);
 
-        // Show type selection
-        this.showTypeSelection(mfd);
+        // Request name input
+        mfd.requestKeyboardInput('WPT NAME (or ENTER): ', 'waypoint_construct_name', 5);
+        mfd.needsRedraw = true;
     }
 
     /**
@@ -1102,7 +1161,9 @@ class NavigationPage {
     static selectType(mfd, type) {
         const construction = gameStateInstance.getProperty('navigation.waypointConstruction');
         construction.data.type = type;
-        construction.step = 6;
+
+        // Move to confirmation (step differs by method)
+        construction.step = construction.method === 'pbd' ? 7 : 6;
         gameStateInstance.updateProperty('navigation.waypointConstruction', construction);
 
         // Show confirmation
@@ -1159,14 +1220,167 @@ class NavigationPage {
     }
 
     /**
+     * Select input method (LAT/LON or PBD)
+     */
+    static selectMethod(mfd, method) {
+        const construction = gameStateInstance.getProperty('navigation.waypointConstruction');
+        construction.method = method;
+
+        if (method === 'latlon') {
+            // LAT/LON path: go to latitude input (step 3)
+            construction.step = 3;
+            gameStateInstance.updateProperty('navigation.waypointConstruction', construction);
+
+            const latStr = formatLatitude(construction.data.lat);
+            mfd.requestKeyboardInput(`LAT [${latStr}]: `, 'waypoint_construct_lat', 15);
+            mfd.needsRedraw = true;
+        } else if (method === 'pbd') {
+            // PBD path: go to place selection (step 3)
+            construction.step = 3;
+            gameStateInstance.updateProperty('navigation.waypointConstruction', construction);
+
+            // Show waypoint picker
+            mfd.setupPageSoftKeys('navigation');
+            mfd.needsRedraw = true;
+            console.log('SELECT PLACE: PPOS or waypoint');
+        }
+    }
+
+    /**
+     * Select place for PBD (PPOS or waypoint)
+     */
+    static selectPBDPlace(mfd, refType, refId) {
+        const construction = gameStateInstance.getProperty('navigation.waypointConstruction');
+
+        if (refType === 'ppos') {
+            const currentPos = missionComputer.getCurrentPosition();
+            construction.data.refType = 'ppos';
+            construction.data.refId = null;
+            construction.data.refName = 'PPOS';
+            construction.data.refLat = currentPos.lat;
+            construction.data.refLon = currentPos.lon;
+            console.log('Place: PPOS');
+        } else if (refType === 'waypoint') {
+            const waypoint = gameStateInstance.getWaypoint(refId);
+            const [lon, lat] = waypoint.geometry.coordinates;
+            construction.data.refType = 'waypoint';
+            construction.data.refId = refId;
+            construction.data.refName = waypoint.name;
+            construction.data.refLat = lat;
+            construction.data.refLon = lon;
+            console.log(`Place: ${waypoint.name}`);
+        }
+
+        construction.step = 4;  // Move to bearing input
+        gameStateInstance.updateProperty('navigation.waypointConstruction', construction);
+
+        mfd.requestKeyboardInput('BEARING (000-360): ', 'waypoint_construct_bearing', 3);
+        mfd.needsRedraw = true;
+    }
+
+    /**
+     * Handle bearing input for PBD
+     */
+    static handleBearingInput(mfd, input) {
+        const construction = gameStateInstance.getProperty('navigation.waypointConstruction');
+
+        if (!input || input.trim() === '') {
+            console.log('ERROR: Bearing required');
+            return;
+        }
+
+        const bearing = parseFloat(input);
+        if (isNaN(bearing) || bearing < 0 || bearing >= 360) {
+            console.log('ERROR: Bearing must be 000-359');
+            return;
+        }
+
+        construction.data.bearing = bearing;
+        construction.step = 5;  // Move to distance input
+        gameStateInstance.updateProperty('navigation.waypointConstruction', construction);
+
+        mfd.requestKeyboardInput('DISTANCE (NM): ', 'waypoint_construct_distance', 6);
+        mfd.needsRedraw = true;
+    }
+
+    /**
+     * Handle distance input for PBD - calculate final position
+     */
+    static handleDistanceInput(mfd, input) {
+        const construction = gameStateInstance.getProperty('navigation.waypointConstruction');
+
+        if (!input || input.trim() === '') {
+            console.log('ERROR: Distance required');
+            return;
+        }
+
+        const distance = parseFloat(input);
+        if (isNaN(distance) || distance <= 0) {
+            console.log('ERROR: Distance must be positive');
+            return;
+        }
+
+        construction.data.distance = distance;
+
+        // Calculate destination point using PBD
+        const dest = missionComputer.calculateDestinationPoint(
+            construction.data.refLon,
+            construction.data.refLat,
+            construction.data.bearing,
+            construction.data.distance
+        );
+
+        // Store calculated position
+        construction.data.lat = dest.lat;
+        construction.data.lon = dest.lon;
+        construction.data.depth = 0;  // Surface default for PBD
+
+        construction.step = 6;  // Move to type selection
+        gameStateInstance.updateProperty('navigation.waypointConstruction', construction);
+
+        // Show type selection
+        mfd.setupPageSoftKeys('navigation');
+        mfd.needsRedraw = true;
+        console.log(`Calculated position: ${formatLatitude(dest.lat)}, ${formatLongitude(dest.lon)}`);
+        console.log('SELECT TYPE');
+    }
+
+    /**
+     * Waypoint picker pagination - previous page
+     */
+    static pickerPageUp(mfd) {
+        const construction = gameStateInstance.getProperty('navigation.waypointConstruction');
+        construction.pickerOffset = Math.max(0, construction.pickerOffset - construction.pickerPageSize);
+        gameStateInstance.updateProperty('navigation.waypointConstruction', construction);
+        mfd.setupPageSoftKeys('navigation');
+        mfd.needsRedraw = true;
+    }
+
+    /**
+     * Waypoint picker pagination - next page
+     */
+    static pickerPageDown(mfd) {
+        const construction = gameStateInstance.getProperty('navigation.waypointConstruction');
+        const totalWaypoints = gameStateInstance.getAllWaypoints().length;
+        const maxOffset = Math.max(0, totalWaypoints - construction.pickerPageSize);
+        construction.pickerOffset = Math.min(maxOffset, construction.pickerOffset + construction.pickerPageSize);
+        gameStateInstance.updateProperty('navigation.waypointConstruction', construction);
+        mfd.setupPageSoftKeys('navigation');
+        mfd.needsRedraw = true;
+    }
+
+    /**
      * Cancel waypoint construction
      */
     static cancelWaypointConstruction(mfd) {
         gameStateInstance.updateProperty('navigation.waypointConstruction', {
             active: false,
             mode: null,
+            method: null,
             step: 0,
-            data: {}
+            data: {},
+            pickerOffset: 0,
+            pickerPageSize: 3
         });
 
         this.setMode(mfd, 'waypoint');

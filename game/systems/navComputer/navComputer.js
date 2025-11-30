@@ -554,36 +554,77 @@ function drawContextInfoBox(svg, state) {
   if (construction && construction.active) {
     const data = construction.data || {};
     const step = construction.step || 0;
+    const method = construction.method;
     const modeLabel = construction.mode === 'add' ? 'NEW' : construction.mode === 'edit' ? 'EDIT' : 'DELETE';
-    title = `${modeLabel} WAYPOINT`;
 
-    // Show data only after user has confirmed it (based on step)
-    // Step 0: entering name
-    // Step 1: entering lat (name confirmed)
-    // Step 2: entering lon (lat confirmed)
-    // Step 3: entering depth (lon confirmed)
-    // Step 4+: selecting category/type (depth confirmed)
-
-    line1 = (step >= 1 && data.name) ? `NAME: ${data.name}` : 'NAME: _____';
-
-    if (step >= 2 && data.lat !== undefined) {
-      const latStr = formatLatitude(data.lat);
-      line2 = `LAT:  ${latStr}`;
+    // Show method in title if selected
+    if (method) {
+      title = `${modeLabel} WAYPOINT (${method === 'pbd' ? 'PBD' : 'LAT/LON'})`;
     } else {
-      line2 = 'LAT:  ___________';
+      title = `${modeLabel} WAYPOINT`;
     }
 
-    if (step >= 3 && data.lon !== undefined) {
-      const lonStr = formatLongitude(data.lon);
-      line3 = `LON:  ${lonStr}`;
-    } else {
-      line3 = 'LON:  ___________';
-    }
+    // Updated step numbering:
+    // Step 0: category selection
+    // Step 1: name entry
+    // Step 2: method selection (LAT/LON or PBD)
+    // LAT/LON: Step 3=lat, 4=lon, 5=depth, 5=type, 6=confirm
+    // PBD: Step 3=place, 4=bearing, 5=distance, 6=type, 7=confirm
 
-    if (step >= 4 && data.depth !== undefined) {
-      line4 = `DPTH: ${data.depth}m`;
+    line1 = (step >= 2 && data.name) ? `NAME: ${data.name}` : 'NAME: _____';
+
+    // Display based on method
+    if (method === 'pbd') {
+      // PBD mode: Show reference point, bearing, distance, then calculated coords
+      if (step >= 4 && data.refName) {
+        line2 = `FROM: ${data.refName}`;
+      } else {
+        line2 = 'FROM: ____';
+      }
+
+      if (step >= 5 && data.bearing !== undefined) {
+        line3 = `BRG:  ${String(Math.round(data.bearing)).padStart(3, '0')}°`;
+      } else {
+        line3 = 'BRG:  ___°';
+      }
+
+      if (step >= 6 && data.distance !== undefined) {
+        line4 = `DST:  ${data.distance.toFixed(1)} NM`;
+      } else {
+        line4 = 'DST:  ___ NM';
+      }
+
+      // After distance is entered, also show calculated position
+      if (step >= 6 && data.lat !== undefined && data.lon !== undefined) {
+        // We'll show the calculated coords in a second info section
+        // For now, keep the PBD parameters primary
+      }
+    } else if (method === 'latlon') {
+      // LAT/LON mode: Show coordinates directly
+      if (step >= 4 && data.lat !== undefined) {
+        const latStr = formatLatitude(data.lat);
+        line2 = `LAT:  ${latStr}`;
+      } else {
+        line2 = 'LAT:  ___________';
+      }
+
+      if (step >= 5 && data.lon !== undefined) {
+        const lonStr = formatLongitude(data.lon);
+        line3 = `LON:  ${lonStr}`;
+      } else {
+        line3 = 'LON:  ___________';
+      }
+
+      if (step >= 6 && data.depth !== undefined) {
+        line4 = `DPTH: ${data.depth}m`;
+      } else {
+        line4 = 'DPTH: ____m';
+      }
     } else {
-      line4 = 'DPTH: ____m';
+      // No method selected yet (step 0-2)
+      line2 = null;
+      line3 = null;
+      line4 = null;
     }
   }
   // Check for selected waypoint (if waypoint data exists in state)

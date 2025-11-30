@@ -242,6 +242,107 @@ class MissionComputer {
         };
     }
 
+    /**
+     * Calculate destination point given origin, bearing, and distance
+     * Uses inverse Haversine formula for great circle navigation
+     * @param {number} lon - Starting longitude
+     * @param {number} lat - Starting latitude
+     * @param {number} bearing - Bearing in degrees (0-360)
+     * @param {number} distance - Distance in nautical miles
+     * @returns {object} {lat, lon} - Destination coordinates
+     */
+    calculateDestinationPoint(lon, lat, bearing, distance) {
+        // Convert inputs to radians
+        const latRad = this.degreesToRadians(lat);
+        const lonRad = this.degreesToRadians(lon);
+        const bearingRad = this.degreesToRadians(bearing);
+
+        // Convert distance to angular distance in radians
+        const angularDistance = distance / this.EARTH_RADIUS_NM;
+
+        // Calculate destination point using great circle navigation
+        const destLatRad = Math.asin(
+            Math.sin(latRad) * Math.cos(angularDistance) +
+            Math.cos(latRad) * Math.sin(angularDistance) * Math.cos(bearingRad)
+        );
+
+        const destLonRad = lonRad + Math.atan2(
+            Math.sin(bearingRad) * Math.sin(angularDistance) * Math.cos(latRad),
+            Math.cos(angularDistance) - Math.sin(latRad) * Math.sin(destLatRad)
+        );
+
+        // Convert back to degrees
+        let destLat = this.radiansToDegrees(destLatRad);
+        let destLon = this.radiansToDegrees(destLonRad);
+
+        // Wrap longitude to [-180, 180]
+        while (destLon > 180) destLon -= 360;
+        while (destLon < -180) destLon += 360;
+
+        // Clamp latitude to [-90, 90]
+        destLat = Math.max(-90, Math.min(90, destLat));
+
+        return {
+            lat: destLat,
+            lon: destLon
+        };
+    }
+
+    /**
+     * Generate next available waypoint name (WP001, WP002, etc.)
+     * @returns {string} Next available waypoint name
+     */
+    generateWaypointName() {
+        const waypoints = gameStateInstance.getAllWaypoints();
+
+        // Find all existing WP### names
+        const wpNumbers = waypoints
+            .map(wpt => wpt.name)
+            .filter(name => /^WP\d{3}$/.test(name))
+            .map(name => parseInt(name.substring(2), 10));
+
+        // Find the highest number
+        const maxNumber = wpNumbers.length > 0 ? Math.max(...wpNumbers) : 0;
+
+        // Generate next number (WP001, WP002, etc.)
+        const nextNumber = maxNumber + 1;
+        return `WP${String(nextNumber).padStart(3, '0')}`;
+    }
+
+    /**
+     * Get nearby waypoints sorted by distance from current position
+     * @param {number} lat - Reference latitude
+     * @param {number} lon - Reference longitude
+     * @param {number} limit - Maximum number of waypoints to return (0 = all)
+     * @returns {Array} Array of waypoints with distance and bearing
+     */
+    getNearbyWaypoints(lat, lon, limit = 0) {
+        const waypoints = gameStateInstance.getAllWaypoints();
+
+        // Calculate distance and bearing for each waypoint
+        const waypointsWithDistance = waypoints.map(wpt => {
+            const [wptLon, wptLat] = wpt.geometry.coordinates;
+            const distance = this.calculateDistance(lon, lat, wptLon, wptLat);
+            const bearing = this.calculateBearing(lon, lat, wptLon, wptLat);
+
+            return {
+                ...wpt,
+                distance,
+                bearing
+            };
+        });
+
+        // Sort by distance (closest first)
+        waypointsWithDistance.sort((a, b) => a.distance - b.distance);
+
+        // Return limited set if requested
+        if (limit > 0) {
+            return waypointsWithDistance.slice(0, limit);
+        }
+
+        return waypointsWithDistance;
+    }
+
     // ========================================
     // WAYPOINT MANAGEMENT METHODS
     // ========================================
