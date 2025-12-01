@@ -17,7 +17,7 @@
       "type": "Feature",
       "geometry": {
         "type": "Point",
-        "coordinates": [-70.6841, 41.5050]
+        "coordinates": [-70.5500, 41.4500]
       },
       "properties": {
         "name": "Mystic Reef",
@@ -29,7 +29,7 @@
       "type": "Feature",
       "geometry": {
         "type": "Point",
-        "coordinates": [-70.6500, 41.5300]
+        "coordinates": [-70.8000, 41.6500]
       },
       "properties": {
         "name": "Deep Trench Alpha",

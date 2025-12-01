@@ -2,6 +2,7 @@
 // Separates navigation display from MFD overlay system
 import displayManager from '/utils/displayManager.js';
 import gameStateInstance from '/game/state.js';
+import saveManagerInstance from '/game/saveManager.js';
 import missionManager from '/game/systems/missionManager.js';
 import { initPDAOverlay } from '/utils/pdaOverlay.js';
 import { initCommunicatorOverlay } from '/utils/communicatorOverlay.js';
@@ -28,6 +29,12 @@ const trackInput = document.getElementById("track-input");
 const headingInput = document.getElementById("heading-input");
 
 async function initializeBridge() {
+
+  // Initialize SaveManager to load game state from logbook
+  // This must happen FIRST before any other systems
+  console.log('SAVE MANAGER.....INITIALIZING');
+  await saveManagerInstance.init(gameStateInstance);
+  console.log('SAVE MANAGER.....ONLINE');
 
   if (!missionManager.initialized) {
     console.log('MISSION COMPUTER.....ONLINE');

@@ -1,6 +1,7 @@
 // Handles the Captains quarters system for Aqua Nova
 import displayManager from '/utils/displayManager.js';
 import gameStateInstance from '/game/state.js';
+import saveManagerInstance from '/game/saveManager.js';
 import missionManager from '/game/systems/missionManager.js';
 import { initPDAOverlay } from '/utils/pdaOverlay.js';
 import { initCommunicatorOverlay } from '/utils/communicatorOverlay.js';
@@ -14,6 +15,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Initialize display system FIRST (for proper scaling)
     await displayManager.init();
+
+    // Initialize SaveManager to load game state from logbook
+    await saveManagerInstance.init(gameStateInstance);
 
     // Initialize mission system if not already done
     if (!missionManager.initialized) {

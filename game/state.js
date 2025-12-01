@@ -1,10 +1,60 @@
 // game/state.js
-// Central game state management for Aqua Nova DSV
-// Single source of truth for ALL game data
-// Pure state management - no persistence logic
-// Observer pattern for UI updates
-// Simple get/set/update methods
-
+// ============================================================================
+// GAME STATE - SINGLE SOURCE OF TRUTH
+// ============================================================================
+//
+// This is the ONLY place where game state is stored and modified.
+// ALL game data flows through this module - navigation, systems, missions, etc.
+//
+// ARCHITECTURE:
+// - GameState is a singleton exported as `gameStateInstance` at the bottom
+// - Each HTML page (splash, bridge, quarters, etc.) imports this same instance
+// - However, navigating between pages creates a NEW JavaScript context
+// - Therefore, each page MUST call `saveManagerInstance.init(gameStateInstance)`
+//   to restore the persisted state from localStorage
+//
+// USAGE RULES FOR DEVELOPERS:
+//
+// 1. ALWAYS import the singleton instance:
+//    import gameStateInstance from '/game/state.js';
+//    (NOT: import { GameState } from '/game/state.js')
+//
+// 2. NEVER create new GameState instances:
+//    ❌ const state = new GameState();  // WRONG!
+//    ✅ import gameStateInstance from '/game/state.js';  // CORRECT!
+//
+// 3. ALWAYS initialize saveManager on each page:
+//    import saveManagerInstance from '/game/saveManager.js';
+//    await saveManagerInstance.init(gameStateInstance);
+//    (This loads the persisted state from localStorage)
+//
+// 4. READ state using getter methods:
+//    - getState() - Get entire state (use sparingly)
+//    - getProperty('path.to.property') - Get specific property
+//    - getWaypoint(id) - Get specific waypoint
+//    - getAllWaypoints() - Get all waypoints
+//
+// 5. WRITE state using update methods:
+//    - updateProperty('path.to.property', value) - Update specific property
+//    - addWaypoint(waypoint) - Add waypoint
+//    - updateWaypoint(id, updates) - Update waypoint
+//    - deleteWaypoint(id) - Delete waypoint
+//
+// 6. OBSERVE state changes:
+//    gameStateInstance.addObserver((state) => {
+//        // React to state changes
+//    });
+//
+// PERSISTENCE:
+// - State changes are automatically saved by saveManager when needed
+// - Don't manually save unless you have a specific reason
+// - Snapshots are stored in logbook entries in localStorage
+//
+// PERFORMANCE NOTE:
+// - Getter methods like getAllWaypoints() may be called frequently (e.g., 10fps in rendering loops)
+// - This is intentional and works correctly, but may be optimized in the future with caching
+//
+// ============================================================================
 
 class GameState {
     constructor() {
@@ -669,8 +719,33 @@ class GameState {
     }
 }
 
-// Singleton instance
+// ============================================================================
+// SINGLETON EXPORT - USE THIS!
+// ============================================================================
+//
+// This singleton instance is the ONLY game state in the application.
+// Import this in every file that needs access to game state:
+//
+//   import gameStateInstance from '/game/state.js';
+//
+// IMPORTANT: Each HTML page creates a fresh JavaScript context, so the state
+// starts empty. You MUST initialize saveManager on each page to restore state:
+//
+//   import saveManagerInstance from '/game/saveManager.js';
+//   await saveManagerInstance.init(gameStateInstance);
+//
+// This is already done in:
+// - main.js (splash screen)
+// - bridge.js
+// - quarters.js
+// - sensors.js
+// - engineering.js
+//
+// If you create a new page, add saveManager initialization there too!
+//
+// ============================================================================
+
 const gameStateInstance = new GameState();
 
 export default gameStateInstance;
-export { GameState };
+export { GameState };  // Export class for testing purposes only

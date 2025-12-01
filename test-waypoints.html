@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Waypoint Test</title>
+</head>
+<body>
+    <h1>Waypoint Debug</h1>
+    <button onclick="checkWaypoints()">Check Waypoints</button>
+    <pre id="output"></pre>
+    
+    <script type="module">
+        import gameStateInstance from '/game/state.js';
+        
+        window.checkWaypoints = function() {
+            const waypoints = gameStateInstance.getAllWaypoints();
+            const output = document.getElementById('output');
+            output.textContent = `Total waypoints: ${waypoints.length}\n\n`;
+            waypoints.forEach((wpt, i) => {
+                output.textContent += `${i+1}. ${wpt.name} - ${wpt.category}/${wpt.type}\n`;
+            });
+        };
+    </script>
+</body>
+</html>

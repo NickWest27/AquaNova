@@ -1050,7 +1050,8 @@ function drawWaypoints(ctx, cx, cy, maxRadius, state, rotationAngle = 0) {
     SAMPLE_SITE: 'cross',
     RESEARCH_AREA: 'circle', // default
     SURVEY_POINT: 'square',
-    WRECK: 'x',
+    REEF: 'diamond',
+    TRENCH: 'triangle',
     // HAZ types
     ROCK: 'x',
     SHALLOW: 'square',
@@ -1059,6 +1060,7 @@ function drawWaypoints(ctx, cx, cy, maxRadius, state, rotationAngle = 0) {
     // POI types
     LANDMARK: 'star',
     REFERENCE: 'circle', // default
+    WRECK: 'x',
     CUSTOM: 'circle'
   };
 

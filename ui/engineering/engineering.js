@@ -1,9 +1,14 @@
 // Engineering Station Handler
+import gameStateInstance from '/game/state.js';
+import saveManagerInstance from '/game/saveManager.js';
 import { initPDAOverlay } from '/utils/pdaOverlay.js';
 import { initCommunicatorOverlay } from '/utils/communicatorOverlay.js';
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     console.log('Engineering station loading...');
+
+    // Initialize SaveManager to load game state from logbook
+    await saveManagerInstance.init(gameStateInstance);
 
     // Initialize overlays
     initPDAOverlay();

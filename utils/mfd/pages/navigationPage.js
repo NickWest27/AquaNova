@@ -1398,6 +1398,9 @@ class NavigationPage {
 
             // Return to waypoint menu
             this.setMode(mfd, 'waypoint');
+
+            // Force redraw to show new waypoint on map
+            mfd.needsRedraw = true;
         } else {
             console.log(`ERROR: ${result.error}`);
         }
@@ -1445,6 +1448,7 @@ class NavigationPage {
                 // Store position for later use
                 builder.data.refLat = currentPos.lat;
                 builder.data.refLon = currentPos.lon;
+                builder.data.refDepth = currentPos.depth;
                 console.log('PLACE: PPOS');
             } else if (refType === 'waypoint') {
                 const waypoint = gameStateInstance.getWaypoint(refId);

@@ -71,10 +71,12 @@ class SplashScreen {
             this.updateConsole('Initializing game systems...');
 
             // Initialize SaveManager with GameState
+            // This loads the logbook and restores the saved state
             const success = await saveManagerInstance.init(gameStateInstance);
             if (!success) throw new Error('System initialization failed');
 
-            // Load locations from locations.json
+            // Load locations from locations.json AFTER logbook is mounted
+            // This ensures locations don't get wiped by snapshot restore
             await this.loadLocations();
 
             // Update display with current state
@@ -102,6 +104,15 @@ class SplashScreen {
             if (locationsData && locationsData.features) {
                 missionComputer.loadLocationsAsWaypoints(locationsData.features);
                 this.updateConsole(`Loaded ${locationsData.features.length} locations`);
+
+                // IMPORTANT: Save the current state so locations persist
+                // Always update the latest logbook entry to include loaded locations
+                const logbook = saveManagerInstance.getActiveLogbook();
+                if (logbook && logbook.entries && logbook.entries.length > 0) {
+                    const lastEntry = logbook.entries[logbook.entries.length - 1];
+                    lastEntry.gameSnapshot = gameStateInstance.createSnapshot();
+                    saveManagerInstance.saveBookshelf();
+                }
             }
         } catch (error) {
             console.warn('Error loading locations:', error);

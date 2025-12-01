@@ -245,17 +245,19 @@ export class WaypointBuilder {
             throw new Error('PBD data incomplete');
         }
 
-        let refLat, refLon;
+        let refLat, refLon, refDepth;
 
         // Handle PPOS (present position) vs waypoint reference
         if (this.data.refPointId === 'ppos') {
             // Use stored PPOS coordinates from when it was selected
             refLat = this.data.refLat;
             refLon = this.data.refLon;
+            refDepth = this.data.refDepth || 0;
         } else {
             // Look up waypoint
             const refPoint = gameStateInstance.getWaypoint(this.data.refPointId);
             [refLon, refLat] = refPoint.geometry.coordinates;
+            refDepth = refPoint.depth || 0;
         }
 
         // Convert to radians
@@ -279,7 +281,7 @@ export class WaypointBuilder {
         // Convert back to degrees
         this.data.lat = lat2 * 180 / Math.PI;
         this.data.lon = lon2 * 180 / Math.PI;
-        this.data.depth = refPoint.depth || 0;  // Use reference point depth
+        this.data.depth = refDepth;
     }
 
     // ========================================
