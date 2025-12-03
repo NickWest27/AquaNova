@@ -11,6 +11,10 @@ const TILES = [
   { name: 'n40s30w-70e-60', bounds: { n: 40, s: 30, w: -70, e: -60 } },
   { name: 'n40s30w-60e-50', bounds: { n: 40, s: 30, w: -60, e: -50 } },
   { name: 'n40s30w-50e-40', bounds: { n: 40, s: 30, w: -50, e: -40 } },
+  { name: 'n40s30w-40e-30', bounds: { n: 40, s: 30, w: -40, e: -30 } },
+  { name: 'n40s30w-30e-20', bounds: { n: 40, s: 30, w: -30, e: -20 } },
+  { name: 'n40s30w-20e-10', bounds: { n: 40, s: 30, w: -20, e: -10 } },
+  { name: 'n40s30w-10e-00', bounds: { n: 40, s: 30, w: -10, e: -0 } },
   { name: 'n45s40w-75e-70', bounds: { n: 45, s: 40, w: -75, e: -70 } }
 ];
 

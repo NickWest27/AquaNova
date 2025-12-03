@@ -3,9 +3,6 @@ Items can be marked as complete or resolved. This document should be constantly 
 /////////////////////////////////////////////////////////////
 
 Check and update Structure.txt
-Incorperate locations.json as game data set the user can see and use
-get waypoint list function working
-Consider .png icon set for waypoints.
-Increase zoom/range level down to 1nm
-rename waypointBuilder to routeBuilder and correct all dipendancies
+get waypoint list function displaying and working correctly
 Add a build route function to string waypoints.
+Brainstorm waypoint catagory and types relevant to this game as a research and exploration sub. 

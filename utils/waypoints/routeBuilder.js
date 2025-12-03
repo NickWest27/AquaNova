@@ -221,7 +221,7 @@ export class WaypointBuilder {
             throw new Error('Bearing must be set before distance');
         }
 
-        if (distance <= 0) {
+        if (distance < 0) {
             throw new Error('Distance must be greater than 0');
         }
 

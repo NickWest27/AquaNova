@@ -12,8 +12,8 @@ export function getDepthFillColor(depth) {
     const absDepth = Math.abs(depth);
 
     if (depth === 0) {
-        // Coastline/Land - tan/brown
-        return 'rgba(139, 119, 101, 0.5)';
+        // Coastline/Land - yellow transparent
+        return 'rgba(249, 220, 31, 0)';
     } else if (absDepth <= 10) {
         // Very shallow (0-10m) - very light blue
         return 'rgba(200, 230, 255, 0.4)';
@@ -51,7 +51,7 @@ export function getDepthColor(depth) {
 
     if (depth === 0) {
         // Coastline - dark grey/brown for land boundary
-        return 'rgba(120, 110, 100, 0.9)';
+        return 'rgba(249, 220, 31, 0.9)';
     } else if (absDepth <= 10) {
         // Very shallow (0-10m) - very light blue, almost white
         return 'rgba(200, 230, 255, 0.7)';

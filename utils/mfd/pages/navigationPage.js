@@ -1,7 +1,6 @@
 // utils/mfd/pages/navigationPage.js
 //
 
-import { drawNavigationDisplay } from '/game/systems/navComputer/navComputer.js';
 import gameStateInstance from '/game/state.js';
 import missionComputer from '/game/systems/missionComputer/missionComputer.js';
 import { formatLatitude, formatLongitude, parseCoordinateInput } from '/utils/coordinates.js';
@@ -18,7 +17,7 @@ class NavigationPage {
             waypoints: true,
             contours: true,  // ALWAYS default to true
             hazards: true,
-            traffic: false,
+            traffic: true,
             latLonGrid: true
         };
 
@@ -85,7 +84,8 @@ class NavigationPage {
             'SHOW',        // L5: Overlays selection
             '', '', '', '', '',  // C1-C5: Empty for nav page
             'WYPT',        // R1: Waypoint management menu
-            '', '', '', ''       // R2-R5: Empty
+            'ROUTE',       // R2: Route management menu
+            '', '', ''       // R3-R5: Empty
         ],
         actions: [ // Not sure if this is still used
             () => this.changeRange(mfd, 1),        // L1
@@ -95,7 +95,8 @@ class NavigationPage {
             () => this.setMode(mfd, 'overlays'),   // L5
             null, null, null, null, null,          // C1-C5
             () => this.setMode(mfd, 'waypoint'),   // R1
-            null, null, null, null                 // R2-R5
+            () => this.setMode(mfd, 'route'),      // R2
+            null, null, null                 // R3-R5
         ],
         states: [ // Not sure if this is still used
             { type: 'momentary', selected: false },  // L1: Range up arrow
@@ -104,8 +105,9 @@ class NavigationPage {
             { type: 'momentary', selected: false },  // L4: Display mode cycle
             { type: 'momentary', selected: false },  // L5: SHOW overlays menu
             null, null, null, null, null,            // C1-C5
-            { type: 'momentary', selected: false },  // R1: ROUTE menu
-            null, null, null, null                   // R2-R5
+            { type: 'momentary', selected: false },  // R1: Waypoint menu
+            { type: 'momentary', selected: false },  // R2: Route menu
+            null, null, null                   // R3-R5
         ]
     };
     }
@@ -172,31 +174,33 @@ class NavigationPage {
                 'EDIT',     // L2: Edit waypoint
                 'DELETE',   // L3: Delete waypoint
                 'LIST',     // L4: List all waypoints
-                'BACK',     // L5: Back to map
+                '',         // L5 
                 '', '', '', '', '',  // C1-C5: Empty
                 '',         // R1
                 '',         // R2
                 '',         // R3
                 '',         // R4
-                ''          // R5
+                'BACK'      // R5 Back to map
             ],
             actions: [
                 () => this.startAddWaypoint(mfd),     // L1
                 () => this.startEditWaypoint(mfd),    // L2
                 () => this.startDeleteWaypoint(mfd),  // L3
                 () => this.showWaypointList(mfd),     // L4
-                () => this.backToMap(mfd),            // L5
+                null,                                 // L5
                 null, null, null, null, null,         // C1-C5
-                null, null, null, null, null          // R1-R5
+                null, null, null, null,               // R1-R4    
+                () => this.backToMap(mfd)            // R5
             ],
             states: [
                 { type: 'momentary', selected: false },  // L1: ADD
                 { type: 'momentary', selected: false },  // L2: EDIT
                 { type: 'momentary', selected: false },  // L3: DELETE
                 { type: 'momentary', selected: false },  // L4: LIST
-                { type: 'momentary', selected: false },  // L5: BACK
+                null,                                    // L5
                 null, null, null, null, null,            // C1-C5
-                null, null, null, null, null             // R1-R5
+                null, null, null, null,                  // R1-R4
+                { type: 'momentary', selected: false }   // R5: BACK
             ]
         };
     }
@@ -258,7 +262,7 @@ class NavigationPage {
         if (stage === WORKFLOW_STAGES.SELECT_CATEGORY) {
             return {
                 labels: [
-                    'NAV', 'SCI', 'HAZ', 'POI', '',
+                    'NAV', 'SCIENCE', 'HAZARD', 'POI', '',
                     '', '', '', '', '',
                     '', '', '', '', 'CANCEL'  // R5
                 ],
@@ -422,72 +426,47 @@ class NavigationPage {
                 'EDIT',     // L2
                 'DELETE',   // L3
                 '',         // L4
-                'BACK',     // L5
+                'DIRECT',     // L5
                 '', '', '', '', '',  // C1-C5: Empty
                 'UP',       // R1
                 'DOWN',     // R2
                 'EXEC',     // R3
                 '',         // R4
-                'DIRECT'    // R5
+                'BACK'    // R5
             ],
             actions: [
                 () => this.addWaypoint(mfd),         // L1
                 () => this.editWaypoint(mfd),        // L2
                 () => this.deleteWaypoint(mfd),      // L3
                 null,                                // L4
-                () => this.backToMap(mfd),           // L5
+                () => this.directToWaypoint(mfd),    // L5
                 null, null, null, null, null,        // C1-C5
                 () => this.moveWaypointUp(mfd),      // R1
                 () => this.moveWaypointDown(mfd),    // R2
                 () => this.executeRoute(mfd),        // R3
                 null,                                // R4
-                () => this.directToWaypoint(mfd)     // R5
+                () => this.backToMap(mfd)           // R5
             ],
             states: [
                 { type: 'momentary', selected: false },  // L1: ADD
                 { type: 'momentary', selected: false },  // L2: EDIT
                 { type: 'momentary', selected: false },  // L3: DELETE
                 null,                                     // L4
-                { type: 'momentary', selected: false },  // L5: BACK
+                { type: 'momentary', selected: false },  // L5: DIRECT
                 null, null, null, null, null,            // C1-C5
                 { type: 'momentary', selected: false },  // R1: UP
                 { type: 'momentary', selected: false },  // R2: DOWN
                 { type: 'momentary', selected: false },  // R3: EXEC
                 null,                                     // R4
-                { type: 'momentary', selected: false }   // R5: DIRECT
+                { type: 'momentary', selected: false }   // R5: BACK
             ]
         };
     }
 
-    static render(mfd, currentGameState) {
-        const canvas = mfd.getDisplayCanvas();
-        const svg = mfd.getDisplaySVG();
-        const state = mfd.getPageState('navigation');
-        
-        if (!canvas || !svg) return;
-
-        // Clear SVG overlays
-        svg.innerHTML = '';
-
-        // Use passed game state (push-based, no pulling from gameStateInstance)
-        const navState = {
-            range: currentGameState.range,
-            ownshipTrack: currentGameState.course,
-            selectedHeading: currentGameState.heading,
-            ownshipPosition: currentGameState.location?.geometry?.coordinates || [-70.6709, 41.5223],
-            overlays: state.overlaysVisible,
-            displayMode: state.displayMode || 'ARC'
-        };
-
-        // Use existing nav computer to draw the display
-        drawNavigationDisplay(canvas, svg, navState, 'centerDisplay');
-
-        // Add page-specific overlays
-        this.addPageOverlays(mfd, state);
-    }
-
-    static addPageOverlays(mfd, state) {
-        const svg = mfd.getDisplaySVG();
+    static addPageOverlays(svg, state) {
+        // SVG is now passed directly instead of getting it from MFD
+        // This is because the navigation overlays belong to the center display,
+        // not the MFD's right-console display
 
         // Check for waypoint modes
         const construction = gameStateInstance.getProperty('navigation.waypointConstruction');

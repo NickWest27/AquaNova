@@ -348,7 +348,7 @@ class MissionComputer {
     // ========================================
 
     /**
-     * Waypoint type definitions by category
+     * Waypoint type definitions by category,
      */
     getWaypointTypes() {
         return {

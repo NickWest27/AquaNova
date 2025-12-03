@@ -366,15 +366,6 @@ class MFDCore {
         }
     }
 
-    // Get display elements (canvas/svg) from container
-    getDisplayCanvas() {
-        return this.container.querySelector('canvas');
-    }
-
-    getDisplaySVG() {
-        return this.container.querySelector('svg');
-    }
-
     getCurrentPage() {
         return this.currentPage;
     }

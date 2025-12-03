@@ -1,6 +1,5 @@
 // Enhanced Bridge System for Aqua Nova
 // Separates navigation display from MFD overlay system
-import displayManager from '/utils/displayManager.js';
 import gameStateInstance from '/game/state.js';
 import saveManagerInstance from '/game/saveManager.js';
 import missionManager from '/game/systems/missionManager.js';
@@ -368,10 +367,11 @@ function updateNavigationDisplay() {
   drawNavigationDisplay(navigationCanvas, navigationSVG, navState, getCurrentDisplayType());
 
   // Add page-specific overlays (waypoint list, selection displays, etc.)
+  // Note: We pass navigationSVG directly to the page's overlay function
   const pageClass = mfdSystem?.pages?.get('navigation');
   if (pageClass && typeof pageClass.addPageOverlays === 'function') {
     const pageState = mfdSystem.getPageState('navigation') || {};
-    pageClass.addPageOverlays(mfdSystem, pageState);
+    pageClass.addPageOverlays(navigationSVG, pageState);
   }
 }
 
