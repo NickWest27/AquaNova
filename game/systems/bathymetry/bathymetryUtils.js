@@ -13,7 +13,7 @@ export function getDepthFillColor(depth) {
 
     if (depth === 0) {
         // Coastline/Land - yellow transparent
-        return 'rgba(249, 220, 31, 0)';
+        return 'rgba(249, 220, 31, 0.9)';
     } else if (absDepth <= 10) {
         // Very shallow (0-10m) - very light blue
         return 'rgba(200, 230, 255, 0.4)';
@@ -42,7 +42,7 @@ export function getDepthFillColor(depth) {
 }
 
 /**
- * Get color based on depth (deeper = darker blue, coastline = grey/brown)
+ * Get color based on depth (bright colors optimized for black background)
  * @param {number} depth - Depth in meters (negative values)
  * @returns {string} RGBA color string
  */
@@ -50,50 +50,50 @@ export function getDepthColor(depth) {
     const absDepth = Math.abs(depth);
 
     if (depth === 0) {
-        // Coastline - dark grey/brown for land boundary
-        return 'rgba(249, 220, 31, 0.9)';
+        // Coastline - tan/beige for land boundary
+        return 'rgba(222, 184, 135, 1.0)'; // Burlywood - highly visible on black
     } else if (absDepth <= 10) {
-        // Very shallow (0-10m) - very light blue, almost white
-        return 'rgba(200, 230, 255, 0.7)';
+        // Very shallow (0-10m) - bright cyan
+        return 'rgba(0, 255, 255, 1.0)';
     } else if (absDepth <= 50) {
-        // Shallow (10-50m) - light blue
-        return 'rgba(170, 215, 255, 0.7)';
+        // Shallow (10-50m) - bright aqua
+        return 'rgba(64, 224, 208, 1.0)';
     } else if (absDepth <= 100) {
-        // Shallow shelf (50-100m) - light-medium blue
-        return 'rgba(140, 200, 250, 0.7)';
+        // Shallow shelf (50-100m) - turquoise
+        return 'rgba(64, 190, 224, 1.0)';
     } else if (absDepth <= 200) {
-        // Shelf (100-200m) - medium blue
-        return 'rgba(110, 180, 240, 0.7)';
+        // Shelf (100-200m) - light blue
+        return 'rgba(100, 160, 255, 1.0)';
     } else if (absDepth <= 500) {
         // Shelf break (200-500m) - medium blue
-        return 'rgba(80, 160, 230, 0.7)';
+        return 'rgba(80, 140, 255, 1.0)';
     } else if (absDepth <= 1000) {
-        // Continental slope (500-1000m) - deeper blue
-        return 'rgba(60, 140, 210, 0.7)';
+        // Continental slope (500-1000m) - royal blue
+        return 'rgba(65, 105, 225, 1.0)';
     } else if (absDepth <= 2000) {
-        // Upper slope (1000-2000m) - deeper blue
-        return 'rgba(45, 120, 190, 0.7)';
+        // Upper slope (1000-2000m) - cornflower blue
+        return 'rgba(100, 149, 237, 1.0)';
     } else if (absDepth <= 3000) {
-        // Mid slope (2000-3000m) - dark blue
-        return 'rgba(35, 100, 170, 0.7)';
+        // Mid slope (2000-3000m) - dodger blue
+        return 'rgba(30, 144, 255, 1.0)';
     } else if (absDepth <= 4000) {
-        // Lower slope (3000-4000m) - darker blue
-        return 'rgba(25, 80, 150, 0.7)';
+        // Lower slope (3000-4000m) - deep sky blue
+        return 'rgba(0, 191, 255, 1.0)';
     } else if (absDepth <= 5000) {
-        // Abyssal plain (4000-5000m) - very dark blue
-        return 'rgba(18, 60, 130, 0.7)';
+        // Abyssal plain (4000-5000m) - light sky blue
+        return 'rgba(135, 206, 250, 1.0)';
     } else if (absDepth <= 6000) {
-        // Deep abyssal (5000-6000m) - very dark blue
-        return 'rgba(12, 45, 110, 0.7)';
+        // Deep abyssal (5000-6000m) - steel blue
+        return 'rgba(70, 130, 180, 1.0)';
     } else if (absDepth <= 8000) {
-        // Deep ocean (6000-8000m) - extremely dark blue
-        return 'rgba(8, 35, 90, 0.7)';
+        // Deep ocean (6000-8000m) - powder blue
+        return 'rgba(176, 224, 230, 1.0)';
     } else if (absDepth <= 10000) {
-        // Deep trenches (8000-10000m) - nearly black blue
-        return 'rgba(5, 25, 70, 0.7)';
+        // Deep trenches (8000-10000m) - light cyan
+        return 'rgba(224, 255, 255, 1.0)';
     } else {
-        // Extreme depths (10000m+) - Challenger Deep, etc.
-        return 'rgba(3, 18, 50, 0.7)';
+        // Extreme depths (10000m+) - white
+        return 'rgba(255, 255, 255, 1.0)';
     }
 }
 
@@ -106,12 +106,18 @@ export function getDepthLineWidth(depth) {
     const absDepth = Math.abs(depth);
 
     // Coastline is thickest
-    if (depth === 0) return 2.5;
+    if (depth === 0) return 3;
 
-    // Major contours (every 1000m) are thicker
-    if (absDepth >= 1000 && absDepth % 1000 === 0) return 1.5;
+    // Major deep contours (every 1000m) are thick
+    if (absDepth >= 1000 && absDepth % 1000 === 0) return 2.5;
 
-    // Standard contours
+    // Important shallow contours (100m, 500m) are medium-thick
+    if (absDepth === 100 || absDepth === 500) return 2;
+
+    // Intermediate contours (50m, 200m) are medium
+    if (absDepth === 50 || absDepth === 200) return 1.5;
+
+    // Minor contours (10m, 20m, 30m, etc.) are thin
     return 1;
 }
 
@@ -223,11 +229,11 @@ export function isContourVisible(feature, shipLon, shipLat, range) {
 /**
  * Get depth label text
  * @param {number} depth - Depth in meters (negative values)
- * @returns {string} Formatted depth label
+ * @returns {string} Formatted depth label (as positive number)
  */
 export function getDepthLabel(depth) {
     if (depth === 0) return '0m';
-    return `${depth}m`;
+    return `${Math.abs(depth)}m`;
 }
 
 /**

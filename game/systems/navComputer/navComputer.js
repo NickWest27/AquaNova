@@ -11,15 +11,6 @@ import missionComputer from '/game/systems/missionComputer/missionComputer.js';
 let bathymetryData = null;
 
 /**
- * Get tile bounds for a specific tile name
- * @param {string} tileName - Tile name (e.g., 'n40s30w-80e-70')
- * @returns {Object|null} Tile bounds {n, s, w, e} or null if not found
- */
-function getTileBounds(tileName) {
-  return bathymetryTileManager.getTileBounds(tileName);
-}
-
-/**
  * Update bathymetry data based on current position and range
  * Intelligently loads/unloads tiles based on viewport visibility
  * This is called synchronously - tile manager handles debouncing
@@ -208,9 +199,7 @@ function drawNavContent(ctx, cx, cy, maxRadius, state, canvasWidth, canvasHeight
 
   // 4. Draw bathymetry contours if enabled (rotated for heading-up display)
   if (state.overlays && state.overlays.contours && bathymetryData) {
-    const primaryTile = bathymetryTileManager.primaryTile;
-    const tileBounds = primaryTile ? getTileBounds(primaryTile) : null;
-    drawBathymetryContours(ctx, cx, cy, maxRadius, state, bathymetryData, rotationAngle, tileBounds);
+    drawBathymetryContours(ctx, cx, cy, maxRadius, state, bathymetryData, rotationAngle);
   }
 
   // 4.5. Draw waypoints if enabled (rotated for heading-up display)
@@ -1218,8 +1207,8 @@ function drawLatLonGrid(ctx, cx, cy, maxRadius, state) {
   const latGridStart = Math.floor(shipLatMinutes / gridInterval) * gridInterval;
   const lonGridStart = Math.floor(shipLonMinutes / gridInterval) * gridInterval;
 
-  // Draw grid lines - thin and light grey
-  ctx.strokeStyle = "rgba(150, 150, 150, 0.25)"; // Light grey with low opacity
+  // Draw grid lines - thin but visible on black background
+  ctx.strokeStyle = "rgba(180, 180, 180, 0.4)"; // Brighter grey with better opacity
   ctx.lineWidth = 0.5; // Thin lines
 
   // Calculate grid bounds based on canvas dimensions, not circular range
@@ -1388,9 +1377,7 @@ function drawPlanContent(ctx, cx, cy, maxRadius, state, canvasWidth, canvasHeigh
 
   // 3. Draw bathymetry contours if enabled (north-up, no rotation)
   if (state.overlays && state.overlays.contours && bathymetryData) {
-    const primaryTile = bathymetryTileManager.primaryTile;
-    const tileBounds = primaryTile ? getTileBounds(primaryTile) : null;
-    drawBathymetryContours(ctx, cx, cy, maxRadius, state, bathymetryData, 0, tileBounds);
+    drawBathymetryContours(ctx, cx, cy, maxRadius, state, bathymetryData, 0);
   }
 
   // 3.5. Draw waypoints if enabled (north-up, no rotation)
@@ -1435,9 +1422,7 @@ function drawRoseContent(ctx, cx, cy, maxRadius, state, canvasWidth, canvasHeigh
 
   // 4. Draw bathymetry contours if enabled (rotated for track-up display)
   if (state.overlays && state.overlays.contours && bathymetryData) {
-    const primaryTile = bathymetryTileManager.primaryTile;
-    const tileBounds = primaryTile ? getTileBounds(primaryTile) : null;
-    drawBathymetryContours(ctx, cx, cy, maxRadius, state, bathymetryData, rotationAngle, tileBounds);
+    drawBathymetryContours(ctx, cx, cy, maxRadius, state, bathymetryData, rotationAngle);
   }
 
   // 4.5. Draw waypoints if enabled (rotated for track-up display)
