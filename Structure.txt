@@ -14,8 +14,9 @@ AquaNova2/
 │
 ├── data/                    # Static game data
 │   ├── bathymetry/          # Bathymetric depth data for ocean floor rendering [Implemented]
-│   │   ├── northAtlantic/   # North Atlantic region bathymetry tiles
-│   │   └── *.geojson        # GeoJSON files at various resolutions (10m, 100m, 500m, 1000m)
+│   │   ├── *.geojson        # GeoJSON contour files at various resolutions (10m, 100m, 500m, 1000m)
+│   │   ├── *.png            # Reference PNG bathymetry images (GEBCO) for documentation
+│   │   └── readme.txt       # Bathymetry data processing workflow documentation
 │   ├── logbooks/
 │   │   ├── MaidenVoyage.json # A placeholder second campaign used for testing bookshelf functionality
 │   │   └── SeaTrials.json   # First campaign logbook, Sea Trials of the Aqua Nova
@@ -37,10 +38,10 @@ AquaNova2/
 │       ├── autopilot/       # Autopilot system [Implemented]
 │       │   └── autopilot.js # Automated navigation and ship control
 │       ├── bathymetry/      # Bathymetric data processing system [Implemented]
-│       │   ├── bathymetryLoader.js       # Loads bathymetric GeoJSON data
-│       │   ├── bathymetryUtils.js        # Utility functions for bathymetry processing
-│       │   ├── bathymetryTileManager.js  # Manages bathymetric tile loading and caching
-│       │   └── bathymetryRenderer.js     # Renders ocean floor depth data
+│       │   ├── bathymetryLoader.js       # Loads bathymetric GeoJSON data with dual-level caching
+│       │   ├── bathymetryUtils.js        # Color schemes, LOD filtering, depth labels, line widths
+│       │   ├── bathymetryTileManager.js  # Manages tile loading with intelligent viewport culling
+│       │   └── bathymetryRenderer.js     # Contour-line renderer with depth labels (no fills)
 │       ├── missionComputer/ # Similar to FMC/MCDU of modern airliner [Implemented]
 │       │   └── missionComputer.js     # Handles calculation (drift, routing between waypoints, etc.) pulls from ship state, passes to navComputer
 │       ├── navComputer/     # Navigation display [Implemented]
