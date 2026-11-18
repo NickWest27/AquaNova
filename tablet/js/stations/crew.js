@@ -2,6 +2,7 @@
 import { sim, toward } from '../sim.js';
 import { el, toast } from '../util.js';
 import { gameState } from '../persist.js';
+import { toggleDock } from '../dock.js';
 
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
 
@@ -13,7 +14,15 @@ const HEADINGS = [['North 000', 0], ['045', 45], ['East 090', 90], ['135', 135],
 const hdgText = (h) => String(Math.round(((h % 360) + 360) % 360)).padStart(3, '0');
 
 // Orders that do something. Anything not listed here (or in PARAM) is shown in the "not yet" colour.
+// Orders added here show up even in old saves (a save keeps its own copy of the crew's lines).
+const EXTRA = { helm: ['Undock', 'Dock'] };
 const ORDERS = {
+  'Undock': () => { if (!docked()) return 'We are already undocked, Captain.'; setTimeout(() => toggleDock(), 600); return 'Undocking. Disconnecting shore power and releasing the clamps.'; },
+  'Dock': () => {
+    if (docked()) return 'We are already docked, Captain.';
+    if (!sim.canDock()) return sim.s.at && sim.s.at.type === 'dock' ? 'We need to be at the surface and under 1.5 knots to dock, Captain.' : 'We need to be at a dock first, Captain.';
+    setTimeout(() => toggleDock(), 600); return 'Docking. Aligning with the berth.';
+  },
   'Status Report': () => { const s = sim.s; return `Battery ${Math.round(s.battery)}%, oxygen ${Math.round(s.oxygen)}%, hull ${Math.round(s.hull)}%. Depth ${Math.round(s.depth)} metres.`; },
   'Engineering status report': () => { const s = sim.s; return `Power draw ${Math.round(s.power)} kilowatts, battery ${Math.round(s.battery)}%, hull ${Math.round(s.hull)}%. All engineering stations report ready.`; },
   "Let's take her to sea": () => { if (docked()) return 'We are still docked, Captain. Have the Helm undock first.'; sim.setThrottle(0.4); sim.setDepth(30); sim.setHeading(60); return 'Casting off. Heading 060, thirty metres.'; },
@@ -59,7 +68,8 @@ export function mount(body, ctx) {
   const mineP = () => gameState.getProperty('contacts.crew.captain.dialogueOptions.pleasantries') || ['Hello', 'Goodbye', 'Thank you'];
   const cats = () => {
     const o = (cur && cur.dialogueOptions) || {};
-    return [['Pleasantries', mineP()], ['Commands', o.commands || []], ['Emergency', o.emergency || []]].filter(([, l]) => l.length);
+    const cmds = [...(o.commands || []), ...((EXTRA[cur && cur.id]) || []).filter((c) => !(o.commands || []).includes(c))];
+    return [['Pleasantries', mineP()], ['Commands', cmds], ['Emergency', o.emergency || []]].filter(([, l]) => l.length);
   };
   const line = (text, onclick, cls = '') => el('button', { class: `comm-line ${cls}`, text, onclick });
   const initial = (c) => c.name.replace(/^(Captain|Commander|Dr\.|Specialist|Engineer|Lieutenant) /, '')[0];
@@ -72,7 +82,7 @@ export function mount(body, ctx) {
   }
   function speak(text) {
     const o = cur.dialogueOptions || {};
-    const isOrder = [...(o.commands || []), ...(o.emergency || [])].includes(text);
+    const isOrder = [...(o.commands || []), ...(EXTRA[cur.id] || []), ...(o.emergency || [])].includes(text);
     if (!isOrder) { say(text, pick(o.pleasantries || ['Aye.'])); return; }
     if (PARAM[text]) { const p = PARAM[text](); param = { said: text, ...p }; page = 'param'; render(); return; }
     if (ORDERS[text]) { say(text, ORDERS[text](ctx)); return; }
