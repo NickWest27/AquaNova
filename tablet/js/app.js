@@ -2,7 +2,7 @@ import '../../utils/debugPanel.js';
 import { dlog } from '../../utils/log.js';
 import { sim, clockText, toward, MAX_SPEED } from './sim.js';
 import { createScene } from './scene.js';
-import { say, stats as notifyStats } from './notify.js';
+import { say, unreadCount, stats as notifyStats } from './notify.js';
 import { seafloor } from './seafloor.js';
 import { fileScan } from './findings.js';
 import { el, $, toast, pad, modal, frameThrottle, viewProbe } from './util.js';
@@ -103,7 +103,7 @@ async function toggleComm() {
   root.replaceChildren(el('div', { class: 'comm-panel' },
     el('div', { class: 'comm-top' }, el('small', { class: 'comm-live', text: '● voice channel open' }), el('button', { class: 'btn comm-close', text: 'Close ✕', onclick: closeComm })),
     body));
-  root.onclick = (e) => { if (e.target === root) closeComm(); };
+  root.onclick = (e) => { if (!e.target.closest('button, .comm-reply, .comm-head, .comm-you, .comm-who-label')) closeComm(); };   // a tap anywhere but a button or text closes it
   root.hidden = false;
   try {
     modules.crew ||= await import('./stations/crew.js');
@@ -202,7 +202,7 @@ function showSystemDialogue(id) {
   if (boarded) run(); else pendingModals.push(run);
 }
 document.addEventListener('show-dialogue', (e) => { if (e.detail.characterId === 'system') showSystemDialogue(e.detail.dialogueId); });
-document.addEventListener('comms-message', (e) => { if (boarded) say('comms', `New message from ${e.detail.from} at the Comms station.`, 'mission'); syncUI(); });
+document.addEventListener('comms-message', (e) => { if (boarded) say('comms', 'Captain, sorry to interrupt, but we have an incoming message.', 'mission', { notice: 'INCOMING MESSAGE', keep: `We have an incoming message from ${e.detail.from}. It is waiting at the Comms station.` }); syncUI(); });
 document.addEventListener('mission-notify', (e) => { if (boarded) say('aria', `${e.detail.title} — ${e.detail.subtitle}`, 'mission'); });
 
 function firstVisit(poi) {
@@ -240,6 +240,7 @@ async function boot() {
     sim.start(); startExitSave(); startSync();
     gameState.addObserver(syncUI);
     $('#pin').addEventListener('click', toggleComm);
+    document.addEventListener('inbox-change', () => $('#pin').classList.toggle('unread', unreadCount() > 0));
     $('#ped-btn').hidden = false; $('#ped-btn').addEventListener('click', togglePed);
     sim.on((type, data) => {
       if (type === 'tick') {

@@ -3,12 +3,12 @@ import { sim, toward } from '../sim.js';
 import { el, toast } from '../util.js';
 import { gameState } from '../persist.js';
 import { toggleDock } from '../dock.js';
-import { say as crewSay } from '../notify.js';
+import { say as crewSay, takeHeld, unreadFor, unreadCount } from '../notify.js';
 
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
 
 export const knownCrew = () => Object.values(gameState.getProperty('contacts.crew') || {})
-  .filter((c) => c && c.id !== 'captain' && c.known && c.name);
+  .filter((c) => c && c.id !== 'captain' && (c.known || unreadFor(c.id) > 0) && c.name);   // someone who has called in is reachable
 
 const docked = () => sim.s.docked;
 /** Dive to a depth, but never deeper than the water allows. */
@@ -109,11 +109,14 @@ export function mount(body, ctx) {
     if (!crew.length) kids = [el('div', { class: 'comm-head', text: 'No one else seems to be available right now…' })];
     else if (page === 'crew') {
       kids = [el('div', { class: 'comm-head', text: 'Who would you like to reach out to?' }),
+        unreadCount() > 0 && el('div', { class: 'comm-waiting', text: 'You have messages waiting.' }),
         ...crew.map((c) => el('button', { class: 'comm-line comm-who', onclick: () => {
           cur = c; cat = null;
-          if (c.id === 'executiveOfficer' && !greeted) { greeted = true; reply = { said: null, text: 'Welcome aboard, Captain. I am ARIA, your executive officer. How may I assist you?' }; page = 'reply'; } else page = 'cat';
+          const held = takeHeld(c.id);   // what they tried to tell the Captain while he was elsewhere
+          if (held.length) { greeted = greeted || c.id === 'executiveOfficer'; reply = { said: null, text: held.map((h) => `Captain, ${h.charAt(0).toLowerCase()}${h.slice(1)}`).join(' '), held: true }; page = 'reply'; }
+          else if (c.id === 'executiveOfficer' && !greeted) { greeted = true; reply = { said: null, text: 'Welcome aboard, Captain. I am ARIA, your executive officer. How may I assist you?' }; page = 'reply'; } else page = 'cat';
           render();
-        } }, el('span', { class: `avatar ${c.id === 'executiveOfficer' ? 'aria' : ''}`, text: initial(c) }), el('span', {}, el('b', { text: c.name }), el('small', { text: c.role }))))];
+        } }, el('span', { class: `avatar ${c.id === 'executiveOfficer' ? 'aria' : ''}`, text: initial(c) }), el('span', {}, el('b', { text: c.name }), el('small', { text: c.role })), unreadFor(c.id) > 0 && el('span', { class: 'comm-badge', text: String(unreadFor(c.id)) })))];
     } else if (page === 'cat') {
       kids = [el('div', { class: 'comm-head', text: `What is on your mind, Captain?` }), el('div', { class: 'comm-who-label', text: `${cur.name} · ${cur.role}` }),
         ...cats().map(([n, l, label]) => line(label, () => { cat = [n, l, label]; page = 'lines'; render(); }, n === 'Emergency' ? 'danger' : '')),
@@ -129,8 +132,8 @@ export function mount(body, ctx) {
     } else {
       kids = [reply.said && el('div', { class: 'comm-you', text: `You: ${reply.said}` }),
         el('div', { class: 'comm-reply' + (reply.stub ? ' stub' : '') }, el('small', { text: cur.name }), el('p', { text: reply.text })),
-        line(`One more thing, ${first(cur)} …`, () => { page = 'cat'; render(); }, 'back'),
-        line('Put me through to someone else …', () => { page = 'crew'; render(); }, 'back'),
+        line(reply.said ? `One more thing, ${first(cur)} …` : `I need something, ${first(cur)} …`, () => { page = 'cat'; render(); }, 'back'),
+        line('Someone else …', () => { page = 'crew'; render(); }, 'back'),
         line("That's all. Out.", () => ctx.closeComm(), 'back')];
     }
     body.replaceChildren(el('div', { class: 'comm-page' }, ...kids));

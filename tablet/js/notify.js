@@ -11,16 +11,28 @@ export const stats = { chirps: 0, shown: 0 };
 let lastChirp = -1e9, lastPing = -1e9, box = null;
 const msgs = [];   // { who, node, at, timer }
 
+// Held messages: what a crew member said that the Captain may have missed. Kept until the Captain reads it in the communicator.
+const held = new Map();   // crew id -> [{ text, at }]
+const emitChange = () => document.dispatchEvent(new CustomEvent('inbox-change'));
+export const unreadCount = () => [...held.values()].reduce((n, l) => n + l.length, 0);
+export const unreadFor = (id) => (held.get(id) || []).length;
+/** Returns and clears the held messages for one crew member. */
+export function takeHeld(id) { const l = held.get(id) || []; held.delete(id); if (l.length) emitChange(); return l.map((m) => m.text); }
+export function clearHeld() { held.clear(); emitChange(); }
+
 const who = (role) => {
   const c = gameState.getProperty(`contacts.crew.${CREW_ID[role] || role}`);
   return { name: (c && c.name) || (FALLBACK[role] || [role])[0], role: (c && c.role) || (FALLBACK[role] || [, ''])[1] };
 };
 
 /** role: 'helm' | 'aria' | 'sensors' | 'engineering' | 'comms' | 'science'. kind: '' | 'mission' | 'error'. */
-export function say(role, text, kind = '') {
+export function say(role, text, kind = '', opts = {}) {
   const now = Date.now(), w = who(role);
+  if (kind === 'mission' || kind === 'error') {   // worth keeping until read
+    const id = CREW_ID[role] || role, l = held.get(id) || []; l.push({ text: opts.keep || text, at: now }); held.set(id, l.slice(-5)); emitChange();
+  }
   if (viewProbe.fn()) {   // bridge: the upper display
-    document.dispatchEvent(new CustomEvent('notice', { detail: { text: `${w.name.split(' ').pop().toUpperCase()}: ${text}`, kind } }));
+    document.dispatchEvent(new CustomEvent('notice', { detail: { text: opts.notice || `${w.name.split(' ').pop().toUpperCase()}: ${text}`, kind } }));
     if (now - lastPing > 3000) { lastPing = now; ping(); }
     return;
   }

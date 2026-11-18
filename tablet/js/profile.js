@@ -24,13 +24,15 @@ export function createProfile(parent) {
     const key = [s.lat.toFixed(4), s.lon.toFixed(4), Math.round(s.heading), Math.round(s.depth), rangeNm, s.sonar ? 1 : 0].join();
     const now = Date.now(); if (key === sig && now - last < 1000) return; sig = key; last = now;
     const pts = profileSamples(s, rangeNm);
+    // Y axis: auto. From the surface down to whichever is deeper, the terrain in view or the ship, rounded to a tidy number.
     const known = pts.filter((v) => v != null), maxFloor = known.length ? Math.max(...known) : 0;
-    const below = Math.max(100, Math.min(maxFloor + 10 - s.depth, 400)), top = Math.max(0, s.depth - below * 0.45), bot = top + (s.depth - top) + below;
+    const need = Math.max(maxFloor, s.depth + KEEL + 10, 30) * 1.05, mag = 10 ** Math.floor(Math.log10(need)), top = 0;
+    const bot = [1, 1.5, 2, 3, 5, 10].map((k) => k * mag).find((v) => v >= need);
     const L = 8, R = W - 52, T = 8, B = H - 24, px = (i) => L + ((R - L) * i) / N, py = (m) => T + ((B - T) * (m - top)) / (bot - top);
     ctx.setTransform(SCALE, 0, 0, SCALE, 0, 0);
     ctx.fillStyle = '#04202e'; ctx.fillRect(0, 0, W, H);
     // depth scale on the right
-    const step = bot - top > 400 ? 100 : bot - top > 150 ? 50 : 20;
+    const step = [10, 20, 50, 100, 200, 500, 1000, 2000].find((v) => (bot - top) / v <= 5) || 2000;
     ctx.font = '13px monospace'; ctx.textBaseline = 'middle'; ctx.textAlign = 'left'; ctx.strokeStyle = 'rgba(120,200,220,.25)'; ctx.lineWidth = 1; ctx.fillStyle = '#7fb6c6';
     for (let m = Math.ceil(top / step) * step; m < bot; m += step) { const y = py(m); ctx.beginPath(); ctx.moveTo(L, y); ctx.lineTo(R, y); ctx.stroke(); ctx.fillText(String(m), R + 6, y); }
     // terrain

@@ -57,7 +57,7 @@ export function createBridgeConsole({ top, main, display, center, left, right, o
         set(logTime, `MISSION TIME INDEX ${clockText()}`);
         set(logCur, `CURR POS ${deg(s.lat, 'N', 'S', 2)} ${deg(s.lon, 'E', 'W', 3)}`); set(logPlace, s.at ? s.at.name : 'Open water');
         if (s.wpt) { const t = toward(s, s.wpt); set(logDest, `DEST POS ${s.wpt.name}  ${t.nm.toFixed(1)} nm  ETA ${etaText(t.nm, s.speed)}`); } else set(logDest, 'DEST POS none');
-        prof.draw(s, Math.max(2, nds[0].range)); profBox.dataset.warn = prof.warn;
+        prof.draw(s, nds[0].range); profBox.dataset.warn = prof.warn;
         nd.redraw();
       } };
     };

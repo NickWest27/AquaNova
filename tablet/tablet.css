@@ -485,3 +485,8 @@ textarea.field { min-height: 6rem; resize: none; }
 .pc-row input, .pc-row select { flex: 1; min-width: 0; padding: 0.7rem; border-radius: 12px; border: 2px solid var(--line); background: #061523; color: var(--text); }
 .pc-hint { font-size: 0.85rem !important; color: var(--dim); line-height: 1.35; }
 .pc-msg { min-height: 1.3rem; font-size: 0.95rem; } .pc-msg.bad { color: #ff8a8a; } .pc-msg.ok { color: var(--cyan); }
+
+/* ---- held messages ---- */
+.comm-waiting { color: var(--amber); font-size: 1.05rem; letter-spacing: .06em; margin: -0.3rem 0 0.4rem; }
+.comm-badge { margin-left: auto; min-width: 1.6rem; height: 1.6rem; border-radius: 1rem; background: var(--amber); color: #04121f; font: 800 1rem var(--font); display: inline-flex; align-items: center; justify-content: center; padding: 0 .4rem; }
+.pin.unread { animation: pinring 1.2s ease-in-out infinite; border-color: var(--amber); }

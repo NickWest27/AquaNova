@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Notices on the upper display, crew calls elsewhere, safe course out, WSKRs, sonar detail.  python3 tools/notices_test.py"""
-import os, sys, importlib.util
+import os, re, sys, importlib.util
 from playwright.sync_api import sync_playwright
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 spec = importlib.util.spec_from_file_location("smoke", os.path.join(ROOT, "tools", "smoke.py"))
@@ -18,7 +18,7 @@ def main():
         page = ctx.new_page(); errors = []
         page.on("pageerror", lambda e: errors.append(str(e)[:200]))
         page.on("console", lambda m: errors.append(m.text[:200]) if m.type == "error" else None)
-        js = lambda code: page.evaluate("(async()=>{const sim=(await import('./js/sim.js')).sim;const sf=(await import('./js/seafloor.js')).seafloor;const N=await import('./js/notify.js');" + code + "})()")
+        js = lambda code: page.evaluate("(async()=>{const sim=(await import('./js/sim.js')).sim;const sf=(await import('./js/seafloor.js')).seafloor;const N=await import('./js/notify.js');const g=(await import('./js/persist.js')).gameState;" + code + "})()")
         page.goto(base); page.wait_for_function("!document.getElementById('board-btn').disabled", timeout=20000)
         page.tap("#board-btn"); page.wait_for_timeout(1500)
         if page.is_visible(".modal .btn"): page.tap(".modal .btn"); page.wait_for_timeout(300)
@@ -52,7 +52,7 @@ def main():
         check("a safe heading exists from the dock", r and r["clearNm"] >= 1, r)
         page.evaluate("document.querySelector('#pin').click()"); page.wait_for_timeout(600)
         page.locator(".comm-who", has_text="ARIA").first.tap(); page.wait_for_timeout(300)
-        if page.locator(".comm-line", has_text="Give an order").count() == 0: page.locator(".comm-line", has_text="One more thing").first.tap(); page.wait_for_timeout(300)
+        if page.locator(".comm-line", has_text="Give an order").count() == 0: page.locator(".comm-line", has_text=re.compile("One more thing|I need something")).first.tap(); page.wait_for_timeout(300)
         page.locator(".comm-line", has_text="Give an order").first.tap(); page.wait_for_timeout(300)
         page.locator(".comm-line", has_text="take her to sea").first.tap(); page.wait_for_timeout(5500)
         r = js("const s=sim.s; return {docked:s.docked, thr:s.throttle, td:s.targetDepth, hdg:s.targetHeading}")
@@ -61,7 +61,7 @@ def main():
         check("course stays in water for a mile", r2 >= 3, r2)
         # dive clamp
         r = js("""const s=sim.s; s.docked=false; s.lat=41.2; s.lon=-70.7; s.at=null; s.speed=0; s.depth=0; s.targetDepth=0; return sim.deepest()""")
-        page.locator(".comm-line", has_text="Put me through").first.tap(); page.wait_for_timeout(300)
+        page.locator(".comm-line", has_text="Someone else").first.tap(); page.wait_for_timeout(300)
         page.locator(".comm-who").filter(has_text="Marcus").first.tap() if page.locator(".comm-who", has_text="Marcus").count() else None
         page.wait_for_timeout(300)
         page.locator(".comm-line", has_text="Give an order").first.tap(); page.wait_for_timeout(300)
@@ -71,6 +71,23 @@ def main():
         check("depth order is held above the floor", r is not None and td <= r, (td, r))
         page.locator(".comm-line", has_text="That's all").first.tap(); page.wait_for_timeout(400)
         check("That's all. Out. closes the communicator", not page.is_visible("#comm-pop .comm-page"))
+
+        # 3b. held messages: a missed message waits in the communicator
+        page.evaluate("window.__aq.scene('bridge')"); page.wait_for_timeout(300)
+        js("N.clearHeld && N.clearHeld(); N.say('comms', 'Captain, sorry to interrupt, but we have an incoming message.', 'mission', { notice: 'INCOMING MESSAGE', keep: 'We have an incoming message from Test. It is waiting at the Comms station.' })"); page.wait_for_timeout(500)
+        check("upper display says Incoming message", "INCOMING MESSAGE" in page.inner_text(".bt-note").upper(), page.inner_text(".bt-note"))
+        page.wait_for_timeout(6500)
+        check("pin glows while a message is unread", "unread" in page.get_attribute("#pin", "class"))
+        page.evaluate("document.querySelector('#pin').click()"); page.wait_for_timeout(600)
+        check("communicator says messages are waiting", "waiting" in page.inner_text("#comm-pop"), page.inner_text("#comm-pop"))
+        check("badge on the Comms officer", page.locator(".comm-badge").count() == 1, (page.locator(".comm-badge").count(), js("return Object.values(g.getProperty('contacts.crew')).map(c=>c.id+':'+c.known).join()")))
+        page.locator(".comm-who").filter(has=page.locator(".comm-badge")).first.tap(); page.wait_for_timeout(400)
+        check("held message shown in the dialogue area", "incoming message from Test" in page.inner_text(".comm-reply"), page.inner_text(".comm-reply"))
+        check("pin stops glowing once read", "unread" not in page.get_attribute("#pin", "class"))
+        check("first line offers I need something", page.locator(".comm-line", has_text="I need something").count() == 1)
+        check("Someone else label", page.locator(".comm-line", has_text="Someone else").count() == 1 and page.locator(".comm-line", has_text="Put me through").count() == 0)
+        page.mouse.click(8, 8); page.wait_for_timeout(400)
+        check("tap outside closes the communicator", not page.is_visible("#comm-pop .comm-page"))
 
         # 4. sonar sets map detail
         page.evaluate("window.__aq.scene('bridge')"); page.wait_for_timeout(500)
@@ -86,7 +103,7 @@ def main():
           const t=(await import('./js/sim.js')).toward; return s.wskrs.map(w=>+t(s,w).nm.toFixed(2))""")
         check("three WSKRs hold a ring round the ship", len(r) == 3 and all(1.0 < d < 2.0 for d in r), r)
         r = js("""const s=sim.s; const p=s.pois.find(q=>q.name==='Deep Trench Alpha'); const w=sim.taskWskr(p); const n=w.n; for(let i=0;i<900;i++) sim.step(0.2);
-          const g=(await import('./js/findings.js')); return {scanned:g.scanned(p), mode:s.wskrs.find(q=>q.n===n).mode}""")
+          const fd=(await import('./js/findings.js')); return {scanned:fd.scanned(p), mode:s.wskrs.find(q=>q.n===n).mode}""")
         check("a tasked WSKR investigates, files the scan and rejoins", r["scanned"] and r["mode"] == "escort", r)
         r = js("sim.recallWskrs(); for(let i=0;i<600;i++) sim.step(0.2); return sim.s.wskrs.length")
         check("recalled WSKRs come home", r == 0, r)
