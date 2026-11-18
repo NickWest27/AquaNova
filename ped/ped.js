@@ -153,3 +153,4 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) sync
 window.addEventListener('online', sync);
 setInterval(() => { if (!document.hidden) sync(); }, 60000);
 paint(); sync();
+if ('serviceWorker' in navigator) navigator.serviceWorker.register(new URL('../sw.js', import.meta.url)).catch(() => {});

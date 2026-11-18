@@ -194,4 +194,6 @@ async function boot() {
     dlog('tablet: boarded');
   });
 }
+// Offline play: the service worker keeps a copy of the game. Needs https (GitHub Pages) or localhost.
+if ('serviceWorker' in navigator) navigator.serviceWorker.register(new URL('../../sw.js', import.meta.url)).catch((e) => dlog('service worker not registered: ' + e.message));
 boot();
