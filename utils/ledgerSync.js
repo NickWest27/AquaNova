@@ -221,19 +221,23 @@ function mergeTasks(a = [], b = []) {
  *  The checkpoint (exit save) with the newer time wins when revisions match. */
 export function mergeLogbooks(a, b) {
   const ra = a.revision || 0, rb = b.revision || 0;
+  // A restart (`resetAt`) wipes notes and tasks made before it, on every device.
+  const resetAt = [a.resetAt, b.resetAt].filter(Boolean).sort().pop() || null, resetMs = resetAt ? Date.parse(resetAt) : 0;
+  const fresh = (e) => !resetMs || !isJournal(e) || Date.parse(e.logbook.timestamp) >= resetMs;
+  const freshTask = (t) => !resetMs || (t.modified || 0) >= resetMs;
   const base = ra >= rb ? a : b, other = base === a ? b : a;
   const map = new Map();
-  const take = (list, journalsOnly) => (list || []).forEach((e) => { const id = e.logbook.entryId; if (!map.has(id) && (!journalsOnly || isJournal(e))) map.set(id, e); });
+  const take = (list, journalsOnly) => (list || []).forEach((e) => { const id = e.logbook.entryId; if (!map.has(id) && fresh(e) && (!journalsOnly || isJournal(e))) map.set(id, e); });
   take(base.entries, false);
   take(other.entries, ra === rb ? false : true);
   const entries = [...map.values()].sort((x, y) => new Date(x.logbook.timestamp) - new Date(y.logbook.timestamp));
   let checkpoint = base.checkpoint || null;
   if (ra === rb && a.checkpoint && b.checkpoint) checkpoint = new Date(a.checkpoint.timestamp) >= new Date(b.checkpoint.timestamp) ? a.checkpoint : b.checkpoint;
   else if (ra === rb) checkpoint = a.checkpoint || b.checkpoint || null;
-  return { ...other, ...base, entries, checkpoint, revision: Math.max(ra, rb), pedTasks: mergeTasks(a.pedTasks, b.pedTasks) };
+  return { ...other, ...base, entries, checkpoint, revision: Math.max(ra, rb), resetAt, pedTasks: mergeTasks(a.pedTasks, b.pedTasks).filter(freshTask) };
 }
 
-const fingerprint = (b) => JSON.stringify([b.revision || 0, (b.entries || []).map((e) => e.logbook.entryId), b.checkpoint && b.checkpoint.timestamp,
+const fingerprint = (b) => JSON.stringify([b.revision || 0, b.resetAt || null, (b.entries || []).map((e) => e.logbook.entryId), b.checkpoint && b.checkpoint.timestamp,
   (b.pedTasks || []).map((t) => `${t.id}:${t.modified}:${t.done ? 1 : 0}${t.deleted ? 1 : 0}`)]);
 
 /** Pull the remote copy, merge, and stage the result if anything changed.

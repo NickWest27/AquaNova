@@ -251,6 +251,26 @@ class SaveManager {
         return true;
     }
 
+    /** Start the active logbook again from its very first entry (M.LOG-0001).
+     *  Removes every later entry, the journal notes and the tasks, restores the first snapshot,
+     *  and marks the time (`resetAt`) so synced devices drop their older notes and tasks. */
+    resetToStart() {
+        const logbook = this.getActiveLogbook();
+        if (!logbook) throw new Error('No active logbook');
+        const first = logbook.entries.find(e => e.logbook?.entryId === 'M.LOG-0001' && e.gameSnapshot) || logbook.entries.find(e => e.gameSnapshot);
+        if (!first) throw new Error('This logbook has no starting snapshot');
+        this.gameState.loadFromSnapshot(first.gameSnapshot);
+        logbook.entries = [first];
+        logbook.checkpoint = null;
+        logbook.pedTasks = [];
+        logbook.resetAt = new Date().toISOString();
+        logbook.revision = (logbook.revision || 0) + 1;   // synced devices must not bring the old entries back
+        this.updateLogbookStats(logbook);
+        this.saveBookshelf();
+        dlog('Logbook reset to M.LOG-0001');
+        return true;
+    }
+
     // Logbook selection - switches the active logbook
     mountLogbook(logbookId) {
         const logbook = this.bookshelf.find(book => book.id === logbookId);

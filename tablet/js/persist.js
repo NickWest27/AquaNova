@@ -66,7 +66,9 @@ export function restoreSim() {
   dlog('persist: restored sim at', s.lat, s.lon);
 }
 
+let frozen = false;   // set while the game restarts, so the exit save cannot write the old moment back
 export function checkpoint() {
+  if (frozen) return;
   try { snapshotSim(); saveManager.saveCheckpoint(); } catch (e) { console.error('Autosave failed', e); }
 }
 
@@ -87,3 +89,10 @@ export function startExitSave() {
 
 /** Call before any big jump in time (sleep) so the player can return to this moment. */
 export function saveBeforeSleep() { checkpoint(); }
+
+/** Start again from M.LOG-0001, then reload the game so everything starts clean. */
+export function restartGame() {
+  frozen = true;
+  try { saveManager.resetToStart(); } catch (e) { frozen = false; throw e; }
+  location.reload();
+}

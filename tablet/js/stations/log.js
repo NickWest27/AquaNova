@@ -1,5 +1,5 @@
 import { el, modal, toast } from '../util.js';
-import { saveManager, gameState, addLogEntry, snapshotSim, restoreSim } from '../persist.js';
+import { saveManager, gameState, addLogEntry, snapshotSim, restoreSim, restartGame } from '../persist.js';
 import { sim } from '../sim.js';
 import { requestSync } from '../sync.js';
 
@@ -37,6 +37,13 @@ export function mount(body, ctx) {
       } }] });
   }
 
+  function restart() {
+    modal({ title: 'Restart from the beginning?', body: el('p', { text: 'The game returns to M.LOG-0001. Every later logbook entry, journal note, task and mission progress is removed, on the iPad and on the iPhone. Export the logbook first if you want a copy.' }),
+      actions: [{ label: 'Cancel' }, { label: 'Restart', primary: true, kind: 'danger', run: () => {
+        try { restartGame(); } catch (e) { toast(e.message, 'error'); }
+      } }] });
+  }
+
   function render() {
     const lb = book();
     title.textContent = lb ? lb.name : 'No logbook';
@@ -48,6 +55,7 @@ export function mount(body, ctx) {
         el('h3', { text: (l.type || 'log').replace(/_/g, ' ') }),
         el('p', { text: entryText(e) }),
         tasks.length ? el('ul', {}, tasks.map((t) => el('li', { class: done.includes(t) ? 'done' : '', text: t }))) : null,
+        l.entryId === 'M.LOG-0001' && e.gameSnapshot ? el('div', { class: 'actions' }, el('button', { class: 'btn warn chip', text: 'Restart from the beginning', onclick: restart })) :
         e.gameSnapshot && e.metadata && e.metadata.canRevert !== false ? el('div', { class: 'actions' }, el('button', { class: 'btn warn chip', text: 'Revert here', onclick: () => revert(e) })) : null);
     }) : [el('div', { class: 'empty', text: 'No entries yet.' })]));
   }

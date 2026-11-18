@@ -2,7 +2,7 @@
 // The iPhone PED (ped/ at the site root) shows the same things, kept in step through GitHub.
 import { el, modal, pad, toast } from '../util.js';
 import { sim } from '../sim.js';
-import { gameState, saveManager } from '../persist.js';
+import { gameState, saveManager, restartGame } from '../persist.js';
 import { syncNow, requestSync, syncState, onSyncChange } from '../sync.js';
 import { getConfig, describeSync, connect as connectSync, clearConfig, makeJournalEntry, newTask, isJournal } from '../../../utils/ledgerSync.js';
 import { DEBUG } from '../../../utils/log.js';
@@ -103,9 +103,9 @@ export function mount(body, ctx) {
           el('button', { class: 'btn primary', text: 'Update now', onclick: updateNow })),
         el('div', { class: 'card setting' }, el('div', { class: 'lbl', text: 'Text size' }), el('div', { class: 'row' }, zoomBtn('Smaller', -0.1), zoomBtn('Reset', 0), zoomBtn('Larger', 0.1))),
         el('div', { class: 'card setting' }, el('div', { class: 'lbl', text: 'Debug' }), el('p', { text: DEBUG ? 'Debug logging is on. Triple-tap the top-left corner to see the log.' : 'Triple-tap the top-left corner to see the log panel. Add ?debug=1 to the address for routine logs.' })),
-        el('div', { class: 'card setting' }, el('div', { class: 'lbl', text: 'New game' }), el('p', { text: 'Erases every logbook and save on this device, then restarts the tutorial.' }),
-          el('button', { class: 'btn danger', text: 'Erase and restart', onclick: () => modal({ title: 'Erase all saves?', body: el('p', { text: 'This cannot be undone. Export your logbook first if you want to keep it.' }),
-            actions: [{ label: 'Cancel' }, { label: 'Erase', kind: 'danger', primary: true, run: () => { try { localStorage.removeItem('aquaNovaBookshelf'); } catch (e) { /* ignore */ } location.reload(); } }] }) })),
+        el('div', { class: 'card setting' }, el('div', { class: 'lbl', text: 'New game' }), el('p', { text: 'Starts again from the first logbook entry (M.LOG-0001). Removes later entries, notes, tasks and mission progress on every synced device.' }),
+          el('button', { class: 'btn danger', text: 'Erase and restart', onclick: () => modal({ title: 'Erase and restart?', body: el('p', { text: 'This cannot be undone. Export your logbook first if you want to keep it.' }),
+            actions: [{ label: 'Cancel' }, { label: 'Erase', kind: 'danger', primary: true, run: () => { try { restartGame(); } catch (e) { console.error(e); toast(e.message, 'error'); } } }] }) })),
       ];
     },
   };
