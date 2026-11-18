@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="PED">
+  <meta name="theme-color" content="#04101f">
+  <title>Aqua Nova PED</title>
+  <link rel="icon" href="../favicon.ico" type="image/x-icon">
+  <link rel="apple-touch-icon" href="icon-180.png">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="ped.css">
+</head>
+<body>
+  <header class="top">
+    <div class="who"><b>PED</b><small id="book">Aqua Nova DSV</small></div>
+    <button id="chip" class="chip" aria-label="Sync now"><i></i><span id="chip-text">Not connected</span></button>
+  </header>
+  <main id="view"></main>
+  <nav id="nav" class="nav" aria-label="PED sections"></nav>
+  <div id="toast" class="toast" hidden></div>
+  <script type="module" src="ped.js"></script>
+</body>
+</html>

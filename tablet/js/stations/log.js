@@ -1,6 +1,7 @@
 import { el, modal, toast } from '../util.js';
 import { saveManager, gameState, addLogEntry, snapshotSim, restoreSim } from '../persist.js';
 import { sim } from '../sim.js';
+import { requestSync } from '../sync.js';
 
 const entryText = (e) => (e.logbook ? e.logbook.content : '');
 
@@ -13,7 +14,7 @@ export function mount(body, ctx) {
     const ta = el('textarea', { placeholder: "Captain's log…" });
     modal({ title: 'New log entry', body: ta, actions: [{ label: 'Cancel' }, { label: 'Save', primary: true, run: () => {
       if (!ta.value.trim()) return;
-      addLogEntry(ta.value.trim(), { type: 'personal_log' }); toast('Log entry saved'); render();
+      addLogEntry(ta.value.trim(), { type: 'personal_log' }); toast('Log entry saved'); requestSync(); render();
     } }] });
     setTimeout(() => ta.focus(), 50);
   } });
@@ -32,7 +33,7 @@ export function mount(body, ctx) {
   function revert(entry) {
     modal({ title: 'Revert to this entry?', body: el('p', { text: 'The ship and mission return to this moment. Later entries are removed.' }),
       actions: [{ label: 'Cancel' }, { label: 'Revert', primary: true, kind: 'danger', run: () => {
-        try { saveManager.revertToEntry(entry.logbook.entryId); restoreSim(); sim.touch(); toast('Reverted'); ctx.refreshScene && ctx.refreshScene(); render(); } catch (e) { toast(e.message, 'error'); }
+        try { saveManager.revertToEntry(entry.logbook.entryId); restoreSim(); sim.touch(); requestSync(); toast('Reverted'); ctx.refreshScene && ctx.refreshScene(); render(); } catch (e) { toast(e.message, 'error'); }
       } }] });
   }
 

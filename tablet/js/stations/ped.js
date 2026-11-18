@@ -1,15 +1,26 @@
-// PED (personal electronic device): ship status, missions, findings, settings.
-import { el, modal, pad } from '../util.js';
+// PED (personal electronic device): ship status, missions, findings, tasks, journal, settings.
+// The iPhone PED (ped/ at the site root) shows the same things, kept in step through GitHub.
+import { el, modal, pad, toast } from '../util.js';
 import { sim } from '../sim.js';
-import { gameState } from '../persist.js';
+import { gameState, saveManager } from '../persist.js';
+import { syncNow, requestSync, syncState, onSyncChange } from '../sync.js';
+import { getConfig, setConfig, clearConfig, makeJournalEntry, newTask, isJournal } from '../../../utils/ledgerSync.js';
 import { DEBUG } from '../../../utils/log.js';
 
 export function mount(body, ctx) {
   body.classList.add('more-st');
   const tabs = el('div', { class: 'tabs' }), tb = el('div', { class: 'tab-body' });
   body.append(tabs, tb);
-  let cur = 'status', refs = {};
+  let cur = 'status', refs = {}, syncLine = null;
   const stat = (label, key) => { const n = el('div', { class: 'num' }); refs[key] = n; return el('div', { class: 'card' }, el('div', { class: 'lbl', text: label }), n); };
+
+  const syncText = () => {
+    if (syncState.status === 'off') return 'Not connected.';
+    if (syncState.status === 'syncing') return 'Syncing…';
+    if (syncState.status === 'error') return 'Sync failed: ' + syncState.error;
+    return syncState.at ? 'Synced at ' + syncState.at.toLocaleTimeString() : 'Connected.';
+  };
+
   const views = {
     status() {
       refs = {};
@@ -24,9 +35,46 @@ export function mount(body, ctx) {
       const f = gameState.getProperty('mission.discoveries') || [];
       return f.length ? f.map((d) => el('div', { class: 'card' }, el('h3', { text: d.name || d.title || 'Finding' }), el('p', { text: d.description || d.text || '' }))) : [el('div', { class: 'empty', text: 'No findings yet. Samples and scans will be filed here.' })];
     },
+    tasks() {
+      const input = el('input', { class: 'field', type: 'text', placeholder: 'New task…', enterkeyhint: 'done' });
+      const save = (tasks) => { saveManager.setPedTasks(tasks); requestSync(); render(); };
+      const add = () => { const v = input.value.trim(); if (!v) return; save([...saveManager.getPedTasks(), newTask(v)]); };
+      input.addEventListener('keydown', (e) => { if (e.key === 'Enter') add(); });
+      const change = (id, fn) => save(saveManager.getPedTasks().map((t) => t.id === id ? { ...t, ...fn(t), modified: Date.now() } : t));
+      const live = saveManager.getPedTasks().filter((t) => !t.deleted);
+      return [el('div', { class: 'row' }, input, el('button', { class: 'btn primary', text: 'Add', onclick: add })),
+        ...(live.length ? live.map((t) => el('div', { class: `card task ${t.done ? 'done' : ''}` },
+          el('button', { class: 'dot', 'aria-label': 'Toggle task', onclick: () => change(t.id, (x) => ({ done: !x.done })) }), el('span', { class: 'grow', text: t.text }),
+          el('button', { class: 'btn chip', text: 'Delete', onclick: () => change(t.id, () => ({ deleted: true })) }))) : [el('div', { class: 'empty', text: 'No tasks.' })])];
+    },
+    journal() {
+      const ta = el('textarea', { class: 'field', placeholder: 'Write a journal note…', rows: 3 });
+      const save = el('button', { class: 'btn primary', text: 'Save note', onclick: () => {
+        if (!ta.value.trim()) return;
+        saveManager.addJournal(makeJournalEntry(ta.value.trim())); requestSync(); toast('Note saved'); render();
+      } });
+      const notes = ((saveManager.getActiveLogbook() || {}).entries || []).filter(isJournal).reverse();
+      return [ta, el('div', { class: 'row' }, save),
+        ...(notes.length ? notes.map((e) => el('div', { class: 'card entry' }, el('div', { class: 'meta' }, el('span', { text: new Date(e.logbook.timestamp).toLocaleString() })), el('p', { text: e.logbook.content }))) : [el('div', { class: 'empty', text: 'No notes yet.' })])];
+    },
     settings() {
       const zoomBtn = (t, d) => el('button', { class: 'btn', text: t, onclick: () => ctx.zoom(d) });
+      const cfg = getConfig() || {};
+      const owner = el('input', { class: 'field', value: cfg.owner || '', placeholder: 'GitHub user name', autocapitalize: 'off', autocorrect: 'off' });
+      const repo = el('input', { class: 'field', value: cfg.repo || '', placeholder: 'Saves repo name', autocapitalize: 'off', autocorrect: 'off' });
+      const token = el('input', { class: 'field', type: 'password', value: cfg.token || '', placeholder: 'Token (github_pat_…)', autocapitalize: 'off', autocorrect: 'off' });
+      syncLine = el('p', { text: syncText() });
       return [
+        el('div', { class: 'card setting' }, el('div', { class: 'lbl', text: 'Phone sync (GitHub)' }),
+          el('p', { text: 'Links this iPad to your iPhone PED through a private saves repo. Use a token limited to that repo.' }),
+          owner, repo, token, syncLine,
+          el('div', { class: 'row' },
+            el('button', { class: 'btn primary', text: getConfig() ? 'Save and sync' : 'Connect', onclick: async () => {
+              if (!owner.value.trim() || !repo.value.trim() || !token.value.trim()) { toast('Fill in all three fields', 'error'); return; }
+              setConfig({ owner: owner.value, repo: repo.value, token: token.value }); await syncNow(); render();
+            } }),
+            getConfig() && el('button', { class: 'btn', text: 'Sync now', onclick: () => syncNow() }),
+            getConfig() && el('button', { class: 'btn danger', text: 'Disconnect', onclick: () => { clearConfig(); syncState.status = 'off'; render(); } }))),
         el('div', { class: 'card setting' }, el('div', { class: 'lbl', text: 'Text size' }), el('div', { class: 'row' }, zoomBtn('Smaller', -0.1), zoomBtn('Reset', 0), zoomBtn('Larger', 0.1))),
         el('div', { class: 'card setting' }, el('div', { class: 'lbl', text: 'Debug' }), el('p', { text: DEBUG ? 'Debug logging is on. Triple-tap the top-left corner to see the log.' : 'Triple-tap the top-left corner to see the log panel. Add ?debug=1 to the address for routine logs.' })),
         el('div', { class: 'card setting' }, el('div', { class: 'lbl', text: 'New game' }), el('p', { text: 'Erases every logbook and save on this device, then restarts the tutorial.' }),
@@ -35,8 +83,9 @@ export function mount(body, ctx) {
       ];
     },
   };
-  const TITLES = { status: 'Status', missions: 'Missions', findings: 'Findings', settings: 'Settings' };
+  const TITLES = { status: 'Status', missions: 'Missions', findings: 'Findings', tasks: 'Tasks', journal: 'Journal', settings: 'Settings' };
   function render() {
+    syncLine = null;
     tabs.replaceChildren(...Object.keys(views).map((k) => el('button', { class: `btn chip ${k === cur ? 'on' : ''}`, text: TITLES[k], onclick: () => { cur = k; render(); } })));
     tb.replaceChildren(...views[cur]());
     update();
@@ -49,6 +98,7 @@ export function mount(body, ctx) {
     refs.dep.innerHTML = `${Math.round(s.depth)}<small>m</small>`; refs.hdg.textContent = pad(s.heading) + '°'; refs.spd.innerHTML = `${s.speed.toFixed(1)}<small>kt</small>`;
     refs.bat.textContent = Math.round(s.battery) + '%'; refs.o2.textContent = Math.round(s.oxygen) + '%'; refs.hull.textContent = Math.round(s.hull) + '%';
   }
+  const off = onSyncChange(() => { if (syncLine) syncLine.textContent = syncText(); if (cur === 'tasks' || cur === 'journal') { /* picks up phone changes on next open */ } });
   render();
-  return { update, destroy() {} };
+  return { update, destroy() { off(); } };
 }

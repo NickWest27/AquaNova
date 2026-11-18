@@ -4,6 +4,7 @@ import { sim } from './sim.js';
 import { createScene } from './scene.js';
 import { el, $, toast, pad, modal, frameThrottle } from './util.js';
 import { ICONS } from './ui.js';
+import { startSync, syncAtBoot } from './sync.js';
 import { gameState, loadGame, startExitSave, checkpoint, addLogEntry, restoreSim } from './persist.js';
 
 const STATIONS = {
@@ -134,6 +135,7 @@ async function boot() {
     info.textContent = 'Loading charts, crew and saved game…';
     await sim.loadPois();
     await loadGame();                       // saveManager + GameState + sim restore
+    await syncAtBoot();                     // pick up journal notes and tasks from the phone
     try {
       missions = (await import('../../game/systems/missionManager.js')).default;
       await missions.init();
@@ -148,7 +150,7 @@ async function boot() {
     const st = buildDock();
     new ResizeObserver(fit).observe($('#scene-wrap')); fit();
     boarded = true;
-    sim.start(); startExitSave();
+    sim.start(); startExitSave(); startSync();
     gameState.addObserver(syncUI);
     $('#pin').addEventListener('click', () => { if (current && current.name === 'crew') closeStation(); else openStation('crew'); });
     sim.on((type, data) => {

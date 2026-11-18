@@ -29,6 +29,8 @@ PAGES = [
     "ui/captains-quarters/quarters.html",
     "ui/captains-quarters/logbook/logbook.html",
     "ui/bridge/bridge.html",
+    "tablet/index.html",
+    "ped/index.html",
 ]
 
 

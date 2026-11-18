@@ -334,3 +334,8 @@ textarea, input { font: inherit; font-size: 16px; user-select: text; -webkit-use
 .card.msg { display: block; text-align: left; width: 100%; }
 .card.msg .meta { display: flex; justify-content: space-between; gap: 1rem; margin-bottom: 0.3rem; }
 .card.msg h3 { color: var(--cyan); font-size: 1.1rem; margin-bottom: 0.3rem; }
+.field { width: 100%; padding: 0.8rem 1rem; border-radius: 12px; border: 2px solid var(--line); background: #061523; color: var(--text); min-height: var(--tap); }
+textarea.field { min-height: 6rem; resize: none; }
+.task .dot { background: none; padding: 0; min-width: 1.4rem; }
+.task .btn.chip { min-height: 2.6rem; }
+.card.task .dot { width: 2rem; height: 2rem; }

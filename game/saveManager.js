@@ -191,7 +191,29 @@ class SaveManager {
         return entry;
     }
 
-    // Autosave: overwrites one slot, never adds a logbook entry.
+    // PED journal and tasks. Journal notes have no snapshot and are never save points.
+    addJournal(entry) {
+        const logbook = this.getActiveLogbook();
+        if (!logbook) throw new Error('No active logbook');
+        logbook.entries = logbook.entries || [];
+        logbook.entries.push(entry);
+        this.saveBookshelf();
+        return entry;
+    }
+
+    getPedTasks() {
+        const logbook = this.getActiveLogbook();
+        return (logbook && logbook.pedTasks) || [];
+    }
+
+    setPedTasks(tasks) {
+        const logbook = this.getActiveLogbook();
+        if (!logbook) return false;
+        logbook.pedTasks = tasks;
+        return this.saveBookshelf();
+    }
+
+    // Exit save: overwrites one slot, never adds a logbook entry.
     saveCheckpoint() {
         const logbook = this.getActiveLogbook();
         if (!logbook) return false;
@@ -218,8 +240,10 @@ class SaveManager {
         this.gameState.loadFromSnapshot(entry.gameSnapshot);
         logbook.checkpoint = null;
         
-        // Remove all entries after this one
-        logbook.entries = logbook.entries.slice(0, entryIndex + 1);
+        // Remove all entries after this one, but keep journal notes (they are not save points)
+        const journals = logbook.entries.slice(entryIndex + 1).filter(e => e.logbook && e.logbook.type === 'journal');
+        logbook.entries = logbook.entries.slice(0, entryIndex + 1).concat(journals);
+        logbook.revision = (logbook.revision || 0) + 1; // tells synced devices not to bring the removed entries back
         this.updateLogbookStats(logbook);
         this.saveBookshelf();
         
