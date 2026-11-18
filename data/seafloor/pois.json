@@ -1,0 +1,16 @@
+[
+ {
+  "name": "Deep Trench Alpha",
+  "type": "trench",
+  "lat": 39.4,
+  "lon": -72.2,
+  "text": "Hudson Canyon: a deep canyon cut into the continental slope, with strong currents and strange readings."
+ },
+ {
+  "name": "Canyon Head",
+  "type": "site",
+  "lat": 39.62,
+  "lon": -72.45,
+  "text": "The head of Hudson Canyon, where the shelf begins to fall away."
+ }
+]

@@ -32,6 +32,11 @@ const ORDERS = {
   'Emergency surfaace': () => { sim.setDepth(0); return 'Blowing ballast. Surfacing!'; },
   'Emergency dive': () => { if (docked()) return 'We are docked, Captain.'; sim.setDepth(500); return 'Diving. Five hundred metres.'; },
   'Full sensor sweep': () => { sim.s.sonar = true; sim.touch(); const n = sim.s.pois.filter((p) => toward(sim.s, p).nm <= 4).length; return `Sonar active. ${n} contact${n === 1 ? '' : 's'} within four miles. Details are on the Sensors station.`; },
+  'Deploy sensor buoys': () => {
+    const r = sim.deployWskr();
+    if (!r.ok) return r.why === 'docked' ? 'We are docked, Captain. WSKRs go out once we are underway.' : 'All four WSKRs are already deployed, Captain.';
+    return `WSKR ${r.n} deployed. It is mapping the sea floor around itself and shows on the nav chart.`;
+  },
   'Passive listening mode': () => { sim.s.sonar = false; sim.touch(); return 'Sonar secured. Listening passively.'; },
   'Run crew diagnostics': () => 'Crew diagnostics complete. Everyone aboard is healthy, Captain.',
   'Request departure clearance': () => (docked() ? 'Woods Hole Harbor Control: you are cleared to depart at your discretion. Safe travels.' : 'Harbor Control: you are already underway, Captain.'),

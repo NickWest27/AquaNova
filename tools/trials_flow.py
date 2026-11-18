@@ -39,7 +39,7 @@ def main():
         check("mission is not started until accepted", (js(G + "return (g.getProperty('mission.objectives')||[]).length")) == 0)
         page.evaluate("window.__aq.open('comms')"); page.wait_for_timeout(500)
         page.tap(".msg-head"); page.wait_for_timeout(300)
-        check("message text and Accept button show after opening", page.is_visible("text=Take her below 50 meters") and page.is_visible('button:text-is("Accept mission")'))
+        check("message text and Accept button show after opening", page.is_visible("text=Take her below 30 meters") and page.is_visible('button:text-is("Accept mission")'))
         page.screenshot(path=f"{SHOTS}/m-1message.png")
         page.tap('button:text-is("Accept mission")'); page.wait_for_timeout(500)
         o = objs(); check("mission started with 5 objectives", len(o) == 5, o)

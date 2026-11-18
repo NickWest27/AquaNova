@@ -23,8 +23,8 @@ def main():
         page.tap("#board-btn"); page.wait_for_timeout(800)
         if page.is_visible(".modal .btn"): page.tap(".modal .btn"); page.wait_for_timeout(300)
         # three save points in three different places, one journal note in between
-        for name, depth, lat, hull, hrs in [("Alpha", 50, 41.55, 90, 8), ("Bravo", 120, 41.60, 80, 10), ("Charlie", 300, 41.70, 60, 12)]:
-            js(f"sim.s.docked=false; sim.s.depth={depth}; sim.s.targetDepth={depth}; sim.s.lat={lat}; sim.s.battery={hull}; sim.s.clock={hrs}*3600; P.addLogEntry('Entry {name}');")
+        for name, depth, lat, hull, hrs in [("Alpha", 50, 39.30, 90, 8), ("Bravo", 120, 39.35, 80, 10), ("Charlie", 300, 39.50, 60, 12)]:
+            js(f"sim.s.docked=false; sim.s.depth={depth}; sim.s.targetDepth={depth}; sim.s.lat={lat}; sim.s.lon=-72.2; sim.s.battery={hull}; sim.s.clock={hrs}*3600; P.addLogEntry('Entry {name}');")
             if name == "Bravo": js("P.saveManager.addEntry({type:'journal', content:'note after Bravo'})")
         ids = js("return P.saveManager.getActiveLogbook().entries.map(e=>e.logbook.entryId+':'+(e.logbook.content||'').slice(0,13))")
         check("setup: M.LOG-0001 plus three entries and a note", len(ids) == 5, ids)
@@ -37,7 +37,7 @@ def main():
         check("the entry reverted to is kept", "Entry Bravo" in t)
         check("later entry removed (Charlie)", "Entry Charlie" not in t)
         check("journal note kept (notes are not save points)", "note after Bravo" in t)
-        check("ship state is Bravo's (depth 120, lat 41.60, battery about 80, 10:00)", (r["depth"], r["lat"], r["hrs"]) == (120, 41.6, 10) and abs(r["bat"] - 80) <= 2, r)
+        check("ship state is Bravo's (depth 120, lat 39.35, battery about 80, 10:00)", (r["depth"], r["lat"], r["hrs"]) == (120, 39.35, 10) and abs(r["bat"] - 80) <= 2, r)
         check("exit save cleared and revision raised", r["cp"] is False and r["rev"] >= 1, r)
         page.evaluate("window.__aq.open('log')") if page.is_hidden(".entry") else None
         page.wait_for_timeout(400)

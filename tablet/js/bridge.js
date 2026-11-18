@@ -43,12 +43,12 @@ export function createBridgeConsole({ top, main, display, center, left, right, o
       nd.sel = sel; nds.push(nd);
       if (compact) return { m, update() { nd.redraw(); } };
       const logCur = el('div'), logDest = el('div'), logTime = el('div');
-      const rSpd = el('b'), rDep = el('b'), rHdg = el('b');
+      const rSpd = el('b'), rDep = el('b'), rFlr = el('b'), rHdg = el('b');
       m.append(el('div', { class: 'nav-log' }, el('b', { text: 'NAVIGATIONAL POSITION LOG' }), logTime, logCur, logDest),
-        el('div', { class: 'nav-read' }, rd('SPEED KT', rSpd), rd('DEPTH M', rDep), rd('HDG', rHdg)));
+        el('div', { class: 'nav-read' }, rd('SPEED KT', rSpd), rd('DEPTH M', rDep), rd('FLOOR M', rFlr), rd('HDG', rHdg)));
       return { m, update() {
         const s = sim.s;
-        set(rSpd, s.speed.toFixed(1)); set(rDep, String(Math.round(s.depth))); set(rHdg, pad(s.heading) + '°');
+        set(rSpd, s.speed.toFixed(1)); set(rDep, String(Math.round(s.depth))); set(rFlr, s.floor == null ? '—' : String(Math.round(s.floor))); set(rHdg, pad(s.heading) + '°');
         set(logTime, `MISSION TIME INDEX ${clockText()}`);
         set(logCur, `CURR POS ${deg(s.lat, 'N', 'S', 2)} ${deg(s.lon, 'E', 'W', 3)}  ${s.at ? s.at.name : 'Open water'}`);
         if (s.wpt) { const t = toward(s, s.wpt); set(logDest, `DEST POS ${s.wpt.name}  ${t.nm.toFixed(1)} nm  ETA ${etaText(t.nm, s.speed)}`); } else set(logDest, 'DEST POS none');

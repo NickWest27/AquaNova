@@ -1,12 +1,15 @@
 // Ship simulation. Pure data, no DOM. Runs at 5 Hz and only while the page is visible.
 import { clamp, norm360, angDiff } from './util.js';
 import { dlog } from '../../utils/log.js';
+import { seafloor } from './seafloor.js';
 
 const TICK_MS = 200;
 const TIMESCALE = 30;        // 1 real second = 30 game seconds of travel
 const MAX_KT = 14;
 const NM_PER_DEG_LAT = 60;
 const POI_RADIUS_NM = 0.3;
+const KEEL = 8;             // metres the ship needs under it (hull height plus a margin)
+const HARBOR_NM = 2;        // the dredged channel round a dock: no grounding checks inside it
 
 export const sim = {
   s: {
@@ -14,7 +17,7 @@ export const sim = {
     throttle: 0, speed: 0, depth: 0, targetDepth: 0,
     battery: 100, oxygen: 100, hull: 100, co2: 0.04, temp: 4.1, power: 0,
     ballast: 100, comms: true, sonar: true, lights: true, pois: [], wpt: null, at: null,
-    clock: 6 * 3600, docked: false,     // clock = game seconds since Day 1 00:00
+    clock: 6 * 3600, docked: false, damage: 0, floor: null, wskrs: [],     // clock = game seconds since Day 1 00:00
   },
   listeners: new Set(),
   dirty: true,
@@ -33,6 +36,13 @@ sim.loadPois = async () => {
       id: i, name: f.properties.name, type: f.properties.type, text: f.properties.description || '',
       lon: f.geometry.coordinates[0], lat: f.geometry.coordinates[1],
     }));
+    try {   // the tablet map is real, so a few sites move to real places (the desktop game keeps locations.json as it is)
+      const ov = await (await fetch(new URL('../../data/seafloor/pois.json', import.meta.url))).json();
+      for (const o of ov) {
+        const p = sim.s.pois.find((q) => q.name === o.name);
+        if (p) Object.assign(p, o); else sim.s.pois.push({ id: sim.s.pois.length, text: '', ...o });
+      }
+    } catch (e) { dlog('sim: no POI overrides'); }
     dlog('sim: loaded', sim.s.pois.length, 'POIs');
   } catch (e) { console.error('Could not load locations.json', e); }
 };
@@ -49,6 +59,13 @@ sim.setHeading = (h) => { sim.s.targetHeading = norm360(h); sim.touch(); };
 sim.setDepth = (d) => { if (sim.s.docked) return; sim.s.targetDepth = clamp(d, 0, 6000); sim.touch(); };
 sim.setWpt = (p) => { sim.s.wpt = p; if (p) { sim.s.targetHeading = toward(sim.s, p).brg; } sim.touch(); };
 sim.stop = () => { sim.s.throttle = 0; sim.s.wpt = null; sim.touch(); };
+/** Drop a WSKR (remote sensor probe) at the ship. Up to 4 at once; each maps the sea floor in detail round itself. */
+sim.deployWskr = () => {
+  const s = sim.s;
+  if (s.docked) return { ok: false, why: 'docked' };
+  if (s.wskrs.length >= 4) return { ok: false, why: 'full' };
+  s.wskrs.push({ lat: s.lat, lon: s.lon, n: s.wskrs.length + 1 }); sim.touch(); return { ok: true, n: s.wskrs.length };
+};
 sim.dockPoi = () => sim.s.pois.find((p) => p.type === 'dock');
 
 sim.step = (dt) => {
@@ -70,11 +87,30 @@ sim.step = (dt) => {
   // depth
   const dd = s.targetDepth - s.depth;
   s.depth = clamp(s.depth + clamp(dd, -12 * dt, 12 * dt), 0, 6000);
-  // move
+  // move, then check the sea floor
+  const prevLat = s.lat, prevLon = s.lon;
   const nm = (s.speed * dt * TIMESCALE) / 3600;
   const r = (s.heading * Math.PI) / 180;
   s.lat += (nm * Math.cos(r)) / NM_PER_DEG_LAT;
   s.lon += (nm * Math.sin(r)) / (NM_PER_DEG_LAT * Math.cos((s.lat * Math.PI) / 180));
+  if (seafloor.ready && !s.docked) {
+    const dock = sim.dockPoi(), harbor = dock && toward(s, dock).nm < HARBOR_NM;
+    let hit = null;
+    if (!seafloor.inside(s.lat, s.lon)) hit = nm > 0 ? 'edge' : null;
+    else if (!harbor) {
+      const fl = seafloor.depthAt(s.lat, s.lon);
+      if (fl < KEEL) hit = nm > 0 ? 'shoal' : null;   // a ship that is not moving cannot run aground
+      else if (s.depth > fl - KEEL) { s.depth = Math.max(0, fl - KEEL); if (!sim.onBottom) hit = 'bottom'; sim.onBottom = true; }
+      else sim.onBottom = false;
+    }
+    if (hit === 'edge' || hit === 'shoal') {      // blocked: back to where we were, stopped
+      const kt = s.speed; s.lat = prevLat; s.lon = prevLon; s.speed = 0; s.throttle = 0; s.wpt = null;
+      if (hit === 'edge') sim.emit('bump', { kind: 'edge' });
+      else sim.hurt(kt, 'shoal');
+    } else if (hit === 'bottom') sim.hurt(s.speed, 'bottom');
+    if (!seafloor.ready) sim.onBottom = false;
+  }
+  s.floor = seafloor.ready ? seafloor.depthAt(s.lat, s.lon) : null;
   // systems
   s.power = 8 + (s.speed / MAX_KT) * 70 + (s.lights ? 5 : 0) + (s.sonar ? 4 : 0);
   if (s.docked) { // shore power and air: about 20% battery and 30% oxygen per game hour
@@ -86,7 +122,8 @@ sim.step = (dt) => {
   }
   s.co2 = clamp(0.04 + (100 - s.oxygen) * 0.012, 0, 5);
   s.temp = clamp(20 - Math.sqrt(s.depth) * 0.28, 1.5, 20);
-  s.hull = clamp(100 - Math.max(0, s.depth - 4500) / 30, 0, 100);
+  if (s.docked) s.damage = Math.max(0, s.damage - 6 * (dt * TIMESCALE) / 3600);   // the dock crew repair about 6% an hour
+  s.hull = clamp(100 - s.damage - Math.max(0, s.depth - 4500) / 30, 0, 100);
   // arrival at POI
   let here = null;
   for (const p of s.pois) if (toward(s, p).nm < POI_RADIUS_NM) { here = p; break; }
@@ -96,6 +133,14 @@ sim.step = (dt) => {
     sim.emit('enter', here);
   } else if (!here && s.at) { s.at = null; }
   sim.dirty = true;
+};
+
+/** An impact costs hull: 2% plus 1.5% per knot (at most once every 30 game seconds). */
+let lastHurt = -1e9;
+sim.hurt = (kt, kind) => {
+  const now = sim.s.clock; if (now - lastHurt < 30) return; lastHurt = now;   // game seconds
+  const d = 2 + 1.5 * kt; sim.s.damage = Math.min(100, sim.s.damage + d);
+  sim.emit('bump', { kind, damage: d });
 };
 
 /** Docking needs a dock marker, low speed and the surface. */

@@ -1,6 +1,7 @@
 // Navigation display: one canvas, north-up, ship-centred. Redraws only when asked.
 import { sim, toward } from './sim.js';
 import { frameThrottle } from './util.js';
+import { seafloor } from './seafloor.js';
 
 const RANGES = [0.5, 1, 2, 4, 8, 16];
 
@@ -30,27 +31,44 @@ export function createND(wrap, { onPick, stage = false, units = 1, contours = fa
     return { x: nd.w / 2 + t.dx * scale, y: nd.h / 2 - t.dy * scale, nm: t.nm, brg: t.brg };
   };
 
-  // PLACEHOLDER seabed: smooth invented contours that scroll with the ship. Real seafloor data comes later.
-  const seabed = (e, n) => Math.sin(e * 0.9 + 1.3) * Math.cos(n * 0.7 + 0.4) + 0.55 * Math.sin(e * 0.33 + n * 0.51 + 2) + 0.3 * Math.cos(e * 1.7 - n * 1.3);
-  function drawContours(w, h, R) {
-    const s = sim.s, nmE = s.lon * 60 * Math.cos((s.lat * Math.PI) / 180), nmN = s.lat * 60, scale = R / nd.range;
-    const step = 26, cols = Math.ceil(w / step) + 1, rows = Math.ceil(h / step) + 1;
-    const grid = [];
-    for (let j = 0; j < rows; j++) { const row = []; for (let i = 0; i < cols; i++) row.push(seabed(nmE + (i * step - w / 2) / scale, nmN - (j * step - h / 2) / scale)); grid.push(row); }
-    const levels = [-0.9, -0.35, 0.2, 0.75, 1.3];
-    ctx.lineWidth = 1.3;
-    levels.forEach((L, li) => {
-      ctx.strokeStyle = `rgba(90,170,255,${0.16 + li * 0.07})`; ctx.beginPath();
-      for (let j = 0; j < rows - 1; j++) for (let i = 0; i < cols - 1; i++) {
-        const v = [grid[j][i], grid[j][i + 1], grid[j + 1][i + 1], grid[j + 1][i]];
-        const x0 = i * step, y0 = j * step, pts = [];
-        const edge = (a, b, ax, ay, bx, by) => { if ((v[a] < L) !== (v[b] < L)) { const t = (L - v[a]) / (v[b] - v[a]); pts.push([ax + (bx - ax) * t, ay + (by - ay) * t]); } };
-        edge(0, 1, x0, y0, x0 + step, y0); edge(1, 2, x0 + step, y0, x0 + step, y0 + step); edge(2, 3, x0 + step, y0 + step, x0, y0 + step); edge(3, 0, x0, y0 + step, x0, y0);
-        if (pts.length >= 2) { ctx.moveTo(pts[0][0], pts[0][1]); ctx.lineTo(pts[1][0], pts[1][1]); }
-        if (pts.length === 4) { ctx.moveTo(pts[2][0], pts[2][1]); ctx.lineTo(pts[3][0], pts[3][1]); }
+  // Real sea floor: rough contours everywhere, 10 m contours only in a circle round the ship (and each deployed WSKR).
+  const FINE_NM = 4, WSKR_NM = 3;
+  const shade = (l) => (l === 0 ? 'rgba(255,214,120,0.9)' : l > -100 ? 'rgba(130,215,255,0.40)' : l > -500 ? 'rgba(90,170,255,0.45)' : 'rgba(110,130,255,0.55)');
+  function strokeLevels(levels, p, w, h, fine) {
+    for (const lv of levels) {
+      if (fine && (lv.l === 0 || !(lv.l > -200 || (lv.l > -500 ? lv.l % 50 === 0 : lv.l % 100 === 0)))) continue;   // 10 m on the shelf, thinning out with depth so slopes stay readable
+      ctx.strokeStyle = fine ? (lv.l % 100 === 0 ? 'rgba(130,200,255,0.55)' : 'rgba(110,190,230,0.26)') : shade(lv.l);
+      ctx.lineWidth = lv.l === 0 ? 1.8 : fine ? 0.9 : 1.1; ctx.beginPath();
+      for (const ln of lv.lines) {
+        const a = ln.a, n = a.length / 2;
+        if (p.x(ln.x1) < -20 || p.x(ln.x0) > w + 20 || p.y(ln.y0) < -20 || p.y(ln.y1) > h + 20) continue;   // outside the view
+        ctx.moveTo(p.x(a[0]), p.y(a[1]));
+        for (let i = 1; i < n; i++) ctx.lineTo(p.x(a[i * 2]), p.y(a[i * 2 + 1]));
       }
       ctx.stroke();
-    });
+    }
+  }
+  function drawSeafloor(w, h, R) {
+    if (!seafloor.ready) return;
+    const s = sim.s, scale = R / nd.range, kx = 60 * Math.cos((s.lat * Math.PI) / 180) * scale, ky = 60 * scale;
+    const p = { x: (lon) => w / 2 + (lon - s.lon) * kx, y: (lat) => h / 2 - (lat - s.lat) * ky };
+    strokeLevels(seafloor.rough, p, w, h, false);
+    if (!rings) {   // scale bar: the main screen has no range rings
+      const nice = [0.1, 0.25, 0.5, 1, 2, 5, 10, 20].filter((v) => v * scale < w * 0.25).pop() || 0.1, len = nice * scale, x0 = w - 60 - len, y0 = h - 34;
+      ctx.strokeStyle = '#9fd8ff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x0, y0 - 6); ctx.lineTo(x0, y0); ctx.lineTo(x0 + len, y0); ctx.lineTo(x0 + len, y0 - 6); ctx.stroke();
+      ctx.fillStyle = '#9fd8ff'; ctx.font = '600 15px ui-monospace, Menlo, monospace'; ctx.textAlign = 'center'; ctx.fillText(nice + ' nm', x0 + len / 2, y0 - 10);
+    }
+    const src = [{ lat: s.lat, lon: s.lon, nm: FINE_NM }, ...(s.wskrs || []).map((q) => ({ lat: q.lat, lon: q.lon, nm: WSKR_NM }))];
+    const tiles = seafloor.fineFor(src, nd.redraw);
+    if (!tiles.length) return;
+    ctx.save(); ctx.beginPath();
+    for (const q of src) { const cx = p.x(q.lon), cy = p.y(q.lat); ctx.moveTo(cx + q.nm * scale, cy); ctx.arc(cx, cy, q.nm * scale, 0, 6.2832); }
+    ctx.clip();
+    for (const t of tiles) strokeLevels(t, p, w, h, true);
+    ctx.restore();
+    ctx.strokeStyle = 'rgba(100,255,218,0.25)'; ctx.setLineDash([4, 6]); ctx.lineWidth = 1; ctx.beginPath();
+    for (const q of src) { const cx = p.x(q.lon), cy = p.y(q.lat); ctx.moveTo(cx + q.nm * scale, cy); ctx.arc(cx, cy, q.nm * scale, 0, 6.2832); }
+    ctx.stroke(); ctx.setLineDash([]);
   }
 
   nd.draw = () => {
@@ -59,7 +77,7 @@ export function createND(wrap, { onPick, stage = false, units = 1, contours = fa
     if (R < 20) return; // not laid out yet (hidden)
     ctx.clearRect(0, 0, w, h);
     ctx.fillStyle = '#03121c'; ctx.fillRect(0, 0, w, h);
-    if (contours) drawContours(w, h, R);
+    if (contours) drawSeafloor(w, h, R);
     if (rings) {
     ctx.lineWidth = 1.5; ctx.strokeStyle = 'rgba(100,255,218,0.25)';
     for (let i = 1; i <= 4; i++) { ctx.beginPath(); ctx.arc(cx, cy, (R * i) / 4, 0, 6.2832); ctx.stroke(); }
@@ -74,6 +92,13 @@ export function createND(wrap, { onPick, stage = false, units = 1, contours = fa
       const p = px(s.wpt);
       ctx.setLineDash([8, 8]); ctx.strokeStyle = '#ffb020'; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(p.x, p.y); ctx.stroke(); ctx.setLineDash([]);
+    }
+    // WSKRs (deployed sensor probes): diamonds
+    for (const q of s.wskrs || []) {
+      const t = toward(s, q), scale = R / nd.range, x = w / 2 + t.dx * scale, y = h / 2 - t.dy * scale;
+      if (x < -20 || x > w + 20 || y < -20 || y > h + 20) continue;
+      ctx.fillStyle = '#ffd666'; ctx.beginPath(); ctx.moveTo(x, y - 7); ctx.lineTo(x + 6, y); ctx.lineTo(x, y + 7); ctx.lineTo(x - 6, y); ctx.fill();
+      ctx.font = '700 14px system-ui'; ctx.textAlign = 'left'; ctx.fillText('W' + q.n, x + 9, y + 5);
     }
     // POIs
     ctx.font = '700 17px system-ui';

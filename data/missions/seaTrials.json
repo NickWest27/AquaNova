@@ -21,13 +21,13 @@
     },
     {
       "id": "dive",
-      "description": "Dive below 50 m",
+      "description": "Dive below 30 m",
       "required": true,
       "triggers": [
         {
           "type": "property_at_least",
           "property": "navigation.depth",
-          "value": 50
+          "value": 30
         }
       ],
       "after": "undock"

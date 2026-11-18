@@ -123,7 +123,7 @@
         "from": "OERA Operations",
         "subject": "Sea trials orders",
         "missionId": "seaTrials",
-        "text": "Captain, welcome aboard. Get the Aqua Nova out of dry dock and underway for sea trials. Take her below 50 meters, run her up to speed, then bring her back to the surface and report. Accept the mission when you are ready."
+        "text": "Captain, welcome aboard. Get the Aqua Nova out of dry dock and underway for sea trials. Take her below 30 meters, run her up to speed, then bring her back to the surface and report. Accept the mission when you are ready."
       }
     }
   ],

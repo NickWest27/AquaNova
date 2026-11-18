@@ -2,6 +2,7 @@ import '../../utils/debugPanel.js';
 import { dlog } from '../../utils/log.js';
 import { sim, clockText, toward, MAX_SPEED } from './sim.js';
 import { createScene } from './scene.js';
+import { seafloor } from './seafloor.js';
 import { el, $, toast, pad, modal, frameThrottle } from './util.js';
 import { ICONS } from './ui.js';
 import { startSync, syncAtBoot } from './sync.js';
@@ -212,6 +213,7 @@ async function boot() {
   try {
     info.textContent = 'Loading charts, crew and saved game…';
     await sim.loadPois();
+    seafloor.load().then((ok) => ok && sim.touch());      // sea floor data loads in the background
     await loadGame();                       // saveManager + GameState + sim restore
     await syncAtBoot();                     // pick up journal notes and tasks from the phone
     try {
@@ -246,6 +248,11 @@ async function boot() {
         const b = `BAT ${Math.round(s.battery)}%`; if (st.bat.textContent !== b) st.bat.textContent = b;
       } else if (type === 'enter') { toast('Arrived: ' + data.name); firstVisit(data); }
       else if (type === 'arrived') toast('Destination reached');
+      else if (type === 'bump') {
+        const k = data.kind;
+        if (k === 'edge') toast('Edge of the charted area. All stop.', 'error');
+        else toast(`${k === 'shoal' ? 'Shoal water ahead! The ship has run aground' : 'We have touched bottom'}. Hull damage ${Math.round(data.damage)}%.`, 'error');
+      }
     });
     // A new game starts in your quarters, where the tutorial begins.
     if (commsLocked()) openScene('quarters'); else scene.show('bridge');

@@ -78,7 +78,7 @@ def main():
         page.tap(".modal .btn"); page.wait_for_timeout(200)
 
         # --- the ship keeps travelling while the player sleeps ---
-        js("sim.s.oxygen = 100; sim.s.battery = 100; sim.s.docked = false; const d = sim.dockPoi(); sim.s.lat = d.lat; sim.s.lon = d.lon; sim.s.at = null; sim.s.wpt = null; sim.s.heading = 90; sim.s.targetHeading = 90; sim.setThrottle(0.5); sim.s.speed = 7;")
+        js("sim.s.oxygen = 100; sim.s.battery = 100; sim.s.docked = false; sim.s.lat = 40.0; sim.s.lon = -73.0; sim.s.at = null; sim.s.wpt = null; sim.s.heading = 90; sim.s.targetHeading = 90; sim.setThrottle(0.5); sim.s.speed = 7;")
         start = js("return [sim.s.lat, sim.s.lon]")
         tap_hs("SLEEP"); page.tap('.modal button:text-is("2 h")'); page.tap('.modal button:text-is("Sleep")'); page.wait_for_timeout(1500)
         moved = js("const t=(await import('./js/sim.js')).toward; return t({lat:" + str(start[0]) + ",lon:" + str(start[1]) + "}, sim.s).nm")
@@ -86,7 +86,7 @@ def main():
         page.tap(".modal .btn"); page.wait_for_timeout(200)
 
         # --- arrival wakes the player; the dialog offers "Until arrival" ---
-        js("sim.s.docked = false; const d = sim.dockPoi(); const r = sim.s.pois.find(p => p.name === 'Mystic Reef'); sim.s.lat = r.lat - 0.6; sim.s.lon = r.lon; sim.s.at = null; sim.setWpt(r); sim.setThrottle(1); sim.s.speed = 14;")
+        js("sim.s.docked = false; const d = sim.dockPoi(); const r = sim.s.pois.find(p => p.name === 'Mystic Reef'); r.lat = 40.9; r.lon = -71.4; sim.s.lat = r.lat - 0.6; sim.s.lon = r.lon; sim.s.at = null; sim.setWpt(r); sim.setThrottle(1); sim.s.speed = 14;")
         tap_hs("SLEEP"); page.wait_for_timeout(300)
         check("sleep dialog offers Until arrival", page.is_visible('.modal button:has-text("Until arrival")'))
         page.screenshot(path=f"{SHOTS}/d-5until-arrival.png")
