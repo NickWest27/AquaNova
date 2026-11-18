@@ -1,0 +1,13 @@
+{
+  "name": "Aqua Nova DSV",
+  "short_name": "Aqua Nova",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#04101f",
+  "theme_color": "#04101f",
+  "icons": [
+    { "src": "assets/icon-180.png", "sizes": "180x180", "type": "image/png" }
+  ]
+}

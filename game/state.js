@@ -11,6 +11,8 @@ class GameState {
     constructor() {
         this.state = this.getDefaultState();
         this.observers = [];
+        this._batchDepth = 0;
+        this._batchDirty = false;
     }
 
     getDefaultState() {
@@ -493,10 +495,30 @@ class GameState {
         this.observers = this.observers.filter(obs => obs !== callback);
     }
 
+    // Group several updates into ONE observer notification.
+    batch(fn) {
+        this._batchDepth++;
+        try {
+            fn();
+        } finally {
+            this._batchDepth--;
+            if (this._batchDepth === 0 && this._batchDirty) {
+                this._batchDirty = false;
+                this.notifyObservers();
+            }
+        }
+    }
+
     notifyObservers() {
+        if (this._batchDepth > 0) {
+            this._batchDirty = true;
+            return;
+        }
         this.observers.forEach(callback => {
             try {
-                callback(this.getState());
+                // Only clone the whole state for observers that ask for it.
+                if (callback.length > 0) callback(this.getState());
+                else callback();
             } catch (error) {
                 console.error('Observer callback error:', error);
             }
