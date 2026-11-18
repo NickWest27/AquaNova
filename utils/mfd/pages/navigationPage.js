@@ -4,6 +4,7 @@
 import { drawNavigationDisplay } from '../../../game/systems/navComputer/navComputer.js';
 import gameStateInstance from '../../../game/state.js';
 
+import { dlog } from '../../log.js';
 class NavigationPage {
     static init(mfd) {
         // Initialize navigation page state
@@ -24,7 +25,7 @@ class NavigationPage {
         };
         
         mfd.setPageState(defaultState, 'navigation');
-        console.log('Navigation page initialized');
+        dlog('Navigation page initialized');
     }
 
     static getSoftKeys(mfd) {
@@ -283,7 +284,7 @@ class NavigationPage {
         const newRange = ranges[newIndex];
         gameStateInstance.updateProperty("displaySettings.navDisplayRange", newRange);
         mfd.needsRedraw = true; // Force redraw
-        console.log(`Navigation: Range changed to ${newRange}nm`);
+        dlog(`Navigation: Range changed to ${newRange}nm`);
     }
 
     static setMode(mfd, newMode) {
@@ -292,7 +293,7 @@ class NavigationPage {
         mfd.setPageState(state, 'navigation');
         mfd.setupPageSoftKeys('navigation');
         mfd.needsRedraw = true; // Force redraw
-        console.log(`Navigation: Mode changed to ${newMode}`);
+        dlog(`Navigation: Mode changed to ${newMode}`);
     }
 
     static showOverlays(mfd) {
@@ -301,7 +302,7 @@ class NavigationPage {
         mfd.setPageState(state, 'navigation');
         mfd.setupPageSoftKeys('navigation');
         mfd.updateDisplay();
-        console.log('Navigation: Showing overlays menu');
+        dlog('Navigation: Showing overlays menu');
     }
 
     static showRoute(mfd) {
@@ -310,22 +311,22 @@ class NavigationPage {
         mfd.setPageState(state, 'navigation');
         mfd.setupPageSoftKeys('navigation');
         mfd.updateDisplay();
-        console.log('Navigation: Showing route menu');
+        dlog('Navigation: Showing route menu');
     }
 
     static showMenu(mfd) {
         // Could show main menu or switch to different MFD page
-        console.log('Navigation: Main menu requested');
+        dlog('Navigation: Main menu requested');
     }
 
     static toggleZoom(mfd) {
         // Toggle between different zoom levels or display modes
-        console.log('Navigation: Zoom toggle');
+        dlog('Navigation: Zoom toggle');
     }
 
     static showInfo(mfd) {
         // Show navigation information panel
-        console.log('Navigation: Info panel');
+        dlog('Navigation: Info panel');
     }
 
     static backToMap(mfd) {
@@ -334,7 +335,7 @@ class NavigationPage {
         mfd.setPageState(state, 'navigation');
         mfd.setupPageSoftKeys('navigation');
         mfd.updateDisplay();
-        console.log('Navigation: Back to map view');
+        dlog('Navigation: Back to map view');
     }
 
     // Overlay Control Methods
@@ -343,7 +344,7 @@ class NavigationPage {
         state.overlaysVisible[overlayName] = !state.overlaysVisible[overlayName];
         mfd.setPageState(state, 'navigation');
         mfd.updateDisplay();
-        console.log(`Navigation: Toggled ${overlayName} overlay ${state.overlaysVisible[overlayName] ? 'ON' : 'OFF'}`);
+        dlog(`Navigation: Toggled ${overlayName} overlay ${state.overlaysVisible[overlayName] ? 'ON' : 'OFF'}`);
     }
 
     static allOverlaysOn(mfd) {
@@ -353,7 +354,7 @@ class NavigationPage {
         });
         mfd.setPageState(state, 'navigation');
         mfd.updateDisplay();
-        console.log('Navigation: All overlays ON');
+        dlog('Navigation: All overlays ON');
     }
 
     static allOverlaysOff(mfd) {
@@ -363,26 +364,26 @@ class NavigationPage {
         });
         mfd.setPageState(state, 'navigation');
         mfd.updateDisplay();
-        console.log('Navigation: All overlays OFF');
+        dlog('Navigation: All overlays OFF');
     }
 
     // Route Management Methods
     static addWaypoint(mfd) {
         mfd.requestKeyboardInput('WPT NAME: ', 'waypoint_add', 8);
-        console.log('Navigation: Add waypoint requested');
+        dlog('Navigation: Add waypoint requested');
     }
 
     static editWaypoint(mfd) {
         const state = mfd.getPageState('navigation');
         const selectedIndex = state.routeView.selectedWaypoint;
         mfd.requestKeyboardInput('EDIT WPT: ', `waypoint_edit_${selectedIndex}`, 8);
-        console.log('Navigation: Edit waypoint requested');
+        dlog('Navigation: Edit waypoint requested');
     }
 
     static deleteWaypoint(mfd) {
         const state = mfd.getPageState('navigation');
         const selectedIndex = state.routeView.selectedWaypoint;
-        console.log(`Navigation: Delete waypoint ${selectedIndex} requested`);
+        dlog(`Navigation: Delete waypoint ${selectedIndex} requested`);
         // Implementation would remove waypoint from mission computer
     }
 
@@ -393,7 +394,7 @@ class NavigationPage {
             mfd.setPageState(state, 'navigation');
             mfd.updateDisplay();
         }
-        console.log('Navigation: Move waypoint selection up');
+        dlog('Navigation: Move waypoint selection up');
     }
 
     static moveWaypointDown(mfd) {
@@ -405,33 +406,33 @@ class NavigationPage {
             mfd.setPageState(state, 'navigation');
             mfd.updateDisplay();
         }
-        console.log('Navigation: Move waypoint selection down');
+        dlog('Navigation: Move waypoint selection down');
     }
 
     static executeRoute(mfd) {
-        console.log('Navigation: Execute route requested');
+        dlog('Navigation: Execute route requested');
         // Implementation would tell mission computer to activate route
     }
 
     static directToWaypoint(mfd) {
         const state = mfd.getPageState('navigation');
         const selectedIndex = state.routeView.selectedWaypoint;
-        console.log(`Navigation: Direct to waypoint ${selectedIndex} requested`);
+        dlog(`Navigation: Direct to waypoint ${selectedIndex} requested`);
         // Implementation would set direct course to selected waypoint
     }
 
     // Keyboard Input Handler
     static handleKeyboardInput(mfd, data) {
-        console.log('Navigation page received keyboard input:', data);
+        dlog('Navigation page received keyboard input:', data);
         
         if (data.context === 'waypoint_add') {
             // Add waypoint with the entered name
-            console.log(`Adding waypoint: ${data.input}`);
+            dlog(`Adding waypoint: ${data.input}`);
             // Implementation would add to mission computer
         } else if (data.context.startsWith('waypoint_edit_')) {
             // Edit waypoint
             const index = data.context.split('_')[2];
-            console.log(`Editing waypoint ${index}: ${data.input}`);
+            dlog(`Editing waypoint ${index}: ${data.input}`);
             // Implementation would update waypoint in mission computer
         }
     }

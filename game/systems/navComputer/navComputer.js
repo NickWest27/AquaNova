@@ -1,3 +1,4 @@
+import { dlog } from '../../../utils/log.js';
 // /game/systems/navComputer/navComputer.js
 // Enhanced Navigation Computer for Aqua Nova Bridge
 // Properly handles canvas scaling with displayManager and virtual resolutions
@@ -72,7 +73,7 @@ export function drawNavigationDisplay(canvas, svg, state, displayType = 'centerD
 }
 
 function drawNavContent(ctx, cx, cy, maxRadius, state, canvasWidth, canvasHeight) {
-  console.log(`Drawing nav at center(${cx}, ${cy}) with radius ${maxRadius}`);
+  dlog(`Drawing nav at center(${cx}, ${cy}) with radius ${maxRadius}`);
   
   // 1. Clear background with black (like real ND)
   ctx.fillStyle = "#000000";

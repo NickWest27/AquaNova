@@ -1,3 +1,4 @@
+import { dlog } from '../utils/log.js';
 // game/state.js
 // Central game state management for Aqua Nova DSV
 // Single source of truth for ALL game data
@@ -329,7 +330,7 @@ class GameState {
     }
 
     async initializeContacts() {
-        console.log("[Contacts] --- initializeContacts: START ---");
+        dlog("[Contacts] --- initializeContacts: START ---");
         const contactsData = await this.loadContactsData();
 
         // Merge crew contacts (preserve dynamic state)
@@ -361,15 +362,15 @@ class GameState {
         // Log concise summaries of contacts
         const crewContacts = this.getProperty("contacts.crew") || {};
         const externalContacts = this.getProperty("contacts.external") || {};
-        console.log("[Contacts] Crew contacts summary:");
+        dlog("[Contacts] Crew contacts summary:");
         Object.entries(crewContacts).forEach(([id, contact]) => {
-            console.log(`  [Crew] id: ${id}, name: ${contact.name || "(unnamed)"}, known: ${!!contact.known}`);
+            dlog(`  [Crew] id: ${id}, name: ${contact.name || "(unnamed)"}, known: ${!!contact.known}`);
         });
-        console.log("[Contacts] External contacts summary:");
+        dlog("[Contacts] External contacts summary:");
         Object.entries(externalContacts).forEach(([id, contact]) => {
-            console.log(`  [External] id: ${id}, name: ${contact.name || "(unnamed)"}, known: ${!!contact.known}`);
+            dlog(`  [External] id: ${id}, name: ${contact.name || "(unnamed)"}, known: ${!!contact.known}`);
         });
-        console.log("[Contacts] --- initializeContacts: END ---");
+        dlog("[Contacts] --- initializeContacts: END ---");
     }
 
     // Navigation methods

@@ -1,3 +1,4 @@
+import '../../utils/debugPanel.js';
 // Enhanced Bridge System for Aqua Nova
 // Separates navigation display from MFD overlay system
 import displayManager from '../../utils/displayManager.js';
@@ -9,6 +10,7 @@ import KeyboardUnit from '../../utils/keyboardUnit/keyboardUnit.js';
 import { drawNavigationDisplay } from '../../game/systems/navComputer/navComputer.js';
 import MFDCore from '../../utils/mfd/mfdCore.js';
 
+import { dlog } from '../../utils/log.js';
 const gameState = gameStateInstance;
 let lastState = null;
 let animationId = null;
@@ -25,7 +27,7 @@ const headingInput = document.getElementById("heading-input");
 async function initializeBridge() {
   
   if (!missionManager.initialized) {
-    console.log('Initializing mission system...');
+    dlog('Initializing mission system...');
     await missionManager.init();
   }
 
@@ -67,7 +69,7 @@ function initializeGameStateProperties() {
 }
 
 async function initializeNavigationDisplay() {
-  console.log('Initializing navigation display content...');
+  dlog('Initializing navigation display content...');
   
   // Create navigation display elements in container
   const container = document.getElementById('navigation-container');
@@ -83,18 +85,18 @@ async function initializeNavigationDisplay() {
   // Set up proper canvas sizing
   resizeNavigationDisplay();
   
-  console.log('Navigation display content initialized');
+  dlog('Navigation display content initialized');
 }
 
 async function initializeMFDOverlay() {
   try {
-    console.log('Initializing MFD overlay system...');
+    dlog('Initializing MFD overlay system...');
     
     const centerEl = document.querySelector('.right-console');
     if (centerEl) {
       if (!centerEl.id) centerEl.id = 'right-console';
       mfdSystem = new MFDCore(centerEl.id, keyboardUnit);
-      console.log('MFD initialized in right-console');
+      dlog('MFD initialized in right-console');
       window.mfdSystem = mfdSystem;
     } else {
       console.error('right-console element not found. MFD could not initialize.');
@@ -107,7 +109,7 @@ async function initializeMFDOverlay() {
 }
 
 function initializeKeyboardUnit() {
-  console.log('Initializing keyboard unit...');
+  dlog('Initializing keyboard unit...');
   
   const consoleContainer = document.getElementById('center-console');
   const keyboardContainer = document.getElementById('keyboard-unit-container');
@@ -122,11 +124,11 @@ function initializeKeyboardUnit() {
     
     // Listen for keyboard unit data (scratchpad ENTER)
     document.addEventListener('keyboard-data-sent', (e) => {
-      console.log('Keyboard data event received:', e.detail);
+      dlog('Keyboard data event received:', e.detail);
       handleKeyboardData(e.detail);
     });
     
-    console.log('Keyboard Unit initialized successfully in center console');
+    dlog('Keyboard Unit initialized successfully in center console');
     
   } catch (error) {
     console.error('Failed to initialize Keyboard Unit:', error);
@@ -135,7 +137,7 @@ function initializeKeyboardUnit() {
 }
 
 function handleKeyboardData(data) {
-  console.log('Bridge received keyboard data:', data);
+  dlog('Bridge received keyboard data:', data);
   
   // Route to MFD system first if available
   if (mfdSystem) {
@@ -148,25 +150,25 @@ function handleKeyboardData(data) {
   switch (context) {
     case 'latitude':
     case 'latitude_input':
-      console.log(`Latitude entered: ${input}`);
+      dlog(`Latitude entered: ${input}`);
       break;
     case 'longitude':
     case 'longitude_input':
-      console.log(`Longitude entered: ${input}`);
+      dlog(`Longitude entered: ${input}`);
       break;
     case 'waypoint':
     case 'waypoint_name':
-      console.log(`Waypoint name entered: ${input}`);
+      dlog(`Waypoint name entered: ${input}`);
       break;
     case 'speed':
     case 'speed_input':
-      console.log(`Speed entered: ${input}`);
+      dlog(`Speed entered: ${input}`);
       if (!isNaN(parseFloat(input))) {
         gameState.updateProperty("navigation.speed", parseFloat(input));
       }
       break;
     default:
-      console.log(`Unknown input context: ${context}, data: ${input}`);
+      dlog(`Unknown input context: ${context}, data: ${input}`);
   }
 }
 
@@ -262,7 +264,7 @@ function resizeNavigationDisplay() {
   navigationSVG.style.width = '100%';
   navigationSVG.style.height = '100%';
   
-  console.log(`Navigation display resized: CSS(${rect.width}x${rect.height}) Buffer(${navigationCanvas.width}x${navigationCanvas.height}) DPR(${dpr})`);
+  dlog(`Navigation display resized: CSS(${rect.width}x${rect.height}) Buffer(${navigationCanvas.width}x${navigationCanvas.height}) DPR(${dpr})`);
   
   // Redraw navigation content
   updateNavigationDisplay();
@@ -360,13 +362,13 @@ function debugCanvasInfo() {
   
   if (container && navigationCanvas) {
     const containerRect = container.getBoundingClientRect();
-    console.log('=== Navigation Display Debug Info ===');
-    console.log('Container size:', containerRect.width, 'x', containerRect.height);
-    console.log('Canvas buffer size:', navigationCanvas.width, 'x', navigationCanvas.height);
-    console.log('Canvas CSS size:', navigationCanvas.style.width, 'x', navigationCanvas.style.height);
-    console.log('Device pixel ratio:', window.devicePixelRatio);
-    console.log('MFD System:', mfdSystem ? 'Active' : 'Not initialized');
-    console.log('====================================');
+    dlog('=== Navigation Display Debug Info ===');
+    dlog('Container size:', containerRect.width, 'x', containerRect.height);
+    dlog('Canvas buffer size:', navigationCanvas.width, 'x', navigationCanvas.height);
+    dlog('Canvas CSS size:', navigationCanvas.style.width, 'x', navigationCanvas.style.height);
+    dlog('Device pixel ratio:', window.devicePixelRatio);
+    dlog('MFD System:', mfdSystem ? 'Active' : 'Not initialized');
+    dlog('====================================');
   }
 }
 
@@ -419,7 +421,7 @@ window.debugBridge = {
 };
 
 document.addEventListener('keyboard-function-pressed', (e) => {
-  console.log('Function key pressed:', e.detail);
+  dlog('Function key pressed:', e.detail);
   // if (mfdSystem && typeof mfdSystem.handleFunctionKey === 'function') {
   //   mfdSystem.handleFunctionKey(e.detail);
   // }
@@ -427,7 +429,7 @@ document.addEventListener('keyboard-function-pressed', (e) => {
 
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', async () => {
-  console.log('DOM loaded, initializing bridge...');
+  dlog('DOM loaded, initializing bridge...');
   await initializeBridge();
   
   // Update debug object after initialization
@@ -436,7 +438,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.debugBridge.mfdSystem = mfdSystem;
     window.debugBridge.navigationCanvas = navigationCanvas;
     window.debugBridge.navigationSVG = navigationSVG;
-    console.log('Bridge initialization complete');
+    dlog('Bridge initialization complete');
   }, 100);
 });
 

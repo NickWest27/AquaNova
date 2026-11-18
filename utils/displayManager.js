@@ -1,3 +1,4 @@
+import { dlog } from './log.js';
 // utils/displayManager.js
 // Unified display management system combining scaling and settings
 
@@ -145,7 +146,7 @@ export class DisplayManager {
     // Emit events
     this.emitScaleChanged(selectedScale, scaleData, scaledWidth, scaledHeight, offsetX, offsetY);
     
-    console.log(`Display: ${this.baseWidth}×${this.baseHeight} @ ${selectedScale.toFixed(3)}x (${this.scaleMode})`);
+    dlog(`Display: ${this.baseWidth}×${this.baseHeight} @ ${selectedScale.toFixed(3)}x (${this.scaleMode})`);
     
     return this.currentScale;
   }
@@ -216,7 +217,7 @@ export class DisplayManager {
       document.dispatchEvent(event);
     }
 
-    console.log(`Resolution: ${targetWidth}×${targetHeight} (${resolutionKey})`);
+    dlog(`Resolution: ${targetWidth}×${targetHeight} (${resolutionKey})`);
     return true;
   }
 
@@ -412,7 +413,7 @@ export class DisplayManager {
       if (saved) {
         const parsedSettings = JSON.parse(saved);
         this.settings = { ...this.settings, ...parsedSettings };
-        console.log('Settings loaded:', this.settings);
+        dlog('Settings loaded:', this.settings);
       }
     } catch (error) {
       console.error('Failed to load settings:', error);
@@ -436,7 +437,7 @@ export class DisplayManager {
     // Now call updateScale only once with all settings applied
     this.updateScale();
     
-    console.log('Settings applied:', this.settings);
+    dlog('Settings applied:', this.settings);
   }
 
   resetSettings() {

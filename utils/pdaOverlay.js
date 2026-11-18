@@ -3,6 +3,7 @@ import saveManager from '../game/saveManager.js';
 import displayManager from './displayManager.js';
 
 
+import { dlog } from './log.js';
 // =============================================================================
 // CORE STATE AND CONFIGURATION
 // =============================================================================
@@ -948,7 +949,7 @@ function renderPlaceholderPage(contentEl, pageName) {
 // =============================================================================
 
 function showMessage(message) {
-  console.log('PDA Message:', message);
+  dlog('PDA Message:', message);
   
   // Create temporary message element
   const messageEl = document.createElement('div');

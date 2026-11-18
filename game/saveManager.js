@@ -1,3 +1,4 @@
+import { dlog } from '../utils/log.js';
 // game/saveManager.js
 // Pure persistence service 
 // Manages logbook files and bookshelf
@@ -95,7 +96,7 @@ class SaveManager {
             this.activeLogbookId = logbook.id;
             this.saveBookshelf();
             
-            console.log(`Bootstrapped from SeaTrials.json with ID: ${logbook.id}`);
+            dlog(`Bootstrapped from SeaTrials.json with ID: ${logbook.id}`);
             return true;
         } catch (error) {
                 console.error('Bootstrap failed:', error);
@@ -125,22 +126,22 @@ class SaveManager {
         await this.gameState.initializeContacts();
 
         // --- DEBUG: Contacts Info ---
-        console.log('--- DEBUG: Contacts Info START ---');
+        dlog('--- DEBUG: Contacts Info START ---');
         const crewContacts = this.gameState.getProperty('contacts.crew');
         const externalContacts = this.gameState.getProperty('contacts.external');
         const crewCount = Array.isArray(crewContacts) ? crewContacts.length : 0;
         const externalCount = Array.isArray(externalContacts) ? externalContacts.length : 0;
-        console.log(`Crew contacts: ${crewCount}`);
+        dlog(`Crew contacts: ${crewCount}`);
         if (crewCount > 0) {
-            console.log('Crew names:', crewContacts.map(c => c.name).join(', '));
+            dlog('Crew names:', crewContacts.map(c => c.name).join(', '));
         }
-        console.log(`External contacts: ${externalCount}`);
+        dlog(`External contacts: ${externalCount}`);
         if (externalCount > 0) {
-            console.log('External names:', externalContacts.map(c => c.name).join(', '));
+            dlog('External names:', externalContacts.map(c => c.name).join(', '));
         }
-        console.log('--- DEBUG: Contacts Info END ---');
+        dlog('--- DEBUG: Contacts Info END ---');
 
-        console.log(`Mounted logbook: ${logbook.name} (${logbook.id})`);
+        dlog(`Mounted logbook: ${logbook.name} (${logbook.id})`);
         return true;
     }
 
@@ -207,7 +208,7 @@ class SaveManager {
         this.updateLogbookStats(logbook);
         this.saveBookshelf();
         
-        console.log(`Reverted to entry: ${entryId}`);
+        dlog(`Reverted to entry: ${entryId}`);
         return true;
     }
 
@@ -222,7 +223,7 @@ class SaveManager {
         // Load the logbook's state into GameState
         this.mountActiveLogbook();
         
-        console.log(`Switched to logbook: ${logbook.name} (${logbookId})`);
+        dlog(`Switched to logbook: ${logbook.name} (${logbookId})`);
         return true;
     }
 
@@ -251,7 +252,7 @@ class SaveManager {
             this.bookshelf.push(logbook);
             this.saveBookshelf();
             
-            console.log(`Imported logbook: ${logbook.name} (${logbook.id})`);
+            dlog(`Imported logbook: ${logbook.name} (${logbook.id})`);
             return logbook;
         } catch (error) {
             console.error('Import failed:', error);
@@ -290,7 +291,7 @@ class SaveManager {
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
 
-            console.log(`Exported logbook: ${exportData.id}`);
+            dlog(`Exported logbook: ${exportData.id}`);
             return true;
         } catch (error) {
             console.error('Export failed:', error);
@@ -436,10 +437,10 @@ class SaveManager {
 
     // Debug method to list all logbooks
     listLogbooks() {
-        console.log('=== BOOKSHELF ===');
+        dlog('=== BOOKSHELF ===');
         this.bookshelf.forEach(book => {
             const status = book.id === this.activeLogbookId ? '[ACTIVE]' : '[ARCHIVED]';
-            console.log(`${status} ${book.name} (${book.id}) - ${book.entries?.length || 0} entries`);
+            dlog(`${status} ${book.name} (${book.id}) - ${book.entries?.length || 0} entries`);
         });
     }
 }

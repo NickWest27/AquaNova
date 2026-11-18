@@ -1,3 +1,4 @@
+import '../../../utils/debugPanel.js';
 // ui/captains-quarters/logbook/logbook.js
 // Complete logbook system with refactored SaveManager integration
 // Clean separation of concerns - UI logic only
@@ -10,6 +11,7 @@ import saveManager from '../../../game/saveManager.js';
 import { initPDAOverlay } from '../../../utils/pdaOverlay.js';
 import { initCommunicatorOverlay } from '../../../utils/communicatorOverlay.js';
 
+import { dlog } from '../../../utils/log.js';
 initPDAOverlay();
 initCommunicatorOverlay(); 
 
@@ -37,7 +39,7 @@ class LogbookSystem {
         return;
       }
 
-      console.log(`Loaded active logbook: ${activeLogbook.name} with ${activeLogbook.entries?.length || 0} entries`);
+      dlog(`Loaded active logbook: ${activeLogbook.name} with ${activeLogbook.entries?.length || 0} entries`);
 
       // Update current entry ID based on existing entries
       this.updateCurrentEntryId();
@@ -50,7 +52,7 @@ class LogbookSystem {
       this.updateBookshelfUI();
 
       this.initialized = true;
-      console.log('LogbookSystem initialized successfully');
+      dlog('LogbookSystem initialized successfully');
       
     } catch (error) {
       console.error('Failed to initialize LogbookSystem:', error);
@@ -261,7 +263,7 @@ updateCurrentEntryId() {
     const exitBtn = document.getElementById('exit-logbook');
     if (exitBtn) {
       this.addEventListenerWithCleanup(exitBtn, 'click', () => {
-        console.log('Exiting logbook, returning to quarters...');
+        dlog('Exiting logbook, returning to quarters...');
         window.location.href = '../quarters.html';
       });
     }
@@ -740,11 +742,11 @@ updateCurrentEntryId() {
   }
 
   revertToEntry(entryId) {
-    console.log(`Attempting to revert to entry: ${entryId}`);
+    dlog(`Attempting to revert to entry: ${entryId}`);
     
     // Handle the hardcoded first entry (special case)
     if (entryId === 'M.LOG-0001') {
-      console.log('Reverting to initial mission state');
+      dlog('Reverting to initial mission state');
       const confirmRevert = confirm('This will reset the game to the initial mission state. Continue?');
       if (confirmRevert) {
         // Use GameState to reset to initial state
@@ -781,7 +783,7 @@ updateCurrentEntryId() {
   }
 
   showMessage(message) {
-    console.log('INFO:', message);
+    dlog('INFO:', message);
     // Create a temporary notification instead of alert
     this.showNotification(message, 'info');
   }

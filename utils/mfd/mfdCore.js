@@ -4,6 +4,7 @@
 
 import gameStateInstance from '../../game/state.js';
 
+import { dlog } from '../log.js';
 class MFDCore {
     constructor(containerId, keyboardUnit = null) {
         this.container = document.getElementById(containerId);
@@ -45,7 +46,7 @@ class MFDCore {
         await this.loadPages();
         this.setActivePage('navigation');
         
-        console.log('MFD Overlay initialized');
+        dlog('MFD Overlay initialized');
     }
 
     createOverlayStructure() {
@@ -117,7 +118,7 @@ class MFDCore {
     // Update overlay positioning (called on resize)
     updateOverlayPositions() {
         // Overlay positions are handled by CSS, but trigger any needed recalculations
-        console.log('MFD Overlay positions updated');
+        dlog('MFD Overlay positions updated');
     }
 
     // Check if overlay needs updating
@@ -165,14 +166,14 @@ class MFDCore {
         this.needsRedraw = false;
         this.renderCount++;
         
-        console.log(`MFD Overlay updated #${this.renderCount}`);
+        dlog(`MFD Overlay updated #${this.renderCount}`);
     }
 
     // Page Management
     registerPage(pageId, pageClass) {
         this.pages.set(pageId, pageClass);
         this.pageState.set(pageId, {});
-        console.log(`MFD Page registered: ${pageId}`);
+        dlog(`MFD Page registered: ${pageId}`);
     }
 
     setActivePage(pageId) {
@@ -196,7 +197,7 @@ class MFDCore {
         this.needsRedraw = true;
         this.updateOverlay(true);
         
-        console.log(`MFD Active page: ${pageId}`);
+        dlog(`MFD Active page: ${pageId}`);
     }
 
     setupPageSoftKeys(pageId) {
@@ -239,7 +240,7 @@ class MFDCore {
         const action = this.softKeyActions[index];
         if (!action) return;
 
-        console.log(`MFD Soft key pressed: ${keyId} (${this.softKeyLabels[index]})`);
+        dlog(`MFD Soft key pressed: ${keyId} (${this.softKeyLabels[index]})`);
 
         this.flashSoftKey(keyId);
 
@@ -285,7 +286,7 @@ class MFDCore {
         if (pageClass && typeof pageClass.handleKeyboardInput === 'function') {
             pageClass.handleKeyboardInput(this, data);
         } else {
-            console.log(`MFD: No keyboard handler for page ${this.currentPage}`, data);
+            dlog(`MFD: No keyboard handler for page ${this.currentPage}`, data);
         }
     }
 
@@ -331,7 +332,7 @@ class MFDCore {
             const { default: NavigationPage } = await import('./pages/navigationPage.js');
             this.registerPage('navigation', NavigationPage);
             
-            console.log('MFD: Default pages loaded');
+            dlog('MFD: Default pages loaded');
         } catch (error) {
             console.error('MFD: Failed to load pages:', error);
         }
@@ -368,7 +369,7 @@ class MFDCore {
             this.overlayContainer.parentNode.removeChild(this.overlayContainer);
         }
         
-        console.log('MFD Overlay destroyed');
+        dlog('MFD Overlay destroyed');
     }
 
     // Debug methods

@@ -3,6 +3,7 @@
 
 import missionManager from '../game/systems/missionManager.js';
 
+import { dlog } from './log.js';
 class InteractiveElementManager {
     constructor() {
         this.activeElements = new Map();
@@ -66,7 +67,7 @@ class InteractiveElementManager {
             // Add entrance animation
             element.style.animation = 'fadeInGlow 1s ease-out';
             
-            console.log(`Spawned interactive element: ${elementId} at ${location}`);
+            dlog(`Spawned interactive element: ${elementId} at ${location}`);
         }
     }
 
@@ -256,7 +257,7 @@ class InteractiveElementManager {
 
     // Debug methods
     listActiveElements() {
-        console.log('Active interactive elements:', Array.from(this.activeElements.keys()));
+        dlog('Active interactive elements:', Array.from(this.activeElements.keys()));
     }
 
     forceSpawn(elementId, location = 'quarters') {

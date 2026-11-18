@@ -1,3 +1,4 @@
+import { dlog } from '../log.js';
 // utils/keyboardUnit/keyboardUnit.js
 // Self-contained input device with scratchpad display
 // Future enhancments: Press caps lock to grab from physical keyboard
@@ -28,7 +29,7 @@ class KeyboardUnit {
         this.bindEvents();
         this.updateScratchpadDisplay();
         
-        console.log('Keyboard Unit initialized');
+        dlog('Keyboard Unit initialized');
     }
 
     createKeyboardStructure() {
@@ -333,7 +334,7 @@ class KeyboardUnit {
             timestamp: new Date().toISOString()
         };
 
-        console.log('Keyboard Unit sending data:', data);
+        dlog('Keyboard Unit sending data:', data);
 
         // Dispatch custom event for data transmission
         const event = new CustomEvent('keyboard-data-sent', {
@@ -384,7 +385,7 @@ class KeyboardUnit {
         this.updateScratchpadDisplay();
         this.updateStatus('INPUT REQUESTED');
         
-        console.log(`Keyboard Unit: Input requested - ${prompt}`);
+        dlog(`Keyboard Unit: Input requested - ${prompt}`);
     }
 
     setPrompt(prompt, preserveInput = false) {
@@ -510,7 +511,7 @@ class KeyboardUnit {
         });
         this.eventListeners.clear();
         
-        console.log('Keyboard Unit destroyed');
+        dlog('Keyboard Unit destroyed');
     }
 
     // Debug methods

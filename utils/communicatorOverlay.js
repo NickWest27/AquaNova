@@ -4,6 +4,7 @@
 import gameStateInstance from '../game/state.js';
 import missionManager from '../game/systems/missionManager.js';
 
+import { dlog } from './log.js';
 let communicatorVisible = false;
 let communicatorElement = null;
 let currentCommPage = 'crew-select';
@@ -50,7 +51,7 @@ export function initCommunicatorOverlay() {
     });
   }
 
-  console.log('Communicator initialized');
+  dlog('Communicator initialized');
 }
 
 function getCrewData() {
@@ -476,7 +477,7 @@ function goBack() {
 }
 
 function sendThought(message) {
-  console.log(`Message sent to ${selectedCrewMember?.name || 'Unknown'}: ${message}`);
+  dlog(`Message sent to ${selectedCrewMember?.name || 'Unknown'}: ${message}`);
   
   // Check for helm number input commands
   if (selectedCrewMember?.id === 'helm') {
@@ -518,7 +519,7 @@ function sendThought(message) {
         }
       });
       document.dispatchEvent(event);
-      console.log('First contact with AREA completed - mission event fired');
+      dlog('First contact with AREA completed - mission event fired');
     }
   }
   

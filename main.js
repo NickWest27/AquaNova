@@ -1,3 +1,4 @@
+import './utils/debugPanel.js';
 // main.js - Bootstrap and splash screen for Aqua Nova
 // Orchestrates initialization
 // Connects GameState ↔ SaveManager
@@ -12,6 +13,7 @@ import missionManager from './game/systems/missionManager.js';
 import interactiveElementManager from './utils/interactiveElements.js';
 
 
+import { dlog } from './utils/log.js';
 class SplashScreen {
     constructor() {
         this.initialized = false;
@@ -19,7 +21,7 @@ class SplashScreen {
     }
 
     async initialize() {
-        console.log('Initializing Aqua Nova...');
+        dlog('Initializing Aqua Nova...');
         this.updateConsole('System initializing...');
 
         // Initialize display system FIRST
@@ -38,10 +40,10 @@ class SplashScreen {
 
         // Initialize mission system
         await missionManager.init();
-        console.log('Mission system initialized');
+        dlog('Mission system initialized');
         
         // Interactive elements are auto-initialized
-        console.log('Interactive elements ready');
+        dlog('Interactive elements ready');
         
         this.initialized = true;
         this.updateConsole('Press ENTER to board or I to import logbook');
@@ -73,7 +75,7 @@ class SplashScreen {
         if (consoleElement) {
             consoleElement.textContent = message;
         }
-        console.log('Console:', message);
+        dlog('Console:', message);
     }
 
     updateDisplay() {

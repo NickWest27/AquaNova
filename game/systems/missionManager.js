@@ -4,6 +4,7 @@
 
 import gameStateInstance from '../state.js';
 
+import { dlog } from '../../utils/log.js';
 class MissionManager {
     constructor() {
         this.missions = new Map();
@@ -24,7 +25,7 @@ class MissionManager {
         this.checkAutoStartMissions();
         
         this.initialized = true;
-        console.log('MissionManager initialized');
+        dlog('MissionManager initialized');
     }
 
     async loadMissions() {
@@ -39,7 +40,7 @@ class MissionManager {
                 const mission = await missionResponse.json();
                 
                 this.missions.set(mission.id, mission);
-                console.log(`Loaded mission: ${mission.id}`);
+                dlog(`Loaded mission: ${mission.id}`);
             }
         } catch (error) {
             console.error('Failed to load missions:', error);
@@ -127,7 +128,7 @@ class MissionManager {
         // Show mission start notification
         this.showMissionNotification(mission.name, 'New Mission Started');
         
-        console.log(`Started mission: ${missionId}`);
+        dlog(`Started mission: ${missionId}`);
         return true;
     }
 
@@ -142,7 +143,7 @@ class MissionManager {
     }
 
     handleTrigger(triggerType, data) {
-        console.log(`Trigger fired: ${triggerType}`, data);
+        dlog(`Trigger fired: ${triggerType}`, data);
         
         // Check all active missions for this trigger
         for (const missionId of this.activeMissions) {
@@ -217,7 +218,7 @@ class MissionManager {
         // Show completion notification
         this.showObjectiveNotification(missionObjective.description, 'Objective Complete');
         
-        console.log(`Completed objective: ${fullObjectiveId}`);
+        dlog(`Completed objective: ${fullObjectiveId}`);
     }
 
     completeMission(missionId) {
@@ -247,7 +248,7 @@ class MissionManager {
         }
         
         this.showMissionNotification(mission.name, 'Mission Complete!');
-        console.log(`Completed mission: ${missionId}`);
+        dlog(`Completed mission: ${missionId}`);
     }
 
     executeActions(actions) {
@@ -325,24 +326,24 @@ class MissionManager {
     // UI Integration methods
     showMissionNotification(title, subtitle) {
         // Integration with your existing notification system
-        console.log(`Mission Notification: ${title} - ${subtitle}`);
+        dlog(`Mission Notification: ${title} - ${subtitle}`);
         // You could integrate this with your PDA overlay system
     }
 
     showObjectiveNotification(description, status) {
-        console.log(`Objective: ${description} - ${status}`);
+        dlog(`Objective: ${description} - ${status}`);
     }
 
     // Debug and utility methods
     debugMissionState() {
-        console.log('=== MISSION DEBUG ===');
-        console.log(`Active missions: ${Array.from(this.activeMissions).join(', ')}`);
-        console.log(`Completed missions: ${Array.from(this.completedMissions).join(', ')}`);
+        dlog('=== MISSION DEBUG ===');
+        dlog(`Active missions: ${Array.from(this.activeMissions).join(', ')}`);
+        dlog(`Completed missions: ${Array.from(this.completedMissions).join(', ')}`);
         
         const objectives = gameStateInstance.getProperty('mission.objectives') || [];
-        console.log('Current objectives:');
+        dlog('Current objectives:');
         objectives.forEach(obj => {
-            console.log(`  ${obj.id}: ${obj.description} [${obj.status}]`);
+            dlog(`  ${obj.id}: ${obj.description} [${obj.status}]`);
         });
     }
 
