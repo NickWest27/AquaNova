@@ -4,7 +4,7 @@ import { el, modal, pad, toast } from '../util.js';
 import { sim } from '../sim.js';
 import { gameState, saveManager } from '../persist.js';
 import { syncNow, requestSync, syncState, onSyncChange } from '../sync.js';
-import { getConfig, setConfig, clearConfig, makeJournalEntry, newTask, isJournal } from '../../../utils/ledgerSync.js';
+import { getConfig, connect as connectSync, clearConfig, makeJournalEntry, newTask, isJournal } from '../../../utils/ledgerSync.js';
 import { DEBUG } from '../../../utils/log.js';
 
 export function mount(body, ctx) {
@@ -60,20 +60,20 @@ export function mount(body, ctx) {
     settings() {
       const zoomBtn = (t, d) => el('button', { class: 'btn', text: t, onclick: () => ctx.zoom(d) });
       const cfg = getConfig() || {};
-      const owner = el('input', { class: 'field', value: cfg.owner || '', placeholder: 'GitHub user name', autocapitalize: 'off', autocorrect: 'off' });
-      const repo = el('input', { class: 'field', value: cfg.repo || '', placeholder: 'Saves repo name', autocapitalize: 'off', autocorrect: 'off' });
-      const token = el('input', { class: 'field', type: 'password', value: cfg.token || '', placeholder: 'Token (github_pat_…)', autocapitalize: 'off', autocorrect: 'off' });
+      const token = el('input', { class: 'field', type: 'password', placeholder: 'GitHub token (ghp_…)', autocapitalize: 'off', autocorrect: 'off' });
+      const pass = el('input', { class: 'field', type: 'password', placeholder: 'Passphrase (8 or more characters)', autocapitalize: 'off', autocorrect: 'off' });
       syncLine = el('p', { text: syncText() });
       return [
-        el('div', { class: 'card setting' }, el('div', { class: 'lbl', text: 'Phone sync (GitHub)' }),
-          el('p', { text: 'Links this iPad to your iPhone PED through a private saves repo. Use a token limited to that repo.' }),
-          owner, repo, token, syncLine,
+        el('div', { class: 'card setting' }, el('div', { class: 'lbl', text: 'Phone sync (GitHub gist)' }),
+          el('p', { text: 'Links this iPad to your iPhone PED through one secret gist. Data is scrambled with your passphrase before it leaves the iPad. Make a classic token with only the "gist" permission. Use the same token and passphrase on the phone.' }),
+          ...(getConfig() ? [] : [token, pass]), syncLine,
           el('div', { class: 'row' },
-            el('button', { class: 'btn primary', text: getConfig() ? 'Save and sync' : 'Connect', onclick: async () => {
-              if (!owner.value.trim() || !repo.value.trim() || !token.value.trim()) { toast('Fill in all three fields', 'error'); return; }
-              setConfig({ owner: owner.value, repo: repo.value, token: token.value }); await syncNow(); render();
+            !getConfig() && el('button', { class: 'btn primary', text: 'Connect', onclick: async () => {
+              if (!token.value.trim() || !pass.value) { toast('Fill in both boxes', 'error'); return; }
+              try { await connectSync(token.value, pass.value); } catch (e) { toast(e.message, 'error'); return; }   // keep what was typed
+              await syncNow({ manual: true }); render();
             } }),
-            getConfig() && el('button', { class: 'btn', text: 'Sync now', onclick: () => syncNow() }),
+            getConfig() && el('button', { class: 'btn', text: 'Sync now', onclick: () => syncNow({ manual: true }) }),
             getConfig() && el('button', { class: 'btn danger', text: 'Disconnect', onclick: () => { clearConfig(); syncState.status = 'off'; render(); } }))),
         el('div', { class: 'card setting' }, el('div', { class: 'lbl', text: 'Text size' }), el('div', { class: 'row' }, zoomBtn('Smaller', -0.1), zoomBtn('Reset', 0), zoomBtn('Larger', 0.1))),
         el('div', { class: 'card setting' }, el('div', { class: 'lbl', text: 'Debug' }), el('p', { text: DEBUG ? 'Debug logging is on. Triple-tap the top-left corner to see the log.' : 'Triple-tap the top-left corner to see the log panel. Add ?debug=1 to the address for routine logs.' })),

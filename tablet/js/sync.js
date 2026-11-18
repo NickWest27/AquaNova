@@ -1,6 +1,6 @@
-// Keeps this iPad in step with the iPhone PED through the private saves repo (see utils/ledgerSync.js).
+// Keeps this iPad in step with the iPhone PED through one secret GitHub gist (see utils/ledgerSync.js).
 // Nothing here is a save. Saves are logbook entries and the exit save only.
-import { getConfig, syncLogbook, publishActive, pushStatus } from '../../utils/ledgerSync.js';
+import { getConfig, syncLogbook, publishActive, pushStatus, flush, autoSyncAllowed, resetPace } from '../../utils/ledgerSync.js';
 import { saveManager, gameState, restoreSim } from './persist.js';
 import { sim } from './sim.js';
 import { dlog } from '../../utils/log.js';
@@ -24,8 +24,11 @@ export function buildStatus() {
 }
 
 let busy = false, again = false;
-export async function syncNow({ remount = false } = {}) {
+let lastAt = 0;
+/** manual = the player tapped Sync now: ignore error backoff. A rate limit still holds. */
+export async function syncNow({ remount = false, manual = false } = {}) {
   if (!getConfig()) { set('off'); return false; }
+  if (manual) resetPace();
   if (busy) { again = true; return false; }
   busy = true; set('syncing');
   try {
@@ -38,6 +41,8 @@ export async function syncNow({ remount = false } = {}) {
     if (remount && merged.checkpoint && merged.checkpoint.timestamp !== beforeCheckpoint) { await saveManager.mountActiveLogbook(); restoreSim(); dlog('sync: loaded newer exit save'); }
     await publishActive(lb.id);
     await pushStatus(lb.id, buildStatus());
+    await flush();                          // one request carries every changed file
+    lastAt = Date.now();
     set('ok');
     return true;
   } catch (e) {
@@ -49,11 +54,15 @@ export async function syncNow({ remount = false } = {}) {
 
 let timer = null;
 /** Sync soon. Several requests inside the delay become one. */
-export function requestSync(delay = 2500) { clearTimeout(timer); timer = setTimeout(() => syncNow(), delay); }
+export function requestSync(delay = 4000) { clearTimeout(timer); timer = setTimeout(() => { if (autoSyncAllowed()) syncNow(); }, delay); }
 
 export function startSync() {
-  setInterval(() => { if (!document.hidden && getConfig()) syncNow(); }, 60000);
-  document.addEventListener('visibilitychange', () => { if (getConfig()) syncNow(); });
+  // Reads are conditional (free when nothing changed). Writes happen only when something changed.
+  setInterval(() => { if (!document.hidden && getConfig() && autoSyncAllowed()) syncNow(); }, 60000);
+  document.addEventListener('visibilitychange', () => {
+    if (!getConfig() || !autoSyncAllowed()) return;
+    if (document.hidden || Date.now() - lastAt > 15000) syncNow();   // leaving: push at once. Returning: not more than every 15 s
+  });
 }
 
 /** At boot: wait for the first sync, but never longer than a few seconds (offline play must stay fast). */

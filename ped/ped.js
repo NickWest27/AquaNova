@@ -1,9 +1,9 @@
 // Aqua Nova PED for iPhone. A companion to the iPad game:
 //   reads   live ship status, missions and findings (pushed by the iPad)
 //   writes  journal notes and tasks (merged into the iPad logbook)
-// It never writes save points. Everything goes through a private GitHub repo.
+// It never writes save points. Everything goes through one secret GitHub gist.
 import '../utils/debugPanel.js';
-import { getConfig, setConfig, clearConfig, getActiveId, pullStatus, syncCompanion, makeJournalEntry, newTask } from '../utils/ledgerSync.js';
+import { getConfig, connect as connectSync, clearConfig, autoSyncAllowed, resetPace, getActiveId, pullStatus, syncCompanion, makeJournalEntry, newTask } from '../utils/ledgerSync.js';
 
 const KEY = 'aquaNovaPed';
 const $ = (s) => document.querySelector(s);
@@ -38,9 +38,10 @@ function toast(text) { const t = $('#toast'); t.textContent = text; t.hidden = f
 const ago = (iso) => { const s = Math.max(0, (Date.now() - new Date(iso)) / 1000); return s < 90 ? 'just now' : s < 5400 ? `${Math.round(s / 60)} min ago` : s < 129600 ? `${Math.round(s / 3600)} h ago` : `${Math.round(s / 86400)} days ago`; };
 
 // ---------- sync ----------
-async function sync() {
+async function sync({ manual = false } = {}) {
   if (!getConfig()) { net = { state: 'off', error: '' }; paint(); return; }
   if (busy) return;
+  if (manual) resetPace(); else if (!autoSyncAllowed()) return;
   busy = true; net = { state: 'busy', error: '' }; paintChip();
   try {
     const id = await getActiveId();
@@ -102,28 +103,28 @@ const views = {
       ...(notes.length ? notes.map((e) => el('div', { class: 'card' }, el('div', { class: 'meta', text: new Date(e.logbook.timestamp).toLocaleString() }), el('p', { text: e.logbook.content }))) : [el('div', { class: 'empty', text: 'No notes yet.' })])];
   },
   settings() {
-    const cfg = getConfig() || {};
-    const owner = el('input', { class: 'field', value: cfg.owner || '', placeholder: 'GitHub user name', autocapitalize: 'off', autocorrect: 'off' });
-    const repo = el('input', { class: 'field', value: cfg.repo || '', placeholder: 'Saves repo name', autocapitalize: 'off', autocorrect: 'off' });
-    const token = el('input', { class: 'field', type: 'password', value: cfg.token || '', placeholder: 'Token (github_pat_…)', autocapitalize: 'off', autocorrect: 'off' });
-    const connect = () => {
-      if (!owner.value.trim() || !repo.value.trim() || !token.value.trim()) { toast('Fill in all three fields'); return; }
-      setConfig({ owner: owner.value, repo: repo.value, token: token.value }); sync();
+    const token = el('input', { class: 'field', type: 'password', placeholder: 'GitHub token (ghp_…)', autocapitalize: 'off', autocorrect: 'off' });
+    const pass = el('input', { class: 'field', type: 'password', placeholder: 'Passphrase (8 or more characters)', autocapitalize: 'off', autocorrect: 'off' });
+    const connect = async () => {
+      if (!token.value.trim() || !pass.value) { toast('Fill in both boxes'); return; }
+      net = { state: 'busy', error: '' }; paintChip();
+      try { await connectSync(token.value, pass.value); sync({ manual: true }); }
+      catch (e) { net = { state: 'err', error: e.message || String(e) }; paint(); }
     };
     return [
       el('div', { class: 'card' }, el('div', { class: 'lbl', text: 'Connect to your game' }),
         el('p', { class: 'note', style: 'margin:.4rem 0 .8rem', text: net.state === 'err' ? net.error : net.state === 'ok' ? `Connected. Synced ${ago(store.syncedAt)}.` : 'Not connected.' }),
-        owner, el('div', { style: 'height:.5rem' }), repo, el('div', { style: 'height:.5rem' }), token,
-        el('div', { class: 'row', style: 'margin-top:.8rem' }, el('button', { class: 'btn primary', text: getConfig() ? 'Save and sync' : 'Connect', onclick: connect }),
+        getConfig() ? el('p', { class: 'note', text: 'Token and passphrase are saved on this phone.' }) : [token, el('div', { style: 'height:.5rem' }), pass],
+        el('div', { class: 'row', style: 'margin-top:.8rem' }, el('button', { class: 'btn primary', text: getConfig() ? 'Sync now' : 'Connect', onclick: getConfig() ? () => sync({ manual: true }) : connect }),
           getConfig() && el('button', { class: 'btn danger', text: 'Disconnect', onclick: () => { clearConfig(); net = { state: 'off', error: '' }; paint(); } }))),
       el('div', { class: 'card' }, el('div', { class: 'lbl', text: 'One-time setup' }),
         el('ol', { class: 'steps', style: 'margin-top:.5rem' },
-          el('li', { text: 'On github.com, make a PRIVATE repo named aquanova-saves. Add a README file.' }),
-          el('li', { text: 'Go to Settings, Developer settings, Fine-grained tokens. Tap Generate new token.' }),
-          el('li', { text: 'Repository access: Only select repositories. Choose aquanova-saves.' }),
-          el('li', { text: 'Permissions: Repository, Contents: Read and write. Nothing else.' }),
-          el('li', { text: 'Copy the token. Put your user name, the repo name and the token in the boxes above.' }),
-          el('li', { text: 'Do the same on the iPad: PED, Settings, Phone sync.' }))),
+          el('li', { text: 'On github.com, go to Settings, Developer settings, Personal access tokens, Tokens (classic).' }),
+          el('li', { text: 'Tap Generate new token (classic). Name it Aqua Nova. Tick only "gist". Nothing else.' }),
+          el('li', { text: 'Copy the token. Paste it in the first box above.' }),
+          el('li', { text: 'Make up a passphrase of 8 or more characters. Type it in the second box. It scrambles your data.' }),
+          el('li', { text: 'Use the SAME token and passphrase on the iPad.' }),
+          el('li', { text: 'On the iPad: PED, Settings, Phone sync.' }))),
       el('div', { class: 'card' }, el('div', { class: 'lbl', text: 'About' }), el('p', { class: 'note', style: 'margin-top:.4rem', text: 'Ship status and missions come from the iPad. Notes and tasks you add here appear in the iPad logbook and PED. This app never changes your save points.' })),
     ];
   },
@@ -146,7 +147,7 @@ function paint() {
   view.replaceChildren(...views[tab]());
   if (kept && kept.i >= 0) { const n = [...view.querySelectorAll('input,textarea')][kept.i]; if (n) { n.value = kept.v; n.focus(); } }
 }
-$('#chip').addEventListener('click', () => { if (net.state === 'err' || net.state === 'off') tab = 'settings'; sync(); paint(); });
+$('#chip').addEventListener('click', () => { if (net.state === 'err' || net.state === 'off') tab = 'settings'; sync({ manual: true }); paint(); });
 document.addEventListener('visibilitychange', () => { if (!document.hidden) sync(); });
 window.addEventListener('online', sync);
 setInterval(() => { if (!document.hidden) sync(); }, 60000);
