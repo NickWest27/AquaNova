@@ -3,7 +3,7 @@
 //   writes  journal notes and tasks (merged into the iPad logbook)
 // It never writes save points. Everything goes through one secret GitHub gist.
 import '../utils/debugPanel.js';
-import { getConfig, connect as connectSync, clearConfig, autoSyncAllowed, resetPace, getActiveId, pullStatus, syncCompanion, makeJournalEntry, newTask } from '../utils/ledgerSync.js';
+import { getConfig, describeSync, connect as connectSync, clearConfig, autoSyncAllowed, resetPace, getActiveId, pullStatus, syncCompanion, makeJournalEntry, newTask } from '../utils/ledgerSync.js';
 
 const KEY = 'aquaNovaPed';
 const $ = (s) => document.querySelector(s);
@@ -125,6 +125,7 @@ const views = {
           el('li', { text: 'Make up a passphrase of 8 or more characters. Type it in the second box. It scrambles your data.' }),
           el('li', { text: 'Use the SAME token and passphrase on the iPad.' }),
           el('li', { text: 'On the iPad: PED, Settings, Phone sync.' }))),
+      getConfig() && el('div', { class: 'card' }, el('div', { class: 'lbl', text: 'Sync details' }), ...describeSync().map((t) => el('p', { class: 'note', style: 'margin-top:.3rem', text: t })), el('p', { class: 'note', style: 'margin-top:.3rem', text: store.status ? `Ship status from the iPad: ${new Date(store.status.t).toLocaleString()}` : 'Ship status from the iPad: none yet' })),
       el('div', { class: 'card' }, el('div', { class: 'lbl', text: 'About' }), el('p', { class: 'note', style: 'margin-top:.4rem', text: 'Ship status and missions come from the iPad. Notes and tasks you add here appear in the iPad logbook and PED. This app never changes your save points.' })),
     ];
   },

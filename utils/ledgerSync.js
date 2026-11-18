@@ -37,6 +37,25 @@ export function getConfig() {
 const putConfig = (c) => localStorage.setItem(CFG_KEY, JSON.stringify(c));
 export function clearConfig() { localStorage.removeItem(CFG_KEY); cache = { gist: null, etag: null, files: {}, at: 0 }; staged = {}; lastStatus = { sig: '', at: 0 }; }
 
+// ---------- what this device last saw (for the Sync details card) ----------
+const info = { requests: 0, read: null, write: null, files: {}, last: null };
+const clock = (t) => new Date(t).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', second: '2-digit' });
+/** Plain lines for the Sync details card. */
+export function describeSync() {
+  const cfg = getConfig();
+  if (!cfg) return ['Not connected.'];
+  const names = Object.keys(info.files);
+  return [
+    `Gist ${cfg.gist.slice(0, 8)}…`,
+    names.length ? `In the gist: ${names.map((n) => `${n.replace(/^(.{12}).*(\.[a-z.]+)$/, '$1…$2')} (${info.files[n]} B)`).join(', ')}` : 'In the gist: not read yet',
+    info.read ? `Last read ${clock(info.read.at)}: ${info.read.kind}` : 'Last read: never',
+    info.write ? `Last write ${clock(info.write.at)}: ${info.write.names.map((n) => n.replace(/^(.{12}).*(\.[a-z.]+)$/, '$1…$2')).join(', ')}` : 'Last write: none from this device',
+    `Requests this session: ${info.requests}`,
+    info.last ? `Last request: ${info.last}` : '',
+    !autoSyncAllowed() ? (pace.stopped ? 'Automatic sync is stopped. Tap Sync now.' : 'Automatic sync is waiting (backoff or rate limit).') : '',
+  ].filter(Boolean);
+}
+
 // ---------- pacing ----------
 const pace = { fails: 0, retryAt: 0, limitUntil: 0, stopped: false };
 /** True when the timer-driven sync may run now. Manual syncs ignore this (except a rate limit). */
@@ -59,6 +78,7 @@ async function ghFetch(cfg, path, opts = {}) {
     pace.fails++; pace.retryAt = now + Math.min(60000 * 2 ** (pace.fails - 1), 900000);
     throw new SyncError('No connection to GitHub.', 0);
   }
+  info.requests++; info.last = `${opts.method || 'GET'} ${path.split('?')[0].replace(/[0-9a-f]{20,}/, 'gist')} → ${res.status}`;
   const left = res.headers.get('x-ratelimit-remaining'), reset = +res.headers.get('x-ratelimit-reset') * 1000, wait = +res.headers.get('retry-after') * 1000;
   if (res.status === 429 || (res.status === 403 && left === '0')) pace.limitUntil = Math.max(now + 60000, wait ? now + wait : 0, reset || 0);
   else if (left !== null && +left <= 25 && reset) pace.limitUntil = reset;          // nearly out: stop early
@@ -116,9 +136,10 @@ async function load(cfg) {
   if (cache.gist === cfg.gist && Date.now() - cache.at < READ_MEMO) return cache.files;
   const same = cache.gist === cfg.gist && cache.etag;
   const res = await ghFetch(cfg, `/gists/${cfg.gist}`, same ? { headers: { 'If-None-Match': cache.etag } } : {});
-  if (res.status === 304) { cache.at = Date.now(); return cache.files; }
+  if (res.status === 304) { cache.at = Date.now(); info.read = { at: cache.at, kind: 'no change' }; return cache.files; }
   if (!res.ok) throw new SyncError(explain(res.status), res.status);
   cache = { gist: cfg.gist, etag: res.headers.get('etag'), files: await readFiles(await res.json()), at: Date.now() };
+  info.read = { at: cache.at, kind: 'downloaded' }; info.files = Object.fromEntries(Object.entries(cache.files).map(([n, t]) => [n, t.length]));
   return cache.files;
 }
 
@@ -134,6 +155,7 @@ export async function flush() {
   const res = await ghFetch(cfg, `/gists/${cfg.gist}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ files: out }) });
   if (!res.ok) throw new SyncError(explain(res.status), res.status);
   cache = { gist: cfg.gist, etag: res.headers.get('etag'), files: { ...cache.files, ...written }, at: Date.now() };
+  info.write = { at: cache.at, names }; info.files = Object.fromEntries(Object.entries(cache.files).map(([n, t]) => [n, t.length]));
   return true;
 }
 

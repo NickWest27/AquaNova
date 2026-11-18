@@ -4,7 +4,7 @@ import { el, modal, pad, toast } from '../util.js';
 import { sim } from '../sim.js';
 import { gameState, saveManager } from '../persist.js';
 import { syncNow, requestSync, syncState, onSyncChange } from '../sync.js';
-import { getConfig, connect as connectSync, clearConfig, makeJournalEntry, newTask, isJournal } from '../../../utils/ledgerSync.js';
+import { getConfig, describeSync, connect as connectSync, clearConfig, makeJournalEntry, newTask, isJournal } from '../../../utils/ledgerSync.js';
 import { DEBUG } from '../../../utils/log.js';
 
 export function mount(body, ctx) {
@@ -75,6 +75,7 @@ export function mount(body, ctx) {
             } }),
             getConfig() && el('button', { class: 'btn', text: 'Sync now', onclick: () => syncNow({ manual: true }) }),
             getConfig() && el('button', { class: 'btn danger', text: 'Disconnect', onclick: () => { clearConfig(); syncState.status = 'off'; render(); } }))),
+        getConfig() && el('div', { class: 'card setting' }, el('div', { class: 'lbl', text: 'Sync details' }), ...describeSync().map((t) => el('p', { text: t }))),
         el('div', { class: 'card setting' }, el('div', { class: 'lbl', text: 'Text size' }), el('div', { class: 'row' }, zoomBtn('Smaller', -0.1), zoomBtn('Reset', 0), zoomBtn('Larger', 0.1))),
         el('div', { class: 'card setting' }, el('div', { class: 'lbl', text: 'Debug' }), el('p', { text: DEBUG ? 'Debug logging is on. Triple-tap the top-left corner to see the log.' : 'Triple-tap the top-left corner to see the log panel. Add ?debug=1 to the address for routine logs.' })),
         el('div', { class: 'card setting' }, el('div', { class: 'lbl', text: 'New game' }), el('p', { text: 'Erases every logbook and save on this device, then restarts the tutorial.' }),
@@ -98,7 +99,11 @@ export function mount(body, ctx) {
     refs.dep.innerHTML = `${Math.round(s.depth)}<small>m</small>`; refs.hdg.textContent = pad(s.heading) + '°'; refs.spd.innerHTML = `${s.speed.toFixed(1)}<small>kt</small>`;
     refs.bat.textContent = Math.round(s.battery) + '%'; refs.o2.textContent = Math.round(s.oxygen) + '%'; refs.hull.textContent = Math.round(s.hull) + '%';
   }
-  const off = onSyncChange(() => { if (syncLine) syncLine.textContent = syncText(); if (cur === 'tasks' || cur === 'journal') { /* picks up phone changes on next open */ } });
+  const off = onSyncChange(() => { if (syncLine) syncLine.textContent = syncText(); if (syncState.status === 'syncing') return;
+    const f = tb.querySelector('input,textarea');
+    if (f && (f.value || document.activeElement === f)) return;           // never wipe what the player is typing
+    if (cur === 'settings' ? !!getConfig() : (cur === 'tasks' || cur === 'journal')) render();   // show what the phone sent
+  });
   render();
   return { update, destroy() { off(); } };
 }
