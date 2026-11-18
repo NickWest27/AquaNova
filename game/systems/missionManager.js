@@ -2,7 +2,7 @@
 // Mission system for Aqua Nova DSV
 // Handles mission loading, progression, and state management
 
-import gameStateInstance from '/game/state.js';
+import gameStateInstance from '../state.js';
 
 class MissionManager {
     constructor() {
@@ -30,12 +30,12 @@ class MissionManager {
     async loadMissions() {
         try {
             // Load mission index
-            const response = await fetch('/data/missions/index.json');
+            const response = await fetch(new URL('../../data/missions/index.json', import.meta.url));
             const missionIndex = await response.json();
             
             // Load each mission file
             for (const missionFile of missionIndex.missions) {
-                const missionResponse = await fetch(`/data/missions/${missionFile}`);
+                const missionResponse = await fetch(new URL(`../../data/missions/${missionFile}`, import.meta.url));
                 const mission = await missionResponse.json();
                 
                 this.missions.set(mission.id, mission);

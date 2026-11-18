@@ -2,7 +2,7 @@
 // Multi-Function Display Overlay System for Aqua Nova
 // Pure overlay system - doesn't control display content, only provides interaction
 
-import gameStateInstance from '/game/state.js';
+import gameStateInstance from '../../game/state.js';
 
 class MFDCore {
     constructor(containerId, keyboardUnit = null) {

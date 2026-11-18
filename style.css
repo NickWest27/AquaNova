@@ -39,7 +39,7 @@ body {
     left: 0;
     width: 100%;
     height: 100%;
-    background: url('/assets/images/BackgroundSplash.png') center center / cover no-repeat;
+    background: url('./assets/images/BackgroundSplash.png') center center / cover no-repeat;
     z-index: -2;
 }
 
@@ -304,7 +304,7 @@ body {
   left: 0;
   width: 100%;
   height: 100%;
-  background-image: url('/assets/images/PDAframe.png');
+  background-image: url('./assets/images/PDAframe.png');
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center;
@@ -469,7 +469,7 @@ body {
   top:  calc(var(--offset-y, 0px) + (1080px - 153px - 40px) * var(--effective-scale, var(--scale)));
   left: calc(var(--offset-x, 0px) + (1920px - 102px - 80px) * var(--effective-scale, var(--scale)));
 
-  background-image: url('/assets/images/communicatorPin.png');
+  background-image: url('./assets/images/communicatorPin.png');
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center;

@@ -1,8 +1,8 @@
 // utils/mfd/pages/navigationPage.js
 // 
 
-import { drawNavigationDisplay } from '/game/systems/navComputer/navComputer.js';
-import gameStateInstance from '/game/state.js';
+import { drawNavigationDisplay } from '../../../game/systems/navComputer/navComputer.js';
+import gameStateInstance from '../../../game/state.js';
 
 class NavigationPage {
     static init(mfd) {

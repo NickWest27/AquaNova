@@ -316,7 +316,7 @@ class GameState {
     // Contact management
     async loadContactsData() {
         try {
-            const response = await fetch('/data/contacts.json');
+            const response = await fetch(new URL('../data/contacts.json', import.meta.url));
             if (!response.ok) {
                 console.warn('Contacts file not found');
                 return { crew: {}, contacts: {} };

@@ -1,9 +1,9 @@
 // Handles the Captains quarters system for Aqua Nova
-import displayManager from '/utils/displayManager.js';
-import gameStateInstance from '/game/state.js';
-import missionManager from '/game/systems/missionManager.js';
-import { initPDAOverlay } from '/utils/pdaOverlay.js';
-import { initCommunicatorOverlay } from '/utils/communicatorOverlay.js';
+import displayManager from '../../utils/displayManager.js';
+import gameStateInstance from '../../game/state.js';
+import missionManager from '../../game/systems/missionManager.js';
+import { initPDAOverlay } from '../../utils/pdaOverlay.js';
+import { initCommunicatorOverlay } from '../../utils/communicatorOverlay.js';
 
 
 

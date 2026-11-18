@@ -1,13 +1,13 @@
 // Enhanced Bridge System for Aqua Nova
 // Separates navigation display from MFD overlay system
-import displayManager from '/utils/displayManager.js';
-import gameStateInstance from '/game/state.js';
-import missionManager from '/game/systems/missionManager.js';
-import { initPDAOverlay } from '/utils/pdaOverlay.js';
-import { initCommunicatorOverlay } from '/utils/communicatorOverlay.js';
-import KeyboardUnit from '/utils/keyboardUnit/keyboardUnit.js';
-import { drawNavigationDisplay } from '/game/systems/navComputer/navComputer.js';
-import MFDCore from '/utils/mfd/mfdCore.js';
+import displayManager from '../../utils/displayManager.js';
+import gameStateInstance from '../../game/state.js';
+import missionManager from '../../game/systems/missionManager.js';
+import { initPDAOverlay } from '../../utils/pdaOverlay.js';
+import { initCommunicatorOverlay } from '../../utils/communicatorOverlay.js';
+import KeyboardUnit from '../../utils/keyboardUnit/keyboardUnit.js';
+import { drawNavigationDisplay } from '../../game/systems/navComputer/navComputer.js';
+import MFDCore from '../../utils/mfd/mfdCore.js';
 
 const gameState = gameStateInstance;
 let lastState = null;

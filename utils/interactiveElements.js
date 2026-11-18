@@ -1,7 +1,7 @@
 // utils/interactiveElements.js
 // System for spawning and managing interactive elements for missions
 
-import missionManager from '/game/systems/missionManager.js';
+import missionManager from '../game/systems/missionManager.js';
 
 class InteractiveElementManager {
     constructor() {

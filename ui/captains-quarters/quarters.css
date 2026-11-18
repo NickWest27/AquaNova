@@ -33,7 +33,7 @@ body {
     transform: translate(-50%, -50%) scale(var(--scale));
     width: 1920px;
     height: 1080px;
-    background-image: url('/assets/images/captainsQuarters.png');
+    background-image: url('../../assets/images/captainsQuarters.png');
     background-size: contain;
     background-repeat: no-repeat;
     background-position: center;

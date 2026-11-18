@@ -7,7 +7,7 @@
 
 const BOOKSHELF_KEY = 'aquaNovaBookshelf';
 const SCHEMA_VERSION = 1;
-const BOOTSTRAP_PATH = '/data/logbooks/SeaTrials.json';
+const BOOTSTRAP_PATH = new URL('../data/logbooks/SeaTrials.json', import.meta.url);
 
 class SaveManager {
     constructor() {

@@ -1,8 +1,8 @@
 // utils/communicatorOverlay.js
 // Ship communicator overlay system with hierarchical dialogue and number input
 
-import gameStateInstance from '/game/state.js';
-import missionManager from '/game/systems/missionManager.js';
+import gameStateInstance from '../game/state.js';
+import missionManager from '../game/systems/missionManager.js';
 
 let communicatorVisible = false;
 let communicatorElement = null;

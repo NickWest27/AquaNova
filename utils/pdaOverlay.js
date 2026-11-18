@@ -1,6 +1,6 @@
-import gameStateInstance from '/game/state.js';
-import saveManager from '/game/saveManager.js';
-import displayManager from '/utils/displayManager.js';
+import gameStateInstance from '../game/state.js';
+import saveManager from '../game/saveManager.js';
+import displayManager from './displayManager.js';
 
 
 // =============================================================================
@@ -290,13 +290,13 @@ function handleAction(action) {
 
     // Existing PDA overlay actions
     case 'navigate-logbook':
-      window.location.href = 'ui/captains-quarters/logbook/logbook.html';
+      window.location.href = new URL('../ui/captains-quarters/logbook/logbook.html', import.meta.url).href;
       break;
     case 'navigate-quarters':
-      window.location.href = 'ui/captains-quarters/quarters.html';
+      window.location.href = new URL('../ui/captains-quarters/quarters.html', import.meta.url).href;
       break;
     case 'return-splash':
-      window.location.href = 'index.html';
+      window.location.href = new URL('../index.html', import.meta.url).href;
       break;
     case 'refresh-scanner':
       renderCurrentPage(); // Just re-render to show new data
@@ -398,7 +398,7 @@ function getLocation() {
 }
 
 function getCurrentPageFromURL() {
-  if (window.location.pathname.includes('index.html') || window.location.pathname === '/') {
+  if (window.location.pathname.includes('index.html') || window.location.pathname.endsWith('/')) {
     return 'Splash Screen';
   }
   
