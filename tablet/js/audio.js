@@ -4,14 +4,17 @@
 // iPad Safari starts sound only after a tap, so initAudio() runs from the "Board" button.
 const KEY = 'aquaNova_sound';
 let ac = null, master = null, humGain = null, humFilter = null;
-const pref = (() => { try { return Object.assign({ on: true, vol: 0.6 }, JSON.parse(localStorage.getItem(KEY))); } catch (e) { return { on: true, vol: 0.6 }; } })();
+const pref = (() => { try { return Object.assign({ on: true, vol: 0.6, hum: 0.25 }, JSON.parse(localStorage.getItem(KEY))); } catch (e) { return { on: true, vol: 0.6, hum: 0.25 }; } })();
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(pref)); } catch (e) { /* ignore */ } };
+let lastSpeed = 0;
+const humLevel = (speed) => (0.06 + 0.08 * Math.min(1, Math.max(0, speed / 12))) * (pref.hum == null ? 0.25 : pref.hum) * 0.4;   // the hum has its own level: Off, Low, Normal
 const level = () => (pref.on ? pref.vol * 0.8 : 0);
 
 export const getSound = () => ({ ...pref });
 export function setSound(next) {
   Object.assign(pref, next); save();
   if (master) master.gain.setTargetAtTime(level(), ac.currentTime, 0.05);
+  if (humGain) humGain.gain.setTargetAtTime(humLevel(lastSpeed), ac.currentTime, 0.1);
 }
 export const audioState = () => ({ started: !!ac, state: ac ? ac.state : 'not started', running: !!ac && ac.state === 'running', master: master ? +master.gain.value.toFixed(3) : 0, on: pref.on, vol: pref.vol });
 
@@ -29,7 +32,7 @@ export function initAudio() {
   master = ac.createGain(); master.gain.value = level(); master.connect(ac.destination);
   // hum: two low saws a little apart (they beat slowly), through a low-pass filter
   humFilter = ac.createBiquadFilter(); humFilter.type = 'lowpass'; humFilter.frequency.value = 380; humFilter.Q.value = 0.7;
-  humGain = ac.createGain(); humGain.gain.value = 0.1;
+  humGain = ac.createGain(); humGain.gain.value = 0.01;
   for (const f of [110, 110.8, 165.3, 220.5]) { const o = ac.createOscillator(); o.type = 'sawtooth'; o.frequency.value = f; o.connect(humFilter); o.start(); }
   // ventilation: soft filtered noise
   const buf = ac.createBuffer(1, ac.sampleRate * 2, ac.sampleRate), d = buf.getChannelData(0);
@@ -46,8 +49,9 @@ export function initAudio() {
 /** Call a few times a second. speed in knots. */
 export function updateHum(speed) {
   if (!ac || !humGain) return;
+  lastSpeed = speed;
   const k = Math.min(1, Math.max(0, speed / 12));
-  humGain.gain.setTargetAtTime(0.06 + 0.08 * k, ac.currentTime, 0.4);
+  humGain.gain.setTargetAtTime(humLevel(speed), ac.currentTime, 0.4);
   humFilter.frequency.setTargetAtTime(340 + 260 * k, ac.currentTime, 0.4);
 }
 

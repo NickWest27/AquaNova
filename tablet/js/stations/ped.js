@@ -97,6 +97,8 @@ export function mount(body, ctx) {
             el('button', { class: 'btn primary', text: 'Test sound', onclick: () => { const st = testSound(); toast(`Sound engine: ${st.state}`); setTimeout(render, 400); } }),
             el('button', { class: 'btn', text: getSound().on ? 'Turn sound off' : 'Turn sound on', onclick: () => { setSound({ on: !getSound().on }); if (getSound().on) chirp(); render(); } }),
             ...[['Quiet', 0.25], ['Medium', 0.6], ['Loud', 1]].map(([t, v]) => el('button', { class: `btn ${Math.abs(getSound().vol - v) < 0.01 ? 'primary' : ''}`, text: t, onclick: () => { setSound({ vol: v }); chirp(); render(); } })))),
+        el('div', { class: 'card setting' }, el('div', { class: 'lbl', text: 'Engine hum' }), el('div', { class: 'row' },
+          ...[['Off', 0], ['Faint', 0.25], ['Normal', 1]].map(([t, v]) => el('button', { class: `btn ${Math.abs((getSound().hum ?? 0.25) - v) < 0.01 ? 'primary' : ''}`, text: t, onclick: () => { setSound({ hum: v }); render(); } })))),
         el('div', { class: 'card setting' }, el('div', { class: 'lbl', text: 'Game version' }), el('p', { text: `Build ${appVersion}. The game checks for updates each time it opens. If a change is missing, tap Update now. Your saves stay.` }),
           el('button', { class: 'btn primary', text: 'Update now', onclick: updateNow })),
         el('div', { class: 'card setting' }, el('div', { class: 'lbl', text: 'Text size' }), el('div', { class: 'row' }, zoomBtn('Smaller', -0.1), zoomBtn('Reset', 0), zoomBtn('Larger', 0.1))),
