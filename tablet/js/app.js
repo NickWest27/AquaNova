@@ -5,6 +5,7 @@ import { createScene } from './scene.js';
 import { el, $, toast, pad, modal, frameThrottle } from './util.js';
 import { ICONS } from './ui.js';
 import { startSync, syncAtBoot } from './sync.js';
+import { initAudio, updateHum, chirp, ping } from './audio.js';
 import { gameState, loadGame, startExitSave, checkpoint, addLogEntry, restoreSim } from './persist.js';
 
 const STATIONS = {
@@ -38,14 +39,16 @@ const ctx = {
 };
 
 // Keeps pickup, locks and similar UI in step with the mission. Runs at most once per frame.
+let firstUI = true;
 const syncUI = frameThrottle(() => {
   if (!scene) return;
   const locked = commsLocked();
   scene.showPickup(scene.inQuarters && locked && objStatus('meetTheCrew_find_communicator') === 'completed');
   const pin = $('#pin');
+  const quiet = firstUI; firstUI = false;   // the first pass only restores state: no chirp on load
   if (pin.hidden === locked) return;
   pin.hidden = locked;
-  if (!locked) { pin.classList.remove('ring'); void pin.offsetWidth; pin.classList.add('ring'); }
+  if (!locked) { pin.classList.remove('ring'); void pin.offsetWidth; pin.classList.add('ring'); if (!quiet) chirp(); }
 });
 
 // ---------- scene scaling: one transform ----------
@@ -140,7 +143,7 @@ function showSystemDialogue(id) {
   if (boarded) run(); else pendingModals.push(run);
 }
 document.addEventListener('show-dialogue', (e) => { if (e.detail.characterId === 'system') showSystemDialogue(e.detail.dialogueId); });
-document.addEventListener('mission-notify', (e) => { if (boarded) toast(`${e.detail.title} — ${e.detail.subtitle}`, 'mission'); });
+document.addEventListener('mission-notify', (e) => { if (boarded) { ping(); toast(`${e.detail.title} — ${e.detail.subtitle}`, 'mission'); } });
 
 function firstVisit(poi) {
   const seen = gameState.getProperty('progress.areasExplored') || [];
@@ -167,6 +170,7 @@ async function boot() {
   } catch (e) { console.error('Boot failed', e); info.textContent = 'Startup failed. Triple-tap the top-left corner for the log.'; return; }
 
   btn.addEventListener('click', () => {
+    initAudio();                            // sound may start only after a tap
     $('#splash').hidden = true; $('#shell').hidden = false;
     scene = createScene($('#stage'), { onOpen: openScene });
     const st = buildDock();
@@ -178,7 +182,7 @@ async function boot() {
     sim.on((type, data) => {
       if (type === 'tick') {
         const s = sim.s;
-        scene.update(); updateChips(); current && current.api.update(); ped && ped.api.update();
+        scene.update(); updateChips(); current && current.api.update(); ped && ped.api.update(); updateHum(s.speed);
         const t = `${s.lat.toFixed(3)}°N ${Math.abs(s.lon).toFixed(3)}°W`;
         if (st.pos.textContent !== t) st.pos.textContent = t;
         const o = ctx.objectives().find((x) => !x.done); const ot = o ? 'Objective: ' + o.text : '';

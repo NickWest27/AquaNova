@@ -46,6 +46,16 @@ def main():
                 else:
                     page.tap("#station .st-head .btn")
                 page.wait_for_timeout(200)
+            # sound: started by the Board tap, and the PED switch silences it
+            a = page.evaluate("import('./js/audio.js').then(m => m.audioState())")
+            if not a["started"]: note("audio did not start after boarding")
+            page.tap('.dbtn[data-st="ped"]'); page.wait_for_timeout(300); page.tap('button.chip:text-is("Settings")'); page.tap('button:text-is("Turn sound off")'); page.wait_for_timeout(400)
+            a = page.evaluate("import('./js/audio.js').then(m => m.audioState())")
+            if a["master"] != 0: note(f"sound off but master gain is {a['master']}")
+            page.tap('button:text-is("Turn sound on")'); page.wait_for_timeout(400)
+            a = page.evaluate("import('./js/audio.js').then(m => m.audioState())")
+            if a["master"] <= 0: note("sound on but master gain is 0")
+            page.tap(".ped-close"); page.wait_for_timeout(200)
             # PED sits on top of a station without replacing it
             page.tap('.dbtn[data-st="nav"]'); page.wait_for_timeout(500)
             page.tap('#station .st-head .btn:text-is("PED")'); page.wait_for_timeout(500)
