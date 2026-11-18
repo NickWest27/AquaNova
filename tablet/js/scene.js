@@ -1,6 +1,7 @@
 // Bridge and quarters scenes on the fixed 1920x1080 stage. Updates only touch text nodes that changed.
 import { sim } from './sim.js';
-import { el, pad } from './util.js';
+import { el } from './util.js';
+import { createBridgeConsole } from './bridge.js';
 
 const box = (cls, x, y, w, h, kids) => el('div', { class: `disp ${cls}`, style: `left:${x}px;top:${y}px;width:${w}px;height:${h}px` }, kids);
 
@@ -10,25 +11,13 @@ export function createScene(stage, { onOpen }) {
   const cache = new Map();
   const txt = (key, node) => (v) => { if (cache.get(key) !== v) { cache.set(key, v); node.textContent = v; } };
 
-  // exterior view (main window)
-  const water = el('div', { class: 'water' }), dark = el('div', { class: 'dark' });
-  const bubbles = el('div', { class: 'bubbles' }, [1, 2, 3, 4, 5, 6, 7, 8, 9].map(() => el('i')));
-  const place = el('div', { class: 'hud-place' });
-  const bSpd = el('b'), bDep = el('b'), bHdg = el('b');
-  const hud = el('div', { class: 'hud-row' },
-    el('div', {}, bSpd, el('small', { text: 'KNOTS' })), el('div', {}, bDep, el('small', { text: 'DEPTH M' })), el('div', {}, bHdg, el('small', { text: 'HEADING' })));
-  const view = box('view', 254, 189, 1410, 364, [water, bubbles, dark, place, hud]);
-
-  // other displays
-  const top = el('div', { class: 'status-line' });
-  const topT = el('span');
-  top.append(topT);
+  // bridge console: top display, main screen, left selector, center controls, right data
+  const topD = el('div', { class: 'bt' }), mainD = el('div', { class: 'bmain' });
+  const ctrD = el('div', { class: 'bctl' }), leftD = el('div', { class: 'bleft' }), rightD = el('div', { class: 'bright' });
   const bot = el('div', { class: 'status-line' });
   const sBat = el('span'), sO2 = el('span'), sHull = el('span');
   bot.append(sBat, sO2, sHull);
-  const lMini = el('div', { class: 'mini' }, el('small', { text: 'PRESSURE' }), el('b'));
-  const rMini = el('div', { class: 'mini' }, el('small', { text: 'TEMP' }), el('b'));
-  const navLabel = el('div', { class: 'console-label', html: 'NAVIGATION<small>tap to open</small>' });
+  const consoleApi = createBridgeConsole({ top: topD, main: mainD, center: ctrD, left: leftD, right: rightD, onExpand: (id) => onOpen(id) });
 
   const frame = el('img', { class: 'frame', src: 'assets/bridge.webp', alt: '', draggable: 'false', decoding: 'async' });
   const hs = (label, x, y, w, h, onclick, tagPos = 'top', extra = '') =>
@@ -36,11 +25,8 @@ export function createScene(stage, { onOpen }) {
       el('span', { class: `tag ${tagPos}`, text: label }));
 
   bridge.append(
-    view, box('', 594, 76, 733, 94, [top]), box('', 712, 579, 499, 207, [navLabel]), box('', 637, 828, 651, 125, [bot]),
-    box('', 389, 802, 271, 152, [lMini]), box('', 1276, 800, 257, 154, [rMini]), frame,
-    hs('NAVIGATION', 700, 570, 523, 225, () => onOpen('nav'), 'top'),
-    hs('HELM', 625, 820, 675, 140, () => onOpen('helm'), 'bottom'),
-    hs('SYSTEMS', 380, 795, 290, 168, () => onOpen('sys'), 'top'),
+    box('bmainbox', 254, 189, 1410, 364, [mainD]), box('', 594, 76, 733, 94, [topD]), box('', 712, 579, 499, 207, [ctrD]), box('', 637, 828, 651, 125, [bot]),
+    box('', 389, 802, 271, 152, [leftD]), box('', 1276, 800, 257, 154, [rightD]), frame,
     hs('COMMS', 40, 430, 520, 350, () => onOpen('comms'), 'top'),        // comms officer, left station
     hs('SENSORS', 1380, 430, 520, 350, () => onOpen('sensors'), 'top'),  // sensors, right station
     hs('◂ WALKWAY', 0, 890, 330, 190, () => onOpen('walkway'), 'mid'),    // lower corners leave the bridge
@@ -87,14 +73,10 @@ export function createScene(stage, { onOpen }) {
       if (api.where !== 'bridge') return;
       const s = sim.s;
       const set = (k, node, v) => { if (cache.get(k) !== v) { cache.set(k, v); node.textContent = v; } };
-      set('spd', bSpd, s.speed.toFixed(1)); set('dep', bDep, Math.round(s.depth)); set('hdg', bHdg, pad(s.heading) + '°');
-      set('place', place, s.at ? s.at.name : s.wpt ? 'En route: ' + s.wpt.name : 'Open water');
-      set('top', topT, s.wpt ? `WPT ${s.wpt.name.toUpperCase()}` : s.at ? s.at.type.toUpperCase() : 'ALL STATIONS READY');
+      consoleApi.update();
       set('bat', sBat, `BAT ${Math.round(s.battery)}%`); set('o2', sO2, `O₂ ${Math.round(s.oxygen)}%`); set('hull', sHull, `HULL ${Math.round(s.hull)}%`);
-      set('p', lMini.lastChild, `${Math.round(s.depth / 10 + 1)} bar`); set('t', rMini.lastChild, `${s.temp.toFixed(1)} °C`);
-      const moving = s.speed > 0.3; if (cache.get('mv') !== moving) { cache.set('mv', moving); view.classList.toggle('moving', moving); }
-      const dk = Math.min(0.9, s.depth / 900).toFixed(2); if (cache.get('dk') !== dk) { cache.set('dk', dk); dark.style.opacity = dk; }
     },
+    console: consoleApi,
     showPickup(on) { pickup.hidden = !on; },
     lock(label, on) { stage.querySelectorAll('.hs').forEach((b) => { if (b.textContent === label) b.classList.toggle('locked', on); }); },
     glow(label, on) { stage.querySelectorAll('.hs').forEach((b) => { if (b.textContent === label) b.classList.toggle('glow', on); }); },

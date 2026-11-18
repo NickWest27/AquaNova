@@ -4,7 +4,9 @@ import { frameThrottle } from './util.js';
 
 const RANGES = [0.5, 1, 2, 4, 8, 16];
 
-export function createND(wrap, { onPick } = {}) {
+// stage: the canvas sits inside the scaled 1920x1080 bridge stage. Sizes then come from layout (not the scaled
+// rectangle), and `units` makes text and markers bigger so they read at the stage's smaller on-screen size.
+export function createND(wrap, { onPick, stage = false, units = 1, contours = false } = {}) {
   const canvas = document.createElement('canvas');
   wrap.prepend(canvas);
   const ctx = canvas.getContext('2d');
@@ -13,10 +15,12 @@ export function createND(wrap, { onPick } = {}) {
   function resize() {
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     const r = wrap.getBoundingClientRect();
-    nd.w = Math.max(1, Math.round(r.width)); nd.h = Math.max(1, Math.round(r.height));
-    canvas.width = nd.w * dpr; canvas.height = nd.h * dpr;
-    canvas.style.width = nd.w + 'px'; canvas.style.height = nd.h + 'px';
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const lw = stage ? wrap.offsetWidth : r.width, lh = stage ? wrap.offsetHeight : r.height;   // layout size
+    const sc = stage && lw ? r.width / lw : 1;                                                    // the stage's scale
+    nd.w = Math.max(1, Math.round(lw / units)); nd.h = Math.max(1, Math.round(lh / units));
+    canvas.width = Math.round(lw * sc * dpr); canvas.height = Math.round(lh * sc * dpr);
+    canvas.style.width = lw + 'px'; canvas.style.height = lh + 'px';
+    ctx.setTransform((canvas.width / lw) * units, 0, 0, (canvas.height / lh) * units, 0, 0);
     nd.draw();
   }
 
@@ -26,11 +30,36 @@ export function createND(wrap, { onPick } = {}) {
     return { x: nd.w / 2 + t.dx * scale, y: nd.h / 2 - t.dy * scale, nm: t.nm, brg: t.brg };
   };
 
+  // PLACEHOLDER seabed: smooth invented contours that scroll with the ship. Real seafloor data comes later.
+  const seabed = (e, n) => Math.sin(e * 0.9 + 1.3) * Math.cos(n * 0.7 + 0.4) + 0.55 * Math.sin(e * 0.33 + n * 0.51 + 2) + 0.3 * Math.cos(e * 1.7 - n * 1.3);
+  function drawContours(w, h, R) {
+    const s = sim.s, nmE = s.lon * 60 * Math.cos((s.lat * Math.PI) / 180), nmN = s.lat * 60, scale = R / nd.range;
+    const step = 26, cols = Math.ceil(w / step) + 1, rows = Math.ceil(h / step) + 1;
+    const grid = [];
+    for (let j = 0; j < rows; j++) { const row = []; for (let i = 0; i < cols; i++) row.push(seabed(nmE + (i * step - w / 2) / scale, nmN - (j * step - h / 2) / scale)); grid.push(row); }
+    const levels = [-0.9, -0.35, 0.2, 0.75, 1.3];
+    ctx.lineWidth = 1.3;
+    levels.forEach((L, li) => {
+      ctx.strokeStyle = `rgba(90,170,255,${0.16 + li * 0.07})`; ctx.beginPath();
+      for (let j = 0; j < rows - 1; j++) for (let i = 0; i < cols - 1; i++) {
+        const v = [grid[j][i], grid[j][i + 1], grid[j + 1][i + 1], grid[j + 1][i]];
+        const x0 = i * step, y0 = j * step, pts = [];
+        const edge = (a, b, ax, ay, bx, by) => { if ((v[a] < L) !== (v[b] < L)) { const t = (L - v[a]) / (v[b] - v[a]); pts.push([ax + (bx - ax) * t, ay + (by - ay) * t]); } };
+        edge(0, 1, x0, y0, x0 + step, y0); edge(1, 2, x0 + step, y0, x0 + step, y0 + step); edge(2, 3, x0 + step, y0 + step, x0, y0 + step); edge(3, 0, x0, y0 + step, x0, y0);
+        if (pts.length >= 2) { ctx.moveTo(pts[0][0], pts[0][1]); ctx.lineTo(pts[1][0], pts[1][1]); }
+        if (pts.length === 4) { ctx.moveTo(pts[2][0], pts[2][1]); ctx.lineTo(pts[3][0], pts[3][1]); }
+      }
+      ctx.stroke();
+    });
+  }
+
   nd.draw = () => {
     const { w, h } = nd, s = sim.s, cx = w / 2, cy = h / 2;
     const R = Math.min(w, h) / 2 - 24;
+    if (R < 20) return; // not laid out yet (hidden)
     ctx.clearRect(0, 0, w, h);
     ctx.fillStyle = '#03121c'; ctx.fillRect(0, 0, w, h);
+    if (contours) drawContours(w, h, R);
     ctx.lineWidth = 1.5; ctx.strokeStyle = 'rgba(100,255,218,0.25)';
     for (let i = 1; i <= 4; i++) { ctx.beginPath(); ctx.arc(cx, cy, (R * i) / 4, 0, 6.2832); ctx.stroke(); }
     ctx.beginPath(); ctx.moveTo(cx - R, cy); ctx.lineTo(cx + R, cy); ctx.moveTo(cx, cy - R); ctx.lineTo(cx, cy + R); ctx.stroke();
@@ -73,8 +102,8 @@ export function createND(wrap, { onPick } = {}) {
 
   canvas.addEventListener('pointerdown', (e) => {
     const r = canvas.getBoundingClientRect();
-    const x = e.clientX - r.left, y = e.clientY - r.top;
-    let best = null, bd = 44; // 44 px finger-sized pick radius
+    const x = (e.clientX - r.left) * (nd.w / r.width), y = (e.clientY - r.top) * (nd.h / r.height);   // into canvas units
+    let best = null, bd = 44 / ((stage ? r.width / (wrap.offsetWidth || r.width) : 1) * units); // a finger-sized pick radius, in canvas units
     for (const poi of sim.s.pois) { const p = px(poi); const d = Math.hypot(p.x - x, p.y - y); if (d < bd) { bd = d; best = poi; } }
     nd.sel = best; nd.draw(); onPick && onPick(best);
   });

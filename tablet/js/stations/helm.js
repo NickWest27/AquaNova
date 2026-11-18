@@ -1,7 +1,7 @@
 import { sim, MAX_SPEED } from '../sim.js';
 import { createLever, createDial } from '../ui.js';
-import { el, pad, modal, toast } from '../util.js';
-import { liveNav } from '../persist.js';
+import { el } from '../util.js';
+import { toggleDock } from '../dock.js';
 
 export function mount(body) {
   body.classList.add('helm-st');
@@ -14,20 +14,7 @@ export function mount(body) {
     [['Stop', () => { sim.stop(); thr.set(0); }], ['Surface', () => { sim.setDepth(0); dep.set(1); }], ['Dive 500', () => { sim.setDepth(500); dep.set(1 - 500 / 6000); }],
      ['Port 10°', () => sim.setHeading(sim.s.targetHeading - 10)], ['Stbd 10°', () => sim.setHeading(sim.s.targetHeading + 10)]]
       .map(([t, fn]) => el('button', { class: 'btn chip', text: t, onclick: fn })));
-  // docking: a short scripted sequence, then the ship is held at the berth
-  const sequence = (title, steps, done) => {
-    const line = el('p', { style: 'min-height:2.6rem' });
-    const close = modal({ title, body: line, actions: [] });
-    let i = 0;
-    const next = () => { if (i >= steps.length) { close(); done(); return; } line.textContent = steps[i++]; setTimeout(next, 1100); };
-    next();
-  };
-  const dockBtn = el('button', { class: 'btn chip', text: 'Dock', onclick: () => {
-    const s = sim.s;
-    if (s.docked) return sequence('Undocking', ['Disconnecting shore power…', 'Releasing the clamps…', 'Clear of the berth.'], () => { s.docked = false; liveNav(); toast('Undocked'); });
-    if (!sim.canDock()) { toast(s.at && s.at.type === 'dock' ? 'Slow to 1.5 knots and come to the surface to dock' : 'Move to a dock to dock', 'error'); return; }
-    sequence('Docking', ['Aligning with the berth…', 'Matching speed…', 'Latching the clamps…', 'Connecting shore power…'], () => { s.docked = true; s.throttle = 0; s.speed = 0; thr.set(0); liveNav(); toast('Docked. Shore power is charging the ship.'); });
-  } });
+  const dockBtn = el('button', { class: 'btn chip', text: 'Dock', onclick: () => toggleDock(() => thr.set(0)) });
   presets.append(dockBtn);
   body.append(card('Throttle', spd, thr), el('div', { class: 'helm-col dial-col' }, dial.root, presets), card('Depth', dp, dep));
   requestAnimationFrame(() => { thr.set(sim.s.throttle); dep.set(1 - sim.s.targetDepth / 6000); update(); });

@@ -52,18 +52,18 @@ def main():
 
         # --- undock and dock on the Helm ---
         page.evaluate("window.__aq.open('helm')"); page.wait_for_timeout(500)
-        check("helm offers Undock when docked", page.is_visible('button:text-is("Undock")'))
-        page.tap('button:text-is("Undock")'); page.wait_for_timeout(5200)
-        check("undocked after the sequence", js("return sim.s.docked") is False and page.is_visible('button:text-is("Dock")'))
+        check("helm offers Undock when docked", page.is_visible('#station button:text-is("Undock")'))
+        page.tap('#station button:text-is("Undock")'); page.wait_for_timeout(5200)
+        check("undocked after the sequence", js("return sim.s.docked") is False and page.is_visible('#station button:text-is("Dock")'))
         js("sim.setThrottle(0.5)"); check("throttle works once undocked", js("return sim.s.throttle") == 0.5)
         js("sim.setThrottle(0); sim.s.speed = 0")
-        page.tap('button:text-is("Dock")'); page.wait_for_timeout(5800)
+        page.tap('#station button:text-is("Dock")'); page.wait_for_timeout(5800)
         check("docked again at the dock", js("return sim.s.docked") is True)
         page.screenshot(path=f"{SHOTS}/d-3docked-helm.png")
         # not at a dock: refused
-        page.tap('button:text-is("Undock")'); page.wait_for_timeout(5200)
+        page.tap('#station button:text-is("Undock")'); page.wait_for_timeout(5200)
         js("sim.s.at = null; sim.s.lat += 0.5")
-        page.tap('button:text-is("Dock")'); page.wait_for_timeout(500)
+        page.tap('#station button:text-is("Dock")'); page.wait_for_timeout(500)
         check("docking away from a dock is refused", js("return sim.s.docked") is False and "dock" in page.inner_text("#toasts").lower())
         page.tap("#station .st-head .btn"); page.wait_for_timeout(200)
 
