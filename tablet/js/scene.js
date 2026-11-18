@@ -45,8 +45,8 @@ export function createScene(stage, { onOpen }) {
   bridge.append(
     box('bmainbox', 254, 189, 1410, 364, [mainD]), box('', 594, 76, 733, 94, [topD]), slanted('bdispbox', dispD, 478, 204, [[730, 581], [1187, 581], [1206, 781], [711, 781]]),
     slanted('', ctrD, 612, 118, [[674, 832], [1243, 832], [1287, 947], [641, 947]]),
-    slanted('', leftD, 205, 146, [[482, 805], [652, 808], [607, 947], [391, 947]]),
-    slanted('', rightD, 205, 146, [[1278, 803], [1448, 808], [1532, 947], [1318, 947]]), frame,
+    slanted('', leftD, 205, 146, [[470, 805], [640, 808], [595, 947], [379, 947]]),
+    slanted('', rightD, 180, 128, [[1292, 812], [1441, 816], [1515, 938], [1327, 938]]), frame,
     hs('COMMS', 40, 430, 520, 350, () => onOpen('comms'), 'top'),        // comms officer, left station
     hs('SENSORS', 1380, 430, 520, 350, () => onOpen('sensors'), 'top'),  // sensors, right station
     hs('◂ WALKWAY', 0, 890, 330, 190, () => onOpen('walkway'), 'mid'),    // lower corners leave the bridge

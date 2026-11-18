@@ -450,3 +450,9 @@ textarea.field { min-height: 6rem; resize: none; }
 .bd.compact .rd { min-width: 80px; padding: 2px 8px; } .bd.compact .rd b { font-size: 34px; } .bd.compact.bd-helm .rd b { font-size: 34px; } .bd.compact.bd-helm .rd { min-width: 100px; }
 .bd.compact.bd-sys { grid-template-columns: 1fr; gap: 10px; padding: 26px 30px; } .bd.compact .bar { grid-template-columns: 110px 1fr 70px; } .bd.compact .bar small { font-size: 17px; } .bd.compact .bar b { font-size: 24px; } .bd.compact .track { height: 22px; }
 .bd.view.compact .hud-place { top: 14px; font-size: 22px; } .bd.view.compact .hud-row { bottom: 12px; gap: 40px; } .bd.view.compact .hud-row b { font-size: 44px; } .bd.view.compact .hud-row small { font-size: 16px; }
+/* communicator: orders that do nothing yet are shown in a different colour */
+.comm-line.stub { color: #b79df0; border-color: rgba(183,157,240,.4); font-style: italic; }
+.comm-line.stub::after { content: 'not yet'; font-size: .7rem; letter-spacing: .1em; text-transform: uppercase; opacity: .8; }
+.comm-reply.stub p { color: #b79df0; font-style: italic; }
+.comm-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: .5rem; max-width: 34rem; }
+.comm-line.chip { min-width: 7.5rem; }
