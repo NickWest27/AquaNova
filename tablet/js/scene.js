@@ -80,13 +80,23 @@ export function createScene(stage, { onOpen }) {
     door('ENGINEERING', 470, 360, 190, 400, 'engineering', 'near-l'),
     door('SCIENCE / MEDICAL', 1460, 300, 340, 520, 'science'),
     el('div', { class: 'art-note', text: 'Placeholder art' }));
-  stage.append(bridge, quarters, walkway);
+  // science lab: placeholder art (medbay concept). Samples, analysis and research live in the Lab station; the ROV in the Launch Bay.
+  const science = el('div', { class: 'scene science', hidden: true });
+  science.append(el('img', { src: 'assets/science.webp', alt: '', draggable: 'false', style: 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover' }),
+    hs('SAMPLES', 20, 400, 780, 560, () => onOpen('lab'), 'top'),
+    hs('ANALYSIS', 520, 250, 300, 340, () => onOpen('lab-analysis'), 'top'),
+    hs('RESEARCH', 1660, 440, 260, 560, () => onOpen('lab-research'), 'bottom'),
+    hs('LAUNCH BAY', 1500, 320, 260, 330, () => onOpen('launch'), 'mid'),
+    hs('MEDBAY', 1040, 540, 520, 300, () => onOpen('medbay'), 'mid', 'locked'),
+    hs('WALKWAY ▸', 840, 900, 320, 180, () => onOpen('walkway'), 'mid'),
+    el('div', { class: 'art-note', text: 'Placeholder art' }));
+  stage.append(bridge, quarters, walkway, science);
 
   const api = {
     inQuarters: false, where: 'bridge',
     show(which) {
       api.where = which; api.inQuarters = which === 'quarters';
-      bridge.hidden = which !== 'bridge'; quarters.hidden = which !== 'quarters'; walkway.hidden = which !== 'walkway';
+      bridge.hidden = which !== 'bridge'; quarters.hidden = which !== 'quarters'; walkway.hidden = which !== 'walkway'; science.hidden = which !== 'science';
       cache.clear(); api.update();
     },
     update() {

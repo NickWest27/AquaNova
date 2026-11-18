@@ -1,0 +1,97 @@
+// Science model: samples, lab analysis and research. Saved under mission.science.
+// A sample comes from the Science ROV. The lab analyses it over game time and files a finding.
+// Findings give research points. Research topics unlock new abilities (other modules ask research.has(id)).
+import { sim } from './sim.js';
+import { gameState } from './persist.js';
+
+export const SAMPLE_KINDS = {
+  water: { label: 'Water', lab: 'spectral' },
+  sediment: { label: 'Sediment', lab: 'material' },
+  rock: { label: 'Rock core', lab: 'material' },
+  bio: { label: 'Biological', lab: 'gene' },
+  magnetic: { label: 'Magnetic reading', lab: 'spectral' },
+};
+export const LABS = {
+  material: { name: 'Material Analysis', secs: 1200 },
+  spectral: { name: 'Spectral Analysis', secs: 900 },
+  gene: { name: 'Gene Sequencing', secs: 1800 },
+};
+/** Which samples each site type can give. The ROV tool decides the pick. */
+const BY_SITE = {
+  reef: ['bio', 'water', 'sediment'], trench: ['rock', 'sediment', 'water'], wreck: ['sediment', 'rock', 'magnetic'],
+  site: ['rock', 'sediment', 'water'], open_water: ['water'],
+};
+export const TOOLS = {
+  collector: { name: 'Sample collector', secs: 300, needsFloor: true, pick: ['bio', 'water', 'sediment'] },
+  drill: { name: 'Core drill', secs: 900, needsFloor: true, pick: ['rock'] },
+  laser: { name: 'Laser sampler', secs: 240, needsFloor: false, pick: ['rock', 'sediment'] },
+  spectrometer: { name: 'Spectrometer', secs: 180, needsFloor: false, pick: ['water'] },
+  magnetometer: { name: 'Magnetometer', secs: 180, needsFloor: false, pick: ['magnetic'] },
+};
+export const TOPICS = [
+  { id: 'rov-range', name: 'Longer tether', cost: 2, text: 'A better tether lets the Science ROV work 1.5 nm from the ship.' },
+  { id: 'sonar-sweep', name: 'Deep sonar sweep', cost: 3, text: 'Lets the full sweep chart further. (Effect comes later.)' },
+  { id: 'wskr-orders', name: 'WSKR formations and orders', cost: 4, text: 'Give WSKRs names and orders. (Effect comes later.)' },
+  { id: 'synthetic-view', name: 'Synthetic forward view', cost: 5, text: 'Builds a forward view on the main screen from charted sea floor. (Effect comes later.)' },
+];
+
+const root = () => gameState.getProperty('mission.science') || { samples: [], jobs: [], done: [], points: 0, seq: 0 };
+const save = (v) => gameState.updateProperty('mission.science', v);
+export const samples = () => root().samples;
+export const jobs = () => root().jobs;
+export const points = () => root().points;
+export const research = { has: (id) => root().done.includes(id), done: () => root().done };
+
+/** Add a raw sample. Returns it. */
+export function addSample(kind, site, tool) {
+  const r = root(), id = r.seq + 1;
+  const sm = { id, kind, site: site ? site.name : 'Open water', tool, at: sim.s.clock, status: 'raw' };
+  save({ ...r, seq: id, samples: [...r.samples, sm] });
+  return sm;
+}
+/** Pick a sample kind for a tool at a site. */
+export function pickKind(toolId, site) {
+  const tool = TOOLS[toolId], ok = BY_SITE[site ? site.type : 'open_water'] || BY_SITE.open_water;
+  const m = tool.pick.filter((k) => ok.includes(k));
+  if (!m.length) return null;
+  return m[(site ? site.id : 0) % m.length];
+}
+export function startAnalysis(sampleId) {
+  const r = root(), sm = r.samples.find((q) => q.id === sampleId);
+  if (!sm || sm.status !== 'raw') return false;
+  const lab = LABS[SAMPLE_KINDS[sm.kind].lab];
+  if (r.jobs.some((j) => j.lab === SAMPLE_KINDS[sm.kind].lab)) return false;   // each instrument runs one job
+  save({ ...r, samples: r.samples.map((q) => q.id === sampleId ? { ...q, status: 'running' } : q),
+    jobs: [...r.jobs, { sample: sampleId, lab: SAMPLE_KINDS[sm.kind].lab, start: sim.s.clock, end: sim.s.clock + lab.secs }] });
+  return true;
+}
+const RESULT = {
+  water: ['Dissolved gases and trace minerals are within normal range.', 'Odd mineral traces in the water. Something is venting nearby.'],
+  sediment: ['Fine silt with traces of metal.', 'Layered sediment. It records old slides down the slope.'],
+  rock: ['Basalt with a thin mineral crust.', 'Rock with unusual crystal growth. Worth a closer look.'],
+  bio: ['Microbe colony. Its genes differ from the control strand.', 'Tissue from a deep-water species with no match in the library.'],
+  magnetic: ['Weak field, as expected.', 'Strong local field. Something metal lies close by.'],
+};
+/** Finish jobs that are due. Returns finished samples (the caller announces them). */
+export function tickLab() {
+  const r = root(); if (!r.jobs.length) return [];
+  const due = r.jobs.filter((j) => sim.s.clock >= j.end); if (!due.length) return [];
+  let pts = r.points; const out = [], found = [];
+  const smp = r.samples.map((q) => {
+    const j = due.find((d) => d.sample === q.id); if (!j) return q;
+    const res = RESULT[q.kind][(q.id + (q.at | 0)) % 2];
+    pts += 1; const n = { ...q, status: 'done', result: res }; out.push(n);
+    found.push({ id: `sample-${q.id}`, name: `${SAMPLE_KINDS[q.kind].label} sample, ${q.site}`, description: res, type: 'sample', scannedAt: new Date().toISOString() });
+    return n;
+  });
+  save({ ...r, samples: smp, jobs: r.jobs.filter((j) => !due.includes(j)), points: pts });
+  const d = gameState.getProperty('mission.discoveries') || [];
+  gameState.updateProperty('mission.discoveries', [...d, ...found]);
+  return out;
+}
+export function startTopic(id) {
+  const r = root(), t = TOPICS.find((q) => q.id === id);
+  if (!t || r.done.includes(id) || r.points < t.cost) return false;
+  save({ ...r, points: r.points - t.cost, done: [...r.done, id] });
+  return true;
+}

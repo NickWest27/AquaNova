@@ -5,7 +5,7 @@ import { planRoute } from './route.js';
 import { seafloor } from './seafloor.js';
 
 const TICK_MS = 200;
-const TIMESCALE = 30;        // 1 real second = 30 game seconds of travel
+export const TIMESCALE = 30;        // 1 real second = 30 game seconds of travel
 const MAX_KT = 14;
 const NM_PER_DEG_LAT = 60;
 const POI_RADIUS_NM = 0.3;
@@ -181,6 +181,7 @@ sim.etaHours = (maxHours = 96) => {
   return null;
 };
 
+sim.hooks = [];   // extra per-step work added by other modules (the Science ROV)
 sim.step = (dt) => {
   const s = sim.s;
   s.clock += dt * TIMESCALE;
@@ -230,6 +231,7 @@ sim.step = (dt) => {
   }
   s.floor = seafloor.ready ? seafloor.depthAt(s.lat, s.lon) : null;
   stepWskrs(dt);
+  for (const h of sim.hooks) h(dt);
   chartSurroundings();
   // systems
   s.power = 8 + (s.speed / MAX_KT) * 70 + (s.lights ? 5 : 0) + (s.sonar ? 4 : 0);

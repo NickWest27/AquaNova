@@ -34,6 +34,7 @@ export function snapshotSim() {
     gameState.updateProperty('navigation.waypoint', s.wpt && s.wpt.type === 'waypoint' ? { name: s.wpt.name, lat: +s.wpt.lat.toFixed(5), lon: +s.wpt.lon.toFixed(5) } : null);
     gameState.updateProperty('navigation.docked', !!s.docked);
     gameState.updateProperty('navigation.wskrs', s.wskrs.map((w) => ({ lat: +w.lat.toFixed(5), lon: +w.lon.toFixed(5), n: w.n, mode: w.mode, target: w.target })));
+    gameState.updateProperty('navigation.rov', s.rov ? { lat: +s.rov.lat.toFixed(5), lon: +s.rov.lon.toFixed(5), heading: Math.round(s.rov.heading), depth: Math.round(s.rov.depth) } : null);
     gameState.updateProperty('progress.gameClock', Math.round(s.clock));
     gameState.updateProperty('shipSystems.vitals', { battery: +s.battery.toFixed(1), oxygen: +s.oxygen.toFixed(1) });
     gameState.updateProperty('shipSystems.hull.integrity', Math.round(s.hull));
@@ -67,6 +68,7 @@ export function restoreSim() {
   s.docked = (nav.docked == null ? (nav.depth || 0) === 0 : !!nav.docked) && !!s.at && s.at.type === 'dock';   // saves from before docking existed: parked at the dock counts as docked
   seafloor.setChart(nav.charted || '');
   s.wskrs = Array.isArray(nav.wskrs) ? nav.wskrs.map((w) => ({ busy: 0, mode: 'escort', target: null, ...w })) : [];
+  s.rov = nav.rov ? { cmd: { thr: 0, turn: 0, dive: 0 }, job: null, ...nav.rov } : null;
   const clk = gameState.getProperty('progress.gameClock'); if (typeof clk === 'number') s.clock = clk;
   s.wpt = nav.destination ? s.pois.find((p) => p.name === nav.destination) || null : null;
   if (!s.wpt && nav.destination && nav.waypoint && nav.waypoint.name === nav.destination) s.wpt = { id: 'wpt', type: 'waypoint', text: 'Plotted position', ...nav.waypoint };

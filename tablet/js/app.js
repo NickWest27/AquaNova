@@ -5,6 +5,8 @@ import { createScene } from './scene.js';
 import { say, unreadCount, stats as notifyStats } from './notify.js';
 import { seafloor } from './seafloor.js';
 import { fileScan } from './findings.js';
+import './rov.js';
+import { tickLab, SAMPLE_KINDS } from './science.js';
 import { el, $, toast, pad, modal, frameThrottle, viewProbe } from './util.js';
 import { ICONS } from './ui.js';
 import { startSync, syncAtBoot } from './sync.js';
@@ -14,10 +16,11 @@ import { gameState, loadGame, liveNav, startExitSave, saveBeforeSleep, checkpoin
 const STATIONS = {
   nav: { title: 'Navigation', icon: 'nav' }, helm: { title: 'Helm', icon: 'helm' }, sys: { title: 'Systems', icon: 'sys' },
   sensors: { title: 'Sensors', icon: 'sensors' }, comms: { title: 'Comms', icon: 'comms' }, log: { title: 'Logbook', icon: 'log' }, ped: { title: 'PED', icon: 'more' },
+  lab: { title: 'Science Lab', icon: 'sensors' }, launch: { title: 'Launch Bay', icon: 'helm' },
   crew: { title: 'Communicator', icon: 'comms', hidden: true }, // opened from the pin, not the dock
 };
 const FILES = { sys: 'systems' };
-const WHERE = { bridge: 'Bridge', quarters: 'Quarters', walkway: 'Walkway' };   // the back button returns to the room you came from
+const WHERE = { bridge: 'Bridge', quarters: 'Quarters', walkway: 'Walkway', science: 'Science Lab' };   // the back button returns to the room you came from
 const SYSTEM_TEXT = {
   mission_start_tutorial: ['Welcome aboard, Captain', 'Captain Elena Voss was relieved of command at the last minute. OERA called you out of retirement to take her place on the Aqua Nova. Your quarters are ready, and your communicator pin is waiting on your desk.'],
   communicator_tutorial: ['Communicator ready', 'Pin on. Tap the badge in the top-right corner to talk to your crew. ARIA, your executive officer, is waiting to hear from you.'],
@@ -153,7 +156,11 @@ function openScene(name) {
   } else if (name === 'bridge') { closeStation(); scene.show('bridge'); }
   else if (name === 'walkway') { closeStation(); scene.show('walkway'); }
   else if (name === 'sleep') sleepDialog();
-  else if (name === 'engineering' || name === 'science') toast(`${name === 'science' ? 'Science / Medical' : 'Engineering'} is not built yet. Talk to the crew on the communicator.`);
+  else if (name === 'science') { closeStation(); scene.show('science'); }
+  else if (name === 'medbay') toast('The medbay is not built yet.');
+  else if (name === 'lab-analysis' || name === 'lab-research') { ctx.labTab = name.slice(4); openStation('lab'); }
+  else if (name === 'lab') { ctx.labTab = 'samples'; openStation('lab'); }
+  else if (name === 'engineering') toast('Engineering is not built yet. Talk to the crew on the communicator.');
   else if (name === 'pickup') document.dispatchEvent(new CustomEvent('item-pickup', { detail: { itemId: 'communicator' } }));
   else openStation(name);
   syncUI();
@@ -246,7 +253,7 @@ async function boot() {
       if (type === 'tick') {
         const s = sim.s;
         scene.update(); updateChips(); current && current.api.update(); ped && ped.api.update(); updateHum(s.speed);
-        if (++tickN % 5 === 0) liveNav();            // about once a second
+        if (++tickN % 5 === 0) { liveNav(); for (const q of tickLab()) say('science', `Analysis of sample #${q.id} (${SAMPLE_KINDS[q.kind].label.toLowerCase()}) is done: ${q.result} Finding filed.`, 'mission'); }            // about once a second
         const t = `${s.lat.toFixed(3)}°N ${Math.abs(s.lon).toFixed(3)}°W`;
         if (st.pos.textContent !== t) st.pos.textContent = t;
         const ck = clockText() + (s.docked ? ' · DOCKED' : ''); if (st.clock.textContent !== ck) st.clock.textContent = ck;
@@ -256,6 +263,7 @@ async function boot() {
       } else if (type === 'enter') { say('helm', `We are at ${data.name}, Captain.`); firstVisit(data); }
       else if (type === 'arrived') say('helm', 'Destination reached, Captain.');
       else if (type === 'wskr-found') { const fresh = fileScan(data.poi); say('sensors', fresh ? `WSKR ${data.wskr.n} has finished investigating ${data.poi.name}. Scan filed, Captain.` : `WSKR ${data.wskr.n} re-checked ${data.poi.name}. Nothing new.`, 'mission'); }
+      else if (type === 'rov-sample') say('science', `The ROV has a ${SAMPLE_KINDS[data.kind].label.toLowerCase()} sample from ${data.site}. It is in the lab, Captain.`);
       else if (type === 'wskr-recovered') say('sensors', `WSKR ${data.n} is back aboard.`);
       else if (type === 'bump') {
         const k = data.kind;
