@@ -1,6 +1,6 @@
 import '../../utils/debugPanel.js';
 import { dlog } from '../../utils/log.js';
-import { sim, clockText } from './sim.js';
+import { sim, clockText, toward, MAX_SPEED } from './sim.js';
 import { createScene } from './scene.js';
 import { el, $, toast, pad, modal, frameThrottle } from './util.js';
 import { ICONS } from './ui.js';
@@ -132,18 +132,26 @@ function openScene(name) {
 
 // ---------- sleep: jump the game clock forward ----------
 function sleepDialog() {
-  let hours = 8;
-  const note = el('p', { text: `It is ${clockText()}. The game saves first. The ship holds station while you sleep. If docked, shore power charges the ship. The crew wake you early in an emergency.` });
+  const s = sim.s;
+  // time to the destination at the speed you are set for (so a long transit takes less of your time)
+  const kt = Math.max(s.speed, s.throttle * MAX_SPEED);
+  const eta = s.wpt && kt > 0.5 && !s.docked ? Math.min(96, Math.ceil((toward(s, s.wpt).nm / kt) * 10) / 10 + 0.1) : null;
+  let hours = eta && eta <= 12 ? eta : 8, untilArrival = !!(eta && eta <= 12);
+  const fmt = (h) => (h >= 1 ? `${Math.round(h * 10) / 10} h` : `${Math.round(h * 60)} min`);
+  const note = el('p', { text: `It is ${clockText()}. The game saves first. The ship keeps its course and speed while you sleep, so a long trip passes quickly. The crew wake you if you arrive at your destination, or in an emergency.${s.docked ? ' Docked: shore power charges the ship.' : ''}` });
   const chips = el('div', { class: 'row' });
-  const draw = () => chips.replaceChildren(...[2, 4, 6, 8, 10].map((h) => el('button', { class: `btn chip ${h === hours ? 'on primary' : ''}`, text: `${h} h`, onclick: () => { hours = h; draw(); } })));
+  const draw = () => chips.replaceChildren(
+    ...[2, 4, 8, 12, 24].map((h) => el('button', { class: `btn chip ${!untilArrival && h === hours ? 'on primary' : ''}`, text: `${h} h`, onclick: () => { hours = h; untilArrival = false; draw(); } })),
+    eta && el('button', { class: `btn chip ${untilArrival ? 'on primary' : ''}`, text: `Until arrival (${fmt(eta)})`, onclick: () => { hours = eta; untilArrival = true; draw(); } }));
   draw();
   modal({ title: 'Sleep', body: el('div', {}, note, chips), actions: [{ label: 'Cancel' }, { label: 'Sleep', primary: true, run: () => {
     saveBeforeSleep();                         // a save before sleep, as agreed
     const r = sim.warp(hours);
-    const h = r.hours >= 1 ? `${Math.round(r.hours * 10) / 10} hours` : `${Math.round(r.hours * 60)} minutes`;
-    const text = r.reason ? `Captain, ${r.reason}. I woke you early. You slept ${h}. It is ${clockText()}.` : `You slept ${h}. It is ${clockText()}.`;
-    modal({ title: r.reason ? 'ARIA woke you' : 'Good morning, Captain', body: el('p', { text }), actions: [{ label: 'OK', primary: true }] });
-    ping(); liveNav(); syncUI();
+    const h = fmt(r.hours);
+    const text = r.arrived ? `Captain, we have arrived at ${r.arrived}. You slept ${h}. It is ${clockText()}.`
+      : r.reason ? `Captain, ${r.reason}. I woke you early. You slept ${h}. It is ${clockText()}.` : `You slept ${h}. It is ${clockText()}.`;
+    modal({ title: r.arrived ? 'We have arrived' : r.reason ? 'ARIA woke you' : 'Good morning, Captain', body: el('p', { text }), actions: [{ label: 'OK', primary: true }] });
+    ping(); liveNav(); syncUI(); scene.update();
   } }] });
 }
 

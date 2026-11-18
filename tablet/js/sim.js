@@ -104,14 +104,16 @@ sim.canDock = () => { const s = sim.s; return !s.docked && !!s.at && s.at.type =
 /** "Game clock" text, e.g. "Day 2 06:30". */
 export const clockText = (secs = sim.s.clock) => `Day ${Math.floor(secs / 86400) + 1} ${String(Math.floor(secs / 3600) % 24).padStart(2, '0')}:${String(Math.floor(secs / 60) % 60).padStart(2, '0')}`;
 
-/** Sleep: jump the game forward. The ship holds station. The crew wake the player early for an emergency.
- *  Returns { hours, reason } where reason is null when the full time passed. */
+/** Sleep: jump the game forward. The ship keeps its course, speed and destination, so a long
+ *  transit takes less of the player's time. The crew wake the player early for an emergency, or on arrival.
+ *  Returns { hours, reason, arrived }: reason is an emergency text, arrived is the destination name. */
 sim.warp = (hours) => {
   const s = sim.s, total = hours * 3600, stepGame = 15;   // 15 game seconds per step
-  s.throttle = 0; s.wpt = null;
-  let done = 0, reason = null, sinceCheck = 0;
+  const startWpt = s.wpt;
+  let done = 0, reason = null, arrived = null, sinceCheck = 0;
   while (done < total) {
     sim.step(stepGame / TIMESCALE); done += stepGame; sinceCheck += stepGame;
+    if (startWpt && !s.wpt) { arrived = startWpt.name; break; }
     if (sinceCheck >= 60) {
       sinceCheck = 0;
       if (s.oxygen < 30 && !s.docked) reason = `oxygen reserves are down to ${Math.round(s.oxygen)}%`;
@@ -121,7 +123,7 @@ sim.warp = (hours) => {
     }
   }
   sim.dirty = true; sim.emit('tick');
-  return { hours: done / 3600, reason };
+  return { hours: done / 3600, reason, arrived };
 };
 
 sim.emit = (type, data) => sim.listeners.forEach((fn) => { try { fn(type, data); } catch (e) { console.error(e); } });

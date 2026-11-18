@@ -6,31 +6,37 @@ const KEY = 'aquaNova_sound';
 let ac = null, master = null, humGain = null, humFilter = null;
 const pref = (() => { try { return Object.assign({ on: true, vol: 0.6 }, JSON.parse(localStorage.getItem(KEY))); } catch (e) { return { on: true, vol: 0.6 }; } })();
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(pref)); } catch (e) { /* ignore */ } };
-const level = () => (pref.on ? pref.vol * 0.5 : 0);
+const level = () => (pref.on ? pref.vol * 0.8 : 0);
 
 export const getSound = () => ({ ...pref });
 export function setSound(next) {
   Object.assign(pref, next); save();
   if (master) master.gain.setTargetAtTime(level(), ac.currentTime, 0.05);
 }
-export const audioState = () => ({ started: !!ac, running: !!ac && ac.state === 'running', master: master ? +master.gain.value.toFixed(3) : 0, on: pref.on, vol: pref.vol });
+export const audioState = () => ({ started: !!ac, state: ac ? ac.state : 'not started', running: !!ac && ac.state === 'running', master: master ? +master.gain.value.toFixed(3) : 0, on: pref.on, vol: pref.vol });
 
 export function initAudio() {
   if (ac) { if (ac.state === 'suspended') ac.resume(); return; }
   const AC = window.AudioContext || window.webkitAudioContext;
-  if (!AC) return;
+  if (!AC || navigator.webdriver) return; // automated test browsers render audio at full CPU, so skip there
+  // iOS: Web Audio is silent when the ringer switch is on mute unless the page asks for "playback" audio.
+  try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) { /* older iOS */ }
+  try { const a = new Audio('data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA='); a.loop = true; a.play().catch(() => {}); } catch (e) { /* ignore */ }
   ac = new AC();
+  ac.resume();
+  // iOS pauses audio on interruptions (a call, Siri). Any tap brings it back.
+  ['pointerdown', 'touchend', 'keydown'].forEach((ev) => document.addEventListener(ev, () => { if (ac && ac.state !== 'running' && !document.hidden) ac.resume(); }, { passive: true }));
   master = ac.createGain(); master.gain.value = level(); master.connect(ac.destination);
   // hum: two low saws a little apart (they beat slowly), through a low-pass filter
-  humFilter = ac.createBiquadFilter(); humFilter.type = 'lowpass'; humFilter.frequency.value = 180; humFilter.Q.value = 0.7;
+  humFilter = ac.createBiquadFilter(); humFilter.type = 'lowpass'; humFilter.frequency.value = 380; humFilter.Q.value = 0.7;
   humGain = ac.createGain(); humGain.gain.value = 0.5;
-  for (const f of [48, 48.6, 72.2]) { const o = ac.createOscillator(); o.type = 'sawtooth'; o.frequency.value = f; o.connect(humFilter); o.start(); }
+  for (const f of [110, 110.8, 165.3, 220.5]) { const o = ac.createOscillator(); o.type = 'sawtooth'; o.frequency.value = f; o.connect(humFilter); o.start(); }
   // ventilation: soft filtered noise
   const buf = ac.createBuffer(1, ac.sampleRate * 2, ac.sampleRate), d = buf.getChannelData(0);
   for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
   const noise = ac.createBufferSource(); noise.buffer = buf; noise.loop = true;
   const nf = ac.createBiquadFilter(); nf.type = 'bandpass'; nf.frequency.value = 420; nf.Q.value = 0.4;
-  const ng = ac.createGain(); ng.gain.value = 0.035;
+  const ng = ac.createGain(); ng.gain.value = 0.06;
   noise.connect(nf); nf.connect(ng); ng.connect(humGain); noise.start();
   humFilter.connect(humGain); humGain.connect(master);
   // keep quiet when the app is not on screen
@@ -41,8 +47,8 @@ export function initAudio() {
 export function updateHum(speed) {
   if (!ac || !humGain) return;
   const k = Math.min(1, Math.max(0, speed / 12));
-  humGain.gain.setTargetAtTime(0.45 + 0.4 * k, ac.currentTime, 0.4);
-  humFilter.frequency.setTargetAtTime(170 + 110 * k, ac.currentTime, 0.4);
+  humGain.gain.setTargetAtTime(0.28 + 0.3 * k, ac.currentTime, 0.4);
+  humFilter.frequency.setTargetAtTime(340 + 260 * k, ac.currentTime, 0.4);
 }
 
 function blip(freq0, freq1, start, dur, vol = 0.5, type = 'sine') {
@@ -60,4 +66,12 @@ export function chirp() {
 export function ping() {
   if (!ac || !pref.on) return;
   blip(880, 1320, 0, 0.18, 0.28, 'triangle');
+}
+
+/** For the PED "Test sound" button. Must run from a tap. Returns the engine state. */
+export function testSound() {
+  initAudio();
+  if (ac && ac.state !== 'running') ac.resume();
+  chirp();
+  return audioState();
 }

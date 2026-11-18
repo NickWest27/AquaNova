@@ -6,7 +6,7 @@ import { gameState, saveManager } from '../persist.js';
 import { syncNow, requestSync, syncState, onSyncChange } from '../sync.js';
 import { getConfig, describeSync, connect as connectSync, clearConfig, makeJournalEntry, newTask, isJournal } from '../../../utils/ledgerSync.js';
 import { DEBUG } from '../../../utils/log.js';
-import { getSound, setSound, chirp } from '../audio.js';
+import { getSound, setSound, chirp, testSound, audioState } from '../audio.js';
 
 export function mount(body, ctx) {
   body.classList.add('more-st');
@@ -78,8 +78,10 @@ export function mount(body, ctx) {
             getConfig() && el('button', { class: 'btn danger', text: 'Disconnect', onclick: () => { clearConfig(); syncState.status = 'off'; render(); } }))),
         getConfig() && el('div', { class: 'card setting' }, el('div', { class: 'lbl', text: 'Sync details' }), ...describeSync().map((t) => el('p', { text: t }))),
         el('div', { class: 'card setting' }, el('div', { class: 'lbl', text: 'Sound' }),
-          el('p', { text: getSound().on ? 'Sound is on: ship hum and communicator.' : 'Sound is off.' }),
+          el('p', { text: (getSound().on ? 'Sound is on: ship hum and communicator.' : 'Sound is off.') + ` Sound engine: ${audioState().state}.` }),
+          el('p', { text: 'If you hear nothing: turn the ringer switch off mute, raise the volume, then tap Test sound.' }),
           el('div', { class: 'row' },
+            el('button', { class: 'btn primary', text: 'Test sound', onclick: () => { const st = testSound(); toast(`Sound engine: ${st.state}`); setTimeout(render, 400); } }),
             el('button', { class: 'btn', text: getSound().on ? 'Turn sound off' : 'Turn sound on', onclick: () => { setSound({ on: !getSound().on }); if (getSound().on) chirp(); render(); } }),
             ...[['Quiet', 0.25], ['Medium', 0.6], ['Loud', 1]].map(([t, v]) => el('button', { class: `btn ${Math.abs(getSound().vol - v) < 0.01 ? 'primary' : ''}`, text: t, onclick: () => { setSound({ vol: v }); chirp(); render(); } })))),
         el('div', { class: 'card setting' }, el('div', { class: 'lbl', text: 'Text size' }), el('div', { class: 'row' }, zoomBtn('Smaller', -0.1), zoomBtn('Reset', 0), zoomBtn('Larger', 0.1))),
