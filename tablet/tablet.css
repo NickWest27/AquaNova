@@ -198,6 +198,12 @@ textarea, input { font: inherit; font-size: 16px; user-select: text; -webkit-use
 .num small { font-size: 0.9rem; color: var(--dim); margin-left: 0.25rem; font-weight: 600; }
 .ok { color: var(--green); } .warn { color: var(--amber); } .bad { color: var(--red); }
 
+/* PED: a pop-up panel on top of whatever is on screen (scene or station) */
+#ped-pop { position: absolute; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; padding: calc(env(safe-area-inset-top) + 1.2rem) 2.2rem 1.2rem; background: rgba(2,8,16,0.74); animation: stIn 0.16s ease-out; }
+.ped-panel { width: min(62rem, 100%); height: min(100%, 46rem); display: flex; flex-direction: column; overflow: hidden; background: linear-gradient(180deg, #0a2036, #061523); border: 2px solid var(--line); border-radius: 22px; box-shadow: 0 18px 60px rgba(0,0,0,0.6); }
+.ped-panel .st-head { padding-right: 0.9rem; }
+.ped-panel .st-body { overflow-y: auto; }
+
 /* Navigation station */
 .nav-st .nd-wrap { flex: 1; min-width: 0; position: relative; background: #03121c; border: 2px solid var(--line); border-radius: 18px; overflow: hidden; }
 .nd-wrap canvas { position: absolute; left: 0; top: 0; touch-action: none; }

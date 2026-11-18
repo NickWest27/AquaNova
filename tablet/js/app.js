@@ -56,8 +56,30 @@ function fit() {
   if (w) stage.style.transform = `scale(${w / 1920})`;
 }
 
+// ---------- PED: a pop-up on top of the current screen, not a station ----------
+let ped = null;
+async function togglePed() {
+  if (ped) return closePed();
+  const root = $('#ped-pop'), body = el('div', { class: 'st-body' });
+  root.replaceChildren(el('div', { class: 'ped-panel' },
+    el('header', { class: 'st-head' }, el('div', { class: 'st-title', text: 'PED' }), el('button', { class: 'btn ped-close', style: 'margin-left:auto', text: 'Close ✕', onclick: closePed })),
+    body));
+  root.onclick = (e) => { if (e.target === root) closePed(); };   // tap outside the panel
+  root.hidden = false;
+  try {
+    modules.ped ||= await import('./stations/ped.js');
+    ped = { api: modules.ped.mount(body, ctx) }; ped.api.update();
+  } catch (e) { console.error('PED failed', e); toast('Could not open the PED', 'error'); root.hidden = true; }
+}
+function closePed() {
+  if (!ped) return;
+  try { ped.api.destroy(); } catch (e) { console.error(e); }
+  ped = null; $('#ped-pop').hidden = true; $('#ped-pop').replaceChildren();
+}
+
 // ---------- stations ----------
 async function openStation(name) {
+  if (name === 'ped') return togglePed();
   if (name === 'crew') {
     if (commsLocked()) return;
     gameState.updateProperty('tutorial.communicator_opened', true); // "First Contact" step 3
@@ -68,7 +90,7 @@ async function openStation(name) {
   const chips = el('div', { class: 'st-chips' });
   const body = el('div', { class: 'st-body' });
   root.replaceChildren(el('header', { class: 'st-head' },
-    el('button', { class: 'btn', text: '‹ Bridge', onclick: closeStation }), el('div', { class: 'st-title', text: def.title }), chips), body);
+    el('button', { class: 'btn', text: '‹ Bridge', onclick: closeStation }), el('div', { class: 'st-title', text: def.title }), chips, el('button', { class: 'btn', text: 'PED', onclick: togglePed })), body);
   root.hidden = false;
   try {
     modules[name] ||= await import(`./stations/${FILES[name] || name}.js`);
@@ -156,7 +178,7 @@ async function boot() {
     sim.on((type, data) => {
       if (type === 'tick') {
         const s = sim.s;
-        scene.update(); updateChips(); current && current.api.update();
+        scene.update(); updateChips(); current && current.api.update(); ped && ped.api.update();
         const t = `${s.lat.toFixed(3)}°N ${Math.abs(s.lon).toFixed(3)}°W`;
         if (st.pos.textContent !== t) st.pos.textContent = t;
         const o = ctx.objectives().find((x) => !x.done); const ot = o ? 'Objective: ' + o.text : '';

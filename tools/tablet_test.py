@@ -40,7 +40,20 @@ def main():
                 page.screenshot(path=f"{SHOTS}/t-{tag}-2{st}.png")
                 # overflow check: nothing wider than the screen
                 if page.evaluate("document.documentElement.scrollWidth > innerWidth + 1"): note(f"{st}: horizontal overflow")
-                page.tap("#station .st-head .btn"); page.wait_for_timeout(200)
+                if st == "ped":
+                    if not page.is_hidden("#station"): note("ped: opened as a station, not a pop-up")
+                    page.tap(".ped-close")
+                else:
+                    page.tap("#station .st-head .btn")
+                page.wait_for_timeout(200)
+            # PED sits on top of a station without replacing it
+            page.tap('.dbtn[data-st="nav"]'); page.wait_for_timeout(500)
+            page.tap('#station .st-head .btn:text-is("PED")'); page.wait_for_timeout(500)
+            if page.is_hidden("#ped-pop") or page.is_hidden("#station"): note("ped over station: pop-up or station missing")
+            page.screenshot(path=f"{SHOTS}/t-{tag}-3ped-over-nav.png")
+            page.tap("#ped-pop", position={"x": 8, "y": 8}); page.wait_for_timeout(300)   # tap outside the panel
+            if not page.is_hidden("#ped-pop") or page.is_hidden("#station"): note("ped: tapping outside did not close it, or the station closed too")
+            page.tap("#station .st-head .btn"); page.wait_for_timeout(200)
             page.tap('.dbtn[data-st="quarters"]'); page.wait_for_timeout(600)
             ctx.close()
         browser.close()
