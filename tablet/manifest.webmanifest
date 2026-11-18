@@ -4,10 +4,14 @@
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "orientation": "any",
+  "orientation": "landscape",
   "background_color": "#04101f",
   "theme_color": "#04101f",
   "icons": [
-    { "src": "assets/icon-180.png", "sizes": "180x180", "type": "image/png" }
+    {
+      "src": "assets/icon-180.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
   ]
 }

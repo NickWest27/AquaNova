@@ -9,8 +9,8 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 spec = importlib.util.spec_from_file_location("smoke", os.path.join(ROOT, "tools", "smoke.py"))
 smoke = importlib.util.module_from_spec(spec); spec.loader.exec_module(smoke)
 SHOTS = os.path.join(ROOT, "tools", "shots"); os.makedirs(SHOTS, exist_ok=True)
-SIZES = {"land": (1180, 820), "old": (1024, 768), "port": (820, 1180)}
-STATIONS = ["nav", "helm", "sys", "log", "more"]  # comms is covered by tablet_flow.py (locked until the tutorial pickup)
+SIZES = {"land": (1180, 820), "old": (1024, 768), "big": (1366, 1024)}
+STATIONS = ["nav", "helm", "sys", "comms", "log", "ped"]
 
 def main():
     server, site = smoke.start_server()

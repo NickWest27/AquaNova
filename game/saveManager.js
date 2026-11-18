@@ -181,7 +181,9 @@ class SaveManager {
         // Add to active logbook's entries
         if (!logbook.entries) logbook.entries = [];
         logbook.entries.push(entry);
-        logbook.checkpoint = { timestamp: entry.logbook.timestamp, gameSnapshot: entry.gameSnapshot };
+        if (entryData.canRevert !== false) {
+            logbook.checkpoint = { timestamp: entry.logbook.timestamp, gameSnapshot: entry.gameSnapshot };
+        }
         
         this.updateLogbookStats(logbook);
         this.saveBookshelf();

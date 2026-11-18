@@ -4,19 +4,20 @@ import { sim } from './sim.js';
 import { createScene } from './scene.js';
 import { el, $, toast, pad, modal, frameThrottle } from './util.js';
 import { ICONS } from './ui.js';
-import { gameState, loadGame, startAutosave, checkpoint, addLogEntry, restoreSim } from './persist.js';
+import { gameState, loadGame, startExitSave, checkpoint, addLogEntry, restoreSim } from './persist.js';
 
 const STATIONS = {
   nav: { title: 'Navigation', icon: 'nav' }, helm: { title: 'Helm', icon: 'helm' }, sys: { title: 'Systems', icon: 'sys' },
-  comms: { title: 'Comms', icon: 'comms' }, log: { title: 'Logbook', icon: 'log' }, more: { title: 'More', icon: 'more' },
+  comms: { title: 'Comms', icon: 'comms' }, log: { title: 'Logbook', icon: 'log' }, ped: { title: 'PED', icon: 'more' },
+  crew: { title: 'Communicator', icon: 'comms', hidden: true }, // opened from the pin, not the dock
 };
 const FILES = { sys: 'systems' };
 const SYSTEM_TEXT = {
   mission_start_tutorial: ['Welcome aboard, Captain', 'Captain Elena Voss was relieved of command at the last minute. OERA called you out of retirement to take her place on the Aqua Nova. Your quarters are ready, and your communicator pin is waiting on your desk.'],
-  communicator_tutorial: ['Communicator ready', 'Pin on. Tap the COMMS button to open it. ARIA, your executive officer, is waiting to hear from you.'],
+  communicator_tutorial: ['Communicator ready', 'Pin on. Tap the badge in the top-right corner to talk to your crew. ARIA, your executive officer, is waiting to hear from you.'],
 };
 const modules = {};
-let scene, current = null, missions = null, boarded = false, dockEls = {};
+let scene, current = null, missions = null, boarded = false;
 const pendingModals = [];
 let zoom = 1;
 try { zoom = parseFloat(localStorage.getItem('aquaNova_zoom')) || 1; } catch (e) { /* ignore */ }
@@ -40,8 +41,10 @@ const syncUI = frameThrottle(() => {
   if (!scene) return;
   const locked = commsLocked();
   scene.showPickup(scene.inQuarters && locked && objStatus('meetTheCrew_find_communicator') === 'completed');
-  scene.lock('COMMS', locked);
-  dockEls.comms && dockEls.comms.classList.toggle('locked', locked);
+  const pin = $('#pin');
+  if (pin.hidden === locked) return;
+  pin.hidden = locked;
+  if (!locked) { pin.classList.remove('ring'); void pin.offsetWidth; pin.classList.add('ring'); }
 });
 
 // ---------- scene scaling: one transform ----------
@@ -54,8 +57,8 @@ function fit() {
 
 // ---------- stations ----------
 async function openStation(name) {
-  if (name === 'comms') {
-    if (commsLocked()) { toast('Find your communicator in your quarters first.'); return; }
+  if (name === 'crew') {
+    if (commsLocked()) return;
     gameState.updateProperty('tutorial.communicator_opened', true); // "First Contact" step 3
   }
   if (current) closeStation();
@@ -101,10 +104,9 @@ function buildDock() {
   const st = { pos: el('span'), obj: el('span'), bat: el('span') };
   status.append(st.pos, el('span', { class: 'sp' }), st.obj, st.bat);
   const buttons = el('div', { class: 'dock-buttons' },
-    ...Object.entries(STATIONS).map(([k, v]) => el('button', { class: 'dbtn', 'data-st': k, onclick: () => openStation(k), html: `${ICONS[v.icon]}<span>${v.title}</span>` })),
+    ...Object.entries(STATIONS).filter(([, v]) => !v.hidden).map(([k, v]) => el('button', { class: 'dbtn', 'data-st': k, onclick: () => openStation(k), html: `${ICONS[v.icon]}<span>${v.title}</span>` })),
     el('button', { class: 'dbtn', 'data-st': 'quarters', onclick: () => openScene(scene.inQuarters ? 'bridge' : 'quarters'), html: `${ICONS.quarters}<span>Quarters</span>` }));
   dock.replaceChildren(status, buttons);
-  dockEls = { comms: buttons.querySelector('[data-st="comms"]') };
   return st;
 }
 
@@ -122,7 +124,7 @@ function firstVisit(poi) {
   const key = poi.name.toLowerCase().replace(/\s+/g, '_');
   if (seen.includes(key)) return;
   gameState.updateProperty('progress.areasExplored', [...seen, key]);
-  addLogEntry(`Arrived at ${poi.name}. ${poi.text}`, { type: 'discovery_log', tags: ['arrival', poi.type] });
+  addLogEntry(`Arrived at ${poi.name}. ${poi.text}`, { type: 'discovery_log', tags: ['arrival', poi.type], canRevert: false }); // a note, not a save point
 }
 
 // ---------- boot ----------
@@ -146,8 +148,9 @@ async function boot() {
     const st = buildDock();
     new ResizeObserver(fit).observe($('#scene-wrap')); fit();
     boarded = true;
-    sim.start(); startAutosave();
+    sim.start(); startExitSave();
     gameState.addObserver(syncUI);
+    $('#pin').addEventListener('click', () => { if (current && current.name === 'crew') closeStation(); else openStation('crew'); });
     sim.on((type, data) => {
       if (type === 'tick') {
         const s = sim.s;

@@ -1,6 +1,6 @@
 // Saves. The sim lives in GameState (so the desktop game and the tablet share one save),
 // and GameState lives in the active logbook via saveManager.
-//   checkpoint = autosave, one slot, overwritten.
+//   checkpoint = exit save, one slot, overwritten. Only on exit (and before sleep).
 //   entry      = a logbook entry with a snapshot; the player can revert to it.
 import gameState from '../../game/state.js';
 import saveManager from '../../game/saveManager.js';
@@ -65,13 +65,14 @@ export function addLogEntry(content, extra = {}) {
   return saveManager.addEntry({ type: 'personal_log', content, ...extra });
 }
 
-let lastSig = '';
-export function startAutosave() {
-  const sig = () => JSON.stringify([sim.s.lat.toFixed(4), sim.s.lon.toFixed(4), Math.round(sim.s.depth), Math.round(sim.s.battery), gameState.getProperty('mission.objectives'), gameState.getProperty('mission.completedIds')]);
-  const maybe = () => { const n = sig(); if (n !== lastSig) { lastSig = n; checkpoint(); } };
-  setInterval(() => { if (!document.hidden) maybe(); }, 20000);
-  document.addEventListener('visibilitychange', () => { if (document.hidden) maybe(); });
-  window.addEventListener('pagehide', maybe);
-  sim.on((t) => { if (t === 'enter' || t === 'arrived') maybe(); });
-  lastSig = sig();
+/** Saves only happen two ways: a logbook entry (the player's save point), and
+ *  this exit save, which keeps the current moment if the app is closed or hidden.
+ *  There is no timed autosave, so a bad decision stays a bad decision. */
+export function startExitSave() {
+  const onExit = () => { if (document.visibilityState === 'hidden' || document.hidden) checkpoint(); };
+  document.addEventListener('visibilitychange', onExit);
+  window.addEventListener('pagehide', () => checkpoint());
 }
+
+/** Call before any big jump in time (sleep) so the player can return to this moment. */
+export function saveBeforeSleep() { checkpoint(); }
