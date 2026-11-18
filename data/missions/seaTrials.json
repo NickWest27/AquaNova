@@ -1,0 +1,75 @@
+{
+  "id": "seaTrials",
+  "name": "Sea Trials",
+  "description": "Take the Aqua Nova through her paces and report to OERA.",
+  "category": "main",
+  "priority": "high",
+  "autoStart": false,
+  "prerequisites": [],
+  "objectives": [
+    {
+      "id": "dive",
+      "description": "Dive below 50 m",
+      "required": true,
+      "triggers": [
+        {
+          "type": "property_at_least",
+          "property": "navigation.depth",
+          "value": 50
+        }
+      ]
+    },
+    {
+      "id": "speed",
+      "description": "Run at 5 knots or faster",
+      "required": true,
+      "triggers": [
+        {
+          "type": "property_at_least",
+          "property": "navigation.speed",
+          "value": 5
+        }
+      ]
+    },
+    {
+      "id": "surface",
+      "description": "Return to 15 m or shallower, so the antenna has a link",
+      "required": true,
+      "after": "dive",
+      "triggers": [
+        {
+          "type": "property_at_most",
+          "property": "navigation.depth",
+          "value": 15
+        }
+      ]
+    },
+    {
+      "id": "report",
+      "description": "Transmit your sea trials report from the Comms station",
+      "required": true,
+      "after": "surface",
+      "triggers": [
+        {
+          "type": "report_sent"
+        }
+      ]
+    }
+  ],
+  "onComplete": [
+    {
+      "type": "set_property",
+      "property": "progress.seaTrialsComplete",
+      "value": true
+    },
+    {
+      "type": "send_message",
+      "message": {
+        "id": "oera-trials-done",
+        "from": "OERA Operations",
+        "subject": "Sea trials: report received",
+        "text": "Report received. Good work, Captain. The ship passes. We are reviewing survey requests for the Atlantic shelf and will send your first assignment soon."
+      }
+    }
+  ]
+}

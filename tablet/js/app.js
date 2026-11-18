@@ -6,7 +6,7 @@ import { el, $, toast, pad, modal, frameThrottle } from './util.js';
 import { ICONS } from './ui.js';
 import { startSync, syncAtBoot } from './sync.js';
 import { initAudio, updateHum, chirp, ping } from './audio.js';
-import { gameState, loadGame, startExitSave, checkpoint, addLogEntry, restoreSim } from './persist.js';
+import { gameState, loadGame, liveNav, startExitSave, checkpoint, addLogEntry, restoreSim } from './persist.js';
 
 const STATIONS = {
   nav: { title: 'Navigation', icon: 'nav' }, helm: { title: 'Helm', icon: 'helm' }, sys: { title: 'Systems', icon: 'sys' },
@@ -19,6 +19,7 @@ const SYSTEM_TEXT = {
   communicator_tutorial: ['Communicator ready', 'Pin on. Tap the badge in the top-right corner to talk to your crew. ARIA, your executive officer, is waiting to hear from you.'],
 };
 const modules = {};
+let tickN = 0;
 let scene, current = null, missions = null, boarded = false;
 const pendingModals = [];
 let zoom = 1;
@@ -44,6 +45,9 @@ const syncUI = frameThrottle(() => {
   if (!scene) return;
   const locked = commsLocked();
   scene.showPickup(scene.inQuarters && locked && objStatus('meetTheCrew_find_communicator') === 'completed');
+  const unread = (gameState.getProperty('mission.inbox') || []).filter((m) => !m.read).length;
+  const badge = document.querySelector('.dbtn[data-st="comms"] .badge');
+  if (badge) { badge.textContent = unread; badge.classList.toggle('on', unread > 0); }
   const pin = $('#pin');
   const quiet = firstUI; firstUI = false;   // the first pass only restores state: no chirp on load
   if (pin.hidden === locked) return;
@@ -130,7 +134,7 @@ function buildDock() {
   const st = { pos: el('span'), obj: el('span'), bat: el('span') };
   status.append(st.pos, el('span', { class: 'sp' }), st.obj, st.bat);
   const buttons = el('div', { class: 'dock-buttons' },
-    ...Object.entries(STATIONS).filter(([, v]) => !v.hidden).map(([k, v]) => el('button', { class: 'dbtn', 'data-st': k, onclick: () => openStation(k), html: `${ICONS[v.icon]}<span>${v.title}</span>` })),
+    ...Object.entries(STATIONS).filter(([, v]) => !v.hidden).map(([k, v]) => el('button', { class: 'dbtn', 'data-st': k, onclick: () => openStation(k), html: `${ICONS[v.icon]}<span>${v.title}</span>${k === 'comms' ? '<i class="badge"></i>' : ''}` })),
     el('button', { class: 'dbtn', 'data-st': 'quarters', onclick: () => openScene(scene.inQuarters ? 'bridge' : 'quarters'), html: `${ICONS.quarters}<span>Quarters</span>` }));
   dock.replaceChildren(status, buttons);
   return st;
@@ -143,6 +147,7 @@ function showSystemDialogue(id) {
   if (boarded) run(); else pendingModals.push(run);
 }
 document.addEventListener('show-dialogue', (e) => { if (e.detail.characterId === 'system') showSystemDialogue(e.detail.dialogueId); });
+document.addEventListener('comms-message', (e) => { if (boarded) { ping(); toast(`Message from ${e.detail.from}`, 'mission'); } syncUI(); });
 document.addEventListener('mission-notify', (e) => { if (boarded) { ping(); toast(`${e.detail.title} — ${e.detail.subtitle}`, 'mission'); } });
 
 function firstVisit(poi) {
@@ -183,6 +188,7 @@ async function boot() {
       if (type === 'tick') {
         const s = sim.s;
         scene.update(); updateChips(); current && current.api.update(); ped && ped.api.update(); updateHum(s.speed);
+        if (++tickN % 5 === 0) liveNav();            // about once a second
         const t = `${s.lat.toFixed(3)}°N ${Math.abs(s.lon).toFixed(3)}°W`;
         if (st.pos.textContent !== t) st.pos.textContent = t;
         const o = ctx.objectives().find((x) => !x.done); const ot = o ? 'Objective: ' + o.text : '';

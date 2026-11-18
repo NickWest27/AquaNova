@@ -2,7 +2,7 @@
    so an update arrives the next time the game is opened. Covers the iPad game (tablet/) and the
    iPhone PED (ped/). Only same-origin GET requests are handled: GitHub sync calls go straight to
    the network. Run `python3 tools/update_sw.py` after adding or renaming files. */
-const VERSION = '81c4d3daf5';
+const VERSION = '28f5fbe3af';
 const CACHE = 'aquanova-' + VERSION;
 const ASSETS = [
  "tablet/",
@@ -14,6 +14,7 @@ const ASSETS = [
  "data/logbooks/SeaTrials.json",
  "data/missions/index.json",
  "data/missions/meetTheCrew.json",
+ "data/missions/seaTrials.json",
  "data/readme.txt",
  "game/saveManager.js",
  "game/state.js",

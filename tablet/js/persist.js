@@ -34,6 +34,13 @@ export function snapshotSim() {
   });
 }
 
+/** Missions watch depth and speed, so keep those two current. Cheap: writes only when a rounded value changed. */
+export function liveNav() {
+  const s = sim.s, depth = Math.round(s.depth), speed = +s.speed.toFixed(1);
+  if (gameState.getProperty('navigation.depth') === depth && gameState.getProperty('navigation.speed') === speed) return;
+  gameState.batch(() => { gameState.updateProperty('navigation.depth', depth); gameState.updateProperty('navigation.speed', speed); });
+}
+
 /** Copy GameState into the sim. The ship holds still after a load (safer than resuming at speed). */
 export function restoreSim() {
   const nav = gameState.getProperty('navigation');

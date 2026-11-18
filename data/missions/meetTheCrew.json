@@ -115,12 +115,19 @@
       "type": "set_property",
       "property": "progress.tutorial_phase",
       "value": "communications_complete"
+    },
+    {
+      "type": "send_message",
+      "message": {
+        "id": "oera-sea-trials",
+        "from": "OERA Operations",
+        "subject": "Sea trials orders",
+        "missionId": "seaTrials",
+        "text": "Captain, welcome aboard. Get the Aqua Nova out of dry dock and underway for sea trials. Take her below 50 meters, run her up to speed, then bring her back to the surface and report. Accept the mission when you are ready."
+      }
     }
   ],
-  "followUpMissions": [
-    "tutorial_meet_crew",
-    "tutorial_ship_systems"
-  ],
+  "followUpMissions": [],
   "rewards": {
     "experience": 100,
     "items": [

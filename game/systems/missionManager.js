@@ -5,6 +5,8 @@
 import gameStateInstance from '../state.js';
 
 import { dlog } from '../../utils/log.js';
+const PROPERTY_TRIGGERS = ['property_change', 'property_at_least', 'property_at_most'];
+
 class MissionManager {
     constructor() {
         this.missions = new Map();
@@ -23,6 +25,11 @@ class MissionManager {
         
         // Restore progress from the loaded save, then start anything new
         this.restoreFromState();
+        // Messages promised by finished missions (safe to repeat: an id is delivered once)
+        for (const id of this.completedMissions) {
+            const m = this.missions.get(id);
+            if (m && m.onComplete) this.executeActions(m.onComplete.filter(a => a.type === 'send_message'));
+        }
         this.checkAutoStartMissions();
         
         this.initialized = true;
@@ -77,6 +84,8 @@ class MissionManager {
         document.addEventListener('location-enter', (e) => {
             this.handleTrigger('location_enter', { location: e.detail.location });
         });
+
+        document.addEventListener('report-sent', () => this.handleTrigger('report_sent', {}));
 
         document.addEventListener('dialogue-complete', (e) => {
             this.handleTrigger('dialogue_complete', { 
@@ -158,9 +167,9 @@ class MissionManager {
             const saved = gameStateInstance.getProperty('mission.objectives') || [];
             for (const objective of mission.objectives) {
                 const entry = saved.find(o => o.id === `${missionId}_${objective.id}`);
-                if (!entry || entry.status === 'completed') continue;
+                if (!entry || entry.status === 'completed' || !this.objectiveUnlocked(mission, objective, saved)) continue;
                 for (const trigger of objective.triggers || []) {
-                    if (trigger.type === 'property_change' && this.checkTriggerCondition(trigger, null)) {
+                    if (PROPERTY_TRIGGERS.includes(trigger.type) && this.checkTriggerCondition(trigger, null)) {
                         this.completeObjective(missionId, objective.id);
                     }
                 }
@@ -178,8 +187,9 @@ class MissionManager {
             const mission = this.missions.get(missionId);
             if (!mission) continue;
             
+            const saved = gameStateInstance.getProperty('mission.objectives') || [];
             for (const objective of mission.objectives) {
-                if (objective.triggers) {
+                if (objective.triggers && this.objectiveUnlocked(mission, objective, saved)) {
                     for (const trigger of objective.triggers) {
                         if (trigger.type === triggerType && this.checkTriggerCondition(trigger, data)) {
                             this.completeObjective(missionId, objective.id);
@@ -190,8 +200,26 @@ class MissionManager {
         }
     }
 
+    // An objective with "after": "<id>" waits until that objective is done.
+    objectiveUnlocked(mission, objective, saved) {
+        if (!objective.after) return true;
+        const prev = saved.find(o => o.id === `${mission.id}_${objective.after}`);
+        return !!prev && prev.status === 'completed';
+    }
+
     checkTriggerCondition(trigger, data) {
         switch (trigger.type) {
+            case 'property_at_least': {
+                const v = Number(gameStateInstance.getProperty(trigger.property));
+                return Number.isFinite(v) && v >= trigger.value;
+            }
+            case 'property_at_most': {
+                const raw = gameStateInstance.getProperty(trigger.property);
+                const v = Number(raw);
+                return raw != null && Number.isFinite(v) && v <= trigger.value;
+            }
+            case 'report_sent':
+                return true;
             case 'item_pickup':
                 return trigger.itemId === data.itemId;
             case 'location_enter':
@@ -305,10 +333,24 @@ class MissionManager {
                 case 'spawn_interactive':
                     this.spawnInteractive(action.elementId, action.location);
                     break;
+                case 'send_message':
+                    this.sendMessage(action.message);
+                    break;
+                case 'start_mission':
+                    this.startMission(action.missionId);
+                    break;
                 default:
                     console.warn(`Unknown action type: ${action.type}`);
             }
         }
+    }
+
+    // Puts a message in the Comms inbox. The same id is never delivered twice.
+    sendMessage(msg) {
+        const inbox = gameStateInstance.getProperty('mission.inbox') || [];
+        if (inbox.some(m => m.id === msg.id)) return;
+        gameStateInstance.updateProperty('mission.inbox', [...inbox, { ...msg, read: false, receivedAt: new Date().toISOString() }]);
+        document.dispatchEvent(new CustomEvent('comms-message', { detail: { from: msg.from, subject: msg.subject } }));
     }
 
     addItemToInventory(itemId, quantity = 1) {

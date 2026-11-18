@@ -1,0 +1,77 @@
+#!/usr/bin/env python3
+"""Missions by message: First Contact delivers the sea trials orders, the player accepts them in Comms,
+and the mission follows dive, speed, surface and report (in that order for surface and report).
+Run from repo root:  python3 tools/trials_flow.py
+"""
+import os, sys, shutil, importlib.util
+from playwright.sync_api import sync_playwright
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+spec = importlib.util.spec_from_file_location("smoke", os.path.join(ROOT, "tools", "smoke.py"))
+smoke = importlib.util.module_from_spec(spec); spec.loader.exec_module(smoke)
+SHOTS = os.path.join(ROOT, "tools", "shots"); os.makedirs(SHOTS, exist_ok=True)
+fails = []
+def check(name, ok, extra=""):
+    print(("ok   " if ok else "FAIL ") + name + (f"  {extra}" if extra and not ok else ""))
+    if not ok: fails.append(name)
+
+def main():
+    server, site = smoke.start_server()
+    base = f"http://127.0.0.1:{server.server_address[1]}/AquaNova/tablet/"
+    errors = []
+    with sync_playwright() as p:
+        browser = smoke.launch(p)
+        ctx = browser.new_context(viewport={"width": 1180, "height": 820}, has_touch=True, device_scale_factor=2)
+        page = ctx.new_page()
+        page.on("console", lambda m: errors.append(m.text[:200]) if m.type == "error" else None)
+        page.on("pageerror", lambda e: errors.append("uncaught " + str(e)[:200]))
+        js = lambda code: page.evaluate("(async()=>{" + code + "})()")
+        G = "const g=(await import('./js/persist.js')).gameState;"
+        objs = lambda: js(G + "return (g.getProperty('mission.objectives')||[]).map(o=>o.id.replace('seaTrials_','')+':'+o.status)")
+        fly = lambda depth, speed: js("const s=(await import('./js/sim.js')).sim.s; s.depth=s.targetDepth="+str(depth)+"; s.speed="+str(speed)+"; (await import('./js/persist.js')).liveNav();")
+
+        page.goto(base); page.wait_for_function("!document.getElementById('board-btn').disabled", timeout=15000)
+        page.tap("#board-btn"); page.wait_for_timeout(900)
+        page.tap(".modal .btn"); page.wait_for_timeout(300)
+        check("no messages before First Contact", js(G + "return (g.getProperty('mission.inbox')||[]).length") == 0)
+        js("const m=(await import('../game/systems/missionManager.js')).default; m.forceCompleteMission('meetTheCrew')"); page.wait_for_timeout(400)
+        check("First Contact delivers the sea trials orders", js(G + "return (g.getProperty('mission.inbox')||[]).some(m=>m.id==='oera-sea-trials')"))
+        check("dock badge shows 1 unread", page.inner_text('.dbtn[data-st="comms"] .badge').strip() == "1" and page.is_visible('.dbtn[data-st="comms"] .badge'))
+        check("mission is not started until accepted", (js(G + "return (g.getProperty('mission.objectives')||[]).length")) == 0)
+        page.tap('.dbtn[data-st="comms"]'); page.wait_for_timeout(500)
+        page.tap(".msg-head"); page.wait_for_timeout(300)
+        check("message text and Accept button show after opening", page.is_visible("text=Take her below 50 meters") and page.is_visible('button:text-is("Accept mission")'))
+        page.screenshot(path=f"{SHOTS}/m-1message.png")
+        page.tap('button:text-is("Accept mission")'); page.wait_for_timeout(500)
+        o = objs(); check("mission started with 4 objectives", len(o) == 4, o)
+        check("accepted state shown", page.is_visible("text=Mission accepted"))
+        page.tap("#station .st-head .btn"); page.wait_for_timeout(200)
+        check("badge hidden once read", not page.is_visible('.dbtn[data-st="comms"] .badge'))
+
+        fly(60, 6.5); page.wait_for_timeout(300)
+        o = objs(); check("dive and speed complete", "dive:completed" in o and "speed:completed" in o and "surface:active" in o, o)
+        js("document.dispatchEvent(new CustomEvent('report-sent'))"); page.wait_for_timeout(200)
+        check("report sent too early does not count", "report:active" in objs(), objs())
+        fly(40, 2); page.wait_for_timeout(200)
+        check("not surfaced at 40 m", "surface:active" in objs())
+        fly(10, 1); page.wait_for_timeout(300)
+        o = objs(); check("surface complete at 10 m", "surface:completed" in o and "report:active" in o, o)
+        page.tap('.dbtn[data-st="comms"]'); page.wait_for_timeout(500)
+        check("link up at 10 m", page.is_visible("text=LINK UP"))
+        page.screenshot(path=f"{SHOTS}/m-2link.png")
+        page.tap('button:text-is("Transmit report")'); page.wait_for_timeout(600)
+        done = js(G + "return [g.getProperty('mission.completedIds'), (g.getProperty('mission.objectives')||[]).length, (g.getProperty('mission.inbox')||[]).map(m=>m.id), g.getProperty('mission.outbox').length]")
+        check("report completes Sea Trials", "seaTrials" in done[0] and done[1] == 0, done)
+        check("OERA reply arrives", "oera-trials-done" in done[2], done)
+        check("report is in the outbox", done[3] == 1, done)
+        page.screenshot(path=f"{SHOTS}/m-3done.png")
+        # reload: nothing restarts, no duplicate messages
+        page.goto(base); page.wait_for_function("!document.getElementById('board-btn').disabled", timeout=15000)
+        page.tap("#board-btn"); page.wait_for_timeout(900)
+        done = js(G + "return [g.getProperty('mission.completedIds'), (g.getProperty('mission.objectives')||[]).length, (g.getProperty('mission.inbox')||[]).length]")
+        check("after reload: Sea Trials stays done, nothing restarts, no duplicate messages", "seaTrials" in done[0] and done[1] == 0 and done[2] == 2, done)
+        browser.close()
+    server.shutdown(); shutil.rmtree(site, ignore_errors=True)
+    check("no console errors", not errors, errors)
+    print(f"\n{len(fails)} failure(s)"); sys.exit(1 if fails else 0)
+if __name__ == "__main__":
+    main()
