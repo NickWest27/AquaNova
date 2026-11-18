@@ -95,7 +95,7 @@ async function toggleComm() {
   gameState.updateProperty('tutorial.communicator_opened', true); // "First Contact" step 3
   const root = $('#comm-pop'), body = el('div', { class: 'st-body' });
   root.replaceChildren(el('div', { class: 'comm-panel' },
-    el('header', { class: 'st-head' }, el('div', { class: 'st-title', text: 'Communicator' }), el('small', { class: 'comm-live', text: '● voice channel' }), el('button', { class: 'btn comm-close', style: 'margin-left:auto', text: 'Close ✕', onclick: closeComm })),
+    el('div', { class: 'comm-top' }, el('small', { class: 'comm-live', text: '● voice channel open' }), el('button', { class: 'btn comm-close', text: 'Close ✕', onclick: closeComm })),
     body));
   root.onclick = (e) => { if (e.target === root) closeComm(); };
   root.hidden = false;

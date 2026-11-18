@@ -8,6 +8,19 @@ import { getConfig, describeSync, connect as connectSync, clearConfig, makeJourn
 import { DEBUG } from '../../../utils/log.js';
 import { getSound, setSound, chirp, testSound, audioState } from '../audio.js';
 
+let appVersion = '…';
+try { if (window.caches) caches.keys().then((k) => { const v = k.find((n) => n.startsWith('aquanova-')); appVersion = v ? v.slice(9) : 'not saved offline'; }); } catch (e) { /* ignore */ }
+/** Forget the saved offline copy and load every file again from the server. Saves are not touched. */
+async function updateNow() {
+  try {
+    const regs = navigator.serviceWorker ? await navigator.serviceWorker.getRegistrations() : [];
+    await Promise.all(regs.map((r) => r.unregister()));
+    const keys = window.caches ? await caches.keys() : [];
+    await Promise.all(keys.map((k) => caches.delete(k)));
+  } catch (e) { console.warn('Update clear failed', e); }
+  location.replace(location.pathname + '?v=' + Date.now());
+}
+
 export function mount(body, ctx) {
   body.classList.add('more-st');
   const tabs = el('div', { class: 'tabs' }), tb = el('div', { class: 'tab-body' });
@@ -84,6 +97,8 @@ export function mount(body, ctx) {
             el('button', { class: 'btn primary', text: 'Test sound', onclick: () => { const st = testSound(); toast(`Sound engine: ${st.state}`); setTimeout(render, 400); } }),
             el('button', { class: 'btn', text: getSound().on ? 'Turn sound off' : 'Turn sound on', onclick: () => { setSound({ on: !getSound().on }); if (getSound().on) chirp(); render(); } }),
             ...[['Quiet', 0.25], ['Medium', 0.6], ['Loud', 1]].map(([t, v]) => el('button', { class: `btn ${Math.abs(getSound().vol - v) < 0.01 ? 'primary' : ''}`, text: t, onclick: () => { setSound({ vol: v }); chirp(); render(); } })))),
+        el('div', { class: 'card setting' }, el('div', { class: 'lbl', text: 'Game version' }), el('p', { text: `Build ${appVersion}. The game checks for updates each time it opens. If a change is missing, tap Update now. Your saves stay.` }),
+          el('button', { class: 'btn primary', text: 'Update now', onclick: updateNow })),
         el('div', { class: 'card setting' }, el('div', { class: 'lbl', text: 'Text size' }), el('div', { class: 'row' }, zoomBtn('Smaller', -0.1), zoomBtn('Reset', 0), zoomBtn('Larger', 0.1))),
         el('div', { class: 'card setting' }, el('div', { class: 'lbl', text: 'Debug' }), el('p', { text: DEBUG ? 'Debug logging is on. Triple-tap the top-left corner to see the log.' : 'Triple-tap the top-left corner to see the log panel. Add ?debug=1 to the address for routine logs.' })),
         el('div', { class: 'card setting' }, el('div', { class: 'lbl', text: 'New game' }), el('p', { text: 'Erases every logbook and save on this device, then restarts the tutorial.' }),

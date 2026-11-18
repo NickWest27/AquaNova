@@ -1,8 +1,8 @@
-/* Aqua Nova offline cache. Serves the saved copy at once and refreshes it in the background,
-   so an update arrives the next time the game is opened. Covers the iPad game (tablet/) and the
+/* Aqua Nova offline cache. Asks the network first (so updates arrive on the next open) and
+   falls back to the saved copy when offline or slow. Covers the iPad game (tablet/) and the
    iPhone PED (ped/). Only same-origin GET requests are handled: GitHub sync calls go straight to
    the network. Run `python3 tools/update_sw.py` after adding or renaming files. */
-const VERSION = 'd41a3df782';
+const VERSION = '741bfe8abe';
 const CACHE = 'aquanova-' + VERSION;
 const ASSETS = [
  "tablet/",
@@ -66,10 +66,17 @@ self.addEventListener('fetch', (e) => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
+  // Network first, so an update arrives on the next open. If the network is slow (2.5 s) or gone,
+  // the saved copy answers, and the fresh copy still finishes saving in the background.
   e.respondWith(caches.open(CACHE).then(async (cache) => {
-    const cached = await cache.match(req, { ignoreSearch: true });
-    const net = fetch(req, { cache: 'no-cache' }).then((res) => { if (res && res.ok) cache.put(req, res.clone()); return res; })
-      .catch(() => cached || (req.mode === 'navigate' ? cache.match(url.pathname.includes('/ped/') ? 'ped/index.html' : 'tablet/index.html') : Response.error()));
-    return cached || net;
+    const fallback = () => cache.match(req, { ignoreSearch: true }).then((c) => c || (req.mode === 'navigate' ? cache.match(url.pathname.includes('/ped/') ? 'ped/index.html' : 'tablet/index.html') : Response.error()));
+    const net = fetch(req, { cache: 'no-cache' }).then((res) => { if (res && res.ok) cache.put(req, res.clone()); return res; });
+    const slow = new Promise((resolve) => setTimeout(() => resolve(null), 2500));
+    try {
+      const first = await Promise.race([net, slow]);
+      if (first) return first;
+      net.catch(() => null);
+      return (await fallback()) || net;
+    } catch (err) { return fallback(); }
   }));
 });

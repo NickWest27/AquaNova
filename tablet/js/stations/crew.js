@@ -3,7 +3,6 @@ import { sim, toward } from '../sim.js';
 import { el, toast } from '../util.js';
 import { gameState } from '../persist.js';
 
-const threads = {};
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
 
 export const knownCrew = () => Object.values(gameState.getProperty('contacts.crew') || {})
@@ -26,46 +25,53 @@ function act(text, ctx) {
 }
 
 export function mount(body, ctx) {
-  body.classList.add('crew-st');
+  body.classList.add('comm-menu');
   const crew = knownCrew();
-  let cur = crew.find((c) => c.id === 'executiveOfficer') || crew[0];
-  const list = el('div', { class: 'crew-list' });
-  const name = el('b'), role = el('small'), avatar = el('span', { class: 'avatar' });
-  const msgs = el('div', { class: 'msgs' });
-  const screen = el('div', { class: 'comm-screen' }, el('div', { class: 'comm-head' }, avatar, el('div', {}, name, role)), msgs);
-    const say = el('div', { class: 'say' });
-  body.append(list, screen, say);
+  let page = 'crew', cur = null, cat = null, reply = null, greeted = false;
+  const mineP = () => gameState.getProperty('contacts.crew.captain.dialogueOptions.pleasantries') || ['Hello', 'Goodbye', 'Thank you'];
+  const cats = () => {
+    const o = (cur && cur.dialogueOptions) || {};
+    return [['Pleasantries', mineP()], ['Commands', o.commands || []], ['Emergency', o.emergency || []]].filter(([, l]) => l.length);
+  };
+  const line = (text, onclick, cls = '') => el('button', { class: `comm-line ${cls}`, text, onclick });
+  const initial = (c) => c.name.replace(/^(Captain|Commander|Dr\.|Specialist|Engineer|Lieutenant) /, '')[0];
 
-  const thread = () => (threads[cur.id] ||= []);
-  function renderList() {
-    list.replaceChildren(...crew.map((c) => el('button', { class: `crew-btn ${c === cur ? 'on' : ''}`, onclick: () => { cur = c; renderList(); renderThread(); } },
-      el('span', { class: 'avatar', text: c.name.replace(/^(Captain|Commander|Dr\.|Specialist|Engineer|Lieutenant) /, '')[0] }),
-      el('span', {}, el('b', { text: c.name }), el('small', { text: c.role })))));
-  }
-  function renderThread() {
-    if (!cur) { msgs.replaceChildren(el('div', { class: 'empty', text: 'No contacts yet.' })); say.replaceChildren(); return; }
-    name.textContent = cur.name; role.textContent = cur.role; avatar.textContent = cur.name.replace(/^(Captain|Commander|Dr\.|Specialist|Engineer|Lieutenant) /, '')[0];
-    avatar.classList.toggle('aria', cur.id === 'executiveOfficer');
-    const t = thread();
-    if (!t.length && cur.id === 'executiveOfficer') t.push({ who: 'in', text: 'Welcome aboard, Captain. I am ARIA, your executive officer. How may I assist you?' });
-    msgs.replaceChildren(...(t.length ? t : [el('div', { class: 'empty', text: `Channel open to ${cur.name}.` })]).map((m) =>
-      m.nodeType ? m : el('div', { class: `bubble ${m.who}` }, el('small', { text: m.who === 'in' ? cur.name : 'You' }), m.text)));
-    msgs.scrollTop = msgs.scrollHeight;
-    const mine = (gameState.getProperty('contacts.crew.captain.dialogueOptions.pleasantries') || ['Hello', 'Goodbye', 'Thank you']);
-    const o = cur.dialogueOptions || { commands: [], emergency: [], pleasantries: [] };
-    const opts = [...mine, ...o.commands, ...o.emergency];
-    say.replaceChildren(el('div', { class: 'lbl', text: 'Say' }), el('div', { class: 'say-opts' },
-      opts.map((txt) => el('button', { class: `btn ${(o.emergency || []).includes(txt) ? 'danger' : ''}`, text: txt, onclick: () => speak(txt) }))));
-  }
   function speak(text) {
-    const t = thread();
-    t.push({ who: 'out', text });
+    const o = cur.dialogueOptions || {};
     const done = act(text, ctx);
-    const isCommand = [...(cur.dialogueOptions.commands || []), ...(cur.dialogueOptions.emergency || [])].includes(text);
-    t.push({ who: 'in', text: done || (isCommand ? 'Aye, Captain.' : pick(cur.dialogueOptions.pleasantries || ['Aye.'])) });
+    const isCommand = [...(o.commands || []), ...(o.emergency || [])].includes(text);
+    reply = { said: text, text: done || (isCommand ? 'Aye, Captain.' : pick(o.pleasantries || ['Aye.'])) };
+    page = 'reply';
     document.dispatchEvent(new CustomEvent('dialogue-complete', { detail: { characterId: cur.id, dialogueId: 'first_contact' } }));
-    renderThread();
+    render();
   }
-  renderList(); renderThread();
+
+  function render() {
+    let kids;
+    if (!crew.length) kids = [el('div', { class: 'comm-head', text: 'No one else seems to be available right now…' })];
+    else if (page === 'crew') {
+      kids = [el('div', { class: 'comm-head', text: 'Who would you like to reach out to?' }),
+        ...crew.map((c) => el('button', { class: 'comm-line comm-who', onclick: () => {
+          cur = c; cat = null;
+          if (c.id === 'executiveOfficer' && !greeted) { greeted = true; reply = { said: null, text: 'Welcome aboard, Captain. I am ARIA, your executive officer. How may I assist you?' }; page = 'reply'; } else page = 'cat';
+          render();
+        } }, el('span', { class: `avatar ${c.id === 'executiveOfficer' ? 'aria' : ''}`, text: initial(c) }), el('span', {}, el('b', { text: c.name }), el('small', { text: c.role }))))];
+    } else if (page === 'cat') {
+      kids = [el('div', { class: 'comm-head', text: `What would you like to say to ${cur.name}?` }),
+        ...cats().map(([n, l]) => line(n, () => { cat = [n, l]; page = 'lines'; render(); }, n === 'Emergency' ? 'danger' : '')),
+        line('Someone else …', () => { page = 'crew'; render(); }, 'back')];
+    } else if (page === 'lines') {
+      kids = [el('div', { class: 'comm-head', text: `${cat[0]} with ${cur.name}` }),
+        ...cat[1].map((t) => line(t, () => speak(t), cat[0] === 'Emergency' ? 'danger' : '')),
+        line('Something else …', () => { page = 'cat'; render(); }, 'back')];
+    } else {
+      kids = [reply.said && el('div', { class: 'comm-you', text: `You: ${reply.said}` }),
+        el('div', { class: 'comm-reply' }, el('small', { text: cur.name }), el('p', { text: reply.text })),
+        line('Say something else …', () => { page = 'cat'; render(); }, 'back'),
+        line('Someone else …', () => { page = 'crew'; render(); }, 'back')];
+    }
+    body.replaceChildren(el('div', { class: 'comm-page' }, ...kids));
+  }
+  render();
   return { update() {}, destroy() {} };
 }
