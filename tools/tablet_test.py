@@ -10,7 +10,7 @@ spec = importlib.util.spec_from_file_location("smoke", os.path.join(ROOT, "tools
 smoke = importlib.util.module_from_spec(spec); spec.loader.exec_module(smoke)
 SHOTS = os.path.join(ROOT, "tools", "shots"); os.makedirs(SHOTS, exist_ok=True)
 SIZES = {"land": (1180, 820), "old": (1024, 768), "port": (820, 1180)}
-STATIONS = ["nav", "helm", "sys", "comms", "log", "more"]
+STATIONS = ["nav", "helm", "sys", "log", "more"]  # comms is covered by tablet_flow.py (locked until the tutorial pickup)
 
 def main():
     server, site = smoke.start_server()
@@ -29,6 +29,9 @@ def main():
             page.goto(base); page.wait_for_function("!document.getElementById('board-btn').disabled", timeout=15000)
             page.screenshot(path=f"{SHOTS}/t-{tag}-0splash.png")
             page.tap("#board-btn"); page.wait_for_timeout(1200)
+            page.tap(".modal .btn"); page.wait_for_timeout(300)
+            page.screenshot(path=f"{SHOTS}/t-{tag}-1quarters.png")
+            page.tap('.dbtn[data-st="quarters"]'); page.wait_for_timeout(500)
             page.screenshot(path=f"{SHOTS}/t-{tag}-1bridge.png")
             for st in STATIONS:
                 page.tap(f'.dbtn[data-st="{st}"]'); page.wait_for_timeout(700)
@@ -39,7 +42,6 @@ def main():
                 if page.evaluate("document.documentElement.scrollWidth > innerWidth + 1"): note(f"{st}: horizontal overflow")
                 page.tap("#station .st-head .btn"); page.wait_for_timeout(200)
             page.tap('.dbtn[data-st="quarters"]'); page.wait_for_timeout(600)
-            page.screenshot(path=f"{SHOTS}/t-{tag}-3quarters.png")
             ctx.close()
         browser.close()
     server.shutdown(); shutil.rmtree(site, ignore_errors=True)

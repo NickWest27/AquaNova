@@ -114,8 +114,11 @@ class SaveManager {
             return false;
         }
 
-        // Load the most recent entry's game snapshot if available
-        if (logbook.entries && logbook.entries.length > 0) {
+        // A checkpoint (autosave) is newer than any entry, so it wins
+        if (logbook.checkpoint && logbook.checkpoint.gameSnapshot) {
+            this.gameState.loadFromSnapshot(logbook.checkpoint.gameSnapshot);
+        } else if (logbook.entries && logbook.entries.length > 0) {
+            // Load the most recent entry's game snapshot if available
             const lastEntry = logbook.entries[logbook.entries.length - 1];
             if (lastEntry.gameSnapshot) {
                 this.gameState.loadFromSnapshot(lastEntry.gameSnapshot);
@@ -178,11 +181,20 @@ class SaveManager {
         // Add to active logbook's entries
         if (!logbook.entries) logbook.entries = [];
         logbook.entries.push(entry);
+        logbook.checkpoint = { timestamp: entry.logbook.timestamp, gameSnapshot: entry.gameSnapshot };
         
         this.updateLogbookStats(logbook);
         this.saveBookshelf();
         
         return entry;
+    }
+
+    // Autosave: overwrites one slot, never adds a logbook entry.
+    saveCheckpoint() {
+        const logbook = this.getActiveLogbook();
+        if (!logbook) return false;
+        logbook.checkpoint = { timestamp: new Date().toISOString(), gameSnapshot: this.gameState.createSnapshot() };
+        return this.saveBookshelf();
     }
 
     revertToEntry(entryId) {
@@ -202,6 +214,7 @@ class SaveManager {
 
         // Revert GameState to this snapshot
         this.gameState.loadFromSnapshot(entry.gameSnapshot);
+        logbook.checkpoint = null;
         
         // Remove all entries after this one
         logbook.entries = logbook.entries.slice(0, entryIndex + 1);

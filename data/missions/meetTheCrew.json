@@ -1,17 +1,11 @@
 {
   "id": "meetTheCrew",
   "name": "First Contact",
-  "description": "Locate your personal communicator and establish contact with AREA, your executive officer.",
+  "description": "Locate your personal communicator and establish contact with ARIA, your executive officer.",
   "category": "tutorial",
   "priority": "high",
   "autoStart": true,
-  "prerequisites": [
-    {
-      "type": "property_equals",
-      "property": "contacts.crew.captain.communicator",
-      "value": false
-    }
-  ],
+  "prerequisites": [],
   "objectives": [
     {
       "id": "find_communicator",
@@ -61,7 +55,7 @@
     },
     {
       "id": "learn_communicator",
-      "description": "Learn how to use the communicator (Press C to activate)",
+      "description": "Open your communicator (tap the badge, or press C)",
       "required": true,
       "triggers": [
         {
@@ -79,19 +73,19 @@
     },
     {
       "id": "contact_area",
-      "description": "Use the communicator to contact AREA command",
+      "description": "Use the communicator to contact ARIA",
       "required": true,
       "triggers": [
         {
           "type": "dialogue_complete",
-          "characterId": "area_command",
+          "characterId": "executiveOfficer",
           "dialogueId": "first_contact"
         }
       ],
       "onComplete": [
         {
           "type": "add_contextual",
-          "characterId": "area_command",
+          "characterId": "executiveOfficer",
           "context": "first_meeting"
         },
         {

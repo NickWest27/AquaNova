@@ -519,7 +519,7 @@ function sendThought(message) {
         }
       });
       document.dispatchEvent(event);
-      dlog('First contact with AREA completed - mission event fired');
+      dlog('First contact with ARIA completed - mission event fired');
     }
   }
   

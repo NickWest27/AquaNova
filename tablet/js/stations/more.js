@@ -1,4 +1,4 @@
-import { el, toast } from '../util.js';
+import { el, modal } from '../util.js';
 import { DEBUG } from '../../../utils/log.js';
 
 export function mount(body, ctx) {
@@ -16,7 +16,9 @@ export function mount(body, ctx) {
       return [
         el('div', { class: 'card setting' }, el('div', { class: 'lbl', text: 'Text size' }), el('div', { class: 'row' }, zoomBtn('Smaller', -0.1), zoomBtn('Reset', 0), zoomBtn('Larger', 0.1))),
         el('div', { class: 'card setting' }, el('div', { class: 'lbl', text: 'Debug' }), el('p', { text: DEBUG ? 'Debug logging is on. Triple-tap the top-left corner to see the log.' : 'Triple-tap the top-left corner to see the log panel. Add ?debug=1 to the address for routine logs.' })),
-        el('div', { class: 'card setting' }, el('div', { class: 'lbl', text: 'Reset' }), el('button', { class: 'btn danger', text: 'Clear saved log', onclick: () => { localStorage.removeItem('aquaNova_tablet_log'); toast('Log cleared'); } })),
+        el('div', { class: 'card setting' }, el('div', { class: 'lbl', text: 'New game' }), el('p', { text: 'Erases every logbook and save on this device, then restarts the tutorial.' }),
+          el('button', { class: 'btn danger', text: 'Erase and restart', onclick: () => modal({ title: 'Erase all saves?', body: el('p', { text: 'This cannot be undone. Export your logbook first if you want to keep it.' }),
+            actions: [{ label: 'Cancel' }, { label: 'Erase', kind: 'danger', primary: true, run: () => { try { localStorage.removeItem('aquaNovaBookshelf'); } catch (e) { /* ignore */ } location.reload(); } }] }) })),
       ];
     },
     about() { return [el('div', { class: 'card' }, el('h3', { text: 'Aqua Nova DSV: tablet edition' }), el('p', { text: 'Touch-first bridge. The scene is one image; every control is a large tap target; the simulation sleeps when the app is hidden.' }))]; },

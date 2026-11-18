@@ -14,9 +14,9 @@
         },
         "executiveOfficer": {
             "id": "executiveOfficer",
-            "name": "Commander AREA",
+            "name": "Commander ARIA",
             "role": "Executive Officer",
-            "bio": "AREA is a state of the art AI, designed to assist in ship operations and crew management. She is efficient, logical, and always ready to help.",
+            "bio": "ARIA (Advanced Research and Interface Assistant) is a state of the art AI, designed to assist in ship operations and crew management. She is efficient, logical, and always ready to help.",
             "image": "images/crew/AREA.png",
             "dialogueOptions": {
                 "commands": ["Report to my quarters", "Status Report", "Let's take her to sea", "Let's go home"],

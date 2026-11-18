@@ -21,11 +21,27 @@ class MissionManager {
         // Set up trigger listeners
         this.setupTriggers();
         
-        // Start initial missions based on game state
+        // Restore progress from the loaded save, then start anything new
+        this.restoreFromState();
         this.checkAutoStartMissions();
         
         this.initialized = true;
         dlog('MissionManager initialized');
+    }
+
+    // Rebuild the active/completed sets from saved game state.
+    // Without this a reload would restart finished missions.
+    restoreFromState() {
+        this.activeMissions.clear();
+        this.completedMissions.clear();
+        const done = gameStateInstance.getProperty('mission.completedIds') || [];
+        done.forEach(id => this.completedMissions.add(id));
+        const objectives = gameStateInstance.getProperty('mission.objectives') || [];
+        objectives.forEach(obj => {
+            if (obj.missionId && this.missions.has(obj.missionId) && !this.completedMissions.has(obj.missionId)) {
+                this.activeMissions.add(obj.missionId);
+            }
+        });
     }
 
     async loadMissions() {
@@ -137,7 +153,19 @@ class MissionManager {
         for (const missionId of this.activeMissions) {
             const mission = this.missions.get(missionId);
             if (!mission) continue;
-            
+
+            // Objectives that wait for a property to change (nothing else fires these)
+            const saved = gameStateInstance.getProperty('mission.objectives') || [];
+            for (const objective of mission.objectives) {
+                const entry = saved.find(o => o.id === `${missionId}_${objective.id}`);
+                if (!entry || entry.status === 'completed') continue;
+                for (const trigger of objective.triggers || []) {
+                    if (trigger.type === 'property_change' && this.checkTriggerCondition(trigger, null)) {
+                        this.completeObjective(missionId, objective.id);
+                    }
+                }
+            }
+
             this.checkMissionProgress(missionId, gameState);
         }
     }
@@ -227,6 +255,8 @@ class MissionManager {
 
         this.activeMissions.delete(missionId);
         this.completedMissions.add(missionId);
+        const doneIds = gameStateInstance.getProperty('mission.completedIds') || [];
+        if (!doneIds.includes(missionId)) gameStateInstance.updateProperty('mission.completedIds', [...doneIds, missionId]);
         
         // Remove objectives from active list
         const objectives = gameStateInstance.getProperty('mission.objectives') || [];
@@ -327,11 +357,13 @@ class MissionManager {
     showMissionNotification(title, subtitle) {
         // Integration with your existing notification system
         dlog(`Mission Notification: ${title} - ${subtitle}`);
+        document.dispatchEvent(new CustomEvent('mission-notify', { detail: { title, subtitle } }));
         // You could integrate this with your PDA overlay system
     }
 
     showObjectiveNotification(description, status) {
         dlog(`Objective: ${description} - ${status}`);
+        document.dispatchEvent(new CustomEvent('mission-notify', { detail: { title: description, subtitle: status } }));
     }
 
     // Debug and utility methods

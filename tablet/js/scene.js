@@ -48,10 +48,12 @@ export function createScene(stage, { onOpen }) {
 
   // quarters
   const qimg = el('img', { src: 'assets/quarters.webp', alt: '', draggable: 'false', style: 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover' });
+  const pickup = el('button', { class: 'pickup', hidden: true, style: 'left:480px;top:560px;width:120px;height:180px', 'aria-label': 'Pick up communicator', onclick: () => onOpen('pickup') },
+    el('img', { src: 'assets/comm-pin.webp', alt: '' }), el('span', { class: 'tag', text: 'COMMUNICATOR' }));
   quarters.append(qimg,
-    hs('COMMUNICATOR', 760, 560, 400, 200, () => onOpen('communicator'), 'mid', 'hint'),
-    hs('LOGBOOK', 260, 380, 360, 180, () => onOpen('log'), 'mid'),
-    hs('TO BRIDGE', 1380, 400, 380, 200, () => onOpen('bridge'), 'mid'));
+    hs('LOGBOOK', 210, 516, 290, 190, () => onOpen('log'), 'top'),
+    hs('TO BRIDGE', 1236, 120, 560, 700, () => onOpen('bridge'), 'mid'),
+    pickup);
   stage.append(bridge, quarters);
 
   const api = {
@@ -73,6 +75,8 @@ export function createScene(stage, { onOpen }) {
       const moving = s.speed > 0.3; if (cache.get('mv') !== moving) { cache.set('mv', moving); view.classList.toggle('moving', moving); }
       const dk = Math.min(0.9, s.depth / 900).toFixed(2); if (cache.get('dk') !== dk) { cache.set('dk', dk); dark.style.opacity = dk; }
     },
+    showPickup(on) { pickup.hidden = !on; },
+    lock(label, on) { stage.querySelectorAll('.hs').forEach((b) => { if (b.textContent === label) b.classList.toggle('locked', on); }); },
     glow(label, on) { stage.querySelectorAll('.hs').forEach((b) => { if (b.textContent === label) b.classList.toggle('glow', on); }); },
   };
   return api;

@@ -25,12 +25,12 @@
           "name": "Admiral Elena Vasquez",
           "role": "Director of Operations"
         },
-        "content": "Welcome onboard Captain. I trust you are settling in well. This is your digital logbook where you can record your mission progress, discoveries, and any important notes. Please ensure to keep it updated regularly. I must apologize for the haste, but it is of utmost importance that you get Aqua Nova out of dry dock and underway for sea trials. You and the crew need to get yourselves familiarized with the ships operation and systems under various conditions.\nOn your desk in your quarters you should find a communicator pin. Put it on and use it to call AREA, your Executive Officer.",
+        "content": "Welcome onboard Captain. I trust you are settling in well. This is your digital logbook where you can record your mission progress, discoveries, and any important notes. Please ensure to keep it updated regularly. I must apologize for the haste, but it is of utmost importance that you get Aqua Nova out of dry dock and underway for sea trials. You and the crew need to get yourselves familiarized with the ships operation and systems under various conditions.\nOn your desk in your quarters you should find a communicator pin. Put it on and use it to call ARIA, your Executive Officer.",
         "tasks": [
           "Familiarize yourself with the Aqua Nova", 
           "Unpack and look around your personal quarters",
           "Find and put on communicator", 
-          "Meet 'AREA' the Executive Officer", 
+          "Meet 'ARIA' the Executive Officer", 
           "Find your way to the Bridge"
         ],
         "completedTasks": []
