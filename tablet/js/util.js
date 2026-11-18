@@ -38,6 +38,7 @@ export function drag(node, { start, move, end }) {
 }
 
 export function toast(text, kind = '') {
+  document.dispatchEvent(new CustomEvent('notice', { detail: { text, kind } }));
   const box = document.getElementById('toasts');
   if (!box) return;
   const t = el('div', { class: `toast ${kind}`, text });

@@ -14,10 +14,8 @@ export function createScene(stage, { onOpen }) {
   // bridge console: top display, main screen, left selector, center controls, right data
   const topD = el('div', { class: 'bt' }), mainD = el('div', { class: 'bmain' });
   const ctrD = el('div', { class: 'bctl' }), leftD = el('div', { class: 'bleft' }), rightD = el('div', { class: 'bright' });
-  const bot = el('div', { class: 'status-line' });
-  const sBat = el('span'), sO2 = el('span'), sHull = el('span');
-  bot.append(sBat, sO2, sHull);
-  const consoleApi = createBridgeConsole({ top: topD, main: mainD, center: ctrD, left: leftD, right: rightD, onExpand: (id) => onOpen(id) });
+  const dispD = el('div', { class: 'bdisp' });
+  const consoleApi = createBridgeConsole({ top: topD, main: mainD, display: dispD, center: ctrD, left: leftD, right: rightD, onExpand: (id) => onOpen(id) });
 
   const frame = el('img', { class: 'frame', src: 'assets/bridge.webp', alt: '', draggable: 'false', decoding: 'async' });
   const hs = (label, x, y, w, h, onclick, tagPos = 'top', extra = '') =>
@@ -25,7 +23,7 @@ export function createScene(stage, { onOpen }) {
       el('span', { class: `tag ${tagPos}`, text: label }));
 
   bridge.append(
-    box('bmainbox', 254, 189, 1410, 364, [mainD]), box('', 594, 76, 733, 94, [topD]), box('', 712, 579, 499, 207, [ctrD]), box('', 637, 828, 651, 125, [bot]),
+    box('bmainbox', 254, 189, 1410, 364, [mainD]), box('', 594, 76, 733, 94, [topD]), box('bdispbox', 712, 579, 499, 207, [dispD]), box('', 637, 828, 651, 125, [ctrD]),
     box('', 389, 802, 271, 152, [leftD]), box('', 1276, 800, 257, 154, [rightD]), frame,
     hs('COMMS', 40, 430, 520, 350, () => onOpen('comms'), 'top'),        // comms officer, left station
     hs('SENSORS', 1380, 430, 520, 350, () => onOpen('sensors'), 'top'),  // sensors, right station
@@ -72,9 +70,7 @@ export function createScene(stage, { onOpen }) {
     update() {
       if (api.where !== 'bridge') return;
       const s = sim.s;
-      const set = (k, node, v) => { if (cache.get(k) !== v) { cache.set(k, v); node.textContent = v; } };
       consoleApi.update();
-      set('bat', sBat, `BAT ${Math.round(s.battery)}%`); set('o2', sO2, `O₂ ${Math.round(s.oxygen)}%`); set('hull', sHull, `HULL ${Math.round(s.hull)}%`);
     },
     console: consoleApi,
     showPickup(on) { pickup.hidden = !on; },
