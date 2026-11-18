@@ -34,7 +34,7 @@ export function createND(wrap, { onPick, stage = false, units = 1, contours = fa
   // Real sea floor: rough contours everywhere, 10 m contours only in a circle round the ship (and each deployed WSKR).
   const WSKR_NM = 3;
   // Sonar sets how much of the sea floor is mapped in detail: sonar on 4 nm, off 0.8 nm (echo sounder only), active sweep 8 nm.
-  const fineNm = (s) => (s.clock < (s.sweepUntil || 0) ? 8 : s.sonar ? 4 : 0.8);
+  const fineNm = (s) => sim.fineNm(s);
   const shade = (l) => (l === 0 ? 'rgba(255,214,120,0.9)' : l > -100 ? 'rgba(130,215,255,0.40)' : l > -500 ? 'rgba(90,170,255,0.45)' : 'rgba(110,130,255,0.55)');
   function strokeLevels(levels, p, w, h, fine) {
     for (const lv of levels) {
@@ -61,13 +61,18 @@ export function createND(wrap, { onPick, stage = false, units = 1, contours = fa
       ctx.fillStyle = '#9fd8ff'; ctx.font = '600 15px ui-monospace, Menlo, monospace'; ctx.textAlign = 'center'; ctx.fillText(nice + ' nm', x0 + len / 2, y0 - 10);
     }
     const src = [{ lat: s.lat, lon: s.lon, nm: fineNm(s) }, ...(s.wskrs || []).map((q) => ({ lat: q.lat, lon: q.lon, nm: WSKR_NM }))];
-    const tiles = seafloor.fineFor(src, nd.redraw);
-    if (!tiles.length) return;
-    ctx.save(); ctx.beginPath();
-    for (const q of src) { const cx = p.x(q.lon), cy = p.y(q.lat); ctx.moveTo(cx + q.nm * scale, cy); ctx.arc(cx, cy, q.nm * scale, 0, 6.2832); }
-    ctx.clip();
-    for (const t of tiles) strokeLevels(t, p, w, h, true);
-    ctx.restore();
+    // Fine contours show wherever we have charted (fog of war) plus what the sonar and WSKRs see right now. At very wide ranges they would only clutter.
+    const dLonV = w / 2 / kx, dLatV = h / 2 / ky;
+    const view = nd.range <= 16 ? seafloor.chartView(s.lat - dLatV, s.lat + dLatV, s.lon - dLonV, s.lon + dLonV) : { runs: [], keys: [] };
+    const tiles = nd.range <= 16 ? seafloor.loadTiles([...view.keys, ...src.flatMap((q) => seafloor.tilesNear(q.lat, q.lon, q.nm))], nd.redraw) : [];
+    if (tiles.length) {
+      ctx.save(); const clip = new Path2D();
+      for (const r of view.runs) clip.rect(p.x(r.lon0), p.y(r.lat1), (r.lon1 - r.lon0) * kx, (r.lat1 - r.lat0) * ky);
+      for (const q of src) { const cx = p.x(q.lon), cy = p.y(q.lat); clip.moveTo(cx + q.nm * scale, cy); clip.arc(cx, cy, q.nm * scale, 0, 6.2832); }
+      ctx.clip(clip);
+      for (const t of tiles) strokeLevels(t, p, w, h, true);
+      ctx.restore();
+    }
     ctx.strokeStyle = 'rgba(100,255,218,0.25)'; ctx.setLineDash([4, 6]); ctx.lineWidth = 1; ctx.beginPath();
     for (const q of src) { const cx = p.x(q.lon), cy = p.y(q.lat); ctx.moveTo(cx + q.nm * scale, cy); ctx.arc(cx, cy, q.nm * scale, 0, 6.2832); }
     ctx.stroke(); ctx.setLineDash([]);

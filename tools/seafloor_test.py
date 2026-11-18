@@ -56,6 +56,23 @@ def main():
         page.locator('.bc:visible .bbtn:text-is("+")').tap(); page.wait_for_timeout(800)
         page.screenshot(path=os.path.join(ROOT, "tools", "shots", "seafloor_nav.png"))
         check("fine tile loaded near the ship", js("return [...sf.tiles.values()].some(Boolean)"))
+        # fog of war: charted areas stay charted
+        r = js("""const s=sim.s; sf.clearChart(); s.docked=false; s.sonar=true; s.sweepUntil=0; s.wskrs=[]; s.lat=39.45; s.lon=-72.25; sim.step(0.1);
+          const here=sf.isCharted(39.45,-72.25), n1=sf.chartedCount();
+          s.lat=39.9; s.lon=-72.25; sim.step(0.1);
+          return {here, stillHere: sf.isCharted(39.45,-72.25), far: sf.isCharted(39.9,-72.25), unseen: sf.isCharted(39.6,-72.25), n1, n2: sf.chartedCount()}""")
+        check("ship charts its surroundings", r["here"] and r["far"] and r["n1"] > 20, r)
+        check("charted area stays after the ship leaves", r["stillHere"] and r["n2"] > r["n1"], r)
+        check("uncharted water stays dark", not r["unseen"], r)
+        r = js("""const txt=sf.chartToString(); const n=sf.chartedCount(); sf.clearChart(); const empty=sf.chartedCount(); sf.setChart(txt); return {len:txt.length, n, empty, back: sf.chartedCount(), here: sf.isCharted(39.45,-72.25)}""")
+        check("chart saves and restores exactly", r["empty"] == 0 and r["back"] == r["n"] and r["here"], r)
+        check("saved chart text is small", r["len"] < 8000, r)
+        s0 = js("return sf.chartedCount()")
+        js("sim.s.sonar=false; sim.s.lat=40.2; sim.s.lon=-72.0; sim.step(0.1)")
+        s1 = js("return sf.chartedCount()")
+        js("sim.s.sonar=true; sim.s.lat=40.5; sim.s.lon=-72.0; sim.step(0.1)")
+        s2 = js("return sf.chartedCount()")
+        check("sonar off charts a small patch, sonar on a larger one", 0 < s1 - s0 < (s2 - s1) / 5, (s0, s1, s2))
         check("no console errors", not errors, errors)
         browser.close()
     server.shutdown()

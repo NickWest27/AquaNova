@@ -5,6 +5,7 @@
 import gameState from '../../game/state.js';
 import saveManager from '../../game/saveManager.js';
 import { sim } from './sim.js';
+import { seafloor } from './seafloor.js';
 import { dlog } from '../../utils/log.js';
 
 export { gameState, saveManager };
@@ -28,6 +29,7 @@ export function snapshotSim() {
     gameState.updateProperty('navigation.heading', Math.round(s.heading));
     gameState.updateProperty('navigation.course', Math.round(s.targetHeading));
     gameState.updateProperty('navigation.speed', +s.speed.toFixed(1));
+    gameState.updateProperty('navigation.charted', seafloor.chartToString());
     gameState.updateProperty('navigation.destination', s.wpt ? s.wpt.name : null);
     gameState.updateProperty('navigation.waypoint', s.wpt && s.wpt.type === 'waypoint' ? { name: s.wpt.name, lat: +s.wpt.lat.toFixed(5), lon: +s.wpt.lon.toFixed(5) } : null);
     gameState.updateProperty('navigation.docked', !!s.docked);
@@ -63,6 +65,7 @@ export function restoreSim() {
   const name = nav.location.properties && nav.location.properties.name;
   s.at = s.pois.find((p) => p.name === name) || null;
   s.docked = (nav.docked == null ? (nav.depth || 0) === 0 : !!nav.docked) && !!s.at && s.at.type === 'dock';   // saves from before docking existed: parked at the dock counts as docked
+  seafloor.setChart(nav.charted || '');
   s.wskrs = Array.isArray(nav.wskrs) ? nav.wskrs.map((w) => ({ busy: 0, mode: 'escort', target: null, ...w })) : [];
   const clk = gameState.getProperty('progress.gameClock'); if (typeof clk === 'number') s.clock = clk;
   s.wpt = nav.destination ? s.pois.find((p) => p.name === nav.destination) || null : null;

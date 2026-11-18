@@ -58,6 +58,16 @@ export function toward(a, b) {
 sim.setThrottle = (v) => { if (sim.s.docked) return; sim.s.throttle = clamp(v, 0, 1); sim.touch(); };
 sim.setHeading = (h) => { sim.s.targetHeading = norm360(h); sim.touch(); };
 sim.setDepth = (d) => { if (sim.s.docked) return; sim.s.targetDepth = clamp(d, 0, 6000); sim.touch(); };
+/** Radius (nm) the ship charts in fine detail: sonar on 4, off 0.8 (echo sounder only), active sweep 8. */
+sim.fineNm = (s = sim.s) => (s.clock < (s.sweepUntil || 0) ? 8 : s.sonar ? 4 : 0.8);
+export const WSKR_CHART_NM = 3;
+/** Record what the ship and the WSKRs can see as charted (the fog of war lifts for good). */
+function chartSurroundings() {
+  const s = sim.s; if (!seafloor.ready) return;
+  seafloor.mark('ship', s.lat, s.lon, sim.fineNm(s));
+  for (const w of s.wskrs) seafloor.mark('w' + w.n, w.lat, w.lon, WSKR_CHART_NM);
+}
+
 /** Is this point safe water for the ship? (Inside the dredged harbour only land stops us.) */
 sim.shipPassable = (lat, lon) => {
   const fl = seafloor.depthAt(lat, lon); if (fl == null) return false;
@@ -220,6 +230,7 @@ sim.step = (dt) => {
   }
   s.floor = seafloor.ready ? seafloor.depthAt(s.lat, s.lon) : null;
   stepWskrs(dt);
+  chartSurroundings();
   // systems
   s.power = 8 + (s.speed / MAX_KT) * 70 + (s.lights ? 5 : 0) + (s.sonar ? 4 : 0);
   if (s.docked) { // shore power and air: about 20% battery and 30% oxygen per game hour
