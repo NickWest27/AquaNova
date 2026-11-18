@@ -96,6 +96,7 @@ export function createND(wrap, { onPick, stage = false, units = 1, contours = fa
       const p = px(s.wpt);
       ctx.setLineDash([8, 8]); ctx.strokeStyle = '#ffb020'; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(p.x, p.y); ctx.stroke(); ctx.setLineDash([]);
+      if (s.wpt.type === 'waypoint') { ctx.beginPath(); ctx.arc(p.x, p.y, 9, 0, 6.2832); ctx.moveTo(p.x - 14, p.y); ctx.lineTo(p.x + 14, p.y); ctx.moveTo(p.x, p.y - 14); ctx.lineTo(p.x, p.y + 14); ctx.stroke(); }
     }
     // WSKRs (deployed sensor probes): diamonds
     for (const q of s.wskrs || []) {

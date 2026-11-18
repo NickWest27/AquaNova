@@ -49,7 +49,7 @@ def main():
 
         check("ship starts docked, so undock is the first objective", "undock:active" in objs() and js("return (await import('./js/sim.js')).sim.s.docked") is True)
         page.evaluate("window.__aq.open('helm')"); page.wait_for_timeout(500)
-        page.tap('button:text-is("Undock")'); page.wait_for_timeout(5200)
+        page.tap('#station button:text-is("Dock")'); page.wait_for_timeout(5200)
         check("undocking from the Helm completes the objective", "undock:completed" in objs(), objs())
         page.tap("#station .st-head .btn"); page.wait_for_timeout(200)
         fly(60, 6.5); page.wait_for_timeout(300)

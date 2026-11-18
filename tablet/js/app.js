@@ -164,7 +164,8 @@ function sleepDialog() {
   const s = sim.s;
   // time to the destination at the speed you are set for (so a long transit takes less of your time)
   const kt = Math.max(s.speed, s.throttle * MAX_SPEED);
-  const eta = s.wpt && kt > 0.5 && !s.docked ? Math.min(96, Math.ceil((toward(s, s.wpt).nm / kt) * 10) / 10 + 0.1) : null;
+  const eh = s.wpt && kt > 0.5 && !s.docked ? sim.etaHours() : null;
+  const eta = eh == null ? null : Math.min(96, Math.ceil(eh * 10) / 10 + 0.1);
   let hours = eta && eta <= 12 ? eta : 8, untilArrival = !!(eta && eta <= 12);
   const fmt = (h) => (h >= 1 ? `${Math.round(h * 10) / 10} h` : `${Math.round(h * 60)} min`);
   const note = el('p', { text: `It is ${clockText()}. The game saves first. The ship keeps its course and speed while you sleep, so a long trip passes quickly. The crew wake you if you arrive at your destination, or in an emergency.${s.docked ? ' Docked: shore power charges the ship.' : ''}` });

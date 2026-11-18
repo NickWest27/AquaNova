@@ -11,12 +11,15 @@ import { createND } from './nd.js';
 import { createDial } from './ui.js';
 import { el, pad, toast } from './util.js';
 import { toggleDock } from './dock.js';
+import { createProfile } from './profile.js';
+import { openPlotDialog } from './plot.js';
 
 const KEY = 'aquaNova_bridgeDisplay';
 const set = (node, v) => { if (node._v !== v) { node._v = v; node.textContent = v; } };
 const deg = (v, pos, neg, w) => { const a = Math.abs(v), d = Math.floor(a), m = (a - d) * 60; return `${String(d).padStart(w, '0')}°${m.toFixed(1).padStart(4, '0')}′${v >= 0 ? pos : neg}`; };
 const etaText = (nm, kt) => { if (kt < 0.5) return '—'; const mins = Math.round((nm / kt) * 60); return mins >= 60 ? `${Math.floor(mins / 60)} h ${String(mins % 60).padStart(2, '0')} min` : `${mins} min`; };
 const bbtn = (text, onclick, cls = '') => el('button', { class: `bbtn ${cls}`, text, onclick });
+const rdRow = (label, valueNode) => el('div', { class: 'rdr' }, el('small', { text: label }), valueNode);
 const rd = (label, valueNode) => el('div', { class: 'rd' }, el('small', { text: label }), valueNode);
 const order = ['nav', 'helm', 'sys', 'view'];
 const labels = { nav: 'NAV', helm: 'HELM', sys: 'SYS', view: 'VIEW' };
@@ -42,25 +45,24 @@ export function createBridgeConsole({ top, main, display, center, left, right, o
       if (nds[0]) nd.setRange(nds[0].range);
       nd.sel = sel; nds.push(nd);
       if (compact) return { m, update() { nd.redraw(); } };
-      const logCur = el('div'), logDest = el('div'), logTime = el('div');
+      const logCur = el('div'), logPlace = el('div', { class: 'nl-place' }), logDest = el('div'), logTime = el('div');
       const rSpd = el('b'), rDep = el('b'), rFlr = el('b'), rHdg = el('b');
-      m.append(el('div', { class: 'nav-log' }, el('b', { text: 'NAVIGATIONAL POSITION LOG' }), logTime, logCur, logDest),
-        el('div', { class: 'nav-read' }, rd('SPEED KT', rSpd), rd('DEPTH M', rDep), rd('FLOOR M', rFlr), rd('HDG', rHdg)));
+      const prof = createProfile(el('div', { class: 'nav-prof' })); const profBox = prof.canvas.parentNode;
+      profBox.prepend(el('div', { class: 'np-title', text: 'VERTICAL PROFILE' }));
+      m.append(el('div', { class: 'nav-read' }, rdRow('SPEED KT', rSpd), rdRow('DEPTH M', rDep), rdRow('FLOOR M', rFlr), rdRow('HDG', rHdg)),
+        el('div', { class: 'nav-log' }, el('b', { text: 'NAVIGATIONAL POSITION LOG' }), logTime, logCur, logPlace, logDest), profBox);
       return { m, update() {
         const s = sim.s;
         set(rSpd, s.speed.toFixed(1)); set(rDep, String(Math.round(s.depth))); set(rFlr, s.floor == null ? '—' : String(Math.round(s.floor))); set(rHdg, pad(s.heading) + '°');
         set(logTime, `MISSION TIME INDEX ${clockText()}`);
-        set(logCur, `CURR POS ${deg(s.lat, 'N', 'S', 2)} ${deg(s.lon, 'E', 'W', 3)}  ${s.at ? s.at.name : 'Open water'}`);
+        set(logCur, `CURR POS ${deg(s.lat, 'N', 'S', 2)} ${deg(s.lon, 'E', 'W', 3)}`); set(logPlace, s.at ? s.at.name : 'Open water');
         if (s.wpt) { const t = toward(s, s.wpt); set(logDest, `DEST POS ${s.wpt.name}  ${t.nm.toFixed(1)} nm  ETA ${etaText(t.nm, s.speed)}`); } else set(logDest, 'DEST POS none');
+        prof.draw(s, Math.max(2, nds[0].range)); profBox.dataset.warn = prof.warn;
         nd.redraw();
       } };
     };
     const zoom = (dir) => { const r = nds[0].zoom(dir); nds.forEach((n) => n.setRange(r)); refresh(); };
-    const plot = bbtn('Plot a course', () => {
-      if (!sel) { toast('Tap a marker on the map first'); return; }
-      sim.setWpt(sel); sim.setThrottle(0.5);
-      toast(sim.s.docked ? `Course plotted to ${sel.name}. Undock to get underway.` : `Course plotted to ${sel.name}`); refresh();
-    }, 'wide');
+    const plot = bbtn('Plot a course', () => openPlotDialog({ preselect: sel, onPlotted: refresh }), 'wide');
     const clear = bbtn('Clear', () => { sel = null; nds.forEach((n) => { n.sel = null; }); sim.s.wpt = null; sim.touch(); refresh(); });
     const c = el('div', { class: 'bc' }, el('div', { class: 'rowN' },
       bbtn('−', () => zoom(-1), 'sq'), el('div', { class: 'rngbox' }, el('small', { text: 'RANGE' }), rangeTxt), bbtn('+', () => zoom(1), 'sq'), plot, clear));
@@ -68,7 +70,6 @@ export function createBridgeConsole({ top, main, display, center, left, right, o
     function refresh() {
       const s = sim.s;
       set(rangeTxt, nds[0] ? nds[0].range + ' nm' : '');
-      plot.classList.toggle('dim', !sel);
       if (sel) { const t = toward(s, sel); set(rA, sel.type.toUpperCase()); set(rB, sel.name); set(rC, `${t.nm.toFixed(1)} nm  BRG ${pad(t.brg)}°`); }
       else if (s.wpt) { const t = toward(s, s.wpt); set(rA, 'COURSE SET'); set(rB, s.wpt.name); set(rC, `${t.nm.toFixed(1)} nm  ETA ${etaText(t.nm, s.speed)}`); }
       else { set(rA, 'DESTINATION'); set(rB, 'None'); set(rC, 'Tap a marker'); }
@@ -95,7 +96,7 @@ export function createBridgeConsole({ top, main, display, center, left, right, o
     r.append(el('small', { text: 'THROTTLE' }), v1, el('small', { text: 'ORDERED DEPTH' }), v2);
     return { make, c, r, expand: 'helm', side() {
       const s = sim.s; set(v1, Math.round(s.throttle * 100) + '%'); set(v2, Math.round(s.targetDepth) + ' m');
-      set(dockB, s.docked ? 'Undock' : 'Dock'); dockB.classList.toggle('on', s.docked || sim.canDock());
+      dockB.classList.toggle('on', !!s.docked);
     } };
   })();
 
@@ -118,15 +119,17 @@ export function createBridgeConsole({ top, main, display, center, left, right, o
         fillBar(b, 'hull', s.hull, Math.round(s.hull) + '%', s.hull < 60); fillBar(b, 'pres', s.depth / 60, Math.round(s.depth / 10 + 1) + ' bar', s.depth > 4000);
       }
     }
-    const sw = (key, label) => { const b = bbtn('', () => { sim.s[key] = !sim.s[key]; paint(); }); const paint = () => { b.textContent = label + (sim.s[key] ? ' ON' : ' OFF'); b.classList.toggle('on', !!sim.s[key]); }; paint(); return b; };
+    const sw = (key, label) => { const b = bbtn('', () => { sim.s[key] = !sim.s[key]; paint(); }); const paint = () => { b.classList.toggle('on', !!sim.s[key]); }; b.textContent = label; paint(); return b; };
     const banner = el('div', { class: 'sbanner ok' });
-    const c = el('div', { class: 'bc' }, el('div', { class: 'rowN' }, banner, sw('lights', 'Lights'), sw('sonar', 'Sonar')));
+    const swL = sw('lights', 'Lights'), swS = sw('sonar', 'Sonar');
+    const c = el('div', { class: 'bc' }, el('div', { class: 'rowN' }, banner, swL, swS));
     const r = el('div', { class: 'br' }); const tA = el('b'), tB = el('b');
     r.append(el('small', { text: 'WATER TEMP' }), tA, el('small', { text: 'PRESSURE' }), tB);
     return { make, c, r, expand: 'sys', side() {
       const s = sim.s, bad = s.battery < 15 || s.oxygen < 15 || s.hull < 40, warn = s.battery < 30 || s.oxygen < 30 || s.hull < 80;
       banner.className = 'sbanner ' + (bad ? 'bad' : warn ? 'warn' : 'ok'); set(banner, bad ? 'CRITICAL' : warn ? 'CAUTION' : 'NOMINAL');
       set(tA, s.temp.toFixed(1) + ' °C'); set(tB, Math.round(s.depth / 10 + 1) + ' bar');
+      swL.classList.toggle('on', !!s.lights); swS.classList.toggle('on', !!s.sonar);
     } };
   })();
 
@@ -146,11 +149,11 @@ export function createBridgeConsole({ top, main, display, center, left, right, o
         const dk = Math.min(0.9, s.depth / 900).toFixed(2); if (dark._v !== dk) { dark._v = dk; dark.style.opacity = dk; }
       } };
     };
-    const lightsB = bbtn('', () => { sim.s.lights = !sim.s.lights; paint(); }); const paint = () => { lightsB.textContent = 'Lights ' + (sim.s.lights ? 'ON' : 'OFF'); lightsB.classList.toggle('on', !!sim.s.lights); }; paint();
+    const lightsB = bbtn('', () => { sim.s.lights = !sim.s.lights; paint(); }); const paint = () => { lightsB.classList.toggle('on', !!sim.s.lights); }; lightsB.textContent = 'Lights'; paint();
     const c = el('div', { class: 'bc' }, el('div', { class: 'rowN' }, el('div', { class: 'cap', text: 'EXTERIOR CAMERA' }), lightsB));
     const r = el('div', { class: 'br' }); const pA = el('b'), pB = el('b');
     r.append(el('small', { text: 'PRESSURE' }), pA, el('small', { text: 'WATER TEMP' }), pB);
-    return { make, c, r, expand: null, side() { const s = sim.s; set(pA, `${Math.round(s.depth / 10 + 1)} bar`); set(pB, `${s.temp.toFixed(1)} °C`); } };
+    return { make, c, r, expand: null, side() { const s = sim.s; lightsB.classList.toggle('on', !!s.lights); set(pA, `${Math.round(s.depth / 10 + 1)} bar`); set(pB, `${s.temp.toFixed(1)} °C`); } };
   })();
 
   // ---------- build: one large and one compact copy of each ----------

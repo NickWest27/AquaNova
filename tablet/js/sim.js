@@ -121,6 +121,33 @@ sim.deepest = () => { const fl = seafloor.ready ? seafloor.depthAt(sim.s.lat, si
 
 sim.dockPoi = () => sim.s.pois.find((p) => p.type === 'dock');
 
+/** Autopilot speed limit (knots). The ship turns at a fixed rate, so its turning circle grows with speed
+ *  (radius = knots * 0.0796 nm). Turn first at walking pace, then build speed as the nose comes round,
+ *  and keep the circle small enough to fit inside the distance left. A target behind the ship is then
+ *  reached in one turn and never orbited. */
+export function autopilotCap(headingErrDeg, distNm) {
+  const byHeading = headingErrDeg > 60 ? 1 : headingErrDeg > 25 ? 1.5 : headingErrDeg > 10 ? 3 : MAX_KT;
+  const byDistance = Math.max(1, distNm * 6.3);
+  return Math.min(byHeading, byDistance);
+}
+
+/** Game hours to reach the current waypoint, from a dry run of the same turn and speed rules (no sea floor checks). null if none. */
+sim.etaHours = (maxHours = 96) => {
+  const s = sim.s; if (!s.wpt || s.docked) return null;
+  let { lat, lon, heading, speed } = s; const dt = 0.5;
+  for (let t = 0; t * TIMESCALE / 3600 < maxHours; t += dt) {
+    const tw = toward({ lat, lon }, s.wpt);
+    if (tw.nm < POI_RADIUS_NM * 0.6) return (t * TIMESCALE) / 3600;
+    const turn = angDiff(tw.brg, heading), rate = 6 * dt;
+    heading = norm360(heading + clamp(turn, -rate, rate));
+    const want = Math.min(s.throttle * MAX_KT, autopilotCap(Math.abs(turn), tw.nm));
+    speed += clamp(want - speed, -2 * dt, 1.2 * dt);
+    const nm = (speed * dt * TIMESCALE) / 3600, r = (heading * Math.PI) / 180;
+    lat += (nm * Math.cos(r)) / NM_PER_DEG_LAT; lon += (nm * Math.sin(r)) / (NM_PER_DEG_LAT * Math.cos((lat * Math.PI) / 180));
+  }
+  return null;
+};
+
 sim.step = (dt) => {
   const s = sim.s;
   s.clock += dt * TIMESCALE;
@@ -135,7 +162,8 @@ sim.step = (dt) => {
   const rate = 6 * dt; // deg per second
   s.heading = norm360(s.heading + clamp(turn, -rate, rate));
   // speed (smooth)
-  const wantKt = s.throttle * MAX_KT * (s.battery > 0 ? 1 : 0);
+  let wantKt = s.throttle * MAX_KT * (s.battery > 0 ? 1 : 0);
+  if (s.wpt) wantKt = Math.min(wantKt, autopilotCap(Math.abs(turn), toward(s, s.wpt).nm));
   s.speed += clamp(wantKt - s.speed, -2 * dt, 1.2 * dt);
   // depth
   const dd = s.targetDepth - s.depth;

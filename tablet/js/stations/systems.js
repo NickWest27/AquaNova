@@ -5,7 +5,7 @@ import { el } from '../util.js';
 export function mount(body) {
   const banner = el('div', { class: 'sys-banner ok', text: 'ALL SYSTEMS NOMINAL' });
   const m = { bat: meter('Battery', 'bat'), pow: meter('Power draw', 'pow'), o2: meter('Oxygen', 'o2'), co2: meter('CO₂', 'co2'), hull: meter('Hull integrity', 'hull'), pres: meter('Pressure vs rating', 'pres') };
-  const sw = (key, label) => el('button', { class: 'btn chip on', text: label + ' ON', onclick: (e) => { sim.s[key] = !sim.s[key]; e.currentTarget.textContent = label + (sim.s[key] ? ' ON' : ' OFF'); e.currentTarget.classList.toggle('on', sim.s[key]); } });
+  const sw = (key, label) => el('button', { class: 'btn chip' + (sim.s[key] ? ' on' : ''), text: label, onclick: (e) => { sim.s[key] = !sim.s[key]; e.currentTarget.classList.toggle('on', !!sim.s[key]); } });
   const grid = el('div', { class: 'sys-grid' },
     el('div', { class: 'card sys-card' }, el('h3', { text: 'Power' }), m.bat.root, m.pow.root),
     el('div', { class: 'card sys-card' }, el('h3', { text: 'Life support' }), m.o2.root, m.co2.root),

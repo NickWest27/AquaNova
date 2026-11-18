@@ -23,8 +23,7 @@ export function mount(body) {
     spd.innerHTML = `${s.speed.toFixed(1)}<small>kt</small>`; dp.innerHTML = `${Math.round(s.depth)}<small>m</small>`;
     dial.update(s.heading, s.targetHeading);
     body.classList.toggle('docked-st', !!s.docked);
-    const label = s.docked ? 'Undock' : 'Dock'; if (dockBtn.textContent !== label) dockBtn.textContent = label;
-    dockBtn.classList.toggle('on', s.docked || sim.canDock());
+    dockBtn.classList.toggle('on', !!s.docked);
     thr.setActual(s.speed / MAX_SPEED); dep.setActual(1 - s.depth / 6000);
   }
   return { update, destroy() {} };

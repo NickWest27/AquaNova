@@ -35,7 +35,7 @@ export function mount(body) {
     head.children[1].textContent = sweeping ? 'SWEEPING' : s.sonar ? 'ACTIVE' : 'OFF';
     head.children[1].className = 'num ' + (s.sonar ? 'ok' : 'bad');
     head.children[2].textContent = s.sonar ? `Contacts within ${SONAR_RANGE_NM} nm. The chart shows detailed contours ${sweeping ? '8' : '4'} nm round the ship. ${findings().length} scan${findings().length === 1 ? '' : 's'} filed.` : 'Sonar off: contacts hidden and only the nearest 0.8 nm is charted in detail.';
-    sonarBtn.textContent = s.sonar ? 'Sonar off' : 'Sonar on';
+    sonarBtn.textContent = 'Sonar'; sonarBtn.classList.toggle('on', !!s.sonar);
     wsk.children[1].textContent = `${s.wskrs.length} of 4 out`;
     wsk.children[2].textContent = s.wskrs.length ? s.wskrs.map((w) => `WSKR ${w.n}: ${wText(w, s)}`).join(' · ') : 'Autonomous remote sensors. Out, they spread round the ship for better readings, and each charts the sea floor in detail around itself. Send one to a contact to investigate it.';
     depBtn.disabled = s.docked || s.wskrs.length >= 4; recBtn.disabled = !s.wskrs.length;

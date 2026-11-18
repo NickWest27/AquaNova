@@ -1,6 +1,7 @@
 import { sim, toward } from '../sim.js';
 import { createND } from '../nd.js';
-import { el, pad, toast } from '../util.js';
+import { el, pad } from '../util.js';
+import { openPlotDialog } from '../plot.js';
 
 export function mount(body) {
   body.classList.add('nav-st');
@@ -8,6 +9,7 @@ export function mount(body) {
   const rPos = el('div', { class: 'num' }), rHdg = el('div', { class: 'num' }), rSpd = el('div', { class: 'num' }), rDep = el('div', { class: 'num' });
   const rc = (l, n, w) => el('div', { class: `card ${w || ''}` }, el('div', { class: 'lbl', text: l }), n);
   const rangeTxt = el('div', { class: 'num', text: '2 nm' });
+  const plotAny = el('button', { class: 'btn primary', text: 'Plot a course', onclick: () => openPlotDialog({ preselect: sel, onPlotted: renderPick }) });
   const pick = el('div', { class: 'card wpt-card' });
   const side = el('div', { class: 'nav-side' },
     el('div', { class: 'readouts' }, rc('Heading', rHdg), rc('Speed', rSpd), rc('Depth', rDep), rc('Range', rangeTxt)),
@@ -17,14 +19,14 @@ export function mount(body) {
 
   const renderPick = () => {
     pick.replaceChildren();
-    if (!sel) { pick.append(el('div', { class: 'lbl', text: 'Destination' }), el('p', { class: 'empty', text: sim.s.wpt ? 'Course set: ' + sim.s.wpt.name : 'None selected' }), ...(sim.s.wpt ? [el('button', { class: 'btn warn', text: 'Cancel course', onclick: () => { sim.stop(); renderPick(); } })] : [])); return; }
+    if (!sel) { pick.append(el('div', { class: 'lbl', text: 'Destination' }), el('p', { class: 'empty', text: sim.s.wpt ? 'Course set: ' + sim.s.wpt.name : 'None selected' }), plotAny, ...(sim.s.wpt ? [el('button', { class: 'btn warn', text: 'Cancel course', onclick: () => { sim.stop(); renderPick(); } })] : [])); return; }
     const t = toward(sim.s, sel);
     pick.append(
       el('div', { class: 'lbl', text: sel.type }), el('div', { class: 'num wpt', text: sel.name }),
       el('p', { text: sel.text, style: 'margin:0.5rem 0;color:var(--dim)' }),
       el('div', { class: 'num' }, t.nm.toFixed(2), el('small', { text: `nm  brg ${pad(t.brg)}°` })),
       el('div', { class: 'row', style: 'margin-top:0.7rem' },
-        el('button', { class: 'btn primary grow', text: 'Plot a course', onclick: () => { sim.setWpt(sel); sim.setThrottle(0.5); toast('Course plotted to ' + sel.name); renderPick(); } }),
+        el('button', { class: 'btn primary grow', text: 'Plot a course', onclick: () => openPlotDialog({ preselect: sel, onPlotted: renderPick }) }),
         el('button', { class: 'btn', text: 'Clear', onclick: () => { sel = null; nd.sel = null; nd.draw(); renderPick(); } })));
   };
   const zoomRow = el('div', { class: 'range-row card' },

@@ -428,7 +428,7 @@ textarea.field { min-height: 6rem; resize: none; }
 .nav-read .rd { min-width: 100px; padding: 2px 12px; } .nav-read .rd b { font-size: 36px; }
 .bd-expand { right: 120px; top: 36px; }
 .selector { padding: 12px 40px 12px 52px; }
-.nav-read { left: 150px; transform: none; bottom: 40px; }
+
 
 /* ---- bridge console v2: medium display and bottom control strip ---- */
 .bdisp { position: absolute; inset: 0; background: #03121c; }
@@ -464,3 +464,24 @@ textarea.field { min-height: 6rem; resize: none; }
 .crew-card .avatar { flex: none; width: 2.4rem; height: 2.4rem; border-radius: 50%; display: grid; place-items: center; background: #0e3a50; color: var(--cyan); font-weight: 800; }
 .crew-card small { display: block; color: var(--dim); font-size: .75rem; letter-spacing: .06em; text-transform: uppercase; } .crew-card p { margin: 0; font-size: 1.05rem; }
 .comm-who-label { color: var(--dim); font-size: .9rem; letter-spacing: .08em; text-transform: uppercase; margin: -0.3rem 0 0.4rem; }
+
+/* ---- main screen layout v3: readouts top-left, position log bottom-left, vertical profile on the right ---- */
+.bd-nav:not(.compact) .nav-read { left: 150px; top: 36px; bottom: auto; transform: none; display: block; background: rgba(3,18,28,.7); border: 2px solid #1d6a7a; border-radius: 12px; padding: 4px 12px; width: 250px; }
+.nav-read .rdr { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; line-height: 1.2; }
+.nav-read .rdr small { font-size: 17px; letter-spacing: .12em; color: var(--dim); margin: 0; }
+.nav-read .rdr b { font-size: 28px; color: #fff; text-align: right; }
+.bd-nav:not(.compact) .nav-log { left: 150px; top: auto; bottom: 30px; width: 470px; font-size: 17px; line-height: 1.25; padding: 4px 10px; }
+.nav-log > div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nav-log .nl-place { color: #fff; max-width: 440px; }
+.nav-prof { position: absolute; right: 130px; top: 108px; width: 360px; height: 216px; background: rgba(3,18,28,.8); border: 2px solid #1d6a7a; border-radius: 10px; overflow: hidden; pointer-events: none; }
+.nav-prof[data-warn="warn"] { border-color: #ffbe3c; } .nav-prof[data-warn="bad"] { border-color: #ff5a5a; }
+.nav-prof .np-title { position: absolute; left: 10px; top: 4px; font-size: 13px; letter-spacing: .14em; color: var(--dim); z-index: 1; }
+.nav-prof canvas { display: block; }
+
+/* ---- plot a course dialog ---- */
+.pc { display: flex; flex-direction: column; gap: 0.8rem; }
+.pc-box { display: flex; flex-direction: column; gap: 0.6rem; } .pc-box[hidden] { display: none; }
+.pc-row { display: flex; align-items: center; gap: 0.8rem; } .pc-row span { width: 8rem; color: var(--dim); font-size: 0.95rem; letter-spacing: .06em; }
+.pc-row input, .pc-row select { flex: 1; min-width: 0; padding: 0.7rem; border-radius: 12px; border: 2px solid var(--line); background: #061523; color: var(--text); }
+.pc-hint { font-size: 0.85rem !important; color: var(--dim); line-height: 1.35; }
+.pc-msg { min-height: 1.3rem; font-size: 0.95rem; } .pc-msg.bad { color: #ff8a8a; } .pc-msg.ok { color: var(--cyan); }
