@@ -456,3 +456,11 @@ textarea.field { min-height: 6rem; resize: none; }
 .comm-reply.stub p { color: #b79df0; font-style: italic; }
 .comm-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: .5rem; max-width: 34rem; }
 .comm-line.chip { min-width: 7.5rem; }
+
+/* crew messages (when the bridge is not on screen) */
+#crew-msg { position: absolute; left: 0; right: 0; top: calc(env(safe-area-inset-top) + 5.2rem); z-index: 89; display: flex; flex-direction: column; align-items: center; gap: .5rem; pointer-events: none; }
+.crew-card { display: flex; gap: .8rem; align-items: center; max-width: 34rem; padding: .6rem 1rem; border-radius: 16px; background: rgba(6,24,40,.92); border: 2px solid var(--line); color: var(--text); animation: stIn .2s ease-out; transition: opacity .3s; }
+.crew-card.out { opacity: 0; } .crew-card.mission { border-color: var(--amber); } .crew-card.error { border-color: var(--red); }
+.crew-card .avatar { flex: none; width: 2.4rem; height: 2.4rem; border-radius: 50%; display: grid; place-items: center; background: #0e3a50; color: var(--cyan); font-weight: 800; }
+.crew-card small { display: block; color: var(--dim); font-size: .75rem; letter-spacing: .06em; text-transform: uppercase; } .crew-card p { margin: 0; font-size: 1.05rem; }
+.comm-who-label { color: var(--dim); font-size: .9rem; letter-spacing: .08em; text-transform: uppercase; margin: -0.3rem 0 0.4rem; }

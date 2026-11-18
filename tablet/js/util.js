@@ -37,8 +37,12 @@ export function drag(node, { start, move, end }) {
   node.addEventListener('pointercancel', up);
 }
 
+/** App sets this: true while the bridge is on screen with no station or overlay open. Notices then go to the upper display only. */
+export const viewProbe = { fn: () => false };
+
 export function toast(text, kind = '') {
-  document.dispatchEvent(new CustomEvent('notice', { detail: { text, kind } }));
+  document.dispatchEvent(new CustomEvent('notice', { detail: { text, kind } }));   // the bridge's upper display shows it
+  if (viewProbe.fn()) return;
   const box = document.getElementById('toasts');
   if (!box) return;
   const t = el('div', { class: `toast ${kind}`, text });

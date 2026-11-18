@@ -3,6 +3,7 @@ import { sim, toward } from '../sim.js';
 import { el, toast } from '../util.js';
 import { gameState } from '../persist.js';
 import { toggleDock } from '../dock.js';
+import { say as crewSay } from '../notify.js';
 
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
 
@@ -10,6 +11,14 @@ export const knownCrew = () => Object.values(gameState.getProperty('contacts.cre
   .filter((c) => c && c.id !== 'captain' && c.known && c.name);
 
 const docked = () => sim.s.docked;
+/** Dive to a depth, but never deeper than the water allows. */
+function dive(want, lead) {
+  const max = sim.deepest();
+  if (max == null) { sim.setDepth(want); return `${lead} Making my depth ${want} metres.`; }
+  if (max < 5) return `${lead} There is not enough water under us to dive here, Captain. The floor is only ${Math.round(sim.s.floor)} metres.`;
+  if (want > max) { sim.setDepth(max); return `${lead} The floor is ${Math.round(sim.s.floor)} metres here, so ${max} metres is as deep as is safe. Making ${max}.`; }
+  sim.setDepth(want); return `${lead} Making my depth ${want} metres.`;
+}
 const HEADINGS = [['North 000', 0], ['045', 45], ['East 090', 90], ['135', 135], ['South 180', 180], ['225', 225], ['West 270', 270], ['315', 315]];
 const hdgText = (h) => String(Math.round(((h % 360) + 360) % 360)).padStart(3, '0');
 
@@ -25,8 +34,17 @@ const ORDERS = {
   },
   'Status Report': () => { const s = sim.s; return `Battery ${Math.round(s.battery)}%, oxygen ${Math.round(s.oxygen)}%, hull ${Math.round(s.hull)}%. Depth ${Math.round(s.depth)} metres.`; },
   'Engineering status report': () => { const s = sim.s; return `Power draw ${Math.round(s.power)} kilowatts, battery ${Math.round(s.battery)}%, hull ${Math.round(s.hull)}%. All engineering stations report ready.`; },
-  "Let's take her to sea": () => { if (docked()) return 'We are still docked, Captain. Have the Helm undock first.'; sim.setThrottle(0.4); sim.setDepth(30); sim.setHeading(60); return 'Casting off. Heading 060, thirty metres.'; },
-  'Prepare for dive': () => { if (docked()) return 'We are still docked, Captain.'; sim.setDepth(100); return 'Making ready. Diving to one hundred metres.'; },
+  "Let's take her to sea": (ctx) => {
+    const go = () => {
+      const c = sim.safeHeading();
+      if (!c || c.clearNm < 1) return 'I cannot find a mile of safe water in any direction, Captain. Better to plot a course ourselves.';
+      sim.setHeading(c.heading); sim.setDepth(0); sim.setThrottle(0.3); sim.s.wpt = null;
+      return `Heading ${hdgText(c.heading)}, on the surface at about four knots. ${c.clearNm >= 9.9 ? 'Clear water for ten miles' : `${c.clearNm.toFixed(1)} miles of clear water ahead`}. We will go deeper once we are in open water.`;
+    };
+    if (docked()) { setTimeout(() => toggleDock(() => crewSay('aria', go())), 600); return 'Undocking first, Captain. Then I will set a safe course out.'; }
+    return go();
+  },
+  'Prepare for dive': () => { if (docked()) return 'We are still docked, Captain.'; return dive(100, 'Making ready.'); },
   "Let's go home": () => {
     const dock = sim.dockPoi(); if (!dock) return 'No dock on the charts.';
     if (docked()) return 'We are already at the dock, Captain.';
@@ -39,20 +57,16 @@ const ORDERS = {
   'All ahead flank': () => { if (docked()) return 'We are docked, Captain.'; sim.setThrottle(1); return 'All ahead flank!'; },
   'Emergency surface': () => { sim.setDepth(0); return 'Blowing ballast. Surfacing!'; },
   'Emergency surfaace': () => { sim.setDepth(0); return 'Blowing ballast. Surfacing!'; },
-  'Emergency dive': () => { if (docked()) return 'We are docked, Captain.'; sim.setDepth(500); return 'Diving. Five hundred metres.'; },
-  'Full sensor sweep': () => { sim.s.sonar = true; sim.touch(); const n = sim.s.pois.filter((p) => toward(sim.s, p).nm <= 4).length; return `Sonar active. ${n} contact${n === 1 ? '' : 's'} within four miles. Details are on the Sensors station.`; },
-  'Deploy sensor buoys': () => {
-    const r = sim.deployWskr();
-    if (!r.ok) return r.why === 'docked' ? 'We are docked, Captain. WSKRs go out once we are underway.' : 'All four WSKRs are already deployed, Captain.';
-    return `WSKR ${r.n} deployed. It is mapping the sea floor around itself and shows on the nav chart.`;
-  },
+  'Emergency dive': () => { if (docked()) return 'We are docked, Captain.'; return dive(500, 'Diving!'); },
+  'Full sensor sweep': () => { sim.s.sonar = true; sim.s.sweepUntil = sim.s.clock + 1800; sim.touch(); const n = sim.s.pois.filter((p) => toward(sim.s, p).nm <= 4).length; return `Active sweep. ${n} contact${n === 1 ? '' : 's'} within four miles, and the chart shows more detail for a minute.`; },
+  'Deploy sensor buoys': () => `WSKRs launch from the Sensors station, Captain. ${sim.s.wskrs.length} of 4 are out. Once they are out they spread round us on their own, and you can send one to investigate a contact.`,
   'Passive listening mode': () => { sim.s.sonar = false; sim.touch(); return 'Sonar secured. Listening passively.'; },
   'Run crew diagnostics': () => 'Crew diagnostics complete. Everyone aboard is healthy, Captain.',
   'Request departure clearance': () => (docked() ? 'Woods Hole Harbor Control: you are cleared to depart at your discretion. Safe travels.' : 'Harbor Control: you are already underway, Captain.'),
 };
 // Orders that need a number. Each option runs when picked.
 const PARAM = {
-  'Make your depth': () => ({ title: 'Make your depth …', opts: [['Surface', 0], ['30 m', 30], ['100 m', 100], ['300 m', 300], ['500 m', 500], ['1000 m', 1000], ['2000 m', 2000]].map(([l, v]) => [l, () => (docked() ? 'We are docked, Captain.' : (sim.setDepth(v), v ? `Making my depth ${v} metres, aye.` : 'Coming to the surface, aye.'))]) }),
+  'Make your depth': () => ({ title: 'Make your depth …', opts: [['Surface', 0], ['30 m', 30], ['100 m', 100], ['300 m', 300], ['500 m', 500], ['1000 m', 1000], ['2000 m', 2000]].map(([l, v]) => [l, () => (docked() ? 'We are docked, Captain.' : v ? dive(v, 'Aye.') : (sim.setDepth(0), 'Coming to the surface, aye.'))]) }),
   'Come left': () => ({ title: 'Come left …', opts: [5, 10, 20, 45, 90].map((d) => [`${d}°`, () => { sim.setHeading(sim.s.targetHeading - d); sim.s.wpt = null; return `Coming left to ${hdgText(sim.s.targetHeading)}, aye.`; }]) }),
   'Come right': () => ({ title: 'Come right …', opts: [5, 10, 20, 45, 90].map((d) => [`${d}°`, () => { sim.setHeading(sim.s.targetHeading + d); sim.s.wpt = null; return `Coming right to ${hdgText(sim.s.targetHeading)}, aye.`; }]) }),
   'Make your heading': () => ({ title: 'Make your heading …', opts: HEADINGS.map(([l, v]) => [l, () => { sim.setHeading(v); sim.s.wpt = null; return `Steering ${hdgText(v)}, aye.`; }]) }),
@@ -69,9 +83,10 @@ export function mount(body, ctx) {
   const cats = () => {
     const o = (cur && cur.dialogueOptions) || {};
     const cmds = [...(o.commands || []), ...((EXTRA[cur && cur.id]) || []).filter((c) => !(o.commands || []).includes(c))];
-    return [['Pleasantries', mineP()], ['Commands', cmds], ['Emergency', o.emergency || []]].filter(([, l]) => l.length);
+    return [['Pleasantries', mineP(), 'Make small talk'], ['Commands', cmds, 'Give an order'], ['Emergency', o.emergency || [], 'Report an emergency']].filter(([, l]) => l.length);
   };
   const line = (text, onclick, cls = '') => el('button', { class: `comm-line ${cls}`, text, onclick });
+  const first = (c) => (c.id === 'executiveOfficer' ? 'ARIA' : c.name.replace(/^(Captain|Commander|Dr\.|Specialist|Engineer|Lieutenant) /, '').split(' ')[0]);
   const initial = (c) => c.name.replace(/^(Captain|Commander|Dr\.|Specialist|Engineer|Lieutenant) /, '')[0];
 
   function say(text, done) {
@@ -100,22 +115,23 @@ export function mount(body, ctx) {
           render();
         } }, el('span', { class: `avatar ${c.id === 'executiveOfficer' ? 'aria' : ''}`, text: initial(c) }), el('span', {}, el('b', { text: c.name }), el('small', { text: c.role }))))];
     } else if (page === 'cat') {
-      kids = [el('div', { class: 'comm-head', text: `What would you like to say to ${cur.name}?` }),
-        ...cats().map(([n, l]) => line(n, () => { cat = [n, l]; page = 'lines'; render(); }, n === 'Emergency' ? 'danger' : '')),
-        line('Someone else …', () => { page = 'crew'; render(); }, 'back')];
+      kids = [el('div', { class: 'comm-head', text: `What is on your mind, Captain?` }), el('div', { class: 'comm-who-label', text: `${cur.name} · ${cur.role}` }),
+        ...cats().map(([n, l, label]) => line(label, () => { cat = [n, l, label]; page = 'lines'; render(); }, n === 'Emergency' ? 'danger' : '')),
+        line('Actually, let me call someone else …', () => { page = 'crew'; render(); }, 'back')];
     } else if (page === 'lines') {
-      kids = [el('div', { class: 'comm-head', text: `${cat[0]} with ${cur.name}` }),
+      kids = [el('div', { class: 'comm-head', text: cat[0] === 'Pleasantries' ? `Say to ${first(cur)}…` : cat[0] === 'Commands' ? `Order to ${first(cur)}…` : `Tell ${first(cur)}…` }),
         ...cat[1].map((t) => { const ok = works(t, cat[0] === 'Pleasantries'); return line(t, () => speak(t), ok ? (cat[0] === 'Emergency' ? 'danger' : '') : 'stub'); }),
-        line('Something else …', () => { page = 'cat'; render(); }, 'back')];
+        line('Belay that …', () => { page = 'cat'; render(); }, 'back')];
     } else if (page === 'param') {
       kids = [el('div', { class: 'comm-head', text: param.title }),
         el('div', { class: 'comm-chips' }, ...param.opts.map(([l, fn]) => line(l, () => say(`${param.said}: ${l}`, fn(ctx)), 'chip'))),
-        line('Never mind …', () => { page = 'lines'; render(); }, 'back')];
+        line('Belay that …', () => { page = 'lines'; render(); }, 'back')];
     } else {
       kids = [reply.said && el('div', { class: 'comm-you', text: `You: ${reply.said}` }),
         el('div', { class: 'comm-reply' + (reply.stub ? ' stub' : '') }, el('small', { text: cur.name }), el('p', { text: reply.text })),
-        line('Say something else …', () => { page = 'cat'; render(); }, 'back'),
-        line('Someone else …', () => { page = 'crew'; render(); }, 'back')];
+        line(`One more thing, ${first(cur)} …`, () => { page = 'cat'; render(); }, 'back'),
+        line('Put me through to someone else …', () => { page = 'crew'; render(); }, 'back'),
+        line("That's all. Out.", () => ctx.closeComm(), 'back')];
     }
     body.replaceChildren(el('div', { class: 'comm-page' }, ...kids));
   }

@@ -32,7 +32,9 @@ export function createND(wrap, { onPick, stage = false, units = 1, contours = fa
   };
 
   // Real sea floor: rough contours everywhere, 10 m contours only in a circle round the ship (and each deployed WSKR).
-  const FINE_NM = 4, WSKR_NM = 3;
+  const WSKR_NM = 3;
+  // Sonar sets how much of the sea floor is mapped in detail: sonar on 4 nm, off 0.8 nm (echo sounder only), active sweep 8 nm.
+  const fineNm = (s) => (s.clock < (s.sweepUntil || 0) ? 8 : s.sonar ? 4 : 0.8);
   const shade = (l) => (l === 0 ? 'rgba(255,214,120,0.9)' : l > -100 ? 'rgba(130,215,255,0.40)' : l > -500 ? 'rgba(90,170,255,0.45)' : 'rgba(110,130,255,0.55)');
   function strokeLevels(levels, p, w, h, fine) {
     for (const lv of levels) {
@@ -58,7 +60,7 @@ export function createND(wrap, { onPick, stage = false, units = 1, contours = fa
       ctx.strokeStyle = '#9fd8ff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x0, y0 - 6); ctx.lineTo(x0, y0); ctx.lineTo(x0 + len, y0); ctx.lineTo(x0 + len, y0 - 6); ctx.stroke();
       ctx.fillStyle = '#9fd8ff'; ctx.font = '600 15px ui-monospace, Menlo, monospace'; ctx.textAlign = 'center'; ctx.fillText(nice + ' nm', x0 + len / 2, y0 - 10);
     }
-    const src = [{ lat: s.lat, lon: s.lon, nm: FINE_NM }, ...(s.wskrs || []).map((q) => ({ lat: q.lat, lon: q.lon, nm: WSKR_NM }))];
+    const src = [{ lat: s.lat, lon: s.lon, nm: fineNm(s) }, ...(s.wskrs || []).map((q) => ({ lat: q.lat, lon: q.lon, nm: WSKR_NM }))];
     const tiles = seafloor.fineFor(src, nd.redraw);
     if (!tiles.length) return;
     ctx.save(); ctx.beginPath();
@@ -70,6 +72,8 @@ export function createND(wrap, { onPick, stage = false, units = 1, contours = fa
     for (const q of src) { const cx = p.x(q.lon), cy = p.y(q.lat); ctx.moveTo(cx + q.nm * scale, cy); ctx.arc(cx, cy, q.nm * scale, 0, 6.2832); }
     ctx.stroke(); ctx.setLineDash([]);
   }
+
+  nd.fineRadius = () => fineNm(sim.s);
 
   nd.draw = () => {
     const { w, h } = nd, s = sim.s, cx = w / 2, cy = h / 2;
@@ -97,7 +101,7 @@ export function createND(wrap, { onPick, stage = false, units = 1, contours = fa
     for (const q of s.wskrs || []) {
       const t = toward(s, q), scale = R / nd.range, x = w / 2 + t.dx * scale, y = h / 2 - t.dy * scale;
       if (x < -20 || x > w + 20 || y < -20 || y > h + 20) continue;
-      ctx.fillStyle = '#ffd666'; ctx.beginPath(); ctx.moveTo(x, y - 7); ctx.lineTo(x + 6, y); ctx.lineTo(x, y + 7); ctx.lineTo(x - 6, y); ctx.fill();
+      ctx.fillStyle = q.mode === 'task' ? '#ff9f43' : '#ffd666'; ctx.beginPath(); ctx.moveTo(x, y - 7); ctx.lineTo(x + 6, y); ctx.lineTo(x, y + 7); ctx.lineTo(x - 6, y); ctx.fill();
       ctx.font = '700 14px system-ui'; ctx.textAlign = 'left'; ctx.fillText('W' + q.n, x + 9, y + 5);
     }
     // POIs

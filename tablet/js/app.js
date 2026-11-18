@@ -2,8 +2,10 @@ import '../../utils/debugPanel.js';
 import { dlog } from '../../utils/log.js';
 import { sim, clockText, toward, MAX_SPEED } from './sim.js';
 import { createScene } from './scene.js';
+import { say, stats as notifyStats } from './notify.js';
 import { seafloor } from './seafloor.js';
-import { el, $, toast, pad, modal, frameThrottle } from './util.js';
+import { fileScan } from './findings.js';
+import { el, $, toast, pad, modal, frameThrottle, viewProbe } from './util.js';
 import { ICONS } from './ui.js';
 import { startSync, syncAtBoot } from './sync.js';
 import { initAudio, updateHum, chirp, ping } from './audio.js';
@@ -34,8 +36,11 @@ const objectives = () => gameState.getProperty('mission.objectives') || [];
 const objStatus = (id) => (objectives().find((o) => o.id === id) || {}).status;
 const commsLocked = () => objStatus('meetTheCrew_pickup_communicator') === 'active';
 
+viewProbe.fn = () => boarded && !!scene && scene.where === 'bridge' && !current && !ped && !comm;
+
 const ctx = {
   openScene: (name) => openScene(name),
+  closeComm: () => closeComm(),
   refreshScene: () => { scene && scene.update(); syncUI(); },
   zoom(d) { zoom = d === 0 ? 1 : Math.min(1.5, Math.max(0.8, +(zoom + d).toFixed(2))); applyZoom(); try { localStorage.setItem('aquaNova_zoom', zoom); } catch (e) { /* ignore */ } fit(); },
   objectives: () => objectives().map((o) => ({ text: o.description, done: o.status === 'completed' })),
@@ -196,8 +201,8 @@ function showSystemDialogue(id) {
   if (boarded) run(); else pendingModals.push(run);
 }
 document.addEventListener('show-dialogue', (e) => { if (e.detail.characterId === 'system') showSystemDialogue(e.detail.dialogueId); });
-document.addEventListener('comms-message', (e) => { if (boarded) { ping(); toast(`Message from ${e.detail.from}`, 'mission'); } syncUI(); });
-document.addEventListener('mission-notify', (e) => { if (boarded) { ping(); toast(`${e.detail.title} — ${e.detail.subtitle}`, 'mission'); } });
+document.addEventListener('comms-message', (e) => { if (boarded) say('comms', `New message from ${e.detail.from} at the Comms station.`, 'mission'); syncUI(); });
+document.addEventListener('mission-notify', (e) => { if (boarded) say('aria', `${e.detail.title} — ${e.detail.subtitle}`, 'mission'); });
 
 function firstVisit(poi) {
   const seen = gameState.getProperty('progress.areasExplored') || [];
@@ -246,12 +251,14 @@ async function boot() {
         const o = ctx.objectives().find((x) => !x.done); const ot = o ? 'Objective: ' + o.text : '';
         if (st.obj.textContent !== ot) st.obj.textContent = ot;
         const b = `BAT ${Math.round(s.battery)}%`; if (st.bat.textContent !== b) st.bat.textContent = b;
-      } else if (type === 'enter') { toast('Arrived: ' + data.name); firstVisit(data); }
-      else if (type === 'arrived') toast('Destination reached');
+      } else if (type === 'enter') { say('helm', `We are at ${data.name}, Captain.`); firstVisit(data); }
+      else if (type === 'arrived') say('helm', 'Destination reached, Captain.');
+      else if (type === 'wskr-found') { const fresh = fileScan(data.poi); say('sensors', fresh ? `WSKR ${data.wskr.n} has finished investigating ${data.poi.name}. Scan filed, Captain.` : `WSKR ${data.wskr.n} re-checked ${data.poi.name}. Nothing new.`, 'mission'); }
+      else if (type === 'wskr-recovered') say('sensors', `WSKR ${data.n} is back aboard.`);
       else if (type === 'bump') {
         const k = data.kind;
-        if (k === 'edge') toast('Edge of the charted area. All stop.', 'error');
-        else toast(`${k === 'shoal' ? 'Shoal water ahead! The ship has run aground' : 'We have touched bottom'}. Hull damage ${Math.round(data.damage)}%.`, 'error');
+        if (k === 'edge') say('helm', 'We are at the edge of the charted area, Captain. All stop.', 'error');
+        else say('engineering', `${k === 'shoal' ? 'We have run aground' : 'We touched bottom'}! Hull damage ${Math.round(data.damage)}%.`, 'error');
       }
     });
     // A new game starts in your quarters, where the tutorial begins.
@@ -263,5 +270,5 @@ async function boot() {
 }
 // Offline play: the service worker keeps a copy of the game. Needs https (GitHub Pages) or localhost.
 if ('serviceWorker' in navigator) navigator.serviceWorker.register(new URL('../../sw.js', import.meta.url)).catch((e) => dlog('service worker not registered: ' + e.message));
-window.__aq = { open: (n) => openStation(n), scene: (n) => openScene(n), toggleQuarters: () => openScene(scene.inQuarters ? 'bridge' : 'quarters') };   // used by the test scripts
+window.__aq = { open: (n) => openStation(n), scene: (n) => openScene(n), toggleQuarters: () => openScene(scene.inQuarters ? 'bridge' : 'quarters'), notify: notifyStats, console: () => scene.console };   // used by the test scripts
 boot();

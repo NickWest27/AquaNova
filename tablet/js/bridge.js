@@ -73,7 +73,7 @@ export function createBridgeConsole({ top, main, display, center, left, right, o
       else if (s.wpt) { const t = toward(s, s.wpt); set(rA, 'COURSE SET'); set(rB, s.wpt.name); set(rC, `${t.nm.toFixed(1)} nm  ETA ${etaText(t.nm, s.speed)}`); }
       else { set(rA, 'DESTINATION'); set(rB, 'None'); set(rC, 'Tap a marker'); }
     }
-    return { make, c, r, expand: 'nav', side: refresh };
+    return { make, c, r, expand: 'nav', side: refresh, nds };
   })();
 
   // ---------- HELM ----------
@@ -193,5 +193,5 @@ export function createBridgeConsole({ top, main, display, center, left, right, o
 
   let saved = 'nav'; try { saved = localStorage.getItem(KEY) || 'nav'; } catch (e) { /* ignore */ }
   select(saved);
-  return { select, update, get current() { return current; }, get main() { return mainId; } };
+  return { select, update, get current() { return current; }, get main() { return mainId; }, nds: views.nav.nds };
 }

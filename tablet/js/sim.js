@@ -17,7 +17,7 @@ export const sim = {
     throttle: 0, speed: 0, depth: 0, targetDepth: 0,
     battery: 100, oxygen: 100, hull: 100, co2: 0.04, temp: 4.1, power: 0,
     ballast: 100, comms: true, sonar: true, lights: true, pois: [], wpt: null, at: null,
-    clock: 6 * 3600, docked: false, damage: 0, floor: null, wskrs: [],     // clock = game seconds since Day 1 00:00
+    clock: 6 * 3600, docked: false, damage: 0, floor: null, wskrs: [], sweepUntil: 0,     // clock = game seconds since Day 1 00:00
   },
   listeners: new Set(),
   dirty: true,
@@ -59,13 +59,66 @@ sim.setHeading = (h) => { sim.s.targetHeading = norm360(h); sim.touch(); };
 sim.setDepth = (d) => { if (sim.s.docked) return; sim.s.targetDepth = clamp(d, 0, 6000); sim.touch(); };
 sim.setWpt = (p) => { sim.s.wpt = p; if (p) { sim.s.targetHeading = toward(sim.s, p).brg; } sim.touch(); };
 sim.stop = () => { sim.s.throttle = 0; sim.s.wpt = null; sim.touch(); };
-/** Drop a WSKR (remote sensor probe) at the ship. Up to 4 at once; each maps the sea floor in detail round itself. */
+/** WSKRs: autonomous remote sensors. They hold a ring formation round the ship (better readings, stereoscopic data),
+ *  can be sent to investigate a site, and can be recalled. Launched only from the Sensors station. Up to 4.
+ *  Each: { n, lat, lon, mode: 'escort' | 'task' | 'recall', target: poi id | null, busy: game seconds spent investigating } */
+const WSKR_KT = 10, WSKR_RING_NM = 1.5, WSKR_INVESTIGATE_S = 90;
 sim.deployWskr = () => {
   const s = sim.s;
   if (s.docked) return { ok: false, why: 'docked' };
   if (s.wskrs.length >= 4) return { ok: false, why: 'full' };
-  s.wskrs.push({ lat: s.lat, lon: s.lon, n: s.wskrs.length + 1 }); sim.touch(); return { ok: true, n: s.wskrs.length };
+  const used = new Set(s.wskrs.map((w) => w.n)); let n = 1; while (used.has(n)) n++;
+  s.wskrs.push({ n, lat: s.lat, lon: s.lon, mode: 'escort', target: null, busy: 0 }); sim.touch(); return { ok: true, n };
 };
+sim.taskWskr = (poi) => {
+  const w = sim.s.wskrs.find((q) => q.mode === 'escort');
+  if (!w) return null;
+  w.mode = 'task'; w.target = poi.id; w.busy = 0; sim.touch(); return w;
+};
+sim.recallWskrs = () => { sim.s.wskrs.forEach((w) => { w.mode = 'recall'; w.target = null; }); sim.touch(); return sim.s.wskrs.length; };
+function stepWskrs(dt) {
+  const s = sim.s; if (!s.wskrs.length) return;
+  const esc = s.wskrs.filter((w) => w.mode === 'escort'), step = (WSKR_KT * dt * TIMESCALE) / 3600;
+  s.wskrs = s.wskrs.filter((w) => {
+    let goal = null;
+    if (w.mode === 'escort') { const i = esc.indexOf(w), a = ((s.heading + (360 / esc.length) * i + 45) * Math.PI) / 180; goal = { lat: s.lat + (Math.cos(a) * WSKR_RING_NM) / NM_PER_DEG_LAT, lon: s.lon + (Math.sin(a) * WSKR_RING_NM) / (NM_PER_DEG_LAT * Math.cos((s.lat * Math.PI) / 180)) }; }
+    else if (w.mode === 'task') { goal = s.pois.find((p) => p.id === w.target); if (!goal) { w.mode = 'escort'; return true; } }
+    else goal = s;
+    const t = toward(w, goal);
+    if (w.mode === 'recall' && t.nm < 0.15) { sim.emit('wskr-recovered', w); return false; }
+    if (w.mode === 'task' && t.nm < 0.12) {          // on site: investigate, then file the scan and rejoin
+      w.busy += dt * TIMESCALE;
+      if (w.busy >= WSKR_INVESTIGATE_S) { const p = s.pois.find((q) => q.id === w.target); w.mode = 'escort'; w.target = null; sim.emit('wskr-found', { wskr: w, poi: p }); }
+      return true;
+    }
+    if (t.nm > 0.02) {
+      const f = Math.min(1, step / t.nm), lat = w.lat + (goal.lat - w.lat) * f, lon = w.lon + (goal.lon - w.lon) * f;
+      if (!seafloor.ready || (seafloor.depthAt(lat, lon) ?? 0) >= 3) { w.lat = lat; w.lon = lon; }   // small probes stay out of the very shallows
+    }
+    return true;
+  });
+}
+
+/** Safest course out of here: the heading with the most clear water ahead (at least KEEL + 2 m under us), preferring south/open sea.
+ *  Returns { heading, clearNm } or null before the sea floor has loaded. */
+sim.safeHeading = (maxNm = 10) => {
+  if (!seafloor.ready) return null;
+  const s = sim.s, dock = sim.dockPoi(), harbor = !!dock; let best = null;
+  for (let h = 0; h < 360; h += 5) {
+    const r = (h * Math.PI) / 180; let free = 0;
+    for (let d = 0.1; d <= maxNm; d += 0.1) {
+      const fl = seafloor.depthAt(s.lat + (d * Math.cos(r)) / NM_PER_DEG_LAT, s.lon + (d * Math.sin(r)) / (NM_PER_DEG_LAT * Math.cos((s.lat * Math.PI) / 180)));
+      if (fl == null || fl < (harbor && toward(s, dock).nm < HARBOR_NM && toward({ lat: s.lat + (d * Math.cos(r)) / NM_PER_DEG_LAT, lon: s.lon + (d * Math.sin(r)) / (NM_PER_DEG_LAT * Math.cos((s.lat * Math.PI) / 180)) }, dock).nm < HARBOR_NM ? 3 : KEEL + 2)) break;   // inside the dredged harbour only land stops us
+      free = d;
+    }
+    const pref = Math.abs(((h - 180 + 540) % 360) - 180);   // distance from due south
+    if (!best || free > best.clearNm + 0.5 || (Math.abs(free - best.clearNm) <= 0.5 && pref < best.pref)) best = { heading: h, clearNm: free, pref };
+  }
+  return best;
+};
+/** Deepest depth we can safely hold here: the floor minus the keel and a 5 m margin (null if unknown). */
+sim.deepest = () => { const fl = seafloor.ready ? seafloor.depthAt(sim.s.lat, sim.s.lon) : null; return fl == null ? null : Math.max(0, Math.floor(fl - KEEL - 5)); };
+
 sim.dockPoi = () => sim.s.pois.find((p) => p.type === 'dock');
 
 sim.step = (dt) => {
@@ -111,6 +164,7 @@ sim.step = (dt) => {
     if (!seafloor.ready) sim.onBottom = false;
   }
   s.floor = seafloor.ready ? seafloor.depthAt(s.lat, s.lon) : null;
+  stepWskrs(dt);
   // systems
   s.power = 8 + (s.speed / MAX_KT) * 70 + (s.lights ? 5 : 0) + (s.sonar ? 4 : 0);
   if (s.docked) { // shore power and air: about 20% battery and 30% oxygen per game hour
