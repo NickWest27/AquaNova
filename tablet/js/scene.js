@@ -5,6 +5,26 @@ import { createBridgeConsole } from './bridge.js';
 
 const box = (cls, x, y, w, h, kids) => el('div', { class: `disp ${cls}`, style: `left:${x}px;top:${y}px;width:${w}px;height:${h}px` }, kids);
 
+// Map a W x H content box onto a slanted screen. q = corners TL, TR, BR, BL in stage pixels, relative to the box origin.
+function warp(node, W, H, q) {
+  const src = [[0, 0], [W, 0], [W, H], [0, H]], A = [], b = [];
+  src.forEach(([x, y], i) => { const [X, Y] = q[i]; A.push([x, y, 1, 0, 0, 0, -x * X, -y * X], [0, 0, 0, x, y, 1, -x * Y, -y * Y]); b.push(X, Y); });
+  for (let i = 0; i < 8; i++) {                                            // Gaussian elimination
+    let m = i; for (let r = i + 1; r < 8; r++) if (Math.abs(A[r][i]) > Math.abs(A[m][i])) m = r;
+    [A[i], A[m]] = [A[m], A[i]]; [b[i], b[m]] = [b[m], b[i]];
+    for (let r = 0; r < 8; r++) if (r !== i) { const f = A[r][i] / A[i][i]; for (let c = i; c < 8; c++) A[r][c] -= f * A[i][c]; b[r] -= f * b[i]; }
+  }
+  const [a, bb, c, d, e, f, g, h] = b.map((v, i) => v / A[i][i]);
+  node.style.cssText += `;position:absolute;left:0;top:0;width:${W}px;height:${H}px;inset:auto;transform-origin:0 0;transform:matrix3d(${a},${d},0,${g},${bb},${e},0,${h},0,0,1,0,${c},${f},0,1)`;
+}
+// A screen in the art: its bounding box plus the four corners of the slanted glass (stage pixels).
+function slanted(cls, node, W, H, corners) {
+  const xs = corners.map((p) => p[0]), ys = corners.map((p) => p[1]);
+  const x0 = Math.min(...xs), y0 = Math.min(...ys), x1 = Math.max(...xs), y1 = Math.max(...ys);
+  warp(node, W, H, corners.map(([x, y]) => [x - x0, y - y0]));
+  return box(cls, x0, y0, x1 - x0, y1 - y0, [node]);
+}
+
 export function createScene(stage, { onOpen }) {
   const bridge = el('div', { class: 'scene' });
   const quarters = el('div', { class: 'scene', hidden: true });
@@ -23,8 +43,10 @@ export function createScene(stage, { onOpen }) {
       el('span', { class: `tag ${tagPos}`, text: label }));
 
   bridge.append(
-    box('bmainbox', 254, 189, 1410, 364, [mainD]), box('', 594, 76, 733, 94, [topD]), box('bdispbox', 712, 579, 499, 207, [dispD]), box('', 637, 828, 651, 125, [ctrD]),
-    box('', 389, 802, 271, 152, [leftD]), box('', 1276, 800, 257, 154, [rightD]), frame,
+    box('bmainbox', 254, 189, 1410, 364, [mainD]), box('', 594, 76, 733, 94, [topD]), slanted('bdispbox', dispD, 478, 204, [[730, 581], [1187, 581], [1206, 781], [711, 781]]),
+    slanted('', ctrD, 612, 118, [[674, 832], [1243, 832], [1287, 947], [641, 947]]),
+    slanted('', leftD, 205, 146, [[482, 805], [652, 808], [607, 947], [391, 947]]),
+    slanted('', rightD, 205, 146, [[1278, 803], [1448, 808], [1532, 947], [1318, 947]]), frame,
     hs('COMMS', 40, 430, 520, 350, () => onOpen('comms'), 'top'),        // comms officer, left station
     hs('SENSORS', 1380, 430, 520, 350, () => onOpen('sensors'), 'top'),  // sensors, right station
     hs('◂ WALKWAY', 0, 890, 330, 190, () => onOpen('walkway'), 'mid'),    // lower corners leave the bridge

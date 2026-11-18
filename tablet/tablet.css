@@ -433,7 +433,7 @@ textarea.field { min-height: 6rem; resize: none; }
 /* ---- bridge console v2: medium display and bottom control strip ---- */
 .bdisp { position: absolute; inset: 0; background: #03121c; }
 .bt { gap: 0; } .bt-place { font-size: 26px; } .bt-pos { font-size: 19px; }
-.bt-note { font-size: 18px; color: var(--dim); letter-spacing: .06em; white-space: nowrap; max-width: 700px; overflow: hidden; text-overflow: ellipsis; }
+.bt-note { font-size: 18px; color: var(--dim); letter-spacing: .06em; white-space: nowrap; max-width: 560px; overflow: hidden; text-overflow: ellipsis; }
 .bt-note.on { color: var(--amber); } .bt-note.on.error { color: var(--red); }
 .bc { padding: 8px 12px; gap: 6px; }
 .rowN { display: flex; gap: 8px; flex: 1; min-height: 0; align-items: stretch; }

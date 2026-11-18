@@ -6,7 +6,7 @@ const RANGES = [0.5, 1, 2, 4, 8, 16];
 
 // stage: the canvas sits inside the scaled 1920x1080 bridge stage. Sizes then come from layout (not the scaled
 // rectangle), and `units` makes text and markers bigger so they read at the stage's smaller on-screen size.
-export function createND(wrap, { onPick, stage = false, units = 1, contours = false } = {}) {
+export function createND(wrap, { onPick, stage = false, units = 1, contours = false, rings = true } = {}) {
   const canvas = document.createElement('canvas');
   wrap.prepend(canvas);
   const ctx = canvas.getContext('2d');
@@ -60,6 +60,7 @@ export function createND(wrap, { onPick, stage = false, units = 1, contours = fa
     ctx.clearRect(0, 0, w, h);
     ctx.fillStyle = '#03121c'; ctx.fillRect(0, 0, w, h);
     if (contours) drawContours(w, h, R);
+    if (rings) {
     ctx.lineWidth = 1.5; ctx.strokeStyle = 'rgba(100,255,218,0.25)';
     for (let i = 1; i <= 4; i++) { ctx.beginPath(); ctx.arc(cx, cy, (R * i) / 4, 0, 6.2832); ctx.stroke(); }
     ctx.beginPath(); ctx.moveTo(cx - R, cy); ctx.lineTo(cx + R, cy); ctx.moveTo(cx, cy - R); ctx.lineTo(cx, cy + R); ctx.stroke();
@@ -67,6 +68,7 @@ export function createND(wrap, { onPick, stage = false, units = 1, contours = fa
     for (let i = 1; i <= 4; i++) ctx.fillText(((nd.range * i) / 4).toFixed(nd.range < 2 ? 2 : 1) + ' nm', cx + 6, cy - (R * i) / 4 + 16);
     ctx.textAlign = 'center'; ctx.fillStyle = '#64ffda'; ctx.font = '800 18px system-ui';
     ctx.fillText('N', cx, cy - R - 6);
+    }
     // waypoint line
     if (s.wpt) {
       const p = px(s.wpt);

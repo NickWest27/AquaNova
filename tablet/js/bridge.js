@@ -38,7 +38,7 @@ export function createBridgeConsole({ top, main, display, center, left, right, o
     const make = (compact) => {
       const m = el('div', { class: 'bd bd-nav' + (compact ? ' compact' : '') });
       const wrap = el('div', { class: 'nd-stage' }); m.append(wrap);
-      const nd = createND(wrap, { stage: true, units: compact ? 1.25 : 1.7, contours: !compact, onPick: syncSel });
+      const nd = createND(wrap, { stage: true, units: compact ? 1.25 : 1.7, contours: !compact, rings: compact, onPick: syncSel });
       if (nds[0]) nd.setRange(nds[0].range);
       nd.sel = sel; nds.push(nd);
       if (compact) return { m, update() { nd.redraw(); } };
@@ -162,7 +162,7 @@ export function createBridgeConsole({ top, main, display, center, left, right, o
   }
   left.append(sel);
   const expand = el('button', { class: 'bd-expand', 'aria-label': 'Open this display full screen', text: '⤢', onclick: () => { const v = views[mainId]; if (v && v.expand) onExpand(v.expand); } });
-  const promote = el('button', { class: 'bd-promote', 'aria-label': 'Send to the main screen', text: 'MAIN ▲', onclick: () => { mainId = mainId === current && current !== 'nav' ? 'nav' : current; paint(); update(); } });
+  const promote = el('button', { class: 'bd-promote', 'aria-label': 'Send to the main screen', text: 'MAIN ▲', onclick: () => { mainId = current === 'nav' || mainId === current ? 'nav' : current; paint(); update(); } });
   main.append(expand); display.append(promote);
 
   let current = 'nav', mainId = 'nav';
@@ -172,8 +172,7 @@ export function createBridgeConsole({ top, main, display, center, left, right, o
       big[k].m.hidden = k !== mainId; btns[k].classList.toggle('on', k === current);
     }
     expand.hidden = !views[mainId].expand;
-    promote.classList.toggle('on', mainId === current && current !== 'nav');
-    promote.hidden = current === 'nav';
+    promote.classList.toggle('on', mainId === current);
   }
   function select(id) {
     if (!views[id]) id = 'nav';
