@@ -59,7 +59,7 @@ export function requestSync(delay = 4000) { clearTimeout(timer); timer = setTime
 
 export function startSync() {
   // Reads are conditional (free when nothing changed). Writes happen only when something changed.
-  setInterval(() => { if (!document.hidden && getConfig() && autoSyncAllowed()) syncNow(); }, 60000);
+  setInterval(() => { if (!document.hidden && getConfig() && autoSyncAllowed()) syncNow(); }, 20000);
   document.addEventListener('visibilitychange', () => {
     if (!getConfig() || !autoSyncAllowed()) return;
     if (document.hidden || Date.now() - lastAt > 15000) syncNow();   // leaving: push at once. Returning: not more than every 15 s

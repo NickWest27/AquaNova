@@ -1,4 +1,4 @@
-// Crew comms through the communicator pin (Star Trek style): crew on the left, PDA in the middle, things to say on the right.
+// Crew comms through the communicator pin (Star Trek style): crew on the left, the voice channel (transcript) in the middle, things to say on the right.
 import { sim, toward } from '../sim.js';
 import { el, toast } from '../util.js';
 import { gameState } from '../persist.js';
@@ -32,10 +32,9 @@ export function mount(body, ctx) {
   const list = el('div', { class: 'crew-list' });
   const name = el('b'), role = el('small'), avatar = el('span', { class: 'avatar' });
   const msgs = el('div', { class: 'msgs' });
-  const screen = el('div', { class: 'pda-screen' }, el('div', { class: 'pda-head' }, avatar, el('div', {}, name, role)), msgs);
-  const pda = el('div', { class: 'pda' }, screen, el('img', { class: 'pda-frame', src: 'assets/pda-frame.webp', alt: '', draggable: 'false' }));
-  const say = el('div', { class: 'say' });
-  body.append(list, pda, say);
+  const screen = el('div', { class: 'comm-screen' }, el('div', { class: 'comm-head' }, avatar, el('div', {}, name, role)), msgs);
+    const say = el('div', { class: 'say' });
+  body.append(list, screen, say);
 
   const thread = () => (threads[cur.id] ||= []);
   function renderList() {

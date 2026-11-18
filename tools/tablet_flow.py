@@ -44,7 +44,7 @@ def main():
         check("pickup hidden after pickup", not page.is_visible(".pickup"))
         check("pin visible after pickup", page.is_visible("#pin"))
         page.tap("#pin"); page.wait_for_timeout(900)
-        check("pin opens crew comms", page.is_visible("#station .pda"))
+        check("pin opens crew comms", page.is_visible("#comm-pop .comm-screen"))
         o = objs(); check("learn_communicator completed", "learn_communicator:completed" in o, o)
         page.wait_for_timeout(4000); page.screenshot(path=f"{SHOTS}/f-3comms.png")
         page.tap("text=Hello"); page.wait_for_timeout(500)
@@ -53,7 +53,7 @@ def main():
         known = js("const g=(await import('./js/persist.js')).gameState;return g.getProperty('contacts.crew.science.known')")
         check("science unlocked by mission", known is True, known)
         page.screenshot(path=f"{SHOTS}/f-4done.png")
-        page.tap("#station .st-head .btn")
+        page.tap(".comm-close")
         # persistence
         js("const s=(await import('./js/sim.js')).sim, p=await import('./js/persist.js'); s.s.docked=false; s.s.lat=41.51; s.s.lon=-70.68; s.s.depth=120; s.s.heading=77; s.s.targetHeading=77; s.s.targetDepth=120; s.s.throttle=0; p.addLogEntry('Entry A'); p.addLogEntry('Test entry before reload'); p.checkpoint();")
         page.wait_for_timeout(200)

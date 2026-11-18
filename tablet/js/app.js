@@ -68,10 +68,13 @@ let ped = null;
 async function togglePed() {
   if (ped) return closePed();
   const root = $('#ped-pop'), body = el('div', { class: 'st-body' });
-  root.replaceChildren(el('div', { class: 'ped-panel' },
-    el('header', { class: 'st-head' }, el('div', { class: 'st-title', text: 'PED' }), el('button', { class: 'btn ped-close', style: 'margin-left:auto', text: 'Close ✕', onclick: closePed })),
-    body));
-  root.onclick = (e) => { if (e.target === root) closePed(); };   // tap outside the panel
+  // The PED is a handheld: the PDA frame sits around it.
+  root.replaceChildren(el('div', { class: 'ped-panel pda' },
+    el('div', { class: 'pda-screen' },
+      el('div', { class: 'pda-head' }, el('b', { text: 'PED' }), el('button', { class: 'btn ped-close', style: 'margin-left:auto', text: 'Close ✕', onclick: closePed })),
+      body),
+    el('img', { class: 'pda-frame', src: 'assets/pda-frame.webp', alt: '', draggable: 'false' })));
+  root.onclick = (e) => { if (e.target === root) closePed(); };   // tap outside the PDA
   root.hidden = false;
   try {
     modules.ped ||= await import('./stations/ped.js');
@@ -84,13 +87,33 @@ function closePed() {
   ped = null; $('#ped-pop').hidden = true; $('#ped-pop').replaceChildren();
 }
 
+// ---------- Communicator: a voice channel, shown as a blurred overlay over the current screen ----------
+let comm = null;
+async function toggleComm() {
+  if (comm) return closeComm();
+  if (commsLocked()) return;
+  gameState.updateProperty('tutorial.communicator_opened', true); // "First Contact" step 3
+  const root = $('#comm-pop'), body = el('div', { class: 'st-body' });
+  root.replaceChildren(el('div', { class: 'comm-panel' },
+    el('header', { class: 'st-head' }, el('div', { class: 'st-title', text: 'Communicator' }), el('small', { class: 'comm-live', text: '● voice channel' }), el('button', { class: 'btn comm-close', style: 'margin-left:auto', text: 'Close ✕', onclick: closeComm })),
+    body));
+  root.onclick = (e) => { if (e.target === root) closeComm(); };
+  root.hidden = false;
+  try {
+    modules.crew ||= await import('./stations/crew.js');
+    comm = { api: modules.crew.mount(body, ctx) };
+  } catch (e) { console.error('Communicator failed', e); toast('Could not open the communicator', 'error'); root.hidden = true; }
+}
+function closeComm() {
+  if (!comm) return;
+  try { comm.api.destroy(); } catch (e) { console.error(e); }
+  comm = null; $('#comm-pop').hidden = true; $('#comm-pop').replaceChildren();
+}
+
 // ---------- stations ----------
 async function openStation(name) {
   if (name === 'ped') return togglePed();
-  if (name === 'crew') {
-    if (commsLocked()) return;
-    gameState.updateProperty('tutorial.communicator_opened', true); // "First Contact" step 3
-  }
+  if (name === 'crew') return toggleComm();
   if (current) closeStation();
   const def = STATIONS[name]; if (!def) return;
   const root = $('#station');
@@ -211,7 +234,7 @@ async function boot() {
     boarded = true;
     sim.start(); startExitSave(); startSync();
     gameState.addObserver(syncUI);
-    $('#pin').addEventListener('click', () => { if (current && current.name === 'crew') closeStation(); else openStation('crew'); });
+    $('#pin').addEventListener('click', toggleComm);
     sim.on((type, data) => {
       if (type === 'tick') {
         const s = sim.s;

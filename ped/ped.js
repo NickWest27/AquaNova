@@ -152,6 +152,6 @@ function paint() {
 $('#chip').addEventListener('click', () => { if (net.state === 'err' || net.state === 'off') tab = 'settings'; sync({ manual: true }); paint(); });
 document.addEventListener('visibilitychange', () => { if (!document.hidden) sync(); });
 window.addEventListener('online', sync);
-setInterval(() => { if (!document.hidden) sync(); }, 60000);
+setInterval(() => { if (!document.hidden) sync(); }, 20000);
 paint(); sync();
 if ('serviceWorker' in navigator) navigator.serviceWorker.register(new URL('../sw.js', import.meta.url)).catch(() => {});

@@ -14,7 +14,7 @@
 //   - One GET returns every file. It is conditional (ETag): "not changed" answers do not count
 //     against the GitHub limit.
 //   - Writes are batched: one PATCH carries the logbook, active id and status together, and is
-//     sent only when something changed. Status is rewritten at most every 2 minutes.
+//     sent only when something changed. Status is rewritten at most every 20 seconds.
 //   - After errors, automatic sync backs off (1, 2, 4 ... up to 15 min). After a bad token or a
 //     missing gist it stops until the player taps Sync now. After a rate limit it waits for the reset.
 // No DOM here. Both apps import it.
@@ -22,8 +22,8 @@
 const CFG_KEY = 'aquaNovaSync2';
 const API = 'https://api.github.com';
 const DESC = 'Aqua Nova sync';
-const STATUS_MIN_GAP = 120000;   // never rewrite status more often than this
-const STATUS_HEARTBEAT = 180000; // rewrite an unchanged status this often, so the phone sees "live"
+const STATUS_MIN_GAP = 20000;    // never rewrite status more often than this
+const STATUS_HEARTBEAT = 120000; // rewrite an unchanged status this often, so the phone sees "live"
 const READ_MEMO = 5000;          // reads inside this window reuse the last answer
 
 export class SyncError extends Error {
@@ -260,7 +260,7 @@ export async function getActiveId() {
   return files['active.json'] ? (await unseal(cfg, files['active.json'])).activeId : null;
 }
 
-// Status file: small, never a save. Staged only when it changed, and not more than every 2 minutes.
+// Status file: small, never a save. Staged only when it changed, and not more than every 20 seconds.
 export async function pushStatus(id, status) {
   const sig = JSON.stringify({ ...status, t: 0 });
   const age = Date.now() - lastStatus.at;

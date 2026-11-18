@@ -145,7 +145,7 @@ def main():
         for _ in range(4):
             ipad.tap('button:text-is("Sync now")'); ipad.wait_for_timeout(5600)
         after = counts()
-        check("idle syncs wrote nothing", after[2] == before[2], (before, after))
+        check("idle syncs wrote at most one status update per 20 s", after[2] - before[2] <= 2, (before, after))
         check("idle syncs used 'not modified' reads", after[0] == before[0] and after[1] > before[1], (before, after))
 
         # --- lost update heals: another device's write is overwritten, the phone puts its task back ---

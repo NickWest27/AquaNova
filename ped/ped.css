@@ -7,7 +7,10 @@ button { font:inherit; color:inherit; background:none; border:0; cursor:pointer;
 input, textarea { font:inherit; font-size:16px; color:var(--text); -webkit-user-select:text; user-select:text; }
 [hidden] { display:none !important; }
 
-.top { flex:none; display:flex; align-items:center; justify-content:space-between; gap:.6rem; padding:calc(env(safe-area-inset-top) + .5rem) .9rem .6rem; border-bottom:2px solid var(--line); background:linear-gradient(#071a2c,#04101f); }
+.pda { position:absolute; inset:0; container-type:size; }
+.pda-frame { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; -webkit-user-drag:none; z-index:5; }
+.pda-screen { position:absolute; left:14%; right:4.5%; top:calc(env(safe-area-inset-top) + 2.6%); bottom:calc(env(safe-area-inset-bottom) + 4.2%); display:flex; flex-direction:column; overflow:hidden; border-radius:14px; background:var(--bg); }
+.top { flex:none; display:flex; align-items:center; justify-content:space-between; gap:.6rem; padding:.5rem .6rem .6rem 10cqw; border-bottom:2px solid var(--line); background:linear-gradient(#071a2c,#04101f); }
 .who b { display:block; font-size:1.2rem; letter-spacing:.14em; }
 .who small { color:var(--dim); font-size:.8rem; }
 .chip { display:flex; align-items:center; gap:.45rem; min-height:2.75rem; padding:0 .9rem; border-radius:999px; border:2px solid var(--line); background:var(--panel); font-size:.8rem; font-weight:700; color:var(--dim); }
@@ -16,8 +19,8 @@ input, textarea { font:inherit; font-size:16px; color:var(--text); -webkit-user-
 @keyframes blink { 50% { opacity:.3; } }
 
 #view { flex:1; min-height:0; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:.8rem .8rem 1rem; display:flex; flex-direction:column; gap:.7rem; }
-.nav { flex:none; display:grid; grid-template-columns:repeat(6,1fr); gap:.2rem; padding:.35rem .4rem calc(env(safe-area-inset-bottom) + .35rem); border-top:2px solid var(--line); background:#071a2c; }
-.nav button { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:.2rem; min-height:3.4rem; border-radius:12px; color:var(--dim); font-size:.65rem; font-weight:800; letter-spacing:.04em; text-transform:uppercase; }
+.nav { flex:none; display:grid; grid-template-columns:repeat(6,1fr); gap:.2rem; padding:.35rem 14cqw .35rem .3rem; border-top:2px solid var(--line); background:#071a2c; }
+.nav button { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:.2rem; min-height:3.4rem; border-radius:12px; color:var(--dim); font-size:.58rem; font-weight:800; letter-spacing:0; text-transform:uppercase; }
 .nav button.on { color:var(--cyan); background:var(--panel2); }
 .nav svg { width:1.5rem; height:1.5rem; stroke:currentColor; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
 
@@ -51,3 +54,8 @@ textarea.field { min-height:6rem; resize:none; }
 .meta { color:var(--dim); font-size:.8rem; margin-bottom:.3rem; }
 .steps { margin-left:1.2rem; display:flex; flex-direction:column; gap:.4rem; font-size:.95rem; }
 .toast { position:fixed; left:50%; transform:translateX(-50%); bottom:calc(var(--nav) + env(safe-area-inset-bottom) + .8rem); max-width:92vw; padding:.7rem 1rem; border-radius:14px; background:#0b2a44; border:2px solid var(--line); font-size:.95rem; z-index:10; }
+
+/* The PDA frame leaves little room: only the open tab shows its name. */
+.nav button { font-size:.55rem; overflow:hidden; }
+.nav button:not(.on) { font-size:0; gap:0; }
+.nav button:not(.on) svg { margin:0; }

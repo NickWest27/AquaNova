@@ -2,7 +2,7 @@
    so an update arrives the next time the game is opened. Covers the iPad game (tablet/) and the
    iPhone PED (ped/). Only same-origin GET requests are handled: GitHub sync calls go straight to
    the network. Run `python3 tools/update_sw.py` after adding or renaming files. */
-const VERSION = '4acad2cea4';
+const VERSION = 'd41a3df782';
 const CACHE = 'aquanova-' + VERSION;
 const ASSETS = [
  "tablet/",
