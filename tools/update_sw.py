@@ -24,10 +24,10 @@ def main():
         page.goto(base + "tablet/"); page.wait_for_function("!document.getElementById('board-btn').disabled", timeout=15000)
         page.tap("#board-btn"); page.wait_for_timeout(1200)
         if page.is_visible(".modal .btn"): page.tap(".modal .btn")
-        page.tap('.dbtn[data-st="quarters"]'); page.wait_for_timeout(500)
+        page.evaluate("window.__aq.toggleQuarters()"); page.wait_for_timeout(500)
         for st in ("nav", "helm", "sys", "comms", "log"):
-            page.tap(f'.dbtn[data-st="{st}"]'); page.wait_for_timeout(500); page.tap("#station .st-head .btn")
-        page.tap('.dbtn[data-st="ped"]'); page.wait_for_timeout(500); page.tap(".ped-close")
+            page.evaluate(f"window.__aq.open('{st}')"); page.wait_for_timeout(500); page.tap("#station .st-head .btn")
+        page.evaluate("window.__aq.open('ped')"); page.wait_for_timeout(500); page.tap(".ped-close")
         page.goto(base + "ped/"); page.wait_for_timeout(800)
         browser.close()
     server.shutdown()

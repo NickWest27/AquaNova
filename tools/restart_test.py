@@ -28,7 +28,7 @@ def main():
         js("P.addLogEntry('Test entry one'); P.addLogEntry('Test entry two'); P.saveManager.addEntry({type:'journal', content:'phone note'}); sim.s.docked=false; sim.s.depth=200; sim.s.lat=41.6; sim.s.hull=70; sim.s.clock=9*3600; P.checkpoint();")
         n = js("return P.saveManager.getActiveLogbook().entries.length")
         check("test setup made entries", n >= 4, n)
-        page.tap('.dbtn[data-st="log"]'); page.wait_for_timeout(600)
+        page.evaluate("window.__aq.open('log')"); page.wait_for_timeout(600)
         check("M.LOG-0001 offers Restart from the beginning", page.is_visible('button:text-is("Restart from the beginning")'))
         page.screenshot(path=os.path.join(ROOT, "tools", "shots", "r-1log.png"))
         page.tap('button:text-is("Restart from the beginning")'); page.wait_for_timeout(300)

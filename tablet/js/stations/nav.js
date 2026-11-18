@@ -24,13 +24,13 @@ export function mount(body) {
       el('p', { text: sel.text, style: 'margin:0.5rem 0;color:var(--dim)' }),
       el('div', { class: 'num' }, t.nm.toFixed(2), el('small', { text: `nm  brg ${pad(t.brg)}°` })),
       el('div', { class: 'row', style: 'margin-top:0.7rem' },
-        el('button', { class: 'btn primary grow', text: 'Go there', onclick: () => { sim.setWpt(sel); sim.setThrottle(0.5); toast('Course set to ' + sel.name); renderPick(); } }),
+        el('button', { class: 'btn primary grow', text: 'Plot a course', onclick: () => { sim.setWpt(sel); sim.setThrottle(0.5); toast('Course plotted to ' + sel.name); renderPick(); } }),
         el('button', { class: 'btn', text: 'Clear', onclick: () => { sel = null; nd.sel = null; nd.draw(); renderPick(); } })));
   };
   const zoomRow = el('div', { class: 'range-row card' },
-    el('button', { class: 'btn sq', text: '−', 'aria-label': 'Zoom out', onclick: () => { rangeTxt.textContent = nd.zoom(1) + ' nm'; } }),
+    el('button', { class: 'btn sq', text: '−', 'aria-label': 'Decrease range', onclick: () => { rangeTxt.textContent = nd.zoom(-1) + ' nm'; } }),
     el('div', { class: 'lbl', text: 'Map range' }),
-    el('button', { class: 'btn sq', text: '+', 'aria-label': 'Zoom in', onclick: () => { rangeTxt.textContent = nd.zoom(-1) + ' nm'; } }));
+    el('button', { class: 'btn sq', text: '+', 'aria-label': 'Increase range', onclick: () => { rangeTxt.textContent = nd.zoom(1) + ' nm'; } }));
   side.insertBefore(zoomRow, pick);
 
   requestAnimationFrame(() => { nd = createND(wrap, { onPick: (p) => { sel = p; renderPick(); } }); renderPick(); update(); });

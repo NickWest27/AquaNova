@@ -14,6 +14,7 @@ const STATIONS = {
   crew: { title: 'Communicator', icon: 'comms', hidden: true }, // opened from the pin, not the dock
 };
 const FILES = { sys: 'systems' };
+const WHERE = { bridge: 'Bridge', quarters: 'Quarters', walkway: 'Walkway' };   // the back button returns to the room you came from
 const SYSTEM_TEXT = {
   mission_start_tutorial: ['Welcome aboard, Captain', 'Captain Elena Voss was relieved of command at the last minute. OERA called you out of retirement to take her place on the Aqua Nova. Your quarters are ready, and your communicator pin is waiting on your desk.'],
   communicator_tutorial: ['Communicator ready', 'Pin on. Tap the badge in the top-right corner to talk to your crew. ARIA, your executive officer, is waiting to hear from you.'],
@@ -46,8 +47,7 @@ const syncUI = frameThrottle(() => {
   const locked = commsLocked();
   scene.showPickup(scene.inQuarters && locked && objStatus('meetTheCrew_find_communicator') === 'completed');
   const unread = (gameState.getProperty('mission.inbox') || []).filter((m) => !m.read).length;
-  const badge = document.querySelector('.dbtn[data-st="comms"] .badge');
-  if (badge) { badge.textContent = unread; badge.classList.toggle('on', unread > 0); }
+  scene.glow('COMMS', unread > 0);   // new mail: the comms station glows on the bridge
   const pin = $('#pin');
   const quiet = firstUI; firstUI = false;   // the first pass only restores state: no chirp on load
   if (pin.hidden === locked) return;
@@ -120,8 +120,8 @@ async function openStation(name) {
   const chips = el('div', { class: 'st-chips' });
   const body = el('div', { class: 'st-body' });
   root.replaceChildren(el('header', { class: 'st-head' },
-    el('button', { class: 'btn', text: '‹ Bridge', onclick: closeStation }), el('div', { class: 'st-title', text: def.title }), chips, el('button', { class: 'btn', text: 'PED', onclick: togglePed })), body);
-  root.hidden = false;
+    el('button', { class: 'btn', text: '‹ ' + (WHERE[scene.where] || 'Back'), onclick: closeStation }), el('div', { class: 'st-title', text: def.title }), chips, el('button', { class: 'btn', text: 'PED', onclick: togglePed })), body);
+  root.hidden = false; $('#ped-btn').hidden = true;
   try {
     modules[name] ||= await import(`./stations/${FILES[name] || name}.js`);
     current = { name, api: modules[name].mount(body, ctx), chips };
@@ -131,7 +131,7 @@ async function openStation(name) {
 function closeStation() {
   if (!current) return;
   try { current.api.destroy(); } catch (e) { console.error(e); }
-  current = null; $('#station').hidden = true; $('#station').replaceChildren();
+  current = null; $('#station').hidden = true; $('#station').replaceChildren(); $('#ped-btn').hidden = false;
   scene.update(); syncUI();
 }
 function updateChips() {
@@ -178,16 +178,13 @@ function sleepDialog() {
   } }] });
 }
 
-// ---------- dock ----------
+// ---------- status line (no buttons: stations open from hotspots in the rooms) ----------
 function buildDock() {
   const dock = $('#dock');
   const status = el('div', { class: 'dock-status' });
   const st = { clock: el('span'), pos: el('span'), obj: el('span'), bat: el('span') };
   status.append(st.clock, st.pos, el('span', { class: 'sp' }), st.obj, st.bat);
-  const buttons = el('div', { class: 'dock-buttons' },
-    ...Object.entries(STATIONS).filter(([, v]) => !v.hidden).map(([k, v]) => el('button', { class: 'dbtn', 'data-st': k, onclick: () => openStation(k), html: `${ICONS[v.icon]}<span>${v.title}</span>${k === 'comms' ? '<i class="badge"></i>' : ''}` })),
-    el('button', { class: 'dbtn', 'data-st': 'quarters', onclick: () => openScene(scene.inQuarters ? 'bridge' : 'quarters'), html: `${ICONS.quarters}<span>Quarters</span>` }));
-  dock.replaceChildren(status, buttons);
+  dock.replaceChildren(status);
   return st;
 }
 
@@ -235,6 +232,7 @@ async function boot() {
     sim.start(); startExitSave(); startSync();
     gameState.addObserver(syncUI);
     $('#pin').addEventListener('click', toggleComm);
+    $('#ped-btn').hidden = false; $('#ped-btn').addEventListener('click', togglePed);
     sim.on((type, data) => {
       if (type === 'tick') {
         const s = sim.s;
@@ -258,4 +256,5 @@ async function boot() {
 }
 // Offline play: the service worker keeps a copy of the game. Needs https (GitHub Pages) or localhost.
 if ('serviceWorker' in navigator) navigator.serviceWorker.register(new URL('../../sw.js', import.meta.url)).catch((e) => dlog('service worker not registered: ' + e.message));
+window.__aq = { open: (n) => openStation(n), scene: (n) => openScene(n), toggleQuarters: () => openScene(scene.inQuarters ? 'bridge' : 'quarters') };   // used by the test scripts
 boot();

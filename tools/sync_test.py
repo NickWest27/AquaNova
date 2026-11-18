@@ -85,7 +85,7 @@ def main():
         # --- iPad boards and connects ---
         ipad.goto(base + "tablet/"); ipad.wait_for_function("!document.getElementById('board-btn').disabled", timeout=15000)
         ipad.tap("#board-btn"); ipad.wait_for_timeout(800); ipad.tap(".modal .btn"); ipad.wait_for_timeout(300)
-        ipad.tap('.dbtn[data-st="ped"]'); ipad.wait_for_timeout(500); ipad.tap('button.chip:text-is("Settings")'); ipad.wait_for_timeout(300)
+        ipad.evaluate("window.__aq.open('ped')"); ipad.wait_for_timeout(500); ipad.tap('button.chip:text-is("Settings")'); ipad.wait_for_timeout(300)
         ipad.fill('input[placeholder^="GitHub token"]', "bad-token"); ipad.fill('input[placeholder^="Passphrase"]', "correct horse battery")
         ipad.tap('button:text-is("Connect")'); ipad.wait_for_timeout(800)
         check("bad token is reported", ipad.is_visible("text=GitHub rejected"))
@@ -159,7 +159,7 @@ def main():
         # --- revert on iPad does not bring entries back, keeps journal ---
         js(ipad, "const p=await import('./js/persist.js'); p.addLogEntry('Save point A'); p.addLogEntry('Save point B');")
         ipad.wait_for_timeout(200)
-        ipad.tap(".ped-close"); ipad.tap('.dbtn[data-st="log"]'); ipad.wait_for_timeout(500)
+        ipad.tap(".ped-close"); ipad.evaluate("window.__aq.open('log')"); ipad.wait_for_timeout(500)
         ipad.locator(".entry", has_text="Save point A").locator("text=Revert here").tap(); ipad.wait_for_timeout(300)
         ipad.tap(".modal .btn.primary"); ipad.wait_for_timeout(6500)
         texts = [e["logbook"]["content"] for e in dec(ipad, book_name())["entries"]]

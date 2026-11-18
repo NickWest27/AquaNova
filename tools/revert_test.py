@@ -28,7 +28,7 @@ def main():
             if name == "Bravo": js("P.saveManager.addEntry({type:'journal', content:'note after Bravo'})")
         ids = js("return P.saveManager.getActiveLogbook().entries.map(e=>e.logbook.entryId+':'+(e.logbook.content||'').slice(0,13))")
         check("setup: M.LOG-0001 plus three entries and a note", len(ids) == 5, ids)
-        page.tap('.dbtn[data-st="log"]'); page.wait_for_timeout(600)
+        page.evaluate("window.__aq.open('log')"); page.wait_for_timeout(600)
         page.locator(".entry", has_text="Entry Bravo").locator("text=Revert here").tap(); page.wait_for_timeout(300)
         page.tap('.modal button:text-is("Revert")'); page.wait_for_timeout(800)
         r = js("const lb=P.saveManager.getActiveLogbook(); const s=sim.s; return {texts: lb.entries.map(e=>e.logbook.content||''), depth: Math.round(s.depth), lat: +s.lat.toFixed(2), bat: Math.round(s.battery), hrs: Math.round(s.clock/3600), cp: !!lb.checkpoint, rev: lb.revision}")
@@ -39,7 +39,7 @@ def main():
         check("journal note kept (notes are not save points)", "note after Bravo" in t)
         check("ship state is Bravo's (depth 120, lat 41.60, battery about 80, 10:00)", (r["depth"], r["lat"], r["hrs"]) == (120, 41.6, 10) and abs(r["bat"] - 80) <= 2, r)
         check("exit save cleared and revision raised", r["cp"] is False and r["rev"] >= 1, r)
-        page.tap(".dbtn[data-st='log']") if page.is_hidden(".entry") else None
+        page.evaluate("window.__aq.open('log')") if page.is_hidden(".entry") else None
         page.wait_for_timeout(400)
         check("Logbook screen no longer lists Charlie", not page.is_visible("text=Entry Charlie"))
         # reload: the reverted state is what loads, not the old Charlie state

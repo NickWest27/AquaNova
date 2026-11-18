@@ -31,10 +31,10 @@ def main():
             page.tap("#board-btn"); page.wait_for_timeout(1200)
             page.tap(".modal .btn"); page.wait_for_timeout(300)
             page.screenshot(path=f"{SHOTS}/t-{tag}-1quarters.png")
-            page.tap('.dbtn[data-st="quarters"]'); page.wait_for_timeout(500)
+            page.evaluate("window.__aq.toggleQuarters()"); page.wait_for_timeout(500)
             page.screenshot(path=f"{SHOTS}/t-{tag}-1bridge.png")
             for st in STATIONS:
-                page.tap(f'.dbtn[data-st="{st}"]'); page.wait_for_timeout(700)
+                page.evaluate(f"window.__aq.open('{st}')"); page.wait_for_timeout(700)
                 if st == "nav":
                     page.mouse.click(w * 0.35, h * 0.5); page.wait_for_timeout(200)
                 page.screenshot(path=f"{SHOTS}/t-{tag}-2{st}.png")
@@ -49,7 +49,7 @@ def main():
             # sound: started by the Board tap, and the PED switch silences it
             a = page.evaluate("import('./js/audio.js').then(m => m.audioState())")
             if not a["started"]: note("audio did not start after boarding")
-            page.tap('.dbtn[data-st="ped"]'); page.wait_for_timeout(300); page.tap('button.chip:text-is("Settings")'); page.tap('button:text-is("Turn sound off")'); page.wait_for_timeout(400)
+            page.evaluate("window.__aq.open('ped')"); page.wait_for_timeout(300); page.tap('button.chip:text-is("Settings")'); page.tap('button:text-is("Turn sound off")'); page.wait_for_timeout(400)
             a = page.evaluate("import('./js/audio.js').then(m => m.audioState())")
             if a["master"] != 0: note(f"sound off but master gain is {a['master']}")
             page.tap('button:text-is("Turn sound on")'); page.wait_for_timeout(400)
@@ -57,14 +57,14 @@ def main():
             if a["master"] <= 0: note("sound on but master gain is 0")
             page.tap(".ped-close"); page.wait_for_timeout(200)
             # PED sits on top of a station without replacing it
-            page.tap('.dbtn[data-st="nav"]'); page.wait_for_timeout(500)
+            page.evaluate("window.__aq.open('nav')"); page.wait_for_timeout(500)
             page.tap('#station .st-head .btn:text-is("PED")'); page.wait_for_timeout(500)
             if page.is_hidden("#ped-pop") or page.is_hidden("#station"): note("ped over station: pop-up or station missing")
             page.screenshot(path=f"{SHOTS}/t-{tag}-3ped-over-nav.png")
             page.tap("#ped-pop", position={"x": 8, "y": 8}); page.wait_for_timeout(300)   # tap outside the panel
             if not page.is_hidden("#ped-pop") or page.is_hidden("#station"): note("ped: tapping outside did not close it, or the station closed too")
             page.tap("#station .st-head .btn"); page.wait_for_timeout(200)
-            page.tap('.dbtn[data-st="quarters"]'); page.wait_for_timeout(600)
+            page.evaluate("window.__aq.toggleQuarters()"); page.wait_for_timeout(600)
             ctx.close()
         browser.close()
     server.shutdown(); shutil.rmtree(site, ignore_errors=True)

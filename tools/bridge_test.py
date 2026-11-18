@@ -29,7 +29,7 @@ def main():
             page.goto(base); page.wait_for_function("!document.getElementById('board-btn').disabled", timeout=15000)
             page.tap("#board-btn"); page.wait_for_timeout(900)
             page.tap(".modal .btn"); page.wait_for_timeout(300)
-            page.tap('.dbtn[data-st="quarters"]'); page.wait_for_timeout(500)   # quarters -> bridge
+            page.evaluate("window.__aq.toggleQuarters()"); page.wait_for_timeout(500)   # quarters -> bridge
             page.screenshot(path=f"{SHOTS}/b-{tag}-1bridge.png")
             tap_hs("COMMS"); page.wait_for_timeout(500)
             check(f"{tag}: left station opens Comms", page.inner_text("#station .st-title").strip().lower() == "comms")

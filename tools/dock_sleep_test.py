@@ -51,7 +51,7 @@ def main():
         page.tap(".modal .btn"); page.wait_for_timeout(200)
 
         # --- undock and dock on the Helm ---
-        page.tap('.dbtn[data-st="helm"]'); page.wait_for_timeout(500)
+        page.evaluate("window.__aq.open('helm')"); page.wait_for_timeout(500)
         check("helm offers Undock when docked", page.is_visible('button:text-is("Undock")'))
         page.tap('button:text-is("Undock")'); page.wait_for_timeout(5200)
         check("undocked after the sequence", js("return sim.s.docked") is False and page.is_visible('button:text-is("Dock")'))
