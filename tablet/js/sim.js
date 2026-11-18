@@ -1,6 +1,7 @@
 // Ship simulation. Pure data, no DOM. Runs at 5 Hz and only while the page is visible.
 import { clamp, norm360, angDiff } from './util.js';
 import { dlog } from '../../utils/log.js';
+import { planRoute } from './route.js';
 import { seafloor } from './seafloor.js';
 
 const TICK_MS = 200;
@@ -16,7 +17,7 @@ export const sim = {
     lat: 41.5223, lon: -70.6709, heading: 0, targetHeading: 0,
     throttle: 0, speed: 0, depth: 0, targetDepth: 0,
     battery: 100, oxygen: 100, hull: 100, co2: 0.04, temp: 4.1, power: 0,
-    ballast: 100, comms: true, sonar: true, lights: true, pois: [], wpt: null, at: null,
+    ballast: 100, comms: true, sonar: true, lights: true, pois: [], wpt: null, route: [], routeSnapped: false, _routeFor: null, at: null,
     clock: 6 * 3600, docked: false, damage: 0, floor: null, wskrs: [], sweepUntil: 0,     // clock = game seconds since Day 1 00:00
   },
   listeners: new Set(),
@@ -57,7 +58,18 @@ export function toward(a, b) {
 sim.setThrottle = (v) => { if (sim.s.docked) return; sim.s.throttle = clamp(v, 0, 1); sim.touch(); };
 sim.setHeading = (h) => { sim.s.targetHeading = norm360(h); sim.touch(); };
 sim.setDepth = (d) => { if (sim.s.docked) return; sim.s.targetDepth = clamp(d, 0, 6000); sim.touch(); };
-sim.setWpt = (p) => { sim.s.wpt = p; if (p) { sim.s.targetHeading = toward(sim.s, p).brg; } sim.touch(); };
+/** Is this point safe water for the ship? (Inside the dredged harbour only land stops us.) */
+sim.shipPassable = (lat, lon) => {
+  const fl = seafloor.depthAt(lat, lon); if (fl == null) return false;
+  const dock = sim.dockPoi(); return fl >= (dock && toward({ lat, lon }, dock).nm < HARBOR_NM ? 3 : KEEL + 2);
+};
+/** Turning points to steer through to reach p without crossing land or shoals: [] = straight line, null = no safe route. */
+sim.routeTo = (p) => (seafloor.ready ? planRoute(sim.s, p, sim.shipPassable) : []);
+sim.setWpt = (p) => {
+  const s = sim.s; s.wpt = p; s.route = []; s.routeSnapped = false; s._routeFor = p;
+  if (p) { const r = sim.routeTo(p); s.route = r ? [...r] : []; s.routeSnapped = !!(r && r.snapped); s.targetHeading = toward(s, s.route[0] || p).brg; }
+  sim.touch();
+};
 sim.stop = () => { sim.s.throttle = 0; sim.s.wpt = null; sim.touch(); };
 /** WSKRs: autonomous remote sensors. They hold a ring formation round the ship (better readings, stereoscopic data),
  *  can be sent to investigate a site, and can be recalled. Launched only from the Sensors station. Up to 4.
@@ -73,9 +85,10 @@ sim.deployWskr = () => {
 sim.taskWskr = (poi) => {
   const w = sim.s.wskrs.find((q) => q.mode === 'escort');
   if (!w) return null;
-  w.mode = 'task'; w.target = poi.id; w.busy = 0; sim.touch(); return w;
+  w.mode = 'task'; w.target = poi.id; w.busy = 0; w.route = null; sim.touch(); return w;
 };
-sim.recallWskrs = () => { sim.s.wskrs.forEach((w) => { w.mode = 'recall'; w.target = null; }); sim.touch(); return sim.s.wskrs.length; };
+sim.recallWskrs = () => { sim.s.wskrs.forEach((w) => { w.mode = 'recall'; w.target = null; w.route = null; }); sim.touch(); return sim.s.wskrs.length; };
+const wskrPassable = (lat, lon) => (seafloor.depthAt(lat, lon) ?? 0) >= 3;
 function stepWskrs(dt) {
   const s = sim.s; if (!s.wskrs.length) return;
   const esc = s.wskrs.filter((w) => w.mode === 'escort'), step = (WSKR_KT * dt * TIMESCALE) / 3600;
@@ -84,16 +97,24 @@ function stepWskrs(dt) {
     if (w.mode === 'escort') { const i = esc.indexOf(w), a = ((s.heading + (360 / esc.length) * i + 45) * Math.PI) / 180; goal = { lat: s.lat + (Math.cos(a) * WSKR_RING_NM) / NM_PER_DEG_LAT, lon: s.lon + (Math.sin(a) * WSKR_RING_NM) / (NM_PER_DEG_LAT * Math.cos((s.lat * Math.PI) / 180)) }; }
     else if (w.mode === 'task') { goal = s.pois.find((p) => p.id === w.target); if (!goal) { w.mode = 'escort'; return true; } }
     else goal = s;
-    const t = toward(w, goal);
-    if (w.mode === 'recall' && t.nm < 0.15) { sim.emit('wskr-recovered', w); return false; }
-    if (w.mode === 'task' && t.nm < 0.12) {          // on site: investigate, then file the scan and rejoin
+    // Route round land. Replanned when the goal has moved on (escorts and recalls follow the ship) or after a failed attempt.
+    if (!w.route || (w.routeGoal && toward(w.routeGoal, goal).nm > 0.6) || (w.routeRetry != null && s.clock >= w.routeRetry)) {
+      const r = seafloor.ready ? planRoute(w, goal, wskrPassable) : [];
+      w.route = r ? [...r] : []; w.routeSnapped = !!(r && r.snapped); w.routeGoal = { lat: goal.lat, lon: goal.lon }; w.routeRetry = r ? null : s.clock + 300;
+    }
+    while (w.route.length > 1 && toward(w, w.route[0]).nm < 0.12) w.route.shift();
+    const end = w.route.length ? w.route[w.route.length - 1] : goal, t = toward(w, goal), te = toward(w, end);
+    const onSite = w.routeSnapped ? te.nm < 0.12 : t.nm < 0.12;
+    if (w.mode === 'recall' && (t.nm < 0.15 || (w.routeSnapped && te.nm < 0.15))) { sim.emit('wskr-recovered', w); return false; }
+    if (w.mode === 'task' && onSite) {          // on site: investigate, then file the scan and rejoin
       w.busy += dt * TIMESCALE;
-      if (w.busy >= WSKR_INVESTIGATE_S) { const p = s.pois.find((q) => q.id === w.target); w.mode = 'escort'; w.target = null; sim.emit('wskr-found', { wskr: w, poi: p }); }
+      if (w.busy >= WSKR_INVESTIGATE_S) { const p = s.pois.find((q) => q.id === w.target); w.mode = 'escort'; w.target = null; w.route = null; sim.emit('wskr-found', { wskr: w, poi: p }); }
       return true;
     }
-    if (t.nm > 0.02) {
-      const f = Math.min(1, step / t.nm), lat = w.lat + (goal.lat - w.lat) * f, lon = w.lon + (goal.lon - w.lon) * f;
-      if (!seafloor.ready || (seafloor.depthAt(lat, lon) ?? 0) >= 3) { w.lat = lat; w.lon = lon; }   // small probes stay out of the very shallows
+    const aim = w.route[0] || goal, ta = toward(w, aim);
+    if (ta.nm > 0.02 && !(w.mode === 'escort' && t.nm < 0.05)) {
+      const f = Math.min(1, step / ta.nm), lat = w.lat + (aim.lat - w.lat) * f, lon = w.lon + (aim.lon - w.lon) * f;
+      if (!seafloor.ready || wskrPassable(lat, lon)) { w.lat = lat; w.lon = lon; }   // small probes stay out of the very shallows
     }
     return true;
   });
@@ -134,13 +155,15 @@ export function autopilotCap(headingErrDeg, distNm) {
 /** Game hours to reach the current waypoint, from a dry run of the same turn and speed rules (no sea floor checks). null if none. */
 sim.etaHours = (maxHours = 96) => {
   const s = sim.s; if (!s.wpt || s.docked) return null;
-  let { lat, lon, heading, speed } = s; const dt = 0.5;
+  let { lat, lon, heading, speed } = s; const dt = 0.5, route = (s.route || []).map((q) => q);
   for (let t = 0; t * TIMESCALE / 3600 < maxHours; t += dt) {
-    const tw = toward({ lat, lon }, s.wpt);
-    if (tw.nm < POI_RADIUS_NM * 0.6) return (t * TIMESCALE) / 3600;
+    while (route.length > 1 && toward({ lat, lon }, route[0]).nm < 0.25) route.shift();
+    const end = toward({ lat, lon }, route.length ? route[route.length - 1] : s.wpt);
+    if (end.nm < POI_RADIUS_NM * 0.6) return (t * TIMESCALE) / 3600;
+    const tw = toward({ lat, lon }, route[0] || s.wpt);
     const turn = angDiff(tw.brg, heading), rate = 6 * dt;
     heading = norm360(heading + clamp(turn, -rate, rate));
-    const want = Math.min(s.throttle * MAX_KT, autopilotCap(Math.abs(turn), tw.nm));
+    const want = Math.min(s.throttle * MAX_KT, autopilotCap(Math.abs(turn), route.length > 1 ? Infinity : end.nm));
     speed += clamp(want - speed, -2 * dt, 1.2 * dt);
     const nm = (speed * dt * TIMESCALE) / 3600, r = (heading * Math.PI) / 180;
     lat += (nm * Math.cos(r)) / NM_PER_DEG_LAT; lon += (nm * Math.sin(r)) / (NM_PER_DEG_LAT * Math.cos((lat * Math.PI) / 180));
@@ -153,17 +176,21 @@ sim.step = (dt) => {
   s.clock += dt * TIMESCALE;
   if (s.docked) { s.throttle = 0; s.speed = 0; s.targetDepth = 0; s.wpt = null; }   // clamps hold the ship
   // heading
-  if (s.wpt) {
-    const t = toward(s, s.wpt);
-    if (t.nm < POI_RADIUS_NM * 0.6) { s.wpt = null; s.throttle = 0; sim.emit('arrived'); }
-    else s.targetHeading = t.brg;
+  let capDist = Infinity;
+  if (!s.wpt) { s.route = []; s._routeFor = null; }
+  else {
+    if (s._routeFor !== s.wpt) { const r = sim.routeTo(s.wpt); s.route = r ? [...r] : []; s.routeSnapped = !!(r && r.snapped); s._routeFor = s.wpt; }   // after a load, or a course set elsewhere
+    while (s.route.length > 1 && toward(s, s.route[0]).nm < 0.25) s.route.shift();
+    const end = s.route.length ? s.route[s.route.length - 1] : s.wpt, t = toward(s, end);
+    if (t.nm < POI_RADIUS_NM * 0.6) { s.wpt = null; s.route = []; s.throttle = 0; sim.emit('arrived'); }
+    else { const steer = toward(s, s.route[0] || s.wpt); s.targetHeading = steer.brg; capDist = s.route.length > 1 ? Infinity : t.nm; }
   }
   const turn = angDiff(s.targetHeading, s.heading);
   const rate = 6 * dt; // deg per second
   s.heading = norm360(s.heading + clamp(turn, -rate, rate));
   // speed (smooth)
   let wantKt = s.throttle * MAX_KT * (s.battery > 0 ? 1 : 0);
-  if (s.wpt) wantKt = Math.min(wantKt, autopilotCap(Math.abs(turn), toward(s, s.wpt).nm));
+  if (s.wpt) wantKt = Math.min(wantKt, autopilotCap(Math.abs(turn), capDist));
   s.speed += clamp(wantKt - s.speed, -2 * dt, 1.2 * dt);
   // depth
   const dd = s.targetDepth - s.depth;

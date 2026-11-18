@@ -56,7 +56,9 @@ export function mount(body, ctx) {
       input.addEventListener('keydown', (e) => { if (e.key === 'Enter') add(); });
       const change = (id, fn) => save(saveManager.getPedTasks().map((t) => t.id === id ? { ...t, ...fn(t), modified: Date.now() } : t));
       const live = saveManager.getPedTasks().filter((t) => !t.deleted);
-      return [el('div', { class: 'row' }, input, el('button', { class: 'btn primary', text: 'Add', onclick: add })),
+      const obj = ctx.objectives();
+      return [...(obj.length ? [el('div', { class: 'lbl', text: 'Mission objectives' }), ...obj.map((o) => el('div', { class: `card task mission-obj ${o.done ? 'done' : ''}` }, el('span', { class: 'dot' }), el('span', { text: o.text }))), el('div', { class: 'lbl', text: 'My tasks' })] : []),
+        el('div', { class: 'row' }, input, el('button', { class: 'btn primary', text: 'Add', onclick: add })),
         ...(live.length ? live.map((t) => el('div', { class: `card task ${t.done ? 'done' : ''}` },
           el('button', { class: 'dot', 'aria-label': 'Toggle task', onclick: () => change(t.id, (x) => ({ done: !x.done })) }), el('span', { class: 'grow', text: t.text }),
           el('button', { class: 'btn chip', text: 'Delete', onclick: () => change(t.id, () => ({ deleted: true })) }))) : [el('div', { class: 'empty', text: 'No tasks.' })])];

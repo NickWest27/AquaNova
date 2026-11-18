@@ -118,6 +118,7 @@
     },
     {
       "type": "send_message",
+      "delaySeconds": 90,
       "message": {
         "id": "oera-sea-trials",
         "from": "OERA Operations",

@@ -29,8 +29,10 @@ export function openPlotDialog({ preselect = null, onPlotted } = {}) {
     if (sim.s.docked) { msg.textContent = 'The ship is docked. Undock first, then plot the course.'; msg.className = 'pc-msg bad'; return; }
     const r = current(); if (!r.ok) { msg.textContent = r.error; msg.className = 'pc-msg bad'; return; }
     const wp = r.poi || { id: 'wpt', name: `Waypoint ${++counter}`, type: 'waypoint', text: 'Plotted position', lat: r.point.lat, lon: r.point.lon };
+    const route = sim.routeTo(wp);
+    if (route === null) { msg.textContent = 'No safe route there: land or shallows block every way round.'; msg.className = 'pc-msg bad'; return; }
     sim.setWpt(wp); sim.setThrottle(0.5); close();
-    toast(`Course plotted to ${wp.name}`);
+    toast(route.length ? `Course plotted to ${wp.name}, round land in ${route.length} leg${route.length === 1 ? '' : 's'}` : `Course plotted to ${wp.name}`);
     onPlotted && onPlotted(wp);
   } });
   const cancel = el('button', { class: 'btn', text: 'Cancel', onclick: () => close() });

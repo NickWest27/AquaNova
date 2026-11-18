@@ -334,7 +334,7 @@ class MissionManager {
                     this.spawnInteractive(action.elementId, action.location);
                     break;
                 case 'send_message':
-                    this.sendMessage(action.message);
+                    this.sendMessage(action.delaySeconds ? { ...action.message, delaySeconds: action.delaySeconds } : action.message);
                     break;
                 case 'start_mission':
                     this.startMission(action.missionId);
@@ -349,6 +349,16 @@ class MissionManager {
     sendMessage(msg) {
         const inbox = gameStateInstance.getProperty('mission.inbox') || [];
         if (inbox.some(m => m.id === msg.id)) return;
+        if (msg.delaySeconds) {   // real seconds; the due time is saved so a reload keeps the wait
+            const pending = { ...(gameStateInstance.getProperty('mission.pending') || {}) };
+            if (pending[msg.id] == null) { pending[msg.id] = Date.now() + msg.delaySeconds * 1000 * (this.delayScale ?? 1); gameStateInstance.updateProperty('mission.pending', pending); }
+            const wait = pending[msg.id] - Date.now();
+            this._scheduled ||= new Set();
+            if (wait > 0) {
+                if (!this._scheduled.has(msg.id)) { this._scheduled.add(msg.id); setTimeout(() => { this._scheduled.delete(msg.id); this.sendMessage(msg); }, wait); }
+                return;
+            }
+        }
         gameStateInstance.updateProperty('mission.inbox', [...inbox, { ...msg, read: false, receivedAt: new Date().toISOString() }]);
         document.dispatchEvent(new CustomEvent('comms-message', { detail: { from: msg.from, subject: msg.subject } }));
     }

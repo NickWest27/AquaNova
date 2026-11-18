@@ -28,7 +28,7 @@ const who = (role) => {
 /** role: 'helm' | 'aria' | 'sensors' | 'engineering' | 'comms' | 'science'. kind: '' | 'mission' | 'error'. */
 export function say(role, text, kind = '', opts = {}) {
   const now = Date.now(), w = who(role);
-  if (kind === 'mission' || kind === 'error') {   // worth keeping until read
+  if ((kind === 'mission' || kind === 'error') && opts.hold !== false) {   // worth keeping until read
     const id = CREW_ID[role] || role, l = held.get(id) || []; l.push({ text: opts.keep || text, at: now }); held.set(id, l.slice(-5)); emitChange();
   }
   if (viewProbe.fn()) {   // bridge: the upper display

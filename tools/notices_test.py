@@ -89,6 +89,11 @@ def main():
         page.mouse.click(8, 8); page.wait_for_timeout(400)
         check("tap outside closes the communicator", not page.is_visible("#comm-pop .comm-page"))
 
+        # 3c. objectives are not held in the communicator
+        n0 = js("return N.unreadCount()")
+        page.evaluate("document.dispatchEvent(new CustomEvent('mission-notify', { detail: { title: 'Test objective', subtitle: 'New Objective' } }))"); page.wait_for_timeout(300)
+        check("mission objectives are not held for the communicator", js("return N.unreadCount()") == n0)
+
         # 4. sonar sets map detail
         page.evaluate("window.__aq.scene('bridge')"); page.wait_for_timeout(500)
         rad = lambda: page.evaluate("window.__aq.console().nds[0].fineRadius()")
