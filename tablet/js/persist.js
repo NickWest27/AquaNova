@@ -29,6 +29,8 @@ export function snapshotSim() {
     gameState.updateProperty('navigation.course', Math.round(s.targetHeading));
     gameState.updateProperty('navigation.speed', +s.speed.toFixed(1));
     gameState.updateProperty('navigation.destination', s.wpt ? s.wpt.name : null);
+    gameState.updateProperty('navigation.docked', !!s.docked);
+    gameState.updateProperty('progress.gameClock', Math.round(s.clock));
     gameState.updateProperty('shipSystems.vitals', { battery: +s.battery.toFixed(1), oxygen: +s.oxygen.toFixed(1) });
     gameState.updateProperty('shipSystems.hull.integrity', Math.round(s.hull));
   });
@@ -36,9 +38,9 @@ export function snapshotSim() {
 
 /** Missions watch depth and speed, so keep those two current. Cheap: writes only when a rounded value changed. */
 export function liveNav() {
-  const s = sim.s, depth = Math.round(s.depth), speed = +s.speed.toFixed(1);
-  if (gameState.getProperty('navigation.depth') === depth && gameState.getProperty('navigation.speed') === speed) return;
-  gameState.batch(() => { gameState.updateProperty('navigation.depth', depth); gameState.updateProperty('navigation.speed', speed); });
+  const s = sim.s, depth = Math.round(s.depth), speed = +s.speed.toFixed(1), docked = !!s.docked;
+  if (gameState.getProperty('navigation.depth') === depth && gameState.getProperty('navigation.speed') === speed && gameState.getProperty('navigation.docked') === docked) return;
+  gameState.batch(() => { gameState.updateProperty('navigation.depth', depth); gameState.updateProperty('navigation.speed', speed); gameState.updateProperty('navigation.docked', docked); });
 }
 
 /** Copy GameState into the sim. The ship holds still after a load (safer than resuming at speed). */
@@ -58,6 +60,8 @@ export function restoreSim() {
   s.hull = hull != null ? hull : 100;
   const name = nav.location.properties && nav.location.properties.name;
   s.at = s.pois.find((p) => p.name === name) || null;
+  s.docked = (nav.docked == null ? (nav.depth || 0) === 0 : !!nav.docked) && !!s.at && s.at.type === 'dock';   // saves from before docking existed: parked at the dock counts as docked
+  const clk = gameState.getProperty('progress.gameClock'); if (typeof clk === 'number') s.clock = clk;
   s.wpt = nav.destination ? s.pois.find((p) => p.name === nav.destination) || null : null;
   dlog('persist: restored sim at', s.lat, s.lon);
 }

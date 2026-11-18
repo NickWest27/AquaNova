@@ -55,7 +55,7 @@ def main():
         page.screenshot(path=f"{SHOTS}/f-4done.png")
         page.tap("#station .st-head .btn")
         # persistence
-        js("const s=(await import('./js/sim.js')).sim, p=await import('./js/persist.js'); s.s.lat=41.51; s.s.lon=-70.68; s.s.depth=120; s.s.heading=77; s.s.targetHeading=77; s.s.targetDepth=120; s.s.throttle=0; p.addLogEntry('Entry A'); p.addLogEntry('Test entry before reload'); p.checkpoint();")
+        js("const s=(await import('./js/sim.js')).sim, p=await import('./js/persist.js'); s.s.docked=false; s.s.lat=41.51; s.s.lon=-70.68; s.s.depth=120; s.s.heading=77; s.s.targetHeading=77; s.s.targetDepth=120; s.s.throttle=0; p.addLogEntry('Entry A'); p.addLogEntry('Test entry before reload'); p.checkpoint();")
         page.wait_for_timeout(200)
         board()
         pos = js("const s=(await import('./js/sim.js')).sim.s;return [s.lat,s.lon,s.depth,s.heading]")

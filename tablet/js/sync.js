@@ -2,7 +2,7 @@
 // Nothing here is a save. Saves are logbook entries and the exit save only.
 import { getConfig, syncLogbook, publishActive, pushStatus, flush, autoSyncAllowed, resetPace } from '../../utils/ledgerSync.js';
 import { saveManager, gameState, restoreSim } from './persist.js';
-import { sim } from './sim.js';
+import { sim, clockText } from './sim.js';
 import { dlog } from '../../utils/log.js';
 
 export const syncState = { status: getConfig() ? 'idle' : 'off', at: null, error: null };
@@ -15,6 +15,7 @@ export function buildStatus() {
   return {
     t: new Date().toISOString(), logbook: lb ? lb.name : '',
     location: s.at ? s.at.name : 'Open water', lat: +s.lat.toFixed(4), lon: +s.lon.toFixed(4),
+    clock: clockText(), docked: !!s.docked,
     depth: Math.round(s.depth), heading: Math.round(s.heading), speed: +s.speed.toFixed(1),
     battery: Math.round(s.battery), oxygen: Math.round(s.oxygen), hull: Math.round(s.hull),
     destination: s.wpt ? s.wpt.name : null,

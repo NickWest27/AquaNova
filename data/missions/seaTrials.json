@@ -8,6 +8,18 @@
   "prerequisites": [],
   "objectives": [
     {
+      "id": "undock",
+      "description": "Undock from Woods Hole (Helm station)",
+      "required": true,
+      "triggers": [
+        {
+          "type": "property_change",
+          "property": "navigation.docked",
+          "value": false
+        }
+      ]
+    },
+    {
       "id": "dive",
       "description": "Dive below 50 m",
       "required": true,
@@ -17,7 +29,8 @@
           "property": "navigation.depth",
           "value": 50
         }
-      ]
+      ],
+      "after": "undock"
     },
     {
       "id": "speed",

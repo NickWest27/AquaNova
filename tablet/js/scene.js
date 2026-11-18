@@ -53,6 +53,7 @@ export function createScene(stage, { onOpen }) {
     el('img', { src: 'assets/comm-pin.webp', alt: '' }), el('span', { class: 'tag', text: 'COMMUNICATOR' }));
   quarters.append(qimg,
     hs('LOGBOOK', 210, 516, 290, 190, () => onOpen('log'), 'top'),
+    hs('SLEEP', 640, 610, 580, 250, () => onOpen('sleep'), 'mid'),
     hs('TO WALKWAY', 1236, 120, 560, 700, () => onOpen('walkway'), 'mid'),
     pickup);
   // walkway hub: placeholder art. Doors to the bridge, quarters, engineering and science/medical.

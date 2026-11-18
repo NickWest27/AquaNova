@@ -14,6 +14,7 @@ export const sim = {
     throttle: 0, speed: 0, depth: 0, targetDepth: 0,
     battery: 100, oxygen: 100, hull: 100, co2: 0.04, temp: 4.1, power: 0,
     ballast: 100, comms: true, sonar: true, lights: true, pois: [], wpt: null, at: null,
+    clock: 6 * 3600, docked: false,     // clock = game seconds since Day 1 00:00
   },
   listeners: new Set(),
   dirty: true,
@@ -43,15 +44,17 @@ export function toward(a, b) {
   return { nm: Math.hypot(dx, dy), brg: norm360((Math.atan2(dx, dy) * 180) / Math.PI), dx, dy };
 }
 
-sim.setThrottle = (v) => { sim.s.throttle = clamp(v, 0, 1); sim.touch(); };
+sim.setThrottle = (v) => { if (sim.s.docked) return; sim.s.throttle = clamp(v, 0, 1); sim.touch(); };
 sim.setHeading = (h) => { sim.s.targetHeading = norm360(h); sim.touch(); };
-sim.setDepth = (d) => { sim.s.targetDepth = clamp(d, 0, 6000); sim.touch(); };
+sim.setDepth = (d) => { if (sim.s.docked) return; sim.s.targetDepth = clamp(d, 0, 6000); sim.touch(); };
 sim.setWpt = (p) => { sim.s.wpt = p; if (p) { sim.s.targetHeading = toward(sim.s, p).brg; } sim.touch(); };
 sim.stop = () => { sim.s.throttle = 0; sim.s.wpt = null; sim.touch(); };
 sim.dockPoi = () => sim.s.pois.find((p) => p.type === 'dock');
 
 sim.step = (dt) => {
   const s = sim.s;
+  s.clock += dt * TIMESCALE;
+  if (s.docked) { s.throttle = 0; s.speed = 0; s.targetDepth = 0; s.wpt = null; }   // clamps hold the ship
   // heading
   if (s.wpt) {
     const t = toward(s, s.wpt);
@@ -74,8 +77,13 @@ sim.step = (dt) => {
   s.lon += (nm * Math.sin(r)) / (NM_PER_DEG_LAT * Math.cos((s.lat * Math.PI) / 180));
   // systems
   s.power = 8 + (s.speed / MAX_KT) * 70 + (s.lights ? 5 : 0) + (s.sonar ? 4 : 0);
-  s.battery = clamp(s.battery - (s.power / 100) * 0.012 * dt * TIMESCALE / 30, 0, 100);
-  s.oxygen = clamp(s.oxygen - 0.0025 * dt * TIMESCALE / 30, 0, 100);
+  if (s.docked) { // shore power and air: about 20% battery and 30% oxygen per game hour
+    const gh = (dt * TIMESCALE) / 3600;
+    s.battery = clamp(s.battery + 20 * gh, 0, 100); s.oxygen = clamp(s.oxygen + 30 * gh, 0, 100);
+  } else {
+    s.battery = clamp(s.battery - (s.power / 100) * 0.012 * dt * TIMESCALE / 30, 0, 100);
+    s.oxygen = clamp(s.oxygen - 0.0025 * dt * TIMESCALE / 30, 0, 100);
+  }
   s.co2 = clamp(0.04 + (100 - s.oxygen) * 0.012, 0, 5);
   s.temp = clamp(20 - Math.sqrt(s.depth) * 0.28, 1.5, 20);
   s.hull = clamp(100 - Math.max(0, s.depth - 4500) / 30, 0, 100);
@@ -88,6 +96,32 @@ sim.step = (dt) => {
     sim.emit('enter', here);
   } else if (!here && s.at) { s.at = null; }
   sim.dirty = true;
+};
+
+/** Docking needs a dock marker, low speed and the surface. */
+sim.canDock = () => { const s = sim.s; return !s.docked && !!s.at && s.at.type === 'dock' && s.speed <= 1.5 && s.depth <= 5; };
+
+/** "Game clock" text, e.g. "Day 2 06:30". */
+export const clockText = (secs = sim.s.clock) => `Day ${Math.floor(secs / 86400) + 1} ${String(Math.floor(secs / 3600) % 24).padStart(2, '0')}:${String(Math.floor(secs / 60) % 60).padStart(2, '0')}`;
+
+/** Sleep: jump the game forward. The ship holds station. The crew wake the player early for an emergency.
+ *  Returns { hours, reason } where reason is null when the full time passed. */
+sim.warp = (hours) => {
+  const s = sim.s, total = hours * 3600, stepGame = 15;   // 15 game seconds per step
+  s.throttle = 0; s.wpt = null;
+  let done = 0, reason = null, sinceCheck = 0;
+  while (done < total) {
+    sim.step(stepGame / TIMESCALE); done += stepGame; sinceCheck += stepGame;
+    if (sinceCheck >= 60) {
+      sinceCheck = 0;
+      if (s.oxygen < 30 && !s.docked) reason = `oxygen reserves are down to ${Math.round(s.oxygen)}%`;
+      else if (s.battery < 20 && !s.docked) reason = `battery is down to ${Math.round(s.battery)}%`;
+      else if (s.hull < 60) reason = `hull integrity has dropped to ${Math.round(s.hull)}%`;
+      if (reason) break;
+    }
+  }
+  sim.dirty = true; sim.emit('tick');
+  return { hours: done / 3600, reason };
 };
 
 sim.emit = (type, data) => sim.listeners.forEach((fn) => { try { fn(type, data); } catch (e) { console.error(e); } });

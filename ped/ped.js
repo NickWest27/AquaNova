@@ -68,6 +68,7 @@ const views = {
     const num = (label, html, extra = '') => el('div', { class: 'card' }, el('div', { class: 'lbl', text: label }), el('div', { class: `num ${extra}`, html }));
     return [
       el('div', { class: 'card' }, el('div', { class: 'lbl', text: 'Location' }), el('div', { class: 'num', style: 'font-size:1.3rem', text: s.location }),
+        s.clock && el('p', { class: 'note', text: `${s.clock}${s.docked ? ' · docked' : ''}` }),
         el('p', { class: `note ${stale ? 'warn' : ''}`, text: stale ? `iPad last reported ${ago(s.t)}` : `Live from the iPad, ${ago(s.t)}` })),
       el('div', { class: 'grid' },
         num('Depth', `${s.depth}<small>m</small>`), num('Heading', `${String(s.heading).padStart(3, '0')}°`),

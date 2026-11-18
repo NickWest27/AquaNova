@@ -1,12 +1,12 @@
 import '../../utils/debugPanel.js';
 import { dlog } from '../../utils/log.js';
-import { sim } from './sim.js';
+import { sim, clockText } from './sim.js';
 import { createScene } from './scene.js';
 import { el, $, toast, pad, modal, frameThrottle } from './util.js';
 import { ICONS } from './ui.js';
 import { startSync, syncAtBoot } from './sync.js';
 import { initAudio, updateHum, chirp, ping } from './audio.js';
-import { gameState, loadGame, liveNav, startExitSave, checkpoint, addLogEntry, restoreSim } from './persist.js';
+import { gameState, loadGame, liveNav, startExitSave, saveBeforeSleep, checkpoint, addLogEntry, restoreSim } from './persist.js';
 
 const STATIONS = {
   nav: { title: 'Navigation', icon: 'nav' }, helm: { title: 'Helm', icon: 'helm' }, sys: { title: 'Systems', icon: 'sys' },
@@ -123,18 +123,36 @@ function openScene(name) {
     document.dispatchEvent(new CustomEvent('location-enter', { detail: { location: 'quarters' } }));
   } else if (name === 'bridge') { closeStation(); scene.show('bridge'); }
   else if (name === 'walkway') { closeStation(); scene.show('walkway'); }
+  else if (name === 'sleep') sleepDialog();
   else if (name === 'engineering' || name === 'science') toast(`${name === 'science' ? 'Science / Medical' : 'Engineering'} is not built yet. Talk to the crew on the communicator.`);
   else if (name === 'pickup') document.dispatchEvent(new CustomEvent('item-pickup', { detail: { itemId: 'communicator' } }));
   else openStation(name);
   syncUI();
 }
 
+// ---------- sleep: jump the game clock forward ----------
+function sleepDialog() {
+  let hours = 8;
+  const note = el('p', { text: `It is ${clockText()}. The game saves first. The ship holds station while you sleep. If docked, shore power charges the ship. The crew wake you early in an emergency.` });
+  const chips = el('div', { class: 'row' });
+  const draw = () => chips.replaceChildren(...[2, 4, 6, 8, 10].map((h) => el('button', { class: `btn chip ${h === hours ? 'on primary' : ''}`, text: `${h} h`, onclick: () => { hours = h; draw(); } })));
+  draw();
+  modal({ title: 'Sleep', body: el('div', {}, note, chips), actions: [{ label: 'Cancel' }, { label: 'Sleep', primary: true, run: () => {
+    saveBeforeSleep();                         // a save before sleep, as agreed
+    const r = sim.warp(hours);
+    const h = r.hours >= 1 ? `${Math.round(r.hours * 10) / 10} hours` : `${Math.round(r.hours * 60)} minutes`;
+    const text = r.reason ? `Captain, ${r.reason}. I woke you early. You slept ${h}. It is ${clockText()}.` : `You slept ${h}. It is ${clockText()}.`;
+    modal({ title: r.reason ? 'ARIA woke you' : 'Good morning, Captain', body: el('p', { text }), actions: [{ label: 'OK', primary: true }] });
+    ping(); liveNav(); syncUI();
+  } }] });
+}
+
 // ---------- dock ----------
 function buildDock() {
   const dock = $('#dock');
   const status = el('div', { class: 'dock-status' });
-  const st = { pos: el('span'), obj: el('span'), bat: el('span') };
-  status.append(st.pos, el('span', { class: 'sp' }), st.obj, st.bat);
+  const st = { clock: el('span'), pos: el('span'), obj: el('span'), bat: el('span') };
+  status.append(st.clock, st.pos, el('span', { class: 'sp' }), st.obj, st.bat);
   const buttons = el('div', { class: 'dock-buttons' },
     ...Object.entries(STATIONS).filter(([, v]) => !v.hidden).map(([k, v]) => el('button', { class: 'dbtn', 'data-st': k, onclick: () => openStation(k), html: `${ICONS[v.icon]}<span>${v.title}</span>${k === 'comms' ? '<i class="badge"></i>' : ''}` })),
     el('button', { class: 'dbtn', 'data-st': 'quarters', onclick: () => openScene(scene.inQuarters ? 'bridge' : 'quarters'), html: `${ICONS.quarters}<span>Quarters</span>` }));
@@ -172,7 +190,7 @@ async function boot() {
       missions = (await import('../../game/systems/missionManager.js')).default;
       await missions.init();
     } catch (e) { console.warn('Missions unavailable', e); }
-    if (!sim.s.at && !gameState.getProperty('navigation.location')) { const d = sim.dockPoi(); if (d) { sim.s.lat = d.lat; sim.s.lon = d.lon; sim.s.at = d; } }
+    if (!sim.s.at && !gameState.getProperty('navigation.location')) { const d = sim.dockPoi(); if (d) { sim.s.lat = d.lat; sim.s.lon = d.lon; sim.s.at = d; sim.s.docked = true; } }
     btn.disabled = false; btn.textContent = 'Board the Aqua Nova'; info.textContent = '';
   } catch (e) { console.error('Boot failed', e); info.textContent = 'Startup failed. Triple-tap the top-left corner for the log.'; return; }
 
@@ -193,6 +211,7 @@ async function boot() {
         if (++tickN % 5 === 0) liveNav();            // about once a second
         const t = `${s.lat.toFixed(3)}°N ${Math.abs(s.lon).toFixed(3)}°W`;
         if (st.pos.textContent !== t) st.pos.textContent = t;
+        const ck = clockText() + (s.docked ? ' · DOCKED' : ''); if (st.clock.textContent !== ck) st.clock.textContent = ck;
         const o = ctx.objectives().find((x) => !x.done); const ot = o ? 'Objective: ' + o.text : '';
         if (st.obj.textContent !== ot) st.obj.textContent = ot;
         const b = `BAT ${Math.round(s.battery)}%`; if (st.bat.textContent !== b) st.bat.textContent = b;
