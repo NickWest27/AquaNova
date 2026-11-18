@@ -41,9 +41,10 @@ export function createScene(stage, { onOpen }) {
     hs('NAVIGATION', 700, 570, 523, 225, () => onOpen('nav'), 'top'),
     hs('HELM', 625, 820, 675, 140, () => onOpen('helm'), 'bottom'),
     hs('SYSTEMS', 380, 795, 290, 168, () => onOpen('sys'), 'top'),
-    hs('COMMS', 1266, 793, 277, 168, () => onOpen('comms'), 'top'),
-    hs('QUARTERS', 240, 515, 190, 140, () => onOpen('quarters'), 'bottom'),
-    hs('LOGBOOK', 1495, 515, 190, 140, () => onOpen('log'), 'bottom'),
+    hs('COMMS', 40, 430, 520, 350, () => onOpen('comms'), 'top'),        // comms officer, left station
+    hs('SENSORS', 1380, 430, 520, 350, () => onOpen('sensors'), 'top'),  // sensors, right station
+    hs('◂ WALKWAY', 0, 890, 330, 190, () => onOpen('walkway'), 'mid'),    // lower corners leave the bridge
+    hs('WALKWAY ▸', 1590, 890, 330, 190, () => onOpen('walkway'), 'mid'),
   );
 
   // quarters
@@ -52,19 +53,37 @@ export function createScene(stage, { onOpen }) {
     el('img', { src: 'assets/comm-pin.webp', alt: '' }), el('span', { class: 'tag', text: 'COMMUNICATOR' }));
   quarters.append(qimg,
     hs('LOGBOOK', 210, 516, 290, 190, () => onOpen('log'), 'top'),
-    hs('TO BRIDGE', 1236, 120, 560, 700, () => onOpen('bridge'), 'mid'),
+    hs('TO WALKWAY', 1236, 120, 560, 700, () => onOpen('walkway'), 'mid'),
     pickup);
-  stage.append(bridge, quarters);
+  // walkway hub: placeholder art. Doors to the bridge, quarters, engineering and science/medical.
+  const door = (label, x, y, w, h, target, cls = '') => el('button', { class: `door ${cls}`, style: `left:${x}px;top:${y}px;width:${w}px;height:${h}px`, 'aria-label': label, onclick: () => onOpen(target) }, el('span', { text: label }));
+  const walkway = el('div', { class: 'scene walkway', hidden: true });
+  walkway.innerHTML = `<svg viewBox="0 0 1920 1080" preserveAspectRatio="none" aria-hidden="true">
+    <defs><linearGradient id="wf" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0d2c3c"/><stop offset="1" stop-color="#051722"/></linearGradient>
+    <linearGradient id="ww" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#14465a"/><stop offset="1" stop-color="#0b2a3a"/></linearGradient></defs>
+    <rect width="1920" height="1080" fill="#04101f"/>
+    <polygon points="0,0 700,300 700,780 0,1080" fill="url(#ww)"/><polygon points="1920,0 1220,300 1220,780 1920,1080" fill="url(#ww)" transform="scale(1,1)"/>
+    <polygon points="0,0 1920,0 1220,300 700,300" fill="#0a2536"/><polygon points="0,1080 700,780 1220,780 1920,1080" fill="url(#wf)"/>
+    <rect x="700" y="300" width="520" height="480" fill="#06202e"/>
+    <g stroke="#2f8f9d" stroke-width="3" opacity=".55"><line x1="0" y1="0" x2="700" y2="300"/><line x1="1920" y1="0" x2="1220" y2="300"/><line x1="0" y1="1080" x2="700" y2="780"/><line x1="1920" y1="1080" x2="1220" y2="780"/><line x1="960" y1="780" x2="960" y2="1080"/><line x1="830" y1="780" x2="560" y2="1080"/><line x1="1090" y1="780" x2="1360" y2="1080"/></g>
+    <rect x="600" y="0" width="720" height="22" rx="11" fill="#f2d9a0" opacity=".55"/></svg>`;
+  walkway.append(
+    door('BRIDGE', 790, 360, 340, 400, 'bridge', 'far'),
+    door('QUARTERS', 120, 300, 340, 520, 'quarters'),
+    door('ENGINEERING', 470, 360, 190, 400, 'engineering', 'near-l'),
+    door('SCIENCE / MEDICAL', 1460, 300, 340, 520, 'science'),
+    el('div', { class: 'art-note', text: 'Placeholder art' }));
+  stage.append(bridge, quarters, walkway);
 
   const api = {
-    inQuarters: false,
+    inQuarters: false, where: 'bridge',
     show(which) {
-      api.inQuarters = which === 'quarters';
-      bridge.hidden = api.inQuarters; quarters.hidden = !api.inQuarters;
+      api.where = which; api.inQuarters = which === 'quarters';
+      bridge.hidden = which !== 'bridge'; quarters.hidden = which !== 'quarters'; walkway.hidden = which !== 'walkway';
       cache.clear(); api.update();
     },
     update() {
-      if (api.inQuarters) return;
+      if (api.where !== 'bridge') return;
       const s = sim.s;
       const set = (k, node, v) => { if (cache.get(k) !== v) { cache.set(k, v); node.textContent = v; } };
       set('spd', bSpd, s.speed.toFixed(1)); set('dep', bDep, Math.round(s.depth)); set('hdg', bHdg, pad(s.heading) + '°');

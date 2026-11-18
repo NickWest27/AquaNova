@@ -10,7 +10,7 @@ import { gameState, loadGame, liveNav, startExitSave, checkpoint, addLogEntry, r
 
 const STATIONS = {
   nav: { title: 'Navigation', icon: 'nav' }, helm: { title: 'Helm', icon: 'helm' }, sys: { title: 'Systems', icon: 'sys' },
-  comms: { title: 'Comms', icon: 'comms' }, log: { title: 'Logbook', icon: 'log' }, ped: { title: 'PED', icon: 'more' },
+  sensors: { title: 'Sensors', icon: 'sensors' }, comms: { title: 'Comms', icon: 'comms' }, log: { title: 'Logbook', icon: 'log' }, ped: { title: 'PED', icon: 'more' },
   crew: { title: 'Communicator', icon: 'comms', hidden: true }, // opened from the pin, not the dock
 };
 const FILES = { sys: 'systems' };
@@ -122,6 +122,8 @@ function openScene(name) {
     closeStation(); scene.show('quarters');
     document.dispatchEvent(new CustomEvent('location-enter', { detail: { location: 'quarters' } }));
   } else if (name === 'bridge') { closeStation(); scene.show('bridge'); }
+  else if (name === 'walkway') { closeStation(); scene.show('walkway'); }
+  else if (name === 'engineering' || name === 'science') toast(`${name === 'science' ? 'Science / Medical' : 'Engineering'} is not built yet. Talk to the crew on the communicator.`);
   else if (name === 'pickup') document.dispatchEvent(new CustomEvent('item-pickup', { detail: { itemId: 'communicator' } }));
   else openStation(name);
   syncUI();

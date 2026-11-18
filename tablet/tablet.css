@@ -169,7 +169,7 @@ textarea, input { font: inherit; font-size: 16px; user-select: text; -webkit-use
 .dock-status b { color: var(--text); font-weight: 700; }
 .dock-status .sp { flex: 1; }
 .dock-status .ok { color: var(--green); } .dock-status .warn { color: var(--amber); } .dock-status .bad { color: var(--red); }
-.dock-buttons { flex: 1; display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.6rem; min-height: 4.6rem; }
+.dock-buttons { flex: 1; display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 0.6rem; min-height: 4.6rem; }
 .dbtn { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.3rem; border-radius: 16px; border: 2px solid var(--line); background: var(--panel); color: var(--cyan); font-weight: 800; font-size: 0.85rem; letter-spacing: 0.08em; text-transform: uppercase; transition: transform 0.08s ease; }
 .dbtn:active { transform: scale(0.96); background: #134067; }
 .dbtn svg { width: 1.9rem; height: 1.9rem; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
@@ -197,6 +197,13 @@ textarea, input { font: inherit; font-size: 16px; user-select: text; -webkit-use
 .num { font: 700 2.1rem/1.1 var(--mono); }
 .num small { font-size: 0.9rem; color: var(--dim); margin-left: 0.25rem; font-weight: 600; }
 .ok { color: var(--green); } .warn { color: var(--amber); } .bad { color: var(--red); }
+
+/* Walkway hub (placeholder art) */
+.walkway svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.door { position: absolute; border-radius: 18px; border: 4px solid var(--cyan); background: rgba(4, 24, 38, 0.82); color: var(--cyan); display: flex; align-items: center; justify-content: center; padding: 0.6rem; text-align: center; font: 800 38px/1.2 var(--font); letter-spacing: 0.1em; }
+.door:active { background: rgba(100, 255, 218, 0.22); }
+.door.far { border-color: #f2d9a0; color: #f2d9a0; } .door.near-l { font-size: 21px; letter-spacing: 0.02em; }
+.art-note { position: absolute; right: 24px; bottom: 16px; font: 700 22px var(--font); color: #4c6a85; letter-spacing: 0.1em; text-transform: uppercase; }
 
 /* PED: a pop-up panel on top of whatever is on screen (scene or station) */
 #ped-pop { position: absolute; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; padding: calc(env(safe-area-inset-top) + 1.2rem) 2.2rem 1.2rem; background: rgba(2,8,16,0.74); animation: stIn 0.16s ease-out; }
