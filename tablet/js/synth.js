@@ -137,23 +137,24 @@ export function createSynth(parent) {
     g.fillStyle = INK; g.fillText(String(Math.round(hdg) % 360).padStart(3, '0'), cx, hy + 16);
     g.beginPath(); g.moveTo(cx, hy + 3); g.lineTo(cx - 5, hy - 5); g.lineTo(cx + 5, hy - 5); g.closePath(); g.fill();
     // a vertical tape: value scrolls past a fixed box. side -1 = labels on the right of the line (left tape), +1 = labels on the left (right tape)
-    const vtape = (x, side, value, pxPerUnit, minor, major, fmt, boxText) => {
+    const vtape = (x, side, value, pxPerUnit, minor, major, fmt, boxText, unit, inv = false) => {
       const half = 78, span = half / pxPerUnit;
       g.strokeStyle = INK; g.fillStyle = INK; g.lineWidth = 1.5; g.textAlign = side < 0 ? 'left' : 'right';
       g.beginPath(); g.moveTo(x, cy - half); g.lineTo(x, cy + half); g.stroke();
       for (let v = Math.floor((value - span) / minor) * minor; v <= value + span; v += minor) {
-        if (v < 0) continue; const y = cy - (v - value) * pxPerUnit, isMajor = Math.abs(v / major - Math.round(v / major)) < 1e-6;
+        if (v < 0) continue; const y = cy + (inv ? 1 : -1) * (v - value) * pxPerUnit, isMajor = Math.abs(v / major - Math.round(v / major)) < 1e-6;
         g.beginPath(); g.moveTo(x, y); g.lineTo(x - side * (isMajor ? 9 : 5), y); g.stroke();
         if (isMajor && Math.abs(y - cy) > 12) g.fillText(fmt(v), x - side * 13, y + 4);
       }
       const bw = 46; g.fillStyle = 'rgba(6,8,60,0.88)'; const bx = side < 0 ? x + 4 : x - 4 - bw; g.fillRect(bx, cy - 9, bw, 18); g.strokeRect(bx, cy - 9, bw, 18);
       g.fillStyle = INK; g.textAlign = 'center'; g.fillText(boxText, bx + bw / 2, cy + 4);
+      g.textAlign = 'center'; g.fillText(unit, x, cy - half - 7);   // the unit above the tape
       g.beginPath(); g.moveTo(x, cy); g.lineTo(x + side * 6 * -1, cy - 5); g.lineTo(x + side * 6 * -1, cy + 5); g.closePath(); g.fill();
     };
     const kt = Math.max(0, craft.speed || 0), dep = Math.max(0, craft.depth || 0);
-    vtape(46, -1, kt, 7, 1, 5, (v) => String(v), kt.toFixed(1));                                           // speed, knots (1 kt ticks, numbers every 5)
+    vtape(46, -1, kt, 7, 1, 5, (v) => String(v), kt.toFixed(1), 'KTS');                                           // speed, knots (1 kt ticks, numbers every 5)
     const dStep = dep < 100 ? [1, 10] : dep < 600 ? [10, 50] : [50, 250];                                 // depth, metres: finer ticks when shallow
-    vtape(W - 46, 1, dep, dep < 100 ? 4 : dep < 600 ? 0.8 : 0.16, dStep[0], dStep[1], (v) => String(v), String(Math.round(dep)));
+    vtape(W - 46, 1, dep, dep < 100 ? 4 : dep < 600 ? 0.8 : 0.16, dStep[0], dStep[1], (v) => String(v), String(Math.round(dep)), 'M', true);   // depth runs down: the surface is at the top
     g.restore();
   } };
   return api;
