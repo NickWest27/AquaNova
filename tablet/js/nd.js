@@ -1,5 +1,5 @@
 // Navigation display: one canvas, north-up, ship-centred. Redraws only when asked.
-import { sim, toward } from './sim.js';
+import { sim, toward, WSKR_CODES } from './sim.js';
 import { frameThrottle } from './util.js';
 import { seafloor } from './seafloor.js';
 
@@ -112,7 +112,7 @@ export function createND(wrap, { onPick, stage = false, units = 1, contours = fa
       const t = turn(toward(c, q)), scale = R / nd.range, x = w / 2 + t.dx * scale, y = h / 2 - t.dy * scale;
       if (x < -20 || x > w + 20 || y < -20 || y > h + 20) continue;
       ctx.fillStyle = q.mode === 'task' ? '#ff9f43' : '#ffd666'; ctx.beginPath(); ctx.moveTo(x, y - 7); ctx.lineTo(x + 6, y); ctx.lineTo(x, y + 7); ctx.lineTo(x - 6, y); ctx.fill();
-      ctx.font = '700 14px system-ui'; ctx.textAlign = 'left'; ctx.fillText('W' + q.n, x + 9, y + 5);
+      ctx.font = '700 14px system-ui'; ctx.textAlign = 'left'; ctx.fillText(WSKR_CODES[q.n - 1] || 'W' + q.n, x + 9, y + 5);
     }
     // POIs
     ctx.font = '700 17px system-ui';

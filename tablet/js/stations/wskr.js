@@ -28,7 +28,7 @@ export function mountWskrPanel(body) {
   };
   const rowText = (w) => {
     const s = sim.s, l = sim.wskrLink(w), bat = Math.round(w.bat == null ? 100 : w.bat), poi = w.target != null ? s.pois.find((p) => p.id === w.target) : null;
-    return { order: w.dead ? 'ADRIFT: no power' : w.mode === 'task' ? `Investigating ${poi ? poi.name : 'a contact'}` : SAY[w.mode] || w.mode, depth: `${wskrDepthFor(w)} m`, bat: `${bat}%`, low: bat <= WSKR_LOW_PCT, range: `${toward(s, w).nm.toFixed(1)} nm`, link: l.ok ? 'Link up' : 'Out of link range' };
+    return { order: w.dead ? 'ADRIFT: no power' : w.mode === 'task' ? `Investigating ${poi ? poi.name : 'a contact'}` : SAY[w.mode] || w.mode, depth: `${wskrDepthFor(w)} m`, bat: `${bat}%`, low: bat <= WSKR_LOW_PCT, range: (() => { const t = toward(s, w); return `BRG ${String(Math.round(t.brg) % 360).padStart(3, '0')}° · ${t.nm.toFixed(1)} nm`; })(), link: l.ok ? 'Link up' : 'Out of link range' };
   };
   function update() {
     const s = sim.s; if (!s.wskrs.some((w) => w.n === sel)) sel = s.wskrs.length ? s.wskrs[0].n : null;

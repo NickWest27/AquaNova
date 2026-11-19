@@ -158,7 +158,8 @@ export const wskrRingNm = (w) => WSKR_CHART_NM + (wskrPerk(w).chart || 0);
  *  The WSKRs then space themselves evenly round the ship. */
 export const formationRadius = (form, w) => ringDistance(sim.fineNm(sim.s), wskrRingNm(w), WSKR_OVERLAP[form] ?? WSKR_OVERLAP.loose);
 export const WSKR_DEPTHS = { auto: 'Auto', shallow: 'Shallow', deep: 'Deep' };
-export const WSKR_NAMES = ['Scout', 'Lantern', 'Drifter', 'Sprat'];   // placeholders, our own names
+export const WSKR_NAMES = ['Scout', 'Lantern', 'Drifter', 'Sprat'];
+export const WSKR_CODES = ['Sc', 'La', 'Dr', 'Sp'];   // two-letter labels on the navigation display   // placeholders, our own names
 /** Each WSKR has a small edge that fits its name. Sizes are small on purpose. */
 export const WSKR_PERKS = {
   1: { text: 'Scout charts the sea floor further out (+0.6 nm).', chart: 0.6 },
