@@ -244,7 +244,14 @@ function showSystemDialogue(id) {
 }
 document.addEventListener('show-dialogue', (e) => { if (e.detail.characterId === 'system') showSystemDialogue(e.detail.dialogueId); });
 document.addEventListener('comms-message', (e) => { if (boarded) say('comms', 'Captain, sorry to interrupt, but we have an incoming message.', 'mission', { notice: 'INCOMING MESSAGE', keep: `We have an incoming message from ${e.detail.from}. It is waiting at the Comms station.` }); syncUI(); });
-document.addEventListener('mission-notify', (e) => { if (boarded) say('aria', `${e.detail.title} — ${e.detail.subtitle}`, 'mission', { hold: false }); });   // objectives live in the PDA Tasks, not the communicator
+document.addEventListener('mission-notify', (e) => {
+  if (!boarded) return;
+  if (e.detail.subtitle === 'Objective Complete') {   // ARIA keeps it short: done, and what is next
+    const next = objectives().find((o) => o.status !== 'completed');
+    say('aria', next ? `Objective complete. Next: ${next.description.replace(/[.\s]+$/, '')}.` : 'Objective complete.', 'mission', { hold: false }); return;
+  }
+  say('aria', `${e.detail.title} — ${e.detail.subtitle}`, 'mission', { hold: false });
+});   // objectives live in the PDA Tasks, not the communicator
 
 function firstVisit(poi) {
   const seen = gameState.getProperty('progress.areasExplored') || [];
