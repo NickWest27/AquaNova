@@ -46,7 +46,7 @@ export function runIntake({ dateText, onDone }) {
         el('label', { class: 'f-tick' }, decl, el('span', { text: 'I confirm that I am the person named above, and I declare the information given on this form to be true and complete. I understand that falsifying or altering O.E.R.A. personnel records is an offence under the Uniform Code of Maritime Conduct, punishable by a fine, court martial, dismissal from the service or imprisonment.' }))),
       el('div', { class: 'sg-right' }, el('b', { class: 'sg-bio', text: 'Biometric verification' }), scanner, status))));
 
-  scanner.addEventListener('click', () => {
+  const press = () => {
     if (scanner.disabled) return;
     scanner.disabled = true; scanner.classList.add('scanning'); status.textContent = 'Verifying. Hold still.';
     inputs().forEach((i) => { i.disabled = true; }); decl.disabled = true;
@@ -57,7 +57,10 @@ export function runIntake({ dateText, onDone }) {
         setPlayer(f, l); back.remove(); idRecord(f, l, onDone);
       }, 900);
     }, 1700);
-  });
+  };
+  // Fires on finger down, not on release. The click listener is only a keyboard fallback (it ignores a press already handled).
+  scanner.addEventListener('pointerdown', (e) => { e.preventDefault(); press(); });
+  scanner.addEventListener('click', press);
 }
 
 function idRecord(f, l, onDone) {
