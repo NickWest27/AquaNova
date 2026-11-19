@@ -44,23 +44,6 @@ async function latestBuild() {
 const BUG_KEY = 'aquaNova_bugnotes';
 const loadBugs = () => { try { return JSON.parse(localStorage.getItem(BUG_KEY)) || []; } catch (e) { return []; } };
 const saveBugs = (list) => { try { localStorage.setItem(BUG_KEY, JSON.stringify(list)); } catch (e) { /* ignore */ } };
-// Optional: each note is also posted as a GitHub Issue (label "bug-note") so it can be read later without copying.
-// Needs a fine-grained token limited to this repo with Issues read and write. The repo is public, so the notes are too.
-const BUG_REPO = 'NickWest27/AquaNova', TOKEN_KEY = 'aquaNova_bugtoken';
-const getTok = () => { try { return localStorage.getItem(TOKEN_KEY) || ''; } catch (e) { return ''; } };
-let bugError = '';
-async function sendBug(b) {
-  const tok = getTok(); if (!tok || b.issue) return false;
-  try {
-    const r = await fetch(`https://api.github.com/repos/${BUG_REPO}/issues`, { method: 'POST',
-      headers: { Authorization: `Bearer ${tok}`, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title: `Bug note: ${b.text.slice(0, 60)}`, body: `${b.text}\n\n---\nGame time: ${b.clock}\nPlace: ${b.where}\nBuild: ${b.build}`, labels: ['bug-note'] }) });
-    if (!r.ok) throw new Error(r.status === 401 || r.status === 403 ? 'GitHub refused the token (it needs Issues read and write on this repo)' : `GitHub answered ${r.status}`);
-    const j = await r.json(); saveBugs(loadBugs().map((x) => x.id === b.id ? { ...x, issue: j.number } : x)); bugError = ''; return true;
-  } catch (e) { bugError = e.message === 'Failed to fetch' ? 'No connection. The note is kept and will be sent later.' : e.message; return false; }
-}
-async function sendUnsent() { let n = 0; for (const b of loadBugs()) if (!b.issue && await sendBug(b)) n++; return n; }
-
 const MISSION_OF = { 'oera-sea-trials': 'seaTrials' };   // older saves stored this offer without a mission id
 const mName = (id, fallback) => (missionManager.missions.get(id) || {}).name || fallback || id;
 
@@ -202,36 +185,23 @@ export function mount(body, ctx) {
       const drawBugs = () => {
         const list = loadBugs();
         bugList.replaceChildren(...(list.length ? [...list].reverse().map((b) => el('div', { class: 'bug-note' },
-          el('div', { class: 'meta' }, el('span', { text: `${b.clock} · ${b.where}${b.issue ? ` · sent (issue #${b.issue})` : getTok() ? ' · not sent yet' : ''}` }), el('button', { class: 'btn chip', text: 'Delete', onclick: () => { saveBugs(loadBugs().filter((x) => x.id !== b.id)); drawBugs(); } })),
+          el('div', { class: 'meta' }, el('span', { text: `${b.clock} · ${b.where}` }), el('button', { class: 'btn chip', text: 'Delete', onclick: () => { saveBugs(loadBugs().filter((x) => x.id !== b.id)); drawBugs(); } })),
           el('p', { text: b.text }))) : [el('div', { class: 'empty', text: 'No bug notes.' })]));
       };
       const addBug = () => {
         const v = bugBox.value.trim(); if (!v) return;
         saveBugs([...loadBugs(), { id: Date.now(), clock: clockText(), where: ctx.place ? ctx.place() : '', text: v, build: appVersion }]);
         bugBox.value = ''; toast('Bug note saved'); drawBugs();
-        sendUnsent().then((n) => { drawBugs(); drawTok(); if (n) toast('Sent to GitHub'); });
       };
       const copyBugs = async () => {
         const text = loadBugs().map((b, i) => `${i + 1}. [${b.clock}, ${b.where}, build ${b.build}] ${b.text}`).join('\n');
         if (!text) { toast('No bug notes to copy'); return; }
         try { await navigator.clipboard.writeText(text); toast('Copied. Paste it into the chat.'); } catch (e) { bugBox.value = text; toast('Copy failed. The text is in the box: select and copy it.', 'warn'); }
       };
-      const tokBox = el('div', { class: 'bug-tok' });
-      const tokInput = el('input', { class: 'field', type: 'password', placeholder: 'GitHub token for bug notes', autocapitalize: 'off', autocorrect: 'off' });
-      const drawTok = () => tokBox.replaceChildren(...(getTok()
-        ? [el('p', { text: bugError || 'Notes are also sent to GitHub, where Claude can read them.' }),
-           el('div', { class: 'row' }, el('button', { class: 'btn', text: 'Send unsent notes', onclick: async () => { const n = await sendUnsent(); drawBugs(); drawTok(); toast(n ? `Sent ${n}` : bugError || 'Nothing to send'); } }),
-             el('button', { class: 'btn danger', text: 'Remove token', onclick: () => { try { localStorage.removeItem(TOKEN_KEY); } catch (e) { /* ignore */ } bugError = ''; drawBugs(); drawTok(); } }))]
-        : [el('p', { text: 'Optional: send each note to GitHub so Claude can read it. Make a fine-grained token on github.com for the repository NickWest27/AquaNova only, with the permission "Issues: read and write". The notes become public, because the repository is public.' }),
-           tokInput, el('div', { class: 'row' }, el('button', { class: 'btn', text: 'Save token', onclick: async () => {
-             const v = tokInput.value.trim(); if (!v) return;
-             try { localStorage.setItem(TOKEN_KEY, v); } catch (e) { toast('Could not save the token', 'error'); return; }
-             const n = await sendUnsent(); drawBugs(); drawTok(); toast(n ? `Sent ${n} note${n === 1 ? '' : 's'} to GitHub` : bugError || 'Token saved');
-           } }))]));
-      drawBugs(); drawTok();
+      drawBugs();
       const bugs = el('div', { class: 'card setting' }, el('div', { class: 'lbl', text: 'Bug notes' }),
         el('p', { text: 'Write what you find while you play. Each note keeps the game time, the place and the build. Copy them all and paste them into the chat later.' }),
-        bugBox, el('div', { class: 'row' }, el('button', { class: 'btn primary', text: 'Add note', onclick: addBug }), el('button', { class: 'btn', text: 'Copy all', onclick: copyBugs })), bugList, tokBox);
+        bugBox, el('div', { class: 'row' }, el('button', { class: 'btn primary', text: 'Add note', onclick: addBug }), el('button', { class: 'btn', text: 'Copy all', onclick: copyBugs })), bugList);
 
       return [sync, sound, version, el('div', { class: 'card setting' }, el('div', { class: 'lbl', text: 'Text size' }), el('div', { class: 'row' }, zoomBtn('Smaller', -0.1), zoomBtn('Reset', 0), zoomBtn('Larger', 0.1))), bugs];
     },
