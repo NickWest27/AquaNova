@@ -29,7 +29,7 @@ export function runIntake({ dateText, onDone }) {
   const ready = () => inputs().every((i) => validName(i.value)) && decl.checked;
   const refresh = () => {
     const ok = ready(); scanner.disabled = !ok;
-    status.textContent = ok ? 'Place your right index finger on the sensor.' : 'Enter your full name and confirm the declaration to enable the sensor.';
+    status.textContent = ok ? 'Place your right index finger on the sensor.' : 'Enter your full name and confirm to enable the sensor.';
     const bad = inputs().some((i) => i.value.trim() && !validName(i.value));
     msg.textContent = bad ? 'Names may use letters, spaces, hyphens and apostrophes only.' : '';
   };
@@ -40,10 +40,10 @@ export function runIntake({ dateText, onDone }) {
     el('div', { class: 'sg-head' }, el('b', { text: 'O.E.R.A.' }), el('span', { text: 'Secure access · Personnel sign-in' })),
     el('div', { class: 'sg-cols' },
       el('div', { class: 'sg-left' },
-        el('h3', { text: 'Command personnel sign-in' }),
-        el('div', { class: 'f-grid' }, info('Vessel', 'Aqua Nova'), info('Access requested', 'Command'), info('Location', 'Walkway AN-1'), info('Date and time', dateText)),
+        el('h3', { text: 'Crew sign-in' }),
+        el('div', { class: 'f-grid' }, info('Vessel', 'Aqua Nova'), info('Sign-in', 'Arrival'), info('Location', 'Launch Bay'), info('Date and time', dateText)),
         el('div', { class: 'f-names' }, first, last), msg,
-        el('label', { class: 'f-tick' }, decl, el('span', { text: 'I confirm that I am the person named above and that I am authorised to assume command of this vessel.' }))),
+        el('label', { class: 'f-tick' }, decl, el('span', { text: 'I confirm that I am the person named above.' }))),
       el('div', { class: 'sg-right' }, el('b', { class: 'sg-bio', text: 'Biometric verification' }), scanner, status))));
 
   scanner.addEventListener('click', () => {
