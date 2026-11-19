@@ -51,7 +51,7 @@ viewProbe.fn = () => boarded && !!scene && scene.where === 'bridge' && !current 
 const ctx = {
   openScene: (name) => openScene(name),
   closeComm: () => closeComm(),
-  openComm: () => { closePed(); if (!comm) toggleComm(); },   // the PED's communicator button: a backup to the pin
+  openComm: () => { closePed(); if (!comm) toggleComm('type'); },   // the PED's communicator button: a backup to the pin
   commReady: () => !$('#pin').hidden, commUnread: () => $('#pin').classList.contains('unread'),
   refreshScene: () => { scene && scene.update(); syncUI(); },
   zoom(d) { zoom = d === 0 ? 1 : Math.min(1.5, Math.max(0.8, +(zoom + d).toFixed(2))); applyZoom(); try { localStorage.setItem('aquaNova_zoom', zoom); } catch (e) { /* ignore */ } fit(); },
@@ -106,19 +106,20 @@ function closePed() {
 
 // ---------- Communicator: a voice channel, shown as a blurred overlay over the current screen ----------
 let comm = null;
-async function toggleComm() {
-  if (comm) return closeComm();
+/** mode: 'voice' (press and hold the pin: the microphone listens) or 'type' (a single tap: quiet, keyboard only). A tap while open closes; a hold while open turns the microphone on. */
+async function toggleComm(mode = 'type') {
+  if (comm) { if (mode === 'voice') { if (comm.api.voice) comm.api.voice(); return; } return closeComm(); }
   if (commsLocked()) return;
   gameState.updateProperty('tutorial.communicator_opened', true); // "First Contact" step 3
   const root = $('#comm-pop'), body = el('div', { class: 'st-body' });
   root.replaceChildren(el('div', { class: 'comm-panel' },
-    el('div', { class: 'comm-top' }, el('small', { class: 'comm-live', text: '● voice channel open' })),
+    el('div', { class: 'comm-top' }, el('small', { class: 'comm-live', text: mode === 'voice' ? '● voice channel open' : '● channel open · quiet' })),
     body));
   root.onclick = (e) => { if (!e.target.closest('.comm-page')) closeComm(); };   // a tap outside the channel closes it
   root.hidden = false;
   try {
     modules.crew ||= await import('./stations/crew.js');
-    comm = { api: modules.crew.mount(body, ctx) };
+    comm = { api: modules.crew.mount(body, ctx, { voice: mode === 'voice' }) };
   } catch (e) { console.error('Communicator failed', e); toast('Could not open the communicator', 'error'); root.hidden = true; }
 }
 function closeComm() {
@@ -130,7 +131,7 @@ function closeComm() {
 // ---------- stations ----------
 async function openStation(name) {
   if (name === 'ped') return togglePed();
-  if (name === 'crew') return toggleComm();
+  if (name === 'crew') return toggleComm('type');
   if (current) closeStation();
   const def = STATIONS[name]; if (!def) return;
   if (!isCommissioned(name)) { toast(excuse(name), 'warn'); return; }
@@ -256,7 +257,13 @@ async function boot() {
     boarded = true;
     sim.start(); startExitSave(); startSync();
     gameState.addObserver(syncUI);
-    $('#pin').addEventListener('click', toggleComm);
+    // single tap = quiet (typing); press and hold = voice. A hold also fires a click when released, which is ignored.
+    let holdT = null, held = false;
+    const pinEl = $('#pin');
+    pinEl.addEventListener('pointerdown', () => { held = false; clearTimeout(holdT); holdT = setTimeout(() => { held = true; try { navigator.vibrate && navigator.vibrate(25); } catch (e) { /* no haptics */ } toggleComm('voice'); }, 450); });
+    for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) pinEl.addEventListener(ev, () => clearTimeout(holdT));
+    pinEl.addEventListener('contextmenu', (e) => e.preventDefault());
+    pinEl.addEventListener('click', () => { if (held) { held = false; return; } toggleComm('type'); });
     document.addEventListener('inbox-change', () => $('#pin').classList.toggle('unread', unreadCount() > 0));
     $('#ped-btn').hidden = false; $('#ped-btn').addEventListener('click', togglePed);
     sim.on((type, data) => {

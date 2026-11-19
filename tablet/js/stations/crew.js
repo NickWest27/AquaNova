@@ -156,7 +156,7 @@ const SAMPLES = [
 const hist = [];      // the conversation, kept while the game runs: { you, who, text }
 let hintAt = 0;
 
-export function mount(body, ctx) {
+export function mount(body, ctx, opts = {}) {
   body.classList.add('comm-menu');
   const crew = knownCrew();
   const byId = (id) => crew.find((c) => c.id === id);
@@ -167,7 +167,7 @@ export function mount(body, ctx) {
   const log = el('div', { class: 'comm-log' });
   const hint = el('div', { class: 'comm-hint' });
   const listen = el('span', { class: 'comm-mic' });
-  const input = el('input', { class: 'comm-input', type: 'text', placeholder: 'Speak, or type here…', autocomplete: 'off', autocapitalize: 'sentences', enterkeyhint: 'send', 'aria-label': 'Say something to the crew' });
+  const input = el('input', { class: 'comm-input', type: 'text', placeholder: opts.voice ? 'Speak, or type here…' : 'Type to the crew…', autocomplete: 'off', autocapitalize: 'sentences', enterkeyhint: 'send', 'aria-label': 'Say something to the crew' });
   const form = el('form', { class: 'comm-say', onsubmit: (e) => { e.preventDefault(); const t = input.value.trim(); input.value = ''; if (t) heard(t); } }, input);
   body.replaceChildren(el('div', { class: 'comm-page' }, log, hint, listen, form));
 
@@ -229,6 +229,7 @@ export function mount(body, ctx) {
   }
   if (!spoke && !hist.length && byId('executiveOfficer')) { hist.push({ who: aria(), text: 'Welcome aboard, Captain. I am ARIA, your executive officer. How may I assist you?' }); last = aria(); }
   hintAt = Math.floor(Math.random() * SAMPLES.length);
-  draw(); startMic();
-  return { update() {}, destroy() { alive = false; try { rec && rec.abort(); } catch (e) { /* ignore */ } } };
+  draw();
+  if (opts.voice) startMic(); else { alive = false; listen.textContent = ''; try { input.focus(); } catch (e) { /* keyboard comes up on the next tap */ } }
+  return { update() {}, voice() { try { rec && rec.abort(); } catch (e) { /* none running */ } alive = true; quiet = 0; startMic(); }, destroy() { alive = false; try { rec && rec.abort(); } catch (e) { /* ignore */ } } };
 }
