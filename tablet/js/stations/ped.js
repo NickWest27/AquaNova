@@ -124,7 +124,8 @@ export function mount(body, ctx) {
   const TITLES = { status: 'Status', missions: 'Missions', findings: 'Findings', tasks: 'Tasks', journal: 'Journal', settings: 'Settings' };
   function render() {
     syncLine = null;
-    tabs.replaceChildren(...Object.keys(views).map((k) => el('button', { class: `btn chip ${k === cur ? 'on' : ''}`, text: TITLES[k], onclick: () => { cur = k; render(); } })));
+    tabs.replaceChildren(...Object.keys(views).map((k) => el('button', { class: `btn chip ${k === cur ? 'on' : ''}`, text: TITLES[k], onclick: () => { cur = k; render(); } })),
+      ctx.commReady && ctx.commReady() && el('button', { class: `btn chip comm-btn${ctx.commUnread() ? ' unread' : ''}`, text: 'Communicator', 'aria-label': 'Open communicator', onclick: () => ctx.openComm() }));
     tb.replaceChildren(...views[cur]());
     update();
   }

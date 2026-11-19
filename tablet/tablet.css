@@ -219,7 +219,7 @@ textarea, input { font: inherit; font-size: 16px; user-select: text; -webkit-use
 .comm-reply { margin: 0.4rem 0 0.8rem; max-width: 36rem; } .comm-reply small { color: var(--dim); letter-spacing: 0.1em; text-transform: uppercase; } .comm-reply p { font-size: 1.5rem; line-height: 1.4; color: #fff; }
 .ped-panel.pda { width: min(100%, calc((100dvh - 1.6rem) * 1.7778)); height: auto; aspect-ratio: 16 / 9; }
 .ped-panel .pda-frame { width: 100cqh; height: 100cqw; left: 50%; top: 50%; right: auto; bottom: auto; transform: translate(-50%, -50%) rotate(90deg); }   /* the frame art is portrait: turned on its side */
-.ped-panel .pda-screen { left: 5.5%; right: 2.2%; top: 9.5%; bottom: 3.6%; padding: 0; gap: 0; }
+.ped-panel .pda-screen { left: 5.5%; right: 2.2%; top: 9.5%; bottom: 3.6%; padding: 4cqh 0 0 0; gap: 0; }
 .ped-panel .pda-head { margin: 0; padding: 0.15rem 19cqw 0.25rem 21cqw; min-height: 0; }
 .ped-panel .pda-head b { font-size: 1.15rem; letter-spacing: 0.14em; }
 .ped-panel .st-body { flex: 1; min-height: 0; flex-direction: column; gap: 0.6rem; padding: 0.5rem 0.6rem 11cqh 0.6rem; overflow: hidden; }
@@ -514,3 +514,6 @@ textarea.field { min-height: 6rem; resize: none; }
 .mail-field { display: flex; gap: 0.8rem; padding: 0.15rem 0; } .mail-field span { flex: 0 0 5.5rem; color: var(--dim); } .mail-field b { color: var(--text, #e6f1ff); }
 .mail-text { white-space: pre-wrap; margin-top: 1rem; padding-top: 1rem; border-top: 2px solid var(--line-soft); line-height: 1.5; font-size: 1.05rem; }
 .mail-tail { margin-top: 1.2rem; }
+
+.btn.chip.comm-btn { border-color: #d9b93a; color: #e8d27a; }
+.btn.chip.comm-btn.unread { background: #d9b93a; color: #04101f; animation: pinglow 1.2s ease-in-out infinite; }

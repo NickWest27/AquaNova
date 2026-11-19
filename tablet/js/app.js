@@ -49,6 +49,8 @@ viewProbe.fn = () => boarded && !!scene && scene.where === 'bridge' && !current 
 const ctx = {
   openScene: (name) => openScene(name),
   closeComm: () => closeComm(),
+  openComm: () => { closePed(); if (!comm) toggleComm(); },   // the PED's communicator button: a backup to the pin
+  commReady: () => !$('#pin').hidden, commUnread: () => $('#pin').classList.contains('unread'),
   refreshScene: () => { scene && scene.update(); syncUI(); },
   zoom(d) { zoom = d === 0 ? 1 : Math.min(1.5, Math.max(0.8, +(zoom + d).toFixed(2))); applyZoom(); try { localStorage.setItem('aquaNova_zoom', zoom); } catch (e) { /* ignore */ } fit(); },
   objectives: () => objectives().map((o) => ({ text: o.description, done: o.status === 'completed' })),
