@@ -59,10 +59,11 @@ def main():
             ok = all(len(set(v)) == len(v) for v in r.values()) and max(r["shallow"]) <= 112 and all(r["shallow"][i] <= r["auto"][i] <= r["deep"][i] + 0.5 for i in range(len(r["auto"])))
             check("depth settings stagger the WSKRs (shallow above, deep below the ship)", ok, r)
             # formation: ring overlap sets the spacing
-            r = js("const s=sim.s; sim.setWskrForm('tight'); const t=T.formationRadius('tight',4); const l=T.formationRadius('loose',4); sim.setWskrForm('loose'); return {t,l, d5:T.ringSpacing(0.05), d50:T.ringSpacing(0.5)}")
-            check("tight overlaps 50% of the scan ring, loose 5%", abs(r["d50"] - 0.8079) < 0.01 and r["d5"] > 1.6 and r["t"] < r["l"], r)
-            r = js("const s=sim.s; s.wskrs.forEach(w=>{w.bat=100;w.dead=false}); for(const w of s.wskrs) w.mode='recall'; sim.s.wskrs.forEach(w=>sim.orderWskr(w.n,'escort')); sim.setWskrForm('tight'); for(let i=0;i<4000;i++) sim.step(0.1); const d=s.wskrs.map(w=>T.toward(s,w).nm); sim.setWskrForm('loose'); return {max:Math.max(...d), want:T.formationRadius('tight',s.wskrs.length)}")
-            check("WSKRs hold the tight ring", r["max"] < r["want"] * 1.6 + 0.3, r)
+            r = js("const s=sim.s, w=s.wskrs[0]; const t=T.formationRadius('tight',w), l=T.formationRadius('loose',w); const R=sim.fineNm(s); return {t,l,R,rw:T.wskrRingNm(w), d50:T.ringDistance(4,3,0.5), d5:T.ringDistance(4,3,0.05)}")
+            check("tight overlaps the ship's scan ring by 50%, loose by 5%", 3.0 < r["d50"] < 5.0 and r["d5"] > r["d50"] and r["d5"] < 7 and r["t"] < r["l"], r)
+            r = js("const s=sim.s; s.wskrs.forEach(w=>{w.bat=100;w.dead=false}); s.speed=0; s.throttle=0; sim.setWskrForm('tight'); s.wskrs.forEach(w=>sim.orderWskr(w.n,'escort')); for(let i=0;i<5000;i++) sim.step(0.1); const d=s.wskrs.map(w=>T.toward(s,w)); const want=s.wskrs.map(w=>T.formationRadius('tight',w)); const brgs=d.map(x=>x.brg).sort((a,b)=>a-b); const gaps=brgs.map((b,i)=>((brgs[(i+1)%brgs.length]-b+360)%360)); sim.setWskrForm('loose'); return {dist:d.map(x=>+x.nm.toFixed(2)), want, gaps}")
+            ok = all(abs(a - b) < 0.35 * b + 0.2 for a, b in zip(r["dist"], r["want"])) and (max(r["gaps"]) - min(r["gaps"]) < 60 or len(r["gaps"]) < 3)
+            check("WSKRs hold the ring distance and spread evenly round the ship", ok, r)
             # battery: 6 hours, low charge recalls, flat battery leaves it adrift
             r = js("const s=sim.s; const w=s.wskrs[0]; w.bat=100; sim.orderWskr(w.n,'escort'); const c0=s.clock; for(let i=0;i<200;i++) sim.step(0.1); const used=100-w.bat; const hours=(100/ (used/((s.clock-c0)/3600)));  return {used, hours, clock:s.clock-c0}")
             check("battery lasts about 6 hours", 4.5 < r["hours"] < 8, r)

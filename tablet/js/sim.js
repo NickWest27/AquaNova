@@ -90,19 +90,25 @@ export const WSKR_LINK_NM = 3, SEARCH_LEG_NM = 0.45, SEARCH_LEGS = 14, WSKR_TURN
  *  relay (follows the ship just below the surface and carries comms and a GPS fix when Aqua Nova is deep), task, recall.
  *  Depth is one fleet setting, staggered so no two WSKRs share a layer: auto (the whole water column in equal layers),
  *  shallow (the surface down to just below Aqua Nova), deep (from just above Aqua Nova to the floor).
- *  Formation is one fleet setting, set by how much neighbouring scan rings overlap: loose 5%, tight 50%.
+ *  Formation is one fleet setting, set by how much each WSKR's scan ring overlaps Aqua Nova's: loose 5%, tight 50%; the WSKRs space themselves evenly round the ship.
  *  Battery: 6 hours at normal draw (`WSKR_BATTERY_H`; research can change it later). */
 export const WSKR_BATTERY_H = 6, WSKR_LOW_PCT = 15, WSKR_STAGGER_M = 10, WSKR_RELAY_DEPTH = 4;
 export const wskrBatteryHours = () => WSKR_BATTERY_H;
 export const WSKR_OVERLAP = { loose: 0.05, tight: 0.5 };
-/** Spacing (in scan-ring radii) at which two rings overlap by this share of one ring's area. */
-export function ringSpacing(frac) {
-  const lens = (d) => (2 * Math.acos(d / 2) - (d / 2) * Math.sqrt(4 - d * d)) / Math.PI;   // unit radius, share of one ring
-  let lo = 0, hi = 2; for (let k = 0; k < 40; k++) { const m = (lo + hi) / 2; if (lens(m) > frac) lo = m; else hi = m; }
+/** Distance between two scan-ring centres (nm) at which the rings overlap by `frac` of the SMALLER ring's area. */
+export function ringDistance(r1, r2, frac) {
+  const lens = (d) => {
+    if (d >= r1 + r2) return 0; if (d <= Math.abs(r1 - r2)) return 1;
+    const a = r1 * r1 * Math.acos((d * d + r1 * r1 - r2 * r2) / (2 * d * r1)), b = r2 * r2 * Math.acos((d * d + r2 * r2 - r1 * r1) / (2 * d * r2)), c = 0.5 * Math.sqrt((-d + r1 + r2) * (d + r1 - r2) * (d - r1 + r2) * (d + r1 + r2));
+    return (a + b - c) / (Math.PI * Math.min(r1, r2) ** 2);
+  };
+  let lo = Math.abs(r1 - r2), hi = r1 + r2; for (let k = 0; k < 50; k++) { const m = (lo + hi) / 2; if (lens(m) > frac) lo = m; else hi = m; }
   return (lo + hi) / 2;
 }
-/** Ring radius round the ship so the neighbours (and, for one WSKR, the ship) overlap as asked. */
-export const formationRadius = (form, n) => { const d = ringSpacing(WSKR_OVERLAP[form] ?? WSKR_OVERLAP.loose) * WSKR_CHART_NM; return n < 2 ? d : Math.max(0.4, d / (2 * Math.sin(Math.PI / n))); };
+export const wskrRingNm = (w) => WSKR_CHART_NM + (wskrPerk(w).chart || 0);
+/** How far from Aqua Nova a WSKR holds: its scan ring overlaps the SHIP's scan ring (sonar: 4 nm on, 0.8 off, 8 sweep) by 5% (loose) or 50% (tight).
+ *  The WSKRs then space themselves evenly round the ship. */
+export const formationRadius = (form, w) => ringDistance(sim.fineNm(sim.s), wskrRingNm(w), WSKR_OVERLAP[form] ?? WSKR_OVERLAP.loose);
 export const WSKR_DEPTHS = { auto: 'Auto', shallow: 'Shallow', deep: 'Deep' };
 export const WSKR_NAMES = ['Scout', 'Lantern', 'Drifter', 'Sprat'];   // placeholders, our own names
 /** Each WSKR has a small edge that fits its name. Sizes are small on purpose. */
@@ -190,7 +196,7 @@ function stepWskrs(dt) {
     if (w.dead) { if (toward(s, w).nm < 0.15) { sim.emit('wskr-recovered', w); return false; } return true; }   // adrift: the ship must come to it
     if (seafloor.ready && !wskrPassable(w.lat, w.lon)) { const sp = nearestWater(w.lat, w.lon); if (sp) { w.lat = sp.lat; w.lon = sp.lon; w.route = null; } }   // never sit on land (after a load, a ship move, or a thin spit)
     let goal = null; const perk = wskrPerk(w), step = (((perk.kt || WSKR_KT) * dt) * TIMESCALE) / 3600;
-    const ring = formationRadius(s.wskrForm, esc.length) * (perk.drift && s.wskrForm !== 'tight' ? 1 + 0.35 * (0.5 + 0.5 * Math.sin((s.clock / 3600) * 2 * Math.PI)) : 1);
+    const ring = formationRadius(s.wskrForm, w) * (perk.drift && s.wskrForm !== 'tight' ? 1 + 0.35 * (0.5 + 0.5 * Math.sin((s.clock / 3600) * 2 * Math.PI)) : 1);
     { // battery: 6 h at normal draw; holding station and relaying draw less, hard running draws more
       const draw = w.mode === 'relay' ? 0.6 : w.mode === 'manual' ? 0.7 + 0.6 * (w.thr || 0) : w.moving ? 1 : 0.8;
       w.bat = Math.max(0, w.bat - (100 / (wskrBatteryHours() * 3600)) * draw * dt * TIMESCALE);

@@ -105,8 +105,8 @@ def main():
         # 5. WSKRs
         r = js("""const s=sim.s; s.docked=false; s.lat=39.45; s.lon=-72.25; s.at=null; s.speed=0; s.throttle=0; s.depth=0; s.targetDepth=0; s.wskrs=[]; s.sonar=true;
           for (let i=0;i<3;i++) sim.deployWskr(); for(let i=0;i<400;i++) sim.step(0.2);
-          const T=await import('./js/sim.js'); return {d:s.wskrs.map(w=>+T.toward(s,w).nm.toFixed(2)), want:T.formationRadius('loose',3)}""")
-        check("three WSKRs hold the loose ring round the ship", len(r["d"]) == 3 and all(abs(d - r["want"]) < 0.8 * r["want"] for d in r["d"]), r)
+          const T=await import('./js/sim.js'); return {d:s.wskrs.map(w=>+T.toward(s,w).nm.toFixed(2)), want:T.formationRadius('loose',s.wskrs[0])}""")
+        check("three WSKRs hold the loose ring round the ship", len(r["d"]) == 3 and all(abs(d - r["want"]) < 0.4 * r["want"] + 0.5 for d in r["d"]), r)
         r = js("""const s=sim.s; const p=s.pois.find(q=>q.name==='Deep Trench Alpha'); const w=sim.taskWskr(p); const n=w.n; for(let i=0;i<900;i++) sim.step(0.2);
           const fd=(await import('./js/findings.js')); return {scanned:fd.scanned(p), mode:s.wskrs.find(q=>q.n===n).mode}""")
         check("a tasked WSKR investigates, files the scan and rejoins", r["scanned"] and r["mode"] == "escort", r)
