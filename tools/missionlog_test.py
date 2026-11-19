@@ -47,6 +47,7 @@ def main():
         check("log numbers rise", a.get("id") != b.get("id"))
         # the logbook shows both
         page.evaluate("window.__aq.open('log')"); page.wait_for_timeout(500)
+        check("no task is crossed out in the logbook", page.locator("#station .entry li.done").count() == 0 and page.evaluate("[...document.querySelectorAll('#station .entry li')].every(x=>getComputedStyle(x).textDecorationLine==='none')"))
         t = page.inner_text("#station"); check("logbook lists the mission logs", t.upper().count("MISSION LOG") >= 2 and "Mission accepted: Sea Trials" in t, t[:200])
         # revert to the acceptance entry: mission is active again, the outcome entry is gone
         js(f"P.saveManager.revertToEntry('{a['id']}'); P.restoreSim(); M.restoreFromState(); return 1"); page.wait_for_timeout(300)

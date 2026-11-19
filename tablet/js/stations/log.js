@@ -51,12 +51,12 @@ export function mount(body, ctx) {
     title.textContent = lb ? lb.name : 'No logbook';
     const entries = lb && lb.entries ? [...lb.entries].reverse() : [];
     list.replaceChildren(...(entries.length ? entries.map((e) => {
-      const l = e.logbook, tasks = l.tasks || [], done = l.completedTasks || [];   // a logbook entry is a document: it shows what was true when it was written and never changes
+      const l = e.logbook, tasks = l.tasks || [];   // a logbook entry is a document: it lists its tasks and never crosses them out
       return el('div', { class: 'card entry' },
         el('div', { class: 'meta' }, el('span', { text: new Date(l.timestamp).toLocaleString() }), el('span', { text: l.entryId })),
         el('h3', { text: (l.type || 'log').replace(/_/g, ' ') }),
         el('p', { text: entryText(e) }),
-        tasks.length ? el('ul', {}, tasks.map((t) => el('li', { class: done.includes(t) ? 'done' : '', text: t }))) : null,
+        tasks.length ? el('ul', {}, tasks.map((t) => el('li', { text: t }))) : null,
         l.entryId === 'M.LOG-0001' && e.gameSnapshot ? el('div', { class: 'actions' }, el('button', { class: 'btn warn chip', text: 'Restart from the beginning', onclick: restart })) :
         e.gameSnapshot && e.metadata && e.metadata.canRevert !== false ? el('div', { class: 'actions' }, el('button', { class: 'btn warn chip', text: 'Revert here', onclick: () => revert(e) })) : null);
     }) : [el('div', { class: 'empty', text: 'No entries yet.' })]));
