@@ -87,5 +87,31 @@
         "text": "{captain},\n\nWelcome aboard the Aqua Nova, and thank you for answering the call at such short notice. The Alliance is aware of the circumstances of Captain Voss's departure, and we are grateful for your steadiness.\n\nBefore the ship takes on survey work, OERA requires a full set of sea trials. Get the Aqua Nova out of dry dock at Woods Hole and underway. Take her below 30 meters, run her up to speed, then bring her back to the surface and send us a report from the Comms station. The antenna must be at 15 meters or shallower to reach us.\n\nTake your time and trust your crew. ARIA has the full trials checklist and Commander Chen knows these waters.\n\nAccept the mission when you are ready.\n\nO.E.R.A. Operations Directorate"
       }
     }
+  ],
+  "hints": [
+    {
+      "condition": {
+        "type": "objective_active_for",
+        "objectiveId": "log",
+        "seconds": 45
+      },
+      "message": "Your logbook is the laptop on the desk, {captain}. It holds your orders."
+    },
+    {
+      "condition": {
+        "type": "objective_active_for",
+        "objectiveId": "ped",
+        "seconds": 45
+      },
+      "message": "Your PED was on the bed. Once you have it, its button is at the top of the screen."
+    },
+    {
+      "condition": {
+        "type": "objective_active_for",
+        "objectiveId": "bridge",
+        "seconds": 60
+      },
+      "message": "The bridge is the door at the end of the main walkway, {captain}."
+    }
   ]
 }

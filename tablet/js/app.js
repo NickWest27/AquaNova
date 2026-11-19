@@ -13,6 +13,7 @@ import { ICONS } from './ui.js';
 import { startSync, syncAtBoot } from './sync.js';
 import { getPlayer, setPlayer, fill } from './player.js';
 import { runIntake } from './intake.js';
+import { startAria } from './aria.js';
 import { isCommissioned, excuse } from './unlocks.js';
 import { initMissionLog } from './missionLog.js';
 import { initAudio, updateHum, chirp, ping } from './audio.js';
@@ -147,7 +148,7 @@ async function openStation(name) {
   if (name === 'crew') return toggleComm();
   if (current) closeStation();
   const def = STATIONS[name]; if (!def) return;
-  if (!isCommissioned(name)) { toast(excuse(name), 'warn'); return; }
+  if (!isCommissioned(name)) { say('aria', excuse(name)); return; }   // ARIA explains: she sees what is and is not commissioned
   flag('opened_' + name);
   if (name === 'log') gameState.updateProperty('progress.read_welcome', true);
   const root = $('#station');
@@ -186,11 +187,11 @@ function openScene(name) {
   else if (name === 'science') { closeStation(); scene.show('science'); }
   else if (name === 'launchbay') { closeStation(); scene.show('launchbay'); }
   else if (name === 'medbay') { closeStation(); scene.show('medbay'); }
-  else if (name === 'medbay-station') toast('The medbay equipment is not commissioned yet.');
+  else if (name === 'medbay-station') say('aria', 'The medbay equipment is not commissioned yet, Captain.');
   else if (name === 'lab-analysis' || name === 'lab-research') { ctx.labTab = name.slice(4); openStation('lab'); }
   else if (name === 'lab') { ctx.labTab = 'samples'; openStation('lab'); }
-  else if (name === 'engineering') toast('Engineering is not built yet. Talk to the crew on the communicator.');
-  else if (name === 'pickup-ped') { gameState.updateProperty('progress.got_ped', true); toast('PED collected. Its button is at the top of the screen.'); }
+  else if (name === 'engineering') say('aria', 'Engineering is not built yet, Captain. The engineering crew are on the communicator if you need them.');
+  else if (name === 'pickup-ped') { gameState.updateProperty('progress.got_ped', true); say('aria', 'That is your PED, Captain. Its button is at the top of the screen. Your tasks and contacts are in there.'); }
   else if (name === 'pickup') document.dispatchEvent(new CustomEvent('item-pickup', { detail: { itemId: 'communicator' } }));
   else openStation(name);
   syncUI();
@@ -261,7 +262,7 @@ async function boot() {
     await syncAtBoot();                     // pick up journal notes and tasks from the phone
     try {
       missions = (await import('../../game/systems/missionManager.js')).default;
-      await missions.init(); initMissionLog();
+      await missions.init(); initMissionLog(); startAria();
     } catch (e) { console.warn('Missions unavailable', e); }
     if (!sim.s.at && !gameState.getProperty('navigation.location')) { const d = sim.dockPoi(); if (d) { sim.s.lat = d.lat; sim.s.lon = d.lon; sim.s.at = d; sim.s.docked = true; } }
     btn.disabled = false; btn.textContent = 'Board the Aqua Nova'; info.textContent = '';
@@ -307,7 +308,7 @@ async function boot() {
     const skip = navigator.webdriver && !/[?&]intake=1/.test(location.search);   // automated tests skip the form
     if (fresh && !skip) {
       openScene('walkway2');
-      runIntake({ dateText: clockText(), onDone: () => { checkpoint(); syncUI(); toast('Report to your quarters. The glowing markers show the way.'); } });
+      runIntake({ dateText: clockText(), onDone: () => { checkpoint(); syncUI(); say('aria', 'Welcome aboard, Captain. OERA Operations has left you a message. Your quarters are off the main walkway. Follow the glowing markers.'); } });
     } else {
       if (fresh) { setPlayer('Alex', 'Mercer'); gameState.updateProperty('progress.got_ped', true); }
       if (commsLocked()) openScene('quarters'); else scene.show('bridge');

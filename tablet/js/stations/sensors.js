@@ -1,6 +1,7 @@
 // Sensors station: sonar, contacts around the ship, scans, and the WSKRs (autonomous remote sensors).
 // A scan files a finding (PED → Findings). Scanning needs the ship at the site, or a WSKR sent to investigate it.
 // WSKRs are launched only here. They hold a ring round the ship, can be sent to a contact, and can be recalled.
+import { tell } from '../notify.js';
 import { sim, toward, wskrName } from '../sim.js';
 import { el, toast } from '../util.js';
 import { findings, scanned, fileScan } from '../findings.js';
@@ -11,14 +12,14 @@ export function mount(body, ctx) {
   body.style.flexDirection = 'column';
   const head = el('div', { class: 'card' }, el('div', { class: 'lbl', text: 'Sonar' }), el('div', { class: 'num' }), el('p', { style: 'color:var(--dim);margin-top:0.4rem' }));
   const sonarBtn = el('button', { class: 'btn chip', onclick: () => { sim.s.sonar = !sim.s.sonar; sig = ''; update(); } });
-  const sweepBtn = el('button', { class: 'btn chip', text: 'Full sweep', onclick: () => { sim.s.sonar = true; sim.s.sweepUntil = sim.s.clock + SWEEP_GAME_S; ctx.flag('swept'); toast('Active sweep: the chart shows more detail for a minute'); sig = ''; update(); } });
+  const sweepBtn = el('button', { class: 'btn chip', text: 'Full sweep', onclick: () => { sim.s.sonar = true; sim.s.sweepUntil = sim.s.clock + SWEEP_GAME_S; ctx.flag('swept'); tell('sensors', 'Active sweep: the chart shows more detail for a minute'); sig = ''; update(); } });
   head.append(sonarBtn, sweepBtn);
   const wsk = el('div', { class: 'card' }, el('div', { class: 'lbl', text: 'WSKRs' }), el('div', { class: 'num' }), el('p', { style: 'color:var(--dim);margin:0.4rem 0' }));
   const wRow = el('div', { class: 'row' });
   const depBtn = el('button', { class: 'btn chip', text: 'Deploy WSKR', onclick: () => {
     const r = sim.deployWskr();
-    toast(r.ok ? `${wskrName({ n: r.n })} launched from the bay` : r.why === 'docked' ? 'Undock first' : 'All four WSKRs are out', r.ok ? '' : 'error'); sig = ''; update(); } });
-  const recBtn = el('button', { class: 'btn chip', text: 'Recall all', onclick: () => { sim.recallWskrs(); toast('WSKRs recalled'); sig = ''; update(); } });
+    tell('sensors', r.ok ? `${wskrName({ n: r.n })} launched from the bay` : r.why === 'docked' ? 'Undock first' : 'All four WSKRs are out', r.ok ? '' : 'error'); sig = ''; update(); } });
+  const recBtn = el('button', { class: 'btn chip', text: 'Recall all', onclick: () => { sim.recallWskrs(); tell('sensors', 'WSKRs recalled'); sig = ''; update(); } });
   const viewBtn = el('button', { class: 'btn chip', text: 'WSKR view', onclick: () => ctx.openScene('wskr') });
   wRow.append(depBtn, recBtn, viewBtn); wsk.append(wRow);
   const list = el('div', { class: 'tab-body', style: 'flex:1;min-height:0' });
@@ -26,8 +27,8 @@ export function mount(body, ctx) {
   let sig = '';
 
   const scan = (p) => {
-    if (!fileScan(p)) { toast('Already scanned'); return; }
-    ctx.flag('scanned'); toast(`Scan filed: ${p.name}`, 'mission'); sig = ''; update();
+    if (!fileScan(p)) { tell('sensors', 'Already scanned'); return; }
+    ctx.flag('scanned'); tell('sensors', `Scan filed: ${p.name}`, 'mission'); sig = ''; update();
   };
   const wText = (w, s) => w.mode === 'escort' ? 'holding formation' : w.mode === 'recall' ? 'returning' : `investigating ${(s.pois.find((p) => p.id === w.target) || {}).name || 'a contact'}`;
 
@@ -51,7 +52,7 @@ export function mount(body, ctx) {
         el('div', { class: 'grow' }, el('h3', { text: r.p.name }), el('p', { style: 'color:var(--dim)', text: `${r.nm.toFixed(1)} nm · bearing ${String(Math.round(r.brg)).padStart(3, '0')}° · ${r.p.type.replace(/_/g, ' ')}` })),
         done ? el('span', { class: 'ok', text: 'Scanned' }) : busy ? el('span', { style: 'color:var(--amber)', text: 'WSKR investigating' })
           : [here && el('button', { class: 'btn primary', text: 'Scan', onclick: () => scan(r.p) }),
-             r.p.type !== 'dock' && (idle ? el('button', { class: 'btn chip', text: 'Send WSKR', onclick: () => { const w = sim.taskWskr(r.p); toast(`${wskrName(w)} sent to ${r.p.name}`); sig = ''; update(); } }) : !here && el('span', { style: 'color:var(--dim)', text: s.wskrs.length ? 'No free WSKR' : 'Deploy a WSKR or move closer' }))]);
+             r.p.type !== 'dock' && (idle ? el('button', { class: 'btn chip', text: 'Send WSKR', onclick: () => { const w = sim.taskWskr(r.p); tell('sensors', `${wskrName(w)} sent to ${r.p.name}`); sig = ''; update(); } }) : !here && el('span', { style: 'color:var(--dim)', text: s.wskrs.length ? 'No free WSKR' : 'Deploy a WSKR or move closer' }))]);
     }) : [el('div', { class: 'empty', text: s.sonar ? 'No contacts in range.' : 'Sonar is off.' })]));
   }
   update();

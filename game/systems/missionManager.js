@@ -226,6 +226,8 @@ class MissionManager {
                 return trigger.location === data.location;
             case 'dialogue_complete':
                 return trigger.characterId === data.characterId;
+            case 'decision_made':
+                return trigger.decisionId === data.decisionId && (!trigger.optionId || trigger.optionId === data.optionId);
             case 'property_change':
                 const currentValue = gameStateInstance.getProperty(trigger.property);
                 return currentValue === trigger.value;
@@ -321,6 +323,9 @@ class MissionManager {
                     break;
                 case 'crew_say':
                     document.dispatchEvent(new CustomEvent('crew-say', { detail: { role: action.role, text: action.text } }));
+                    break;
+                case 'aria_decision':   // ARIA puts a choice to the Captain (tablet/js/aria.js)
+                    document.dispatchEvent(new CustomEvent('aria-decision', { detail: action }));
                     break;
                 case 'unlock_crew':
                     gameStateInstance.unlockCrewMember(action.crewId);

@@ -2,6 +2,7 @@
 // (Crew talk goes through the communicator pin, not here.)
 // Messages arrive from missions (send_message action). A message can offer a mission to accept.
 // The link needs the antenna near the surface, so reports go out only at 15 m or shallower.
+import { tell } from '../notify.js';
 import { fill } from '../player.js';
 import { sim, gameDateText } from '../sim.js';
 import { mailZoom } from '../audio.js';
@@ -24,11 +25,11 @@ export function mount(body) {
   body.style.flexDirection = 'column';
   const linkNum = el('div', { class: 'num' }), linkNote = el('p', { style: 'color:var(--dim);margin-top:0.4rem' });
   const transmit = () => {
-    const t = canTransmit(); if (!t.ok) { toast(`Cannot transmit: ${t.L.label} is ${t.st.status.toLowerCase()}`, 'warn'); return; }
+    const t = canTransmit(); if (!t.ok) { tell('comms', `Cannot transmit: ${t.L.label} is ${t.st.status.toLowerCase()}`, 'warn'); return; }
     const found = (gameState.getProperty('mission.discoveries') || []).length;
     const s = sim.s;
     gameState.updateProperty('mission.outbox', [...outbox(), { at: new Date().toISOString(), text: `Status report via ${t.L.label}: ${s.at ? s.at.name : 'open water'}, depth ${Math.round(s.depth)} m, battery ${Math.round(s.battery)}%, ${found} finding${found === 1 ? '' : 's'}.` }]);
-    toast('Report transmitted to OERA');
+    tell('comms', 'Report transmitted to OERA');
     document.dispatchEvent(new CustomEvent('report-sent'));
     render();
   };

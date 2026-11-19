@@ -67,5 +67,31 @@
       "type": "start_mission",
       "missionId": "sensorsLesson"
     }
+  ],
+  "hints": [
+    {
+      "condition": {
+        "type": "objective_active_for",
+        "objectiveId": "open",
+        "seconds": 45
+      },
+      "message": "Navigation is one of the stations on the bridge, {captain}."
+    },
+    {
+      "condition": {
+        "type": "objective_active_for",
+        "objectiveId": "plot",
+        "seconds": 60
+      },
+      "message": "Pick Mystic Reef on the chart and plot the course. It is close to the dock."
+    },
+    {
+      "condition": {
+        "type": "objective_active_for",
+        "objectiveId": "arrive",
+        "seconds": 90
+      },
+      "message": "Set a speed and the ship will follow the plotted course. Mystic Reef is a short run."
+    }
   ]
 }

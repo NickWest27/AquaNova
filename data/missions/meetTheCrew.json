@@ -131,7 +131,15 @@
         "objectiveId": "find_communicator",
         "seconds": 30
       },
-      "message": "Check your personal quarters - the communicator should be somewhere on your desk."
+      "message": "{captain}, your quarters are off the main walkway. Your communicator pin is on the desk, and your PED is on the bed."
+    },
+    {
+      "condition": {
+        "type": "objective_active_for",
+        "objectiveId": "pickup_communicator",
+        "seconds": 30
+      },
+      "message": "The pin is on the desk beside your laptop, {captain}. Tap it to pick it up."
     },
     {
       "condition": {
@@ -139,7 +147,7 @@
         "objectiveId": "learn_communicator",
         "seconds": 45
       },
-      "message": "Press the C key to activate your communicator once you've picked it up."
+      "message": "Tap the badge in the top-right corner, {captain}. I will be listening."
     }
   ]
 }

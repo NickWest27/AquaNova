@@ -1,5 +1,6 @@
 // Launch Bay: launches the Science ROV (and later the away boats and WSKRs). Touch piloting for the ROV.
 // Hold a button to steer. Tools work only at a site, some only near the sea floor.
+import { tell } from '../notify.js';
 import { sim, toward } from '../sim.js';
 import { ROV_NAME, rovRange, rovSite, rovFloor } from '../rov.js';
 import { TOOLS, samples } from '../science.js';
@@ -12,8 +13,8 @@ export function mount(body) {
   body.style.flexDirection = 'column'; body.style.overflowY = 'auto';
   const head = el('div', { class: 'card' }, el('div', { class: 'lbl', text: ROV_NAME + ' (Science ROV)' }), el('div', { class: 'num' }), el('p', { style: 'color:var(--dim);margin:0.4rem 0' }));
   const row = el('div', { class: 'row' });
-  const launchBtn = el('button', { class: 'btn chip', text: 'Launch', onclick: () => { const r = sim.launchRov(); toast(r.ok ? `${ROV_NAME} launched` : r.why === 'docked' ? 'Undock first' : 'Already out', r.ok ? '' : 'error'); update(); } });
-  const recBtn = el('button', { class: 'btn chip', text: 'Recover', onclick: () => { const r = sim.recoverRov(); toast(r.ok ? `${ROV_NAME} recovered` : 'Bring the ROV within 0.2 nm of the ship first', r.ok ? '' : 'error'); update(); } });
+  const launchBtn = el('button', { class: 'btn chip', text: 'Launch', onclick: () => { const r = sim.launchRov(); tell('science', r.ok ? `${ROV_NAME} launched` : r.why === 'docked' ? 'Undock first' : 'Already out', r.ok ? '' : 'error'); update(); } });
+  const recBtn = el('button', { class: 'btn chip', text: 'Recover', onclick: () => { const r = sim.recoverRov(); tell('science', r.ok ? `${ROV_NAME} recovered` : 'Bring the ROV within 0.2 nm of the ship first', r.ok ? '' : 'error'); update(); } });
   row.append(launchBtn, recBtn); head.append(row);
   const pilot = el('div', { class: 'card' });
   const hold = (label, key, val) => {
@@ -26,7 +27,7 @@ export function mount(body) {
   pilot.append(el('div', { class: 'row' }, hold('Forward', 'thr', 1), hold('Back', 'thr', -1), hold('Turn left', 'turn', -1), hold('Turn right', 'turn', 1), hold('Dive', 'dive', 1), hold('Rise', 'dive', -1)));
   const toolRow = el('div', { class: 'row', style: 'margin-top:0.6rem' });
   const toolBtns = Object.entries(TOOLS).map(([id, t]) => el('button', { class: 'btn chip', text: t.name, onclick: () => {
-    const r = sim.rovUse(id); toast(r.ok ? `${t.name} working` : WHY[r.why], r.ok ? '' : 'error'); update(); } }));
+    const r = sim.rovUse(id); tell('science', r.ok ? `${t.name} working` : WHY[r.why], r.ok ? '' : 'error'); update(); } }));
   toolRow.append(...toolBtns); pilot.append(toolRow);
   const readout = el('p', { style: 'color:var(--dim);margin-top:0.6rem' }); pilot.append(readout);
   const viewBox = el('div', { class: 'card cv' });

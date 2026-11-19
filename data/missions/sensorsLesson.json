@@ -76,5 +76,23 @@
         "text": "{captain},\n\nThe Aqua Nova has passed her trials, and the Directorate has your first survey assignment. We want baseline samples from the shelf off Woods Hole before the deep work begins.\n\nUse Remora, the Science ROV, from the Science Lab or the Launch Bay. First, take a water sample at Mystic Reef, right beside the dock, with the spectrometer. Then take the ship about 16 nautical miles south to Vineyard Ledge and drill a rock core. Remora is slow and stays on a tether, so bring the ship close and keep Remora within a nautical mile of it.\n\nBring both samples to Dr. Patel's lab for analysis, then send us your findings from the Comms station.\n\nAccept the mission when you are ready.\n\nO.E.R.A. Operations Directorate"
       }
     }
+  ],
+  "hints": [
+    {
+      "condition": {
+        "type": "objective_active_for",
+        "objectiveId": "sweep",
+        "seconds": 60
+      },
+      "message": "A full sonar sweep shows more of what is around us, {captain}. The button is on the Sensors station."
+    },
+    {
+      "condition": {
+        "type": "objective_active_for",
+        "objectiveId": "scan",
+        "seconds": 90
+      },
+      "message": "Scanning needs the ship at the reef, {captain}. We are not there yet."
+    }
   ]
 }

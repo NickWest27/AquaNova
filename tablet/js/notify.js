@@ -14,8 +14,9 @@ let lastChirp = -1e9, lastPing = -1e9;
 // Held messages: what a crew member said that the Captain may have missed. Kept until the Captain reads it in the communicator.
 const held = new Map();   // crew id -> [{ text, at }]
 const emitChange = () => document.dispatchEvent(new CustomEvent('inbox-change'));
-export const unreadCount = () => [...held.values()].reduce((n, l) => n + l.length, 0);
-export const unreadFor = (id) => (held.get(id) || []).length;
+const waiting = () => ((gameState.getProperty('progress.decisions') || {}).pending || []).length;   // decisions ARIA is waiting on
+export const unreadCount = () => [...held.values()].reduce((n, l) => n + l.length, 0) + waiting();
+export const unreadFor = (id) => (held.get(id) || []).length + (id === 'executiveOfficer' ? waiting() : 0);
 /** Returns and clears the held messages for one crew member. */
 export function takeHeld(id) { const l = held.get(id) || []; held.delete(id); if (l.length) emitChange(); return l.map((m) => m.text); }
 export function clearHeld() { held.clear(); emitChange(); }
@@ -42,3 +43,6 @@ export function say(role, text, kind = '', opts = {}) {
   consoleLine(`${w.name} · ${w.role}: ${text}${kind === 'mission' || kind === 'error' ? '  (tap the pin to answer)' : ''}`, kind);   // docked readout; the pin pulses for held messages
 
 }
+
+/** A crew member reports on what the Captain just did. Replaces the old pop-up toast. kind 'mission' keeps it until read. */
+export const tell = (role, text, kind = '') => say(role, text, kind === 'mission' ? 'mission' : '');

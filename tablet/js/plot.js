@@ -1,5 +1,6 @@
 // "Plot a course" dialog. Three ways to name the destination:
 //   Lat / Long, Place, or Place + bearing (+ distance). Used by the bridge console and the Navigation station.
+import { tell } from './notify.js';
 import { sim, toward } from './sim.js';
 import { seafloor } from './seafloor.js';
 import { el, modal, pad, toast } from './util.js';
@@ -32,7 +33,7 @@ export function openPlotDialog({ preselect = null, onPlotted } = {}) {
     const route = sim.routeTo(wp);
     if (route === null) { msg.textContent = 'No safe route there: land or shallows block every way round.'; msg.className = 'pc-msg bad'; return; }
     sim.setWpt(wp); sim.setThrottle(0.5); close();
-    toast(route.length ? `Course plotted to ${wp.name}, round land in ${route.length} leg${route.length === 1 ? '' : 's'}` : `Course plotted to ${wp.name}`);
+    tell('helm', route.length ? `Course plotted to ${wp.name}, round land in ${route.length} leg${route.length === 1 ? '' : 's'}` : `Course plotted to ${wp.name}`);
     onPlotted && onPlotted(wp);
   } });
   const cancel = el('button', { class: 'btn', text: 'Cancel', onclick: () => close() });

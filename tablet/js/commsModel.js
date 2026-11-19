@@ -1,5 +1,6 @@
 // Comms model: antennas, links, aim, contacts, tuning and the EMF detector.
 // The Comms station (stations/comms*.js) draws it; the sim hook below moves the antennas even when it is closed.
+import { tell } from './notify.js';
 import { sim } from './sim.js';
 import { toast } from './util.js';
 import { gameState } from './persist.js';
@@ -21,7 +22,7 @@ export const antDepth = (k, s = sim.s) => Math.max(0, s.depth - ant(k).ext);
 sim.hooks.push((dt) => {
   for (const k in ANTS) {
     const a = ant(k), D = ANTS[k];
-    if ((a.ext > 0.2 || a.set > 0) && sim.s.speed > D.kt) { if (a.set > 0 || a.ext > 0.5) toast(`${D.label} pulled in: too fast (over ${D.kt} kt)`, 'warn'); a.set = 0; }
+    if ((a.ext > 0.2 || a.set > 0) && sim.s.speed > D.kt) { if (a.set > 0 || a.ext > 0.5) tell('comms', `${D.label} pulled in: too fast (over ${D.kt} kt)`, 'warn'); a.set = 0; }
     const d = a.set - a.ext; a.ext += Math.sign(d) * Math.min(Math.abs(d), D.rate * dt);
   }
 });

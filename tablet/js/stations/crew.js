@@ -1,4 +1,6 @@
 // Crew comms through the communicator pin (Star Trek style): crew on the left, the voice channel (transcript) in the middle, things to say on the right.
+import { pendingDecisions, decide } from '../aria.js';
+import { fill } from '../player.js';
 import { sim, toward } from '../sim.js';
 import { el, toast } from '../util.js';
 import { gameState } from '../persist.js';
@@ -112,8 +114,9 @@ export function mount(body, ctx) {
         unreadCount() > 0 && el('div', { class: 'comm-waiting', text: 'You have messages waiting.' }),
         ...crew.map((c) => el('button', { class: 'comm-line comm-who', onclick: () => {
           cur = c; cat = null;
+          if (c.id === 'executiveOfficer' && pendingDecisions().length) { greeted = true; page = 'decision'; render(); return; }   // ARIA is waiting for an answer
           const held = takeHeld(c.id);   // what they tried to tell the Captain while he was elsewhere
-          if (held.length) { greeted = greeted || c.id === 'executiveOfficer'; reply = { said: null, text: held.map((h) => `Captain, ${h.charAt(0).toLowerCase()}${h.slice(1)}`).join(' '), held: true }; page = 'reply'; }
+          if (held.length) { greeted = greeted || c.id === 'executiveOfficer'; reply = { said: null, text: held.map((h) => (/^Captain\b/.test(h) ? h : `Captain, ${h.charAt(0).toLowerCase()}${h.slice(1)}`)).join(' '), held: true }; page = 'reply'; }
           else if (c.id === 'executiveOfficer' && !greeted) { greeted = true; reply = { said: null, text: 'Welcome aboard, Captain. I am ARIA, your executive officer. How may I assist you?' }; page = 'reply'; } else page = 'cat';
           render();
         } }, el('span', { class: `avatar ${c.id === 'executiveOfficer' ? 'aria' : ''}`, text: initial(c) }), el('span', {}, el('b', { text: c.name }), el('small', { text: c.role })), unreadFor(c.id) > 0 && el('span', { class: 'comm-badge', text: String(unreadFor(c.id)) })))];
@@ -125,6 +128,12 @@ export function mount(body, ctx) {
       kids = [el('div', { class: 'comm-head', text: cat[0] === 'Pleasantries' ? `Say to ${first(cur)}…` : cat[0] === 'Commands' ? `Order to ${first(cur)}…` : `Tell ${first(cur)}…` }),
         ...cat[1].map((t) => { const ok = works(t, cat[0] === 'Pleasantries'); return line(t, () => speak(t), ok ? (cat[0] === 'Emergency' ? 'danger' : '') : 'stub'); }),
         line('Belay that …', () => { page = 'cat'; render(); }, 'back')];
+    } else if (page === 'decision') {
+      const d = pendingDecisions()[0];
+      if (!d) { page = 'cat'; return render(); }
+      kids = [el('div', { class: 'comm-reply' }, el('small', { text: cur.name }), el('p', { text: fill(d.text) })),
+        ...d.options.map((o) => line(o.label, () => { say(o.label, decide(d.id, o.id)); }, 'decide')),
+        line('Give me a moment …', () => { page = 'crew'; render(); }, 'back')];
     } else if (page === 'param') {
       kids = [el('div', { class: 'comm-head', text: param.title }),
         el('div', { class: 'comm-chips' }, ...param.opts.map(([l, fn]) => line(l, () => say(`${param.said}: ${l}`, fn(ctx)), 'chip'))),

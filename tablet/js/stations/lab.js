@@ -1,4 +1,5 @@
 // Science Lab: samples from the ROV, timed analysis on three instruments, and research topics.
+import { tell } from '../notify.js';
 import { sim } from '../sim.js';
 import { el, toast } from '../util.js';
 import { SAMPLE_KINDS, LABS, TOPICS, samples, jobs, points, research, startAnalysis, startTopic, tickLab } from '../science.js';
@@ -35,7 +36,7 @@ export function mount(body, ctx) {
         return el('div', { class: 'card' }, el('h3', { text: lab.name }),
           el('p', { style: 'color:var(--dim);margin:0.3rem 0' }, job ? `Running sample #${job.sample}. ${fmt(job.end - s.clock)} left.` : 'Idle.'),
           el('div', { class: 'row' }, ...(running ? [] : raw.map((q) => el('button', { class: 'btn chip', text: `Run #${q.id} ${SAMPLE_KINDS[q.kind].label}`, onclick: () => {
-            if (startAnalysis(q.id)) toast(`${lab.name}: sample #${q.id} started`); sig = ''; update(); } })))),
+            if (startAnalysis(q.id)) tell('science', `${lab.name}: sample #${q.id} started`); sig = ''; update(); } })))),
           !job && !raw.length && el('p', { style: 'color:var(--dim)', text: 'No samples for this instrument.' }));
       }));
     } else {
@@ -44,7 +45,7 @@ export function mount(body, ctx) {
         ...TOPICS.map((t) => el('div', { class: 'card task' },
           el('div', { class: 'grow' }, el('h3', { text: t.name }), el('p', { style: 'color:var(--dim)', text: `${t.text} Cost: ${t.cost}.` })),
           done.includes(t.id) ? el('span', { class: 'ok', text: 'Done' }) : el('button', { class: 'btn chip', text: 'Research', disabled: pts < t.cost, onclick: () => {
-            if (startTopic(t.id)) toast(`Research complete: ${t.name}`, 'mission'); sig = ''; update(); } }))));
+            if (startTopic(t.id)) tell('science', `Research complete: ${t.name}`, 'mission'); sig = ''; update(); } }))));
     }
   }
   update();
