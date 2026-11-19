@@ -87,8 +87,13 @@ export function createScene(stage, { onOpen }) {
     hs('RESEARCH', 1660, 440, 260, 560, () => onOpen('lab-research'), 'bottom'),
     hs('REMORA', 830, 300, 190, 220, () => onOpen('remora'), 'top'),
     hs('WALKWAY ▸', 1500, 320, 260, 330, () => onOpen('walkway'), 'mid'),
-    hs('MEDBAY', 1040, 540, 520, 300, () => onOpen('medbay'), 'mid', 'locked'),
+    hs('MEDBAY', 1040, 540, 520, 300, () => onOpen('medbay'), 'mid'),
     el('div', { class: 'art-note', text: 'Placeholder art' }));
+  // medbay (concept art). Treatment and crew health are not built yet; the exam table is a locked tap area for now.
+  const medbay = el('div', { class: 'scene medbay', hidden: true });
+  medbay.append(el('img', { class: 'frame', src: 'assets/medbay.webp', alt: '', draggable: 'false', decoding: 'async' }),
+    hs('EXAM TABLE', 1045, 540, 500, 290, () => onOpen('medbay-station'), 'mid', 'locked'),
+    hs('WALKWAY ▸', 1516, 327, 230, 293, () => onOpen('walkway'), 'mid'));
   // launch bay: placeholder art. Where Remora, the WSKRs and the away boats physically leave and return.
   const bay = el('div', { class: 'scene bay', hidden: true });
   bay.innerHTML = `<svg viewBox="0 0 1920 1080" preserveAspectRatio="none" aria-hidden="true"><rect width="1920" height="1080" fill="#04101f"/>
@@ -99,13 +104,13 @@ export function createScene(stage, { onOpen }) {
   bay.append(hs('BAY CONTROL', 760, 560, 400, 200, () => onOpen('bay'), 'mid'),
     hs('◂ WALKWAY', 0, 890, 330, 190, () => onOpen('walkway'), 'mid'),
     el('div', { class: 'art-note', text: 'Placeholder art' }));
-  stage.append(bridge, quarters, walkway, science, bay);
+  stage.append(bridge, quarters, walkway, science, medbay, bay);
 
   const api = {
     inQuarters: false, where: 'bridge',
     show(which) {
       api.where = which; api.inQuarters = which === 'quarters';
-      bridge.hidden = which !== 'bridge'; quarters.hidden = which !== 'quarters'; walkway.hidden = which !== 'walkway'; science.hidden = which !== 'science'; bay.hidden = which !== 'launchbay';
+      bridge.hidden = which !== 'bridge'; quarters.hidden = which !== 'quarters'; walkway.hidden = which !== 'walkway'; science.hidden = which !== 'science'; medbay.hidden = which !== 'medbay'; bay.hidden = which !== 'launchbay';
       cache.clear(); api.update();
     },
     update() {
