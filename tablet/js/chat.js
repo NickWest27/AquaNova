@@ -4,9 +4,39 @@
 import { sim } from './sim.js';
 import { gameState } from './persist.js';
 import { fill } from './player.js';
+import { cm, loadContacts, linkState, LINKS, antDepth, isActive, distNm } from './commsModel.js';
 
 /** What the Captain said, as one of four intents (or null for anything else). */
 export const intentOf = (text) => /^hello|^hi\b/i.test(text) ? 'hello' : /goodbye|farewell/i.test(text) ? 'bye' : /thank/i.test(text) ? 'thanks' : /all for now|that is all/i.test(text) ? 'done' : null;
+
+/** What the radio room can hear and how the links are doing. */
+function comms(s) {
+  const out = { links: {}, heard: [], mastOpen: true, relay: false };
+  try {
+    if (!cm.contacts) loadContacts();   // loads in the background; the next reply will have it
+    LINKS.slice(0, 3).forEach((L) => { const st = linkState(L); out.links[L.label] = { up: st.up, fading: st.fading, dB: st.dB, status: st.status, eff: Math.round(st.eff), rate: L.rate, to: (L.relay || L.station).name }; });
+    out.mastOpen = antDepth('mast') <= 5; out.relay = !!(sim.relayUp && sim.relayUp());
+    out.heard = out.mastOpen ? (cm.contacts || []).filter((x) => isActive(x) && !x.distress && (x.band === 'VHF' || x.band === 'HF') && distNm(s, x) <= x.range).map((x) => x.id) : [];
+  } catch (e) { /* comms model not ready: Nicole just has less to say */ }
+  return out;
+}
+
+/** What each station on the radio is up to. Used when it is within range. */
+const CHATTER = {
+  'rv-gannet': 'I have RV Gannet on VHF. They are recovering a CTD cast and sound unbothered by it.',
+  'fv-marguerite': 'FV Marguerite is on VHF with her nets out. The skipper asked us, politely, to stay well below her.',
+  'dsv-meridian': 'DSV Meridian is on HF, on a survey line at depth. Not much chat, but it is nice to know they are there.',
+  'cg-sector': 'The Coast Guard sector is working its usual traffic on 156.8. Nothing for us, which is how we like it.',
+  nantucket: 'Nantucket Harbor Office is reporting sea state two and no traffic concerns.',
+  'oera-woodshole': 'Woods Hole Station is reporting fair weather ashore and a quiet night shift.',
+};
+/** A line about the state of one link, or null. */
+const linkLine = (c, label, name) => {
+  const l = c.links[label]; if (!l) return null;
+  if (l.up) return `The ${name} link is operative at ${l.dB} dB, ${l.rate} to ${l.to}.`;
+  if (l.fading) return `The ${name} link is fading, down to ${l.dB} dB. A little shallower would help.`;
+  return `The ${name} link has no carrier at this depth. The antenna needs to be nearer the surface${label === 'SAT-COM' ? ', or I can use a relay' : ''}.`;
+};
 
 /** A snapshot of the ship in words crew might use. */
 export function context(extra = {}) {
@@ -16,7 +46,7 @@ export function context(extra = {}) {
     period: h >= 5 && h < 12 ? 'morning' : h < 18 ? 'afternoon' : h < 22 ? 'evening' : 'night',
     depth: Math.round(s.depth), kt: Math.round(s.speed * 10) / 10, hdg: Math.round(s.heading), bat: Math.round(s.battery), o2: Math.round(s.oxygen), hull: Math.round(s.hull),
     docked: !!s.docked, place: s.at && s.at.name ? s.at.name : null, floor, under: floor == null ? null : Math.round(floor - s.depth),
-    wskrs: (s.wskrs || []).length, rov: !!s.rov, cruise: !!s.cruise, bound: !!s.wpt, moving: s.speed > 0.5, mail: 0, ...extra,
+    wskrs: (s.wskrs || []).length, rov: !!s.rov, cruise: !!s.cruise, bound: !!s.wpt, moving: s.speed > 0.5, mail: 0, ...comms(s), ...extra,
   };
 }
 
@@ -111,15 +141,33 @@ const CREW = {
     greet: G('Comms, {captain}.', 'Nicole here, {captain}.', 'Captain.', { t: 'The airwaves are quiet, {captain}.', p: 'night' }, 'Channel is open, {captain}.'),
     status: (c) => [
       c.mail ? `You have ${c.mail === 1 ? 'a message' : c.mail + ' messages'} waiting.` : 'No new traffic.',
+      linkLine(c, 'LASER', 'laser'), linkLine(c, 'SAT-COM', 'satellite'), linkLine(c, 'HF', 'HF'),
+      c.relay ? 'A WSKR is relaying from just under the surface, so we have the links of a surface ship.' : null,
       c.docked ? 'We have a clean link to the shore.' : null,
-      c.depth > 40 && !c.docked ? 'Remember that we are deep enough to need the buoy or a relay for the satellite.' : null,
+      !c.mastOpen && !c.docked ? 'The mast is too deep for VHF and HF. I am hearing nothing on the radio until we come up.' : null,
+      ...c.heard.map((id) => CHATTER[id]),
+      c.mastOpen && !c.heard.length ? 'The radio is quiet. No traffic in range.' : null,
       c.period === 'night' ? 'It is quiet on the old frequencies too.' : null,
+      ...GOSSIP(c),
     ],
     thanks: ['Any time, {captain}.', 'My pleasure.', 'Happy to help.', 'Just the job.'],
     bye: ['I will keep the channel open.', 'Goodbye, {captain}.', 'Call if you need a line out.', 'Signing off.'],
     done: ['Understood, {captain}.', 'Comms standing by.', 'Aye.', 'Channel stays open.'],
   },
 };
+
+/** Radio-room gossip. Light, a little dry; the Voss lines unlock once the Captain has been around a while. */
+const GOSSIP_LINES = [
+  { t: 'Between us, there are two Chens aboard and one mailbox. Mail is an adventure.' },
+  { t: 'Torres says "probably" so often that the crew has a pool on how many times a shift. I will not say which way I bet.' },
+  { t: 'Marcus insists that the galley coffee is a breach of some convention. He still drinks three cups.' },
+  { t: 'Lieutenant Kim has walked the boat four times today. I do not think he trusts the doors.' },
+  { t: 'Dr. Patel keeps a plant on her desk in the sick bay. She says it is for the air. It is named Gerald.' },
+  { t: 'Ryan talks to the reactor when he thinks nobody is listening. I am told it answers.' },
+  { t: 'Nobody has sat in the Captain\'s chair on the bridge except you, {captain}. The rest of us are not sure if it is allowed.', min: 3 },
+  { t: 'Nobody will say why Captain Voss left. I asked ARIA, and she went very quiet. She does not usually go quiet.', min: 5 },
+];
+const GOSSIP = (c) => { const n = (gameState.getProperty('progress.talk.communications') || { n: 0 }).n; return GOSSIP_LINES.filter((g) => !g.min || n >= g.min).map((g) => g.t); };
 
 const mem = (id) => gameState.getProperty('progress.talk.' + id) || { n: 0, used: {} };
 /** The next unused option from a list (indices stay in the save), or the first once all are used. */

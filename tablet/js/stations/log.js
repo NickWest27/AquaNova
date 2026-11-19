@@ -5,13 +5,6 @@ import { sim } from '../sim.js';
 import { requestSync } from '../sync.js';
 import missionManager from '../../../game/systems/missionManager.js';
 
-// The welcome entry ticks its own tasks off from the game state.
-const WELCOME_DONE = {
-  'Collect your PED from the bed': () => gameState.getProperty('progress.got_ped') === true,
-  'Collect your communicator pin from the desk': () => ((gameState.getProperty('mission.objectives') || []).find((o) => o.id === 'meetTheCrew_pickup_communicator') || {}).status === 'completed',
-  'Call ARIA, your Executive Officer': () => ((gameState.getProperty('mission.objectives') || []).find((o) => o.id === 'meetTheCrew_contact_area') || {}).status === 'completed',
-  'Find your way to the Bridge': () => gameState.getProperty('progress.been_bridge') === true,
-};
 const entryText = (e) => (e.logbook ? fill(e.logbook.content) : '');
 
 export function mount(body, ctx) {
@@ -58,7 +51,7 @@ export function mount(body, ctx) {
     title.textContent = lb ? lb.name : 'No logbook';
     const entries = lb && lb.entries ? [...lb.entries].reverse() : [];
     list.replaceChildren(...(entries.length ? entries.map((e) => {
-      const l = e.logbook, tasks = l.tasks || [], done = l.entryId === 'M.LOG-0001' ? tasks.filter((t) => WELCOME_DONE[t] && WELCOME_DONE[t]()) : (l.completedTasks || []);
+      const l = e.logbook, tasks = l.tasks || [], done = l.completedTasks || [];   // a logbook entry is a document: it shows what was true when it was written and never changes
       return el('div', { class: 'card entry' },
         el('div', { class: 'meta' }, el('span', { text: new Date(l.timestamp).toLocaleString() }), el('span', { text: l.entryId })),
         el('h3', { text: (l.type || 'log').replace(/_/g, ' ') }),

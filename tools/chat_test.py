@@ -38,6 +38,17 @@ def main():
         check("four thanks cycle through four lines", len(set(t)) == 4, t)
         check("goodbye and 'all for now' answered", js("return !!C.reply('sensors','Goodbye') && !!C.reply('sensors','That is all for now')"))
         check("unknown phrases fall back (null)", js("return C.reply('sensors','Something else entirely') === null"))
+        # Nicole: link reports, radio chatter and gossip
+        nic = lambda n: js("return Array.from({length:%d},()=>C.reply('communications','Hello')).join(' | ')" % n)
+        js("Object.assign(sim.s,{docked:false,at:null,speed:3,depth:120,lat:41.1,lon:-70.9,heading:90}); return 1")
+        deep = nic(40)
+        check("Nicole reports the links when deep (no carrier)", "no carrier" in deep.lower(), deep[:300])
+        check("Nicole says the radio is deaf when the mast is too deep", "too deep" in deep.lower(), deep[:300])
+        js("Object.assign(sim.s,{depth:2,speed:3,lat:41.1,lon:-70.9}); await C.reply('communications','Hello'); return 1"); page.wait_for_timeout(700)
+        near = nic(40)
+        check("Nicole reports radio chatter from nearby ships", "Gannet" in near or "Marguerite" in near or "Coast Guard" in near, near[:300])
+        check("Nicole reports a working link", "operative" in near, near[:300])
+        check("Nicole has gossip", any(w in near for w in ("Chens", "probably", "coffee", "Kim", "Gerald", "reactor")), near[:300])
         # low battery and hull change what ARIA and engineering say
         js("sim.s.battery=20; sim.s.damage=20; return 1")
         ar = js("return Array.from({length:6},()=>C.reply('executiveOfficer','Hello')).join(' | ')")
