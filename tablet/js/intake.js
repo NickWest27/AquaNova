@@ -43,7 +43,7 @@ export function runIntake({ dateText, onDone }) {
         el('h3', { text: 'Crew sign-in' }),
         el('div', { class: 'f-grid' }, info('Vessel', 'Aqua Nova'), info('Sign-in', 'Arrival'), info('Location', 'Launch Bay'), info('Date and time', dateText)),
         el('div', { class: 'f-names' }, first, last), msg,
-        el('label', { class: 'f-tick' }, decl, el('span', { text: 'I confirm that I am the person named above.' }))),
+        el('label', { class: 'f-tick' }, decl, el('span', { text: 'I confirm that I am the person named above, and I declare the information given on this form to be true and complete. I understand that falsifying or altering O.E.R.A. personnel records is an offence under the Uniform Code of Maritime Conduct, punishable by a fine, court martial, dismissal from the service or imprisonment.' }))),
       el('div', { class: 'sg-right' }, el('b', { class: 'sg-bio', text: 'Biometric verification' }), scanner, status))));
 
   scanner.addEventListener('click', () => {
