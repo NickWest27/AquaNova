@@ -24,7 +24,7 @@ export function mountCraftView(parent, { getCraft, title, range = 0.5 }) {
     const key = [typeof title === 'function' ? title() : title, c.lat.toFixed(4), c.lon.toFixed(4), Math.round(c.heading), Math.round(c.depth), rng].join();
     const now = Date.now(); if (key === sig && now - last < 1000) return; sig = key; last = now;
     pr.draw({ ...c, sonar: true }, rng);
-    sy.draw(c);   // a window: fixed field of view and distance, no labels (the range buttons set the profile and map)
+    sy.draw({ ...c, speed: c.kt || 0 });   // a window: fixed field of view and distance (the range buttons set the profile and map)
     nd.draw(); rangeLbl.textContent = `Range ${rng} nm`;
   }
   draw();

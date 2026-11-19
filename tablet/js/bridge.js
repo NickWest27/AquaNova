@@ -171,7 +171,7 @@ export function createBridgeConsole({ top, main, display, center, left, right, o
         m.classList.toggle('synth-on', on);
         if (on) {
           if (Date.now() - last < 250) return; last = Date.now();   // a few redraws a second is plenty
-          sy.draw({ lat: s.lat, lon: s.lon, heading: s.heading, depth: s.depth });   // a window: fixed field of view and distance, no labels
+          sy.draw({ lat: s.lat, lon: s.lon, heading: s.heading, depth: s.depth, speed: s.speed });   // a window: fixed field of view and distance, with horizon and speed, heading and depth tapes
           return;
         }
         set(place, s.at ? s.at.name : s.wpt ? 'En route: ' + s.wpt.name : 'Open water');

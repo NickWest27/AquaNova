@@ -110,6 +110,46 @@ export function createSynth(parent) {
     };
     for (const p of sim.s.pois) if (p.type !== 'dock') mark(p, '#ffe14a', seafloor.depthAt(p.lat, p.lon) || 0);
     mark(sim.s, '#3ddc84', sim.s.depth);
+
+    // ---- instruments: horizon line, heading tape (top), speed tape (left), depth tape (right) ----
+    const INK = 'rgba(225,240,255,0.95)', DIM = 'rgba(225,240,255,0.55)';
+    g.save(); g.shadowColor = 'rgba(0,0,30,0.9)'; g.shadowBlur = 3; g.lineCap = 'butt'; g.setLineDash([]);
+    // horizon: the level line of sight, with a small gap at the centre and a fixed reticle for the craft
+    g.strokeStyle = 'rgba(190,235,255,0.75)'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(0, cy); g.lineTo(cx - 34, cy); g.moveTo(cx + 34, cy); g.lineTo(W, cy); g.stroke();
+    g.strokeStyle = INK; g.lineWidth = 2; g.beginPath(); g.moveTo(cx - 18, cy); g.lineTo(cx - 8, cy); g.moveTo(cx + 8, cy); g.lineTo(cx + 18, cy); g.moveTo(cx, cy - 8); g.lineTo(cx, cy - 3); g.stroke();
+    g.beginPath(); g.arc(cx, cy, 3, 0, 6.2832); g.stroke();
+    // heading tape: scrolls under a fixed caret, ticks every 5 degrees, numbers every 15
+    const hy = 30, hdg = ((craft.heading % 360) + 360) % 360;
+    g.strokeStyle = INK; g.lineWidth = 1.5; g.fillStyle = INK; g.font = '700 11px monospace'; g.textAlign = 'center';
+    g.beginPath(); g.moveTo(cx - 150, hy); g.lineTo(cx + 150, hy); g.stroke();
+    for (let deg = Math.floor(hdg - 22); deg <= Math.ceil(hdg + 22); deg++) {
+      if (deg % 5) continue; const x = cx + (deg - hdg) * 6.4; if (x < cx - 150 || x > cx + 150) continue;
+      const b = ((deg % 360) + 360) % 360, big = b % 15 === 0;
+      g.beginPath(); g.moveTo(x, hy); g.lineTo(x, hy - (big ? 9 : 5)); g.stroke();
+      if (big && Math.abs(x - cx) > 22) g.fillText(String(b).padStart(3, '0'), x, hy + 13);
+    }
+    g.fillStyle = 'rgba(6,8,60,0.85)'; g.fillRect(cx - 22, hy + 3, 44, 17); g.strokeRect(cx - 22, hy + 3, 44, 17);
+    g.fillStyle = INK; g.fillText(String(Math.round(hdg) % 360).padStart(3, '0'), cx, hy + 16);
+    g.beginPath(); g.moveTo(cx, hy + 3); g.lineTo(cx - 5, hy - 5); g.lineTo(cx + 5, hy - 5); g.closePath(); g.fill();
+    // a vertical tape: value scrolls past a fixed box. side -1 = labels on the right of the line (left tape), +1 = labels on the left (right tape)
+    const vtape = (x, side, value, pxPerUnit, minor, major, fmt, boxText) => {
+      const half = 78, span = half / pxPerUnit;
+      g.strokeStyle = INK; g.fillStyle = INK; g.lineWidth = 1.5; g.textAlign = side < 0 ? 'left' : 'right';
+      g.beginPath(); g.moveTo(x, cy - half); g.lineTo(x, cy + half); g.stroke();
+      for (let v = Math.floor((value - span) / minor) * minor; v <= value + span; v += minor) {
+        if (v < 0) continue; const y = cy - (v - value) * pxPerUnit, isMajor = Math.abs(v / major - Math.round(v / major)) < 1e-6;
+        g.beginPath(); g.moveTo(x, y); g.lineTo(x - side * (isMajor ? 9 : 5), y); g.stroke();
+        if (isMajor && Math.abs(y - cy) > 12) g.fillText(fmt(v), x - side * 13, y + 4);
+      }
+      const bw = 46; g.fillStyle = 'rgba(6,8,60,0.88)'; const bx = side < 0 ? x + 4 : x - 4 - bw; g.fillRect(bx, cy - 9, bw, 18); g.strokeRect(bx, cy - 9, bw, 18);
+      g.fillStyle = INK; g.textAlign = 'center'; g.fillText(boxText, bx + bw / 2, cy + 4);
+      g.beginPath(); g.moveTo(x, cy); g.lineTo(x + side * 6 * -1, cy - 5); g.lineTo(x + side * 6 * -1, cy + 5); g.closePath(); g.fill();
+    };
+    const kt = Math.max(0, craft.speed || 0), dep = Math.max(0, craft.depth || 0);
+    vtape(46, -1, kt, 7, 1, 5, (v) => String(v), kt.toFixed(1));                                           // speed, knots (1 kt ticks, numbers every 5)
+    const dStep = dep < 100 ? [1, 10] : dep < 600 ? [10, 50] : [50, 250];                                 // depth, metres: finer ticks when shallow
+    vtape(W - 46, 1, dep, dep < 100 ? 4 : dep < 600 ? 0.8 : 0.16, dStep[0], dStep[1], (v) => String(v), String(Math.round(dep)));
+    g.restore();
   } };
   return api;
 }

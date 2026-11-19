@@ -43,6 +43,7 @@ class SaveManager {
      *  against the real clock. The date is stored on the logbook (`epoch`, midnight UTC of Day 1; the game clock starts at 06:00).
      *  A logbook from before this was kept gets one now: M.LOG-0001 and any later entries are moved onto the new calendar in order. */
     ensureEpoch(logbook) {
+        if (logbook && logbook.checkpoint && Date.parse(logbook.checkpoint.timestamp) > Date.now() + 86400000) { logbook.checkpoint.timestamp = new Date().toISOString(); this.saveBookshelf(); }   // a checkpoint stamped in game time would beat every later save when synced
         if (!logbook || logbook.epoch) return;
         const now = new Date(), start = Date.UTC(now.getUTCFullYear() + 50, now.getUTCMonth(), now.getUTCDate());
         logbook.epoch = new Date(start).toISOString();
@@ -54,7 +55,7 @@ class SaveManager {
             es.slice(1).forEach((e, i) => { const t = Date.parse(e.logbook.timestamp); if (t < Date.UTC(2060, 0, 1)) e.logbook.timestamp = iso(day1 + 60000 + (t - base)); });
         }
         logbook.created = logbook.lastModified = iso(day1);
-        if (logbook.checkpoint && es.length) logbook.checkpoint.timestamp = es[es.length - 1].logbook.timestamp;
+        if (logbook.checkpoint) logbook.checkpoint.timestamp = new Date().toISOString();   // checkpoints are ordered by the real clock (sync compares them), never by game time
         this.updateLogbookStats(logbook);
         this.saveBookshelf();
         dlog(`Game calendar starts ${logbook.epoch.slice(0, 10)}`);
@@ -205,7 +206,7 @@ class SaveManager {
         if (!logbook.entries) logbook.entries = [];
         logbook.entries.push(entry);
         if (entryData.canRevert !== false) {
-            logbook.checkpoint = { timestamp: entry.logbook.timestamp, gameSnapshot: entry.gameSnapshot };
+            logbook.checkpoint = { timestamp: new Date().toISOString(), gameSnapshot: entry.gameSnapshot };   // real clock: entries carry game time, and sync picks the newest checkpoint by timestamp
         }
         
         this.updateLogbookStats(logbook);

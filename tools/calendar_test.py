@@ -32,6 +32,8 @@ def main():
         r = page.evaluate(Q)
         check("old logbook gets an epoch", bool(r["epoch"]) and r["epoch"].startswith(str(yr)), str(r["epoch"]))
         check("old logbook entries are back in order", r["ts"] == sorted(r["ts"]) and all(t.startswith(str(yr)) for t in r["ts"]), str(r["ts"]))
+        cp = page.evaluate("import('./js/persist.js').then(P=>{P.addLogEntry('cp test'); return P.saveManager.getActiveLogbook().checkpoint.timestamp})")
+        check("a log entry's checkpoint uses the real clock (so sync orders it correctly)", cp.startswith(str(datetime.datetime.utcnow().year)), cp)
         check("no page errors", not errs, str(errs))
     server.shutdown()
     print("\nAll checks passed." if not fails else f"\n{len(fails)} failed"); sys.exit(1 if fails else 0)
