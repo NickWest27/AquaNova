@@ -201,6 +201,17 @@ textarea, input { font: inherit; font-size: 16px; user-select: text; -webkit-use
 .wsign-box { pointer-events: none; }
 .wsign { width: 412px; display: flex; align-items: center; justify-content: center; background: #02080f; color: #7fe9ff; font: 800 56px/1 var(--font); letter-spacing: 0.1em; overflow: hidden; text-shadow: 0 0 14px #2fb6ff, 0 0 3px #bff4ff; }
 
+/* Walkway AN-1 sign (sits in the cutout, behind the art) */
+.an-sign { position: absolute; box-sizing: border-box; padding: 6px 54px; display: flex; flex-direction: column; justify-content: center; background: #02080f; color: #7fe9ff; font: 800 38px/1.25 var(--font); letter-spacing: 0.1em; text-shadow: 0 0 12px #2fb6ff, 0 0 3px #bff4ff; }
+.an-sign .r { text-align: right; }
+/* Medbay window: the sea outside, behind the art. Depth sets how dark it is. */
+.mb-view { position: absolute; left: 0; top: 130px; width: 480px; height: 390px; overflow: hidden; background: linear-gradient(#0d5a7a, #05233a 70%, #020b16); }
+.mb-view::after { content: ''; position: absolute; inset: 0; background: #000; opacity: var(--dark, 0.4); }
+.mb-snow { position: absolute; inset: 0; z-index: 1; background-image: radial-gradient(circle, rgba(200, 230, 255, 0.8) 0 2px, transparent 3px), radial-gradient(circle, rgba(200, 230, 255, 0.5) 0 1.5px, transparent 2.5px); background-size: 90px 120px, 140px 170px; background-position: 0 0, 40px 60px; animation: snowdrift 16s linear infinite; }
+.mb-snow.s2 { background-size: 160px 200px, 70px 90px; animation-duration: 26s; opacity: 0.6; }
+@keyframes snowdrift { to { background-position: 0 -120px, 40px -110px; } }
+.mb-read { position: absolute; z-index: 2; left: 40px; top: 150px; font: 700 26px var(--mono); letter-spacing: 0.08em; color: #7fe9ff; text-shadow: 0 0 8px #2fb6ff; white-space: nowrap; }
+
 /* placeholder-art label (science lab, launch bay) */
 .art-note { position: absolute; right: 24px; bottom: 16px; font: 700 22px var(--font); color: #4c6a85; letter-spacing: 0.1em; text-transform: uppercase; }
 

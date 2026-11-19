@@ -22,7 +22,7 @@ const STATIONS = {
   crew: { title: 'Communicator', icon: 'comms', hidden: true }, // opened from the pin, not the dock
 };
 const FILES = { sys: 'systems' };
-const WHERE = { bridge: 'Bridge', quarters: 'Quarters', walkway: 'Walkway', science: 'Science Lab', medbay: 'Medbay', launchbay: 'Launch Bay' };   // the back button returns to the room you came from
+const WHERE = { bridge: 'Bridge', quarters: 'Quarters', walkway: 'Walkway', walkway2: 'Walkway AN-1', science: 'Science Lab', medbay: 'Medbay', launchbay: 'Launch Bay' };   // the back button returns to the room you came from
 const SYSTEM_TEXT = {
   mission_start_tutorial: ['Welcome aboard, Captain', 'Captain Elena Voss was relieved of command at the last minute. OERA called you out of retirement to take her place on the Aqua Nova. Your quarters are ready, and your communicator pin is waiting on your desk.'],
   communicator_tutorial: ['Communicator ready', 'Pin on. Tap the badge in the top-right corner to talk to your crew. ARIA, your executive officer, is waiting to hear from you.'],
@@ -164,6 +164,7 @@ function openScene(name) {
     document.dispatchEvent(new CustomEvent('location-enter', { detail: { location: 'quarters' } }));
   } else if (name === 'bridge') { closeStation(); scene.show('bridge'); }
   else if (name === 'walkway') { closeStation(); scene.show('walkway'); }
+  else if (name === 'walkway2') { closeStation(); scene.show('walkway2'); }
   else if (name === 'sleep') sleepDialog();
   else if (name === 'science') { closeStation(); scene.show('science'); }
   else if (name === 'launchbay') { closeStation(); scene.show('launchbay'); }

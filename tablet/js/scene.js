@@ -77,8 +77,15 @@ export function createScene(stage, { onOpen }) {
     door('MEDICAL', 446, 304, 116, 536, 'medbay'),
     door('QUARTERS', 1524, 240, 237, 710, 'quarters'),
     door('BRIDGE', 805, 377, 323, 293, 'bridge'),
-    door('ENGINEERING', 600, 380, 100, 320, 'engineering', true),
-    door('LAUNCH BAY', 1235, 380, 95, 320, 'launchbay', true));
+    hs('AN-1 DECK ▼', 560, 900, 800, 180, () => onOpen('walkway2'), 'mid'));      // walk on to the next section
+  // walkway AN-1 (concept art): the junction past A1. Launch Bay on the left, Engineering on the right; the sign sits in the cutout.
+  const walkway2 = el('div', { class: 'scene walkway2', hidden: true });
+  walkway2.append(
+    el('div', { class: 'an-sign', style: 'left:677px;top:111px;width:565px;height:101px' }, [el('div', { class: 'l', text: '◂ LAUNCH BAY' }), el('div', { class: 'r', text: 'ENGINEERING ▸' })]),
+    el('img', { class: 'frame', src: 'assets/walkway-an1.webp', alt: '', draggable: 'false', decoding: 'async' }),
+    door('LAUNCH BAY', 396, 287, 494, 586, 'launchbay'),
+    door('ENGINEERING', 1062, 300, 413, 440, 'engineering'),
+    hs('A1 DECK ▼', 560, 900, 800, 180, () => onOpen('walkway'), 'mid'));
   // science lab: placeholder art (medbay concept). Samples, analysis and research live in the Lab station; the ROV in the Launch Bay.
   const science = el('div', { class: 'scene science', hidden: true });
   science.append(el('img', { src: 'assets/science.webp', alt: '', draggable: 'false', style: 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover' }),
@@ -91,7 +98,9 @@ export function createScene(stage, { onOpen }) {
     el('div', { class: 'art-note', text: 'Placeholder art' }));
   // medbay (concept art). Treatment and crew health are not built yet; the exam table is a locked tap area for now.
   const medbay = el('div', { class: 'scene medbay', hidden: true });
-  medbay.append(el('img', { class: 'frame', src: 'assets/medbay.webp', alt: '', draggable: 'false', decoding: 'async' }),
+  const mbRead = el('div', { class: 'mb-read' });
+  const mbView = el('div', { class: 'mb-view' }, [el('div', { class: 'mb-snow' }), el('div', { class: 'mb-snow s2' }), mbRead]);   // the cutout in the art shows the sea outside
+  medbay.append(mbView, el('img', { class: 'frame', src: 'assets/medbay.webp', alt: '', draggable: 'false', decoding: 'async' }),
     hs('EXAM TABLE', 1045, 540, 500, 290, () => onOpen('medbay-station'), 'mid', 'locked'),
     hs('WALKWAY ▸', 1516, 327, 230, 293, () => onOpen('walkway'), 'mid'));
   // launch bay: placeholder art. Where Remora, the WSKRs and the away boats physically leave and return.
@@ -102,18 +111,23 @@ export function createScene(stage, { onOpen }) {
     <g fill="none" stroke="#2f8f9d" stroke-width="3" opacity=".6"><rect x="420" y="330" width="360" height="200" rx="20"/><rect x="1140" y="330" width="360" height="200" rx="20"/></g>
     <text x="600" y="440" fill="#2f8f9d" font-size="34" font-family="sans-serif" text-anchor="middle" opacity=".7">REMORA</text><text x="1320" y="440" fill="#2f8f9d" font-size="34" font-family="sans-serif" text-anchor="middle" opacity=".7">WSKR RACK</text></svg>`;
   bay.append(hs('BAY CONTROL', 760, 560, 400, 200, () => onOpen('bay'), 'mid'),
-    hs('◂ WALKWAY', 0, 890, 330, 190, () => onOpen('walkway'), 'mid'),
+    hs('◂ WALKWAY', 0, 890, 330, 190, () => onOpen('walkway2'), 'mid'),
     el('div', { class: 'art-note', text: 'Placeholder art' }));
-  stage.append(bridge, quarters, walkway, science, medbay, bay);
+  stage.append(bridge, quarters, walkway, walkway2, science, medbay, bay);
 
   const api = {
     inQuarters: false, where: 'bridge',
     show(which) {
       api.where = which; api.inQuarters = which === 'quarters';
-      bridge.hidden = which !== 'bridge'; quarters.hidden = which !== 'quarters'; walkway.hidden = which !== 'walkway'; science.hidden = which !== 'science'; medbay.hidden = which !== 'medbay'; bay.hidden = which !== 'launchbay';
+      bridge.hidden = which !== 'bridge'; quarters.hidden = which !== 'quarters'; walkway.hidden = which !== 'walkway'; walkway2.hidden = which !== 'walkway2'; science.hidden = which !== 'science'; medbay.hidden = which !== 'medbay'; bay.hidden = which !== 'launchbay';
       cache.clear(); api.update();
     },
     update() {
+      if (api.where === 'medbay') {
+        const t = `EXTERNAL VIEW · ${Math.round(sim.s.depth)} m`;
+        if (cache.get('mb') !== t) { cache.set('mb', t); mbRead.textContent = t; mbView.style.setProperty('--dark', Math.min(0.92, 0.25 + sim.s.depth / 700).toFixed(2)); }
+        return;
+      }
       if (api.where !== 'bridge') return;
       const s = sim.s;
       consoleApi.update();
