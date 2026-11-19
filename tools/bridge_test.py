@@ -47,7 +47,7 @@ def main():
             check(f"{tag}: lower-left leaves the bridge for the walkway", page.is_visible(".walkway") and not page.is_visible(".hs[aria-label='COMMS']"))
             page.screenshot(path=f"{SHOTS}/b-{tag}-3walkway.png")
             page.locator('.door[aria-label="ENGINEERING"]').tap(force=True); page.wait_for_timeout(300)
-            check(f"{tag}: engineering door says not built", "not built" in page.inner_text("#toasts"))
+            check(f"{tag}: engineering door says not built", "not built" in page.inner_text("#console-line"))
             page.locator('.door[aria-label="QUARTERS"]').tap(force=True); page.wait_for_timeout(400)
             check(f"{tag}: quarters door", not page.is_visible(".walkway") and page.is_visible(".hs[aria-label='TO WALKWAY']"))
             tap_hs("TO WALKWAY"); page.wait_for_timeout(300)

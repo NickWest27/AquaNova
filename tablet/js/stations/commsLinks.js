@@ -39,10 +39,11 @@ export function mount(host) {
   const cards = LINKS.map((L) => {
     const f = {};
     const c = el('button', { class: 'cl-card', onclick: () => { sel = L.n; update(); } },
-      el('div', { class: 'cl-tag', text: `LINK ${L.n}` }), f.tx = el('div', { class: 'cl-k cl-tx' }),
-      f.mc = el('div', { class: 'cl-v' }), f.st = el('div', { class: 'cl-st' }), f.net = el('div', { class: 'cl-v', text: 'NORPAC' }), f.code = el('div', { class: 'cl-v' }),
+      el('div', { class: 'cl-head' }, f.tx = el('span', { class: 'cl-k cl-tx' }), el('span', { class: 'cl-tag', text: `LINK ${L.n}` })),
+      f.mc = el('div', { class: 'cl-v' }), f.st = el('div', { class: 'cl-st' }),
+      el('div', { class: 'cl-v' }, el('span', { text: 'NORPAC ' }), f.code = el('span')),
       el('div', { class: 'cl-k', text: L.label === L.band ? L.label : `${L.label} · ${L.band.replace('BLUE-GREEN', 'B-G')}` }));
-    f.mc.textContent = `MCell ${L.mcell}`; f.code.textContent = L.code;
+    f.mc.textContent = `MCell ${L.mcell}`; f.code.textContent = L.code; f.net = null;
     return { L, c, f };
   });
   const sig = {}, row = (k, key) => el('div', { class: 'cl-row' }, el('span', { class: 'cl-k', text: k }), sig[key] = el('span', { class: 'cl-v' }));
@@ -89,7 +90,7 @@ export function mount(host) {
     cards.forEach(({ L: l, c, f }, i) => {
       const x = sts[i]; f.st.textContent = x.status; f.st.className = 'cl-st ' + (x.up ? 'ok' : x.fading ? 'warn' : 'bad');
       c.classList.toggle('on', l.n === sel);
-      f.tx.textContent = SOURCES.find((q) => q.id === cm.source).link === l.n ? '● TX SOURCE' : '';
+      f.tx.textContent = SOURCES.find((q) => q.id === cm.source).link === l.n ? '● TX' : '';
     });
     sig.dB.textContent = st.dB == null ? '--' : `${st.dB >= 0 ? '+' : ''}${st.dB} dB`;
     sig.dist.textContent = L.relay ? km(st.dist) : `${(st.dist / 1.852).toFixed(0)} NM`;

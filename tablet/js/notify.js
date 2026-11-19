@@ -1,15 +1,14 @@
 // Crew notices. On the bridge they appear on the upper display only. Anywhere else (a station, quarters, the walkway)
 // the relevant crew member calls in: a communicator chirp and a short message under the top edge.
 // Anti-spam: the chirp sounds at most once every 20 s; messages from the same person within 8 s replace each other.
-import { viewProbe, el } from './util.js';
+import { viewProbe, consoleLine } from './util.js';
 import { gameState } from './persist.js';
 import { chirp, ping } from './audio.js';
 
 const CREW_ID = { helm: 'helm', aria: 'executiveOfficer', sensors: 'sensors', engineering: 'engineering', comms: 'communications', science: 'science' };
 const FALLBACK = { helm: ['Helm', 'Helm officer'], aria: ['ARIA', 'Executive officer'], sensors: ['Sensors', 'Sensors officer'], engineering: ['Engineering', 'Engineer'], comms: ['Comms', 'Communications'], science: ['Science', 'Science officer'] };
 export const stats = { chirps: 0, shown: 0 };
-let lastChirp = -1e9, lastPing = -1e9, box = null;
-const msgs = [];   // { who, node, at, timer }
+let lastChirp = -1e9, lastPing = -1e9;
 
 // Held messages: what a crew member said that the Captain may have missed. Kept until the Captain reads it in the communicator.
 const held = new Map();   // crew id -> [{ text, at }]
@@ -37,13 +36,7 @@ export function say(role, text, kind = '', opts = {}) {
     return;
   }
   if (now - lastChirp > 20000) { lastChirp = now; stats.chirps++; chirp(); }
-  box ||= (() => { const b = el('div', { id: 'crew-msg', 'aria-live': 'polite' }); (document.getElementById('toasts') || document.body).parentElement.append(b); return b; })();
-  const mine = msgs.find((m) => m.who === w.name && now - m.at < 8000);
-  if (mine) { mine.node.querySelector('p').textContent = text; mine.at = now; clearTimeout(mine.timer); mine.timer = setTimeout(() => drop(mine), 6500); return; }
-  const node = el('div', { class: `crew-card ${kind}` }, el('span', { class: 'avatar', text: w.name.replace(/^(Captain|Commander|Dr\.|Specialist|Engineer|Lieutenant) /, '')[0] }),
-    el('div', {}, el('small', { text: `${w.name} · ${w.role}` }), el('p', { text })));
-  const m = { who: w.name, node, at: now, timer: null }; msgs.push(m); stats.shown++;
-  box.append(node); while (msgs.length > 2) drop(msgs[0]);
-  m.timer = setTimeout(() => drop(m), 6500);
+  stats.shown++;
+  consoleLine(`${w.name} · ${w.role}: ${text}${kind === 'mission' || kind === 'error' ? '  (tap the pin to answer)' : ''}`, kind);   // docked readout; the pin pulses for held messages
+
 }
-function drop(m) { clearTimeout(m.timer); const i = msgs.indexOf(m); if (i >= 0) msgs.splice(i, 1); m.node.classList.add('out'); setTimeout(() => m.node.remove(), 300); }

@@ -64,7 +64,7 @@ def main():
         page.tap('#station button:text-is("Dock")'); page.wait_for_timeout(5200)
         js("sim.s.at = null; sim.s.lat += 0.5")
         page.tap('#station button:text-is("Dock")'); page.wait_for_timeout(500)
-        check("docking away from a dock is refused", js("return sim.s.docked") is False and "dock" in page.inner_text(".crew-card").lower())
+        check("docking away from a dock is refused", js("return sim.s.docked") is False and "dock" in page.inner_text("#console-line").lower())
         page.tap("#station .st-head .btn"); page.wait_for_timeout(200)
 
         # --- early wake-up: oxygen falls below 30% during a long sleep ---

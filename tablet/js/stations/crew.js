@@ -75,23 +75,38 @@ const PARAM = {
 PARAM['Make you speed'] = PARAM['Make your speed']; // old saves keep the typo
 const works = (t, pleasantry) => pleasantry || t in ORDERS || t in PARAM;
 
+// The conversation is kept while the game runs, so reopening the pin picks up where you left off.
+const hist = {};      // crew id -> [{ you, text, stub, held }]
+let lastId = null;
+const TABS = [['Pleasantries', 'Talk'], ['Commands', 'Orders'], ['Emergency', 'Emergency']];
+
 export function mount(body, ctx) {
   body.classList.add('comm-menu');
   const crew = knownCrew();
-  let page = 'crew', cur = null, cat = null, reply = null, greeted = false, param = null;
+  let cur = null, tab = 'Commands', param = null;
   const mineP = () => gameState.getProperty('contacts.crew.captain.dialogueOptions.pleasantries') || ['Hello', 'Goodbye', 'Thank you'];
-  const cats = () => {
+  const linesOf = (name) => {
     const o = (cur && cur.dialogueOptions) || {};
-    const cmds = [...(o.commands || []), ...((EXTRA[cur && cur.id]) || []).filter((c) => !(o.commands || []).includes(c))];
-    return [['Pleasantries', mineP(), 'Make small talk'], ['Commands', cmds, 'Give an order'], ['Emergency', o.emergency || [], 'Report an emergency']].filter(([, l]) => l.length);
+    if (name === 'Pleasantries') return mineP();
+    if (name === 'Commands') return [...(o.commands || []), ...((EXTRA[cur && cur.id]) || []).filter((c) => !(o.commands || []).includes(c))];
+    return o.emergency || [];
   };
+  const tabsFor = () => TABS.filter(([n]) => linesOf(n).length);
   const line = (text, onclick, cls = '') => el('button', { class: `comm-line ${cls}`, text, onclick });
   const first = (c) => (c.id === 'executiveOfficer' ? 'ARIA' : c.name.replace(/^(Captain|Commander|Dr\.|Specialist|Engineer|Lieutenant) /, '').split(' ')[0]);
   const initial = (c) => c.name.replace(/^(Captain|Commander|Dr\.|Specialist|Engineer|Lieutenant) /, '')[0];
+  const log = () => (hist[cur.id] ||= []);
 
+  function select(c) {
+    cur = c; lastId = c.id; param = null;
+    const held = takeHeld(c.id);   // what they tried to tell the Captain while he was elsewhere
+    if (held.length) log().push({ text: held.map((h) => `Captain, ${h.charAt(0).toLowerCase()}${h.slice(1)}`).join(' '), held: true });
+    else if (c.id === 'executiveOfficer' && !log().length) log().push({ text: 'Welcome aboard, Captain. I am ARIA, your executive officer. How may I assist you?' });
+    const t = tabsFor().map(([n]) => n); if (!t.includes(tab)) tab = t.includes('Commands') ? 'Commands' : t[0];
+    render();
+  }
   function say(text, done) {
-    reply = { said: text, text: done };
-    page = 'reply';
+    log().push({ you: text, text: done }); param = null;
     document.dispatchEvent(new CustomEvent('dialogue-complete', { detail: { characterId: cur.id, dialogueId: 'first_contact' } }));
     render();
   }
@@ -99,45 +114,30 @@ export function mount(body, ctx) {
     const o = cur.dialogueOptions || {};
     const isOrder = [...(o.commands || []), ...(EXTRA[cur.id] || []), ...(o.emergency || [])].includes(text);
     if (!isOrder) { say(text, pick(o.pleasantries || ['Aye.'])); return; }
-    if (PARAM[text]) { const p = PARAM[text](); param = { said: text, ...p }; page = 'param'; render(); return; }
+    if (PARAM[text]) { param = { said: text, ...PARAM[text]() }; render(); return; }
     if (ORDERS[text]) { say(text, ORDERS[text](ctx)); return; }
-    reply = { said: text, text: 'That order is not available yet.', stub: true }; page = 'reply'; render();
+    log().push({ you: text, text: 'That order is not available yet.', stub: true }); render();
   }
 
   function render() {
-    let kids;
-    if (!crew.length) kids = [el('div', { class: 'comm-head', text: 'No one else seems to be available right now…' })];
-    else if (page === 'crew') {
-      kids = [el('div', { class: 'comm-head', text: 'Who would you like to reach out to?' }),
-        unreadCount() > 0 && el('div', { class: 'comm-waiting', text: 'You have messages waiting.' }),
-        ...crew.map((c) => el('button', { class: 'comm-line comm-who', onclick: () => {
-          cur = c; cat = null;
-          const held = takeHeld(c.id);   // what they tried to tell the Captain while he was elsewhere
-          if (held.length) { greeted = greeted || c.id === 'executiveOfficer'; reply = { said: null, text: held.map((h) => `Captain, ${h.charAt(0).toLowerCase()}${h.slice(1)}`).join(' '), held: true }; page = 'reply'; }
-          else if (c.id === 'executiveOfficer' && !greeted) { greeted = true; reply = { said: null, text: 'Welcome aboard, Captain. I am ARIA, your executive officer. How may I assist you?' }; page = 'reply'; } else page = 'cat';
-          render();
-        } }, el('span', { class: `avatar ${c.id === 'executiveOfficer' ? 'aria' : ''}`, text: initial(c) }), el('span', {}, el('b', { text: c.name }), el('small', { text: c.role })), unreadFor(c.id) > 0 && el('span', { class: 'comm-badge', text: String(unreadFor(c.id)) })))];
-    } else if (page === 'cat') {
-      kids = [el('div', { class: 'comm-head', text: `What is on your mind, Captain?` }), el('div', { class: 'comm-who-label', text: `${cur.name} · ${cur.role}` }),
-        ...cats().map(([n, l, label]) => line(label, () => { cat = [n, l, label]; page = 'lines'; render(); }, n === 'Emergency' ? 'danger' : '')),
-        line('Actually, let me call someone else …', () => { page = 'crew'; render(); }, 'back')];
-    } else if (page === 'lines') {
-      kids = [el('div', { class: 'comm-head', text: cat[0] === 'Pleasantries' ? `Say to ${first(cur)}…` : cat[0] === 'Commands' ? `Order to ${first(cur)}…` : `Tell ${first(cur)}…` }),
-        ...cat[1].map((t) => { const ok = works(t, cat[0] === 'Pleasantries'); return line(t, () => speak(t), ok ? (cat[0] === 'Emergency' ? 'danger' : '') : 'stub'); }),
-        line('Belay that …', () => { page = 'cat'; render(); }, 'back')];
-    } else if (page === 'param') {
-      kids = [el('div', { class: 'comm-head', text: param.title }),
-        el('div', { class: 'comm-chips' }, ...param.opts.map(([l, fn]) => line(l, () => say(`${param.said}: ${l}`, fn(ctx)), 'chip'))),
-        line('Belay that …', () => { page = 'lines'; render(); }, 'back')];
-    } else {
-      kids = [reply.said && el('div', { class: 'comm-you', text: `You: ${reply.said}` }),
-        el('div', { class: 'comm-reply' + (reply.stub ? ' stub' : '') }, el('small', { text: cur.name }), el('p', { text: reply.text })),
-        line(reply.said ? `One more thing, ${first(cur)} …` : `I need something, ${first(cur)} …`, () => { page = 'cat'; render(); }, 'back'),
-        line('Someone else …', () => { page = 'crew'; render(); }, 'back'),
-        line("That's all. Out.", () => ctx.closeComm(), 'back')];
-    }
-    body.replaceChildren(el('div', { class: 'comm-page' }, ...kids));
+    if (!crew.length) { body.replaceChildren(el('div', { class: 'comm-page' }, el('div', { class: 'comm-head', text: 'No one else seems to be available right now…' }))); return; }
+    const strip = el('div', { class: 'comm-crew' }, ...crew.map((c) => el('button', { class: 'comm-who' + (cur && cur.id === c.id ? ' on' : ''), 'aria-label': c.name, onclick: () => select(c) },
+      el('span', { class: `avatar ${c.id === 'executiveOfficer' ? 'aria' : ''}`, text: initial(c) }), el('span', {}, el('b', { text: first(c) }), el('small', { text: c.role })),
+      unreadFor(c.id) > 0 && el('span', { class: 'comm-badge', text: String(unreadFor(c.id)) }))));
+    const entries = log().slice(-3);
+    const talk = el('div', { class: 'comm-log' }, ...(entries.length ? entries.map((e) => el('div', { class: 'comm-entry' },
+      e.you && el('div', { class: 'comm-you', text: `You: ${e.you}` }),
+      el('div', { class: 'comm-reply' + (e.stub ? ' stub' : '') }, el('small', { text: cur.name }), el('p', { text: e.text })))) : [el('div', { class: 'comm-quiet', text: `${cur.name} is on the channel.` })]));
+    let controls;
+    if (param) controls = [el('div', { class: 'comm-head', text: param.title }), el('div', { class: 'comm-chips' }, ...param.opts.map(([l, fn]) => line(l, () => say(`${param.said}: ${l}`, fn(ctx)), 'chip'))), line('Belay that', () => { param = null; render(); }, 'back')];
+    else controls = [el('div', { class: 'comm-tabs' }, ...tabsFor().map(([n, label]) => el('button', { class: `comm-tab${tab === n ? ' on' : ''}${n === 'Emergency' ? ' danger' : ''}`, text: label, onclick: () => { tab = n; render(); } }))),
+      el('div', { class: 'comm-grid' }, ...linesOf(tab).map((t) => { const ok = works(t, tab === 'Pleasantries'); return line(t, () => speak(t), ok ? (tab === 'Emergency' ? 'danger' : '') : 'stub'); }))];
+    body.replaceChildren(el('div', { class: 'comm-page' }, strip, cur ? talk : el('div', { class: 'comm-quiet', text: 'Who would you like to reach?' }),
+      ...(cur ? controls : []), line("That's all. Out.", () => ctx.closeComm(), 'back out')));
+    const lg = body.querySelector('.comm-log'); if (lg) lg.scrollTop = lg.scrollHeight;
   }
-  render();
+  const withMail = crew.slice().sort((a, b) => unreadFor(b.id) - unreadFor(a.id))[0];
+  const start = (withMail && unreadFor(withMail.id) > 0 && withMail) || crew.find((c) => c.id === lastId) || crew[0];
+  if (start) select(start); else render();
   return { update() {}, destroy() {} };
 }

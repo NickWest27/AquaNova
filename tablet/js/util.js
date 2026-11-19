@@ -40,16 +40,19 @@ export function drag(node, { start, move, end }) {
 /** App sets this: true while the bridge is on screen with no station or overlay open. Notices then go to the upper display only. */
 export const viewProbe = { fn: () => false };
 
+/** The console line: one docked readout at the bottom edge (no floating cards). In a station it stays until replaced; elsewhere it fades after a few seconds. */
+let lineTimer = null;
+export function consoleLine(text, kind = '') {
+  const box = document.getElementById('console-line');
+  if (!box) return;
+  box.textContent = text; box.className = `on ${kind}`;
+  clearTimeout(lineTimer);
+  lineTimer = setTimeout(() => { box.classList.add('old'); if (!document.body.classList.contains('has-line')) box.classList.remove('on'); }, 7000);
+}
 export function toast(text, kind = '') {
   document.dispatchEvent(new CustomEvent('notice', { detail: { text, kind } }));   // the bridge's upper display shows it
   if (viewProbe.fn()) return;
-  const box = document.getElementById('toasts');
-  if (!box) return;
-  const t = el('div', { class: `toast ${kind}`, text });
-  box.append(t);
-  while (box.children.length > 3) box.firstChild.remove();
-  setTimeout(() => t.classList.add('out'), 3200);
-  setTimeout(() => t.remove(), 3600);
+  consoleLine(text, kind);
 }
 
 export function modal({ title, body, actions }) {

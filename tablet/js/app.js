@@ -139,17 +139,17 @@ async function openStation(name) {
   const body = el('div', { class: 'st-body' });
   root.replaceChildren(el('header', { class: 'st-head' },
     el('button', { class: 'btn', text: '‹ ' + (WHERE[scene.where] || 'Back'), onclick: closeStation }), el('div', { class: 'st-title', text: def.title }), chips, el('button', { class: 'btn', text: 'PED', onclick: togglePed })), body);
-  root.hidden = false; $('#ped-btn').hidden = true;
+  root.hidden = false; $('#ped-btn').hidden = true; document.body.classList.add('has-line');
   try {
     modules[name] ||= await import(`./stations/${FILES[name] || name}.js`);
     current = { name, api: modules[name].mount(body, ctx), chips };
     current.api.update(); updateChips();
-  } catch (e) { console.error('Station failed', name, e); toast('Could not open ' + def.title, 'error'); root.hidden = true; }
+  } catch (e) { console.error('Station failed', name, e); toast('Could not open ' + def.title, 'error'); root.hidden = true; document.body.classList.remove('has-line'); }
 }
 function closeStation() {
   if (!current) return;
   try { current.api.destroy(); } catch (e) { console.error(e); }
-  current = null; $('#station').hidden = true; $('#station').replaceChildren(); $('#ped-btn').hidden = false;
+  current = null; document.body.classList.remove('has-line'); $('#station').hidden = true; $('#station').replaceChildren(); $('#ped-btn').hidden = false;
   scene.update(); syncUI();
 }
 function updateChips() {

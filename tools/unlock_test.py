@@ -28,7 +28,7 @@ def main():
         page, errors = boot(browser, base + "?locked=1")
         page.evaluate("window.__aq.open('wskr')"); page.wait_for_timeout(500)
         check("locked: WSKR page stays closed", not page.is_visible("#station"))
-        check("locked: excuse is shown", "not been commissioned" in page.inner_text("#toasts"), page.inner_text("#toasts"))
+        check("locked: excuse is shown", "not been commissioned" in page.inner_text("#console-line"), page.inner_text("#console-line"))
         page.evaluate("window.__aq.open('nav')"); page.wait_for_timeout(500)
         check("locked: navigation is always open", page.is_visible("#station"))
         page.evaluate("(async()=>{const m=(await import('../game/systems/missionManager.js')).default; m.executeActions([{type:'unlock_station',station:'wskr'}]);})()")
