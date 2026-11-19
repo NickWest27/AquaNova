@@ -18,7 +18,7 @@ def main():
         page.tap("#board-btn"); page.wait_for_timeout(800)
         if page.is_visible(".modal .btn"): page.tap(".modal .btn"); page.wait_for_timeout(300)
         js("const m=(await import('../game/systems/missionManager.js')).default; m.forceCompleteMission('meetTheCrew')")
-        place = "const s=sim.s; const c=s.pois.find(p=>p.name==='Deep Trench Alpha'); Object.assign(s,{lat:c.lat,lon:c.lon,docked:false,at:null,wpt:null,rov:null,wskrs:[],cruise:false,hug:false,speed:0,throttle:0,depth:0,targetDepth:0}); s.floor=sf.depthAt(s.lat,s.lon);"
+        place = "const s=sim.s; const c=s.pois.find(p=>p.name==='Deep Trench Alpha'); Object.assign(s,{lat:c.lat,lon:c.lon,docked:false,at:null,wpt:null,rov:null,wskrs:[],cruise:false,hug:false,speed:0,throttle:0,depth:0,targetDepth:0}); s.floor=sf.depthAt(s.lat,s.lon); s.depth=Math.max(0,s.floor-40); s.targetDepth=s.depth;"
         r = js(place + "const ok=sim.setHug(true); return {ok:ok.ok, floor:s.floor}")
         check("hug starts in deep water", r["ok"], str(r))
         r = js(place + """sim.setHug(true); sim.setHeading(250); sim.setThrottle(0.4); s.heading=250; const alts=[]; let minAlt=1e9, maxAlt=0;
@@ -46,6 +46,8 @@ def main():
         check("stop order turns it off", js("return sim.s.hug") is False)
         r = js("sim.s.docked=true; sim.s.hug=true; sim.step(0.1); return sim.s.hug"); 
         check("docking ends it", r is False, str(r))
+        r = js("const S=await import('./js/sim.js'); return [S.diveRate(0), S.diveRate(5), S.diveRate(14), S.diveRate(60), S.diveRate(100,true)]")
+        check("dive rate depends on speed (0.5 stopped, about 0.9 at 5 kt, 2.6 at 14 kt, capped at 3, 10 in cruise)", abs(r[0]-0.5)<1e-6 and 0.8<r[1]<1.0 and 2.4<r[2]<2.8 and r[3]==3 and r[4]==10, str(r))
         check("no page errors", not errs, str(errs))
     server.shutdown()
     print("\nAll checks passed." if not fails else f"\n{len(fails)} failed"); sys.exit(1 if fails else 0)

@@ -11,7 +11,10 @@ export const setTimeScale = (n) => { if (TIME_SCALES.includes(n)) TIMESCALE = n;
 /** Turns, speed changes and dives happen in real seconds, so the boat answers the helm at once at any time compression. */
 /** Turn rate in degrees per second: 6 when slow, 3 at full speed (14 kt), 1.5 in super cruise. */
 const turnDps = (kt) => (kt <= MAX_KT ? 6 - 3 * Math.max(0, kt) / MAX_KT : 3 - 1.5 * Math.min(1, (kt - MAX_KT) / (SUPER_KT - MAX_KT)));
-const DIVE_MPS = 8;   // vertical speed, metres per second
+// Vertical speed depends on forward speed: the planes can pitch the boat about 20 degrees, so it climbs or dives at forward speed x tan(20 deg).
+// Stopped, only ballast and thrusters move it, slowly. Capped at 3 m/s (10 m/s in super cruise).
+const PITCH_TAN = Math.tan((20 * Math.PI) / 180), HOVER_MPS = 0.5, MAX_DIVE_MPS = 3, MAX_DIVE_CRUISE_MPS = 10, KT_MPS = 0.5144;
+export const diveRate = (kt, cruise = false) => Math.min(cruise ? MAX_DIVE_CRUISE_MPS : MAX_DIVE_MPS, Math.max(HOVER_MPS, Math.abs(kt) * KT_MPS * PITCH_TAN));
 const pace = () => 1;   // handling is per real second, so turns, speed changes and dives feel the same at any time compression
 const MAX_KT = 14;
 /** Super cruise: Aqua Nova can run at 100 kt in deep water. It drops out on its own when the water ahead is shallow. WSKRs have one too (120 kt). */
@@ -98,7 +101,7 @@ sim.setHug = (on) => {
   s.hug = true; sim.touch(); return { ok: true };
 };
 const hugTarget = () => {
-  const s = sim.s, ahead = clamp((s.speed / 3600) * 30, 0.08, 3), r = (s.heading * Math.PI) / 180;
+  const s = sim.s, ahead = clamp((s.speed / 3600) * 60, 0.08, 4), r = (s.heading * Math.PI) / 180;
   let low = seafloor.depthAt(s.lat, s.lon);
   for (let d = 0.05; d <= ahead + 1e-6; d += 0.05) {
     const f = seafloor.depthAt(s.lat + (d * Math.cos(r)) / NM_PER_DEG_LAT, s.lon + (d * Math.sin(r)) / (NM_PER_DEG_LAT * Math.cos((s.lat * Math.PI) / 180)));
@@ -388,7 +391,8 @@ const stepOnce = (dt) => {
     else s.targetDepth = Math.round(t);
   }
   const dd = s.targetDepth - s.depth;
-  s.depth = clamp(s.depth + clamp(dd, -DIVE_MPS * dt * pace(), DIVE_MPS * dt * pace()), 0, 6000);
+  const vz = diveRate(s.speed, s.cruise) * dt * pace();
+  s.depth = clamp(s.depth + clamp(dd, -vz, vz), 0, 6000);
   // move, then check the sea floor
   const prevLat = s.lat, prevLon = s.lon;
   const nm = (s.speed * dt * TIMESCALE) / 3600;
