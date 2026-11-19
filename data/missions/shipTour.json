@@ -62,7 +62,12 @@
           "location": "bridge"
         }
       ],
-      "after": "walkway"
+      "after": "walkway",
+      "onComplete": [
+        { "type": "unlock_crew", "crewId": "sensors" },
+        { "type": "unlock_crew", "crewId": "communications" },
+        { "type": "unlock_crew", "crewId": "security" }
+      ]
     }
   ],
   "onStart": [

@@ -7,6 +7,7 @@ import { GATES_ON } from '../unlocks.js';
 import { research } from '../science.js';
 import { el, toast } from '../util.js';
 import { gameState } from '../persist.js';
+import { crewIcon } from '../icons.js';
 import { toggleDock } from '../dock.js';
 import { say as crewSay, takeHeld, unreadFor, unreadCount, transcript, logLine } from '../notify.js';
 
@@ -157,7 +158,7 @@ export function mount(body, ctx) {
           const held = takeHeld(c.id);   // what they tried to tell the Captain while he was elsewhere
           if (held.length) { greeted = true; reply = { said: null, text: held.map((h) => (/^Captain\b/.test(h) ? h : `Captain, ${h.charAt(0).toLowerCase()}${h.slice(1)}`)).join(' '), held: true }; page = 'reply'; } else page = 'cat';
           render();
-        } }, el('span', { class: `avatar ${c.id === 'executiveOfficer' ? 'aria' : ''}`, text: initial(c) }), el('span', {}, el('b', { text: c.name }), el('small', { text: c.role })), unreadFor(c.id) > 0 && el('span', { class: 'comm-badge', text: String(unreadFor(c.id)) })))];
+        } }, el('span', { class: `avatar ${c.id === 'executiveOfficer' ? 'aria' : ''}` }, crewIcon(c.id) || initial(c)), el('span', {}, el('b', { text: c.name }), el('small', { text: c.role })), unreadFor(c.id) > 0 && el('span', { class: 'comm-badge', text: String(unreadFor(c.id)) })))];
     } else if (page === 'cat') {
       kids = [logView(5), el('div', { class: 'comm-head', text: `What is on your mind, Captain?` }), el('div', { class: 'comm-who-label', text: `${cur.name} · ${cur.role}` }),
         ...cats().map(([n, l, label]) => line(label, () => { cat = [n, l, label]; page = 'lines'; render(); }, n === 'Emergency' ? 'danger' : '')),

@@ -274,6 +274,11 @@ async function boot() {
     try {
       missions = (await import('../../game/systems/missionManager.js')).default;
       await missions.init(); initMissionLog(); startAria();
+      {   // The Captain has been on the bridge (an older save, or the tour is done): the whole bridge crew is reachable
+        const un = (gameState.getProperty('progress.stationsUnlocked') || []).map((x) => String(x).toLowerCase());
+        const onBridge = un.includes('helm') || un.includes('sys') || (gameState.getProperty('mission.completedIds') || []).includes('shipTour') || objStatus('shipTour_bridge') === 'completed';
+        if (onBridge) for (const id of ['sensors', 'communications', 'security']) if (!gameState.getProperty(`contacts.crew.${id}.known`)) gameState.unlockCrewMember(id);
+      }
     } catch (e) { console.warn('Missions unavailable', e); }
     if (!sim.s.at && !gameState.getProperty('navigation.location')) { const d = sim.dockPoi(); if (d) { sim.s.lat = d.lat; sim.s.lon = d.lon; sim.s.at = d; sim.s.docked = true; } }
     btn.disabled = false; btn.textContent = 'Board the Aqua Nova'; info.textContent = '';

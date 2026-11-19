@@ -30,6 +30,13 @@ def main():
           m.completeMission('seaTrials'); m.completeMission('seaTrials'); await new Promise(r=>setTimeout(r,300));
           return P.saveManager.getActiveLogbook().entries.map(e=>e.logbook.entryId+':'+e.logbook.content.slice(0,16)).join('|')})()""")
         check("one accepted log and one complete log, no duplicates", n.count("Mission accepted") == 1 and n.count("Mission complete") == 1, n)
+        k = page.evaluate("""(async()=>{const m=(await import('../game/systems/missionManager.js')).default;const C=await import('./js/stations/crew.js');const N=await import('./js/notify.js');
+          const ids=()=>C.knownCrew().map(c=>c.id);
+          const before=ids().includes('communications'); N.say('comms','Captain, a quick report.'); const afterSay=ids().includes('communications');
+          N.takeHeld('communications');   // reading it must not make her vanish
+          m.completeObjective('shipTour','bridge'); return {before, afterSay, stays:ids().includes('communications'), sensors:ids().includes('sensors'), security:ids().includes('security')}})()""")
+        check("comms officer stays reachable once she has called in", k["afterSay"] and k["stays"], str(k))
+        check("bridge crew reachable after the bridge visit", k["sensors"] and k["security"], str(k))
         check("no errors", not errors, str(errors))
     server.shutdown()
     print("\nAll checks passed." if not fails else f"\n{len(fails)} failed")

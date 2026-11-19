@@ -42,7 +42,10 @@ export function say(role, text, kind = '', opts = {}) {
   if (hush.fn()) return;
   text = fill(text); if (opts.keep) opts = { ...opts, keep: fill(opts.keep) };
   const now = Date.now(), w = who(role);
-  if (CREW_ID[role]) logLine(CREW_ID[role], 'crew', text);   // the running notes belong in their communicator too
+  if (CREW_ID[role]) {
+    logLine(CREW_ID[role], 'crew', text);   // the running notes belong in their communicator too
+    if (!gameState.getProperty(`contacts.crew.${CREW_ID[role]}.known`)) gameState.updateProperty(`contacts.crew.${CREW_ID[role]}.known`, true);   // someone who has spoken to the Captain stays reachable
+  }
   if ((kind === 'mission' || kind === 'error') && opts.hold !== false) {   // worth keeping until read
     const id = CREW_ID[role] || role, l = held.get(id) || []; l.push({ text: opts.keep || text, at: now }); held.set(id, l.slice(-5)); emitChange();
   }
