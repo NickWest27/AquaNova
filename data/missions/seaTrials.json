@@ -92,5 +92,7 @@
       "type": "start_mission",
       "missionId": "navLesson"
     }
-  ]
+  ],
+  "logBriefing": "OERA wants the Aqua Nova put through her paces before any survey work. My orders: take her out of the dock at Woods Hole, dive below 30 metres, run at 5 knots or better, come back up to 15 metres or less so the antenna has a link, and send the sea trials report from Comms.",
+  "logOutcome": "The ship left the dock, dived below 30 metres, made her speed and came back up to 15 metres for the antenna. I sent the report to OERA from {location} and they passed the Aqua Nova. Survey work comes next."
 }

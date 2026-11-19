@@ -94,5 +94,7 @@
       "role": "sensors",
       "text": "Captain, one more thing. The WSKRs are commissioned. They are small remote sensors that scout ahead of the ship. Deploy them from Sensors."
     }
-  ]
+  ],
+  "logBriefing": "OERA wants baseline samples from the shelf off Woods Hole. The plan: launch Remora and take a water sample at Mystic Reef with the spectrometer, take the ship about 16 nautical miles south to Vineyard Ledge and drill a rock core, have Dr. Patel analyse both samples, then send the findings to OERA from Comms.",
+  "logOutcome": "Remora brought up the reef water and the ledge core, and Dr. Patel analysed both. The findings went to OERA from {location}, with {findings} on file. They have released three research points to the science department. Deeper survey work will follow."
 }

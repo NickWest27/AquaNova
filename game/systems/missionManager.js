@@ -305,6 +305,7 @@ class MissionManager {
             }
         }
         
+        document.dispatchEvent(new CustomEvent('mission-completed', { detail: { id: missionId } }));
         this.showMissionNotification(mission.name, 'Mission Complete!');
         dlog(`Completed mission: ${missionId}`);
     }

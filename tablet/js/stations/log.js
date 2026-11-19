@@ -2,6 +2,7 @@ import { el, modal, toast } from '../util.js';
 import { saveManager, gameState, addLogEntry, snapshotSim, restoreSim, restartGame } from '../persist.js';
 import { sim } from '../sim.js';
 import { requestSync } from '../sync.js';
+import missionManager from '../../../game/systems/missionManager.js';
 
 const entryText = (e) => (e.logbook ? e.logbook.content : '');
 
@@ -33,7 +34,7 @@ export function mount(body, ctx) {
   function revert(entry) {
     modal({ title: 'Revert to this entry?', body: el('p', { text: 'The ship and mission return to this moment. Later entries are removed.' }),
       actions: [{ label: 'Cancel' }, { label: 'Revert', primary: true, kind: 'danger', run: () => {
-        try { saveManager.revertToEntry(entry.logbook.entryId); restoreSim(); sim.touch(); requestSync(); toast('Reverted'); ctx.refreshScene && ctx.refreshScene(); render(); } catch (e) { toast(e.message, 'error'); }
+        try { saveManager.revertToEntry(entry.logbook.entryId); restoreSim(); missionManager.restoreFromState(); sim.touch(); requestSync(); toast('Reverted'); ctx.refreshScene && ctx.refreshScene(); render(); } catch (e) { toast(e.message, 'error'); }
       } }] });
   }
 

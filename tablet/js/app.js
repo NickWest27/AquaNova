@@ -12,6 +12,7 @@ import { el, $, toast, pad, modal, frameThrottle, viewProbe } from './util.js';
 import { ICONS } from './ui.js';
 import { startSync, syncAtBoot } from './sync.js';
 import { isCommissioned, excuse } from './unlocks.js';
+import { initMissionLog } from './missionLog.js';
 import { initAudio, updateHum, chirp, ping } from './audio.js';
 import { gameState, loadGame, liveNav, startExitSave, saveBeforeSleep, checkpoint, addLogEntry, restoreSim } from './persist.js';
 
@@ -250,7 +251,7 @@ async function boot() {
     await syncAtBoot();                     // pick up journal notes and tasks from the phone
     try {
       missions = (await import('../../game/systems/missionManager.js')).default;
-      await missions.init();
+      await missions.init(); initMissionLog();
     } catch (e) { console.warn('Missions unavailable', e); }
     if (!sim.s.at && !gameState.getProperty('navigation.location')) { const d = sim.dockPoi(); if (d) { sim.s.lat = d.lat; sim.s.lon = d.lon; sim.s.at = d; sim.s.docked = true; } }
     btn.disabled = false; btn.textContent = 'Board the Aqua Nova'; info.textContent = '';
