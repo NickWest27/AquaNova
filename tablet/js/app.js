@@ -318,7 +318,9 @@ async function boot() {
       runIntake({ dateText: clockText(), onDone: () => { checkpoint(); syncUI(); } });
     } else {
       if (fresh) { setPlayer('Alex', 'Mercer'); gameState.updateProperty('progress.got_ped', true); }
-      if (commsLocked()) openScene('quarters'); else scene.show('bridge');
+      const resume = !fresh && gameState.getProperty('progress.read_welcome') === true && !(navigator.webdriver && !/[?&]resume=1/.test(location.search));   // tests start on the bridge unless they ask
+      if (resume) { scene.show('quarters'); openStation('log'); }   // coming back to a game, or after an update: start at the logbook
+      else if (commsLocked()) openScene('quarters'); else scene.show('bridge');
     }
     pendingModals.splice(0).forEach((run) => run());
     syncUI();

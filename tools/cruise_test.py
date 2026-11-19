@@ -28,9 +28,9 @@ def main():
         # same game time, different compression: same result
         def run(ts, n, dt):
             return js(place + f"T.setTimeScale({ts}); const c0=s.clock; sim.setThrottle(1); sim.setHeading(250); for(let i=0;i<{n};i++) sim.step({dt}); const r={{lat:s.lat,lon:s.lon,hd:s.heading,sp:s.speed,d:s.depth,clock:s.clock-c0}}; T.setTimeScale(30); return r")
-        a = run(30, 600, 0.1); b = run(120, 150, 0.1)    # both: 1800 game seconds... 600*0.1*30 = 1800; 150*0.1*120 = 1800
+        a = run(30, 600, 0.1); b = run(120, 600, 0.1)    # handling follows real seconds: same real time, same turn and speed
         close = lambda x, y, t: abs(x - y) <= t
-        check("turns and speed follow game time at any compression", close(a["hd"], b["hd"], 3) and close(a["sp"], b["sp"], 0.5) and close(a["lat"], b["lat"], 0.01) and close(a["lon"], b["lon"], 0.01), (a, b))
+        check("turns and speed follow real seconds at any compression", close(a["hd"], b["hd"], 3) and close(a["sp"], b["sp"], 0.5), (a, b))
         r = run(1, 100, 0.1)
         check("real time: the ship barely moves", abs(r["lat"] - a["lat"]) > 0 and r["clock"] < 60, r)
         # settings control

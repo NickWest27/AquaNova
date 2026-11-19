@@ -8,8 +8,11 @@ const TICK_MS = 200;
 export let TIMESCALE = 1;         // 1 real second = 1 game second (real time, the default). Settings can change it (5x to 120x); everything below reads this live.
 export const TIME_SCALES = [1, 5, 15, 30, 60, 120];   // 1 = real time
 export const setTimeScale = (n) => { if (TIME_SCALES.includes(n)) TIMESCALE = n; return TIMESCALE; };
-/** Turns, speed changes and depth changes happen in game time, so the turning circle stays the same at any time compression (30 = the old pace). */
-const pace = () => TIMESCALE / 30;
+/** Turns, speed changes and dives happen in real seconds, so the boat answers the helm at once at any time compression. */
+/** Turn rate in degrees per second: 6 when slow, 3 at full speed (14 kt), 1.5 in super cruise. */
+const turnDps = (kt) => (kt <= MAX_KT ? 6 - 3 * Math.max(0, kt) / MAX_KT : 3 - 1.5 * Math.min(1, (kt - MAX_KT) / (SUPER_KT - MAX_KT)));
+const DIVE_MPS = 8;   // vertical speed, metres per second
+const pace = () => 1;   // handling is per real second, so turns, speed changes and dives feel the same at any time compression
 const MAX_KT = 14;
 /** Super cruise: Aqua Nova can run at 100 kt in deep water. It drops out on its own when the water ahead is shallow. WSKRs have one too (120 kt). */
 export const SUPER_KT = 100, SUPER_MIN_FLOOR = 120, SUPER_LOOK_NM = [3, 6, 9], WSKR_SUPER_KT = 120, WSKR_FAR_NM = 6;
@@ -323,7 +326,7 @@ sim.etaHours = (maxHours = 96) => {
     const end = toward({ lat, lon }, route.length ? route[route.length - 1] : s.wpt);
     if (end.nm < POI_RADIUS_NM * 0.6) return (t * TIMESCALE) / 3600;
     const tw = toward({ lat, lon }, route[0] || s.wpt);
-    const turn = angDiff(tw.brg, heading), rate = 6 * dt * pace();
+    const turn = angDiff(tw.brg, heading), rate = turnDps(speed) * dt * pace();
     heading = norm360(heading + clamp(turn, -rate, rate));
     const want = Math.min(s.throttle * sim.maxKt(), autopilotCap(Math.abs(turn), route.length > 1 ? Infinity : end.nm));
     speed += clamp(want - speed, -(s.cruise ? 6 : 2) * dt * pace(), (s.cruise ? 3 : 1.2) * dt * pace());
@@ -353,7 +356,7 @@ const stepOnce = (dt) => {
     else { const steer = toward(s, s.route[0] || s.wpt); s.targetHeading = steer.brg; capDist = s.route.length > 1 ? Infinity : t.nm; }
   }
   const turn = angDiff(s.targetHeading, s.heading);
-  const rate = 6 * dt * pace(); // deg per second
+  const rate = turnDps(s.speed) * dt * pace();
   s.heading = norm360(s.heading + clamp(turn, -rate, rate));
   // speed (smooth)
   let wantKt = s.throttle * sim.maxKt() * (s.battery > 0 ? 1 : 0);
@@ -361,7 +364,7 @@ const stepOnce = (dt) => {
   s.speed += clamp(wantKt - s.speed, -(s.speed > MAX_KT ? 6 : 2) * dt * pace(), (s.cruise ? 3 : 1.2) * dt * pace());
   // depth
   const dd = s.targetDepth - s.depth;
-  s.depth = clamp(s.depth + clamp(dd, -12 * dt * pace(), 12 * dt * pace()), 0, 6000);
+  s.depth = clamp(s.depth + clamp(dd, -DIVE_MPS * dt * pace(), DIVE_MPS * dt * pace()), 0, 6000);
   // move, then check the sea floor
   const prevLat = s.lat, prevLon = s.lon;
   const nm = (s.speed * dt * TIMESCALE) / 3600;

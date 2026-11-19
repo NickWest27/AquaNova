@@ -1,7 +1,8 @@
 // Autopilot: a target behind or beside a moving ship must be reached in one turn, with no orbiting.
 globalThis.document = { addEventListener() {}, hidden: false };
 globalThis.localStorage = { getItem() { return null; }, setItem() {} };
-const { sim, toward } = await import('../tablet/js/sim.js');
+const { sim, toward, setTimeScale } = await import('../tablet/js/sim.js');
+setTimeScale(30);   // the test was written for the 30x pace
 let fails = 0;
 const check = (name, ok, extra = '') => { console.log((ok ? 'ok   ' : 'FAIL ') + name + (ok ? '' : '  ' + extra)); if (!ok) fails++; };
 function run(name, bearingDeg, distNm, startKt, throttle) {
