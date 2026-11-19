@@ -13,6 +13,10 @@ import { el, pad, toast } from './util.js';
 import { toggleDock } from './dock.js';
 import { createProfile } from './profile.js';
 import { openPlotDialog } from './plot.js';
+import { createSynth } from './synth.js';
+import { seafloor } from './seafloor.js';
+import { research } from './science.js';
+import { GATES_ON } from './unlocks.js';
 
 const KEY = 'aquaNova_bridgeDisplay';
 const set = (node, v) => { if (node._v !== v) { node._v = v; node.textContent = v; } };
@@ -22,6 +26,11 @@ const bbtn = (text, onclick, cls = '') => el('button', { class: `bbtn ${cls}`, t
 const rdRow = (label, valueNode) => el('div', { class: 'rdr' }, el('small', { text: label }), valueNode);
 const rd = (label, valueNode) => el('div', { class: 'rd' }, el('small', { text: label }), valueNode);
 const order = ['nav', 'helm', 'sys', 'view'];
+// VIEW: synthetic vision (a forward window built from the charted sea floor) or the exterior camera picture.
+// With the gates on, synthetic vision comes from the research topic of that name.
+const synthOk = () => !GATES_ON || research.has('synthetic-view');
+const RANGES = [0.5, 1, 1.5, 2, 3];
+const vopt = { mode: 'synth', range: 1.5 };   // shared by the large and the medium copy
 const labels = { nav: 'NAV', helm: 'HELM', sys: 'SYS', view: 'VIEW' };
 
 export function createBridgeConsole({ top, main, display, center, left, right, onExpand }) {
@@ -140,9 +149,19 @@ export function createBridgeConsole({ top, main, display, center, left, right, o
       const bubbles = el('div', { class: 'bubbles' }, [1, 2, 3, 4, 5, 6, 7, 8, 9].map(() => el('i')));
       const place = el('div', { class: 'hud-place' }); const bSpd = el('b'), bDep = el('b'), bHdg = el('b');
       const hud = el('div', { class: 'hud-row' }, el('div', {}, bSpd, el('small', { text: 'KNOTS' })), el('div', {}, bDep, el('small', { text: 'DEPTH M' })), el('div', {}, bHdg, el('small', { text: 'HEADING' })));
-      const m = el('div', { class: 'bd view' + (compact ? ' compact' : '') }, water, bubbles, dark, place, hud);
+      const syn = el('div', { class: 'bd-synth' }), sy = createSynth(syn);
+      const m = el('div', { class: 'bd view' + (compact ? ' compact' : '') }, water, bubbles, dark, place, hud, syn);
+      let last = 0;
       return { m, update() {
-        const s = sim.s;
+        const s = sim.s, on = vopt.mode === 'synth' && synthOk();
+        m.classList.toggle('synth-on', on);
+        if (on) {
+          if (Date.now() - last < 250) return; last = Date.now();   // a few redraws a second is plenty
+          const fl = seafloor.ready ? seafloor.depthAt(s.lat, s.lon) : null;
+          sy.draw({ lat: s.lat, lon: s.lon, heading: s.heading, depth: s.depth }, { rangeNm: vopt.range, title: 'Aqua Nova', exag: 6, inset: 80,
+            readout: [`DEPTH ${Math.round(s.depth)} m`, `ALT ${fl == null ? '—' : Math.max(0, Math.round(fl - s.depth))} m`, `SPD ${s.speed.toFixed(1)} kt`, `HDG ${pad(s.heading)}°`] });
+          return;
+        }
         set(place, s.at ? s.at.name : s.wpt ? 'En route: ' + s.wpt.name : 'Open water');
         set(bSpd, s.speed.toFixed(1)); set(bDep, String(Math.round(s.depth))); set(bHdg, pad(s.heading) + '°');
         m.classList.toggle('moving', s.speed > 0.3);
@@ -150,10 +169,19 @@ export function createBridgeConsole({ top, main, display, center, left, right, o
       } };
     };
     const lightsB = bbtn('', () => { sim.s.lights = !sim.s.lights; paint(); }); const paint = () => { lightsB.classList.toggle('on', !!sim.s.lights); }; lightsB.textContent = 'Lights'; paint();
-    const c = el('div', { class: 'bc' }, el('div', { class: 'rowN' }, el('div', { class: 'cap', text: 'EXTERIOR CAMERA' }), lightsB));
+    const modeB = bbtn('', () => { vopt.mode = vopt.mode === 'synth' ? 'camera' : 'synth'; side(); });
+    const rangeT = el('b'), step = (d) => { const i = Math.max(0, Math.min(RANGES.length - 1, RANGES.indexOf(vopt.range) + d)); vopt.range = RANGES[i]; side(); };
+    const c = el('div', { class: 'bc' }, el('div', { class: 'rowN' }, el('div', { class: 'cap', text: 'FORWARD VIEW' }), lightsB, modeB),
+      el('div', { class: 'rowN' }, el('div', { class: 'cap', text: 'RANGE' }), bbtn('−', () => step(-1)), rangeT, bbtn('+', () => step(1))));
     const r = el('div', { class: 'br' }); const pA = el('b'), pB = el('b');
     r.append(el('small', { text: 'PRESSURE' }), pA, el('small', { text: 'WATER TEMP' }), pB);
-    return { make, c, r, expand: null, side() { const s = sim.s; lightsB.classList.toggle('on', !!s.lights); set(pA, `${Math.round(s.depth / 10 + 1)} bar`); set(pB, `${s.temp.toFixed(1)} °C`); } };
+    function side() {
+      const s = sim.s, ok = synthOk();
+      lightsB.classList.toggle('on', !!s.lights);
+      modeB.textContent = !ok ? 'SYNTHETIC: RESEARCH NEEDED' : vopt.mode === 'synth' ? 'SHOW CAMERA' : 'SHOW SYNTHETIC'; modeB.disabled = !ok;
+      set(rangeT, `${vopt.range} nm`); set(pA, `${Math.round(s.depth / 10 + 1)} bar`); set(pB, `${s.temp.toFixed(1)} °C`);
+    }
+    return { make, c, r, expand: null, side };
   })();
 
   // ---------- build: one large and one compact copy of each ----------

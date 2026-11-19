@@ -627,3 +627,8 @@ input.mix { width: 100%; height: 2.4rem; accent-color: var(--cyan); }
 .item-ped img { position: absolute; inset: 0; width: 100%; height: 100%; }
 .comm-line.decide { border-color: var(--amber); color: var(--amber); }
 .f-ok { margin-right: 15cqw; }
+
+.bd-synth { position: absolute; inset: 0; display: none; background: #0a0a52; }
+.bd-synth .synth-canvas { width: 100%; height: 100%; display: block; }
+.bd.view.synth-on .bd-synth { display: block; }
+.bd.view.synth-on .water, .bd.view.synth-on .dark, .bd.view.synth-on .bubbles, .bd.view.synth-on .hud-place, .bd.view.synth-on .hud-row { display: none; }

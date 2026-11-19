@@ -32,7 +32,7 @@ export const TOPICS = [
   { id: 'rov-range', name: 'Longer tether', cost: 2, text: 'A better tether lets the Science ROV work 1.5 nm from the ship.' },
   { id: 'sonar-sweep', name: 'Deep sonar sweep', cost: 3, text: 'Lets the full sweep chart further. (Effect comes later.)' },
   { id: 'wskr-orders', name: 'WSKR formations and orders', cost: 4, text: 'Give WSKRs names and orders. (Effect comes later.)' },
-  { id: 'synthetic-view', name: 'Synthetic forward view', cost: 5, text: 'Builds a forward view on the main screen from charted sea floor. (Effect comes later.)' },
+  { id: 'synthetic-view', name: 'Synthetic forward view', cost: 5, text: 'Builds a forward view on the bridge VIEW screen from charted sea floor, with known and interpolated contour lines.' },
 ];
 
 const root = () => ({ samples: [], jobs: [], done: [], points: 0, seq: 0, stats: {}, bonus: {}, ...(gameState.getProperty('mission.science') || {}) });
