@@ -1,6 +1,7 @@
 // Crew comms through the communicator pin (Star Trek style): crew on the left, the voice channel (transcript) in the middle, things to say on the right.
 import { pendingDecisions, decide } from '../aria.js';
 import { fill } from '../player.js';
+import { reply as chatReply } from '../chat.js';
 import { sim, toward, wskrName } from '../sim.js';
 import { GATES_ON } from '../unlocks.js';
 import { research } from '../science.js';
@@ -122,7 +123,7 @@ export function mount(body, ctx) {
   function speak(text) {
     const o = cur.dialogueOptions || {};
     const isOrder = [...(o.commands || []), ...(EXTRA[cur.id] || []), ...(o.emergency || [])].includes(text);
-    if (!isOrder) { say(text, pick(o.pleasantries || ['Aye.'])); return; }
+    if (!isOrder) { say(text, chatReply(cur.id, text, { mail: (gameState.getProperty('mission.inbox') || []).filter((m) => !m.read).length }) || fill(pick(o.pleasantries || ['Aye.']))); return; }
     if (PARAM[text]) { const p = PARAM[text](); param = { said: text, ...p }; page = 'param'; render(); return; }
     if (ORDERS[text]) { say(text, ORDERS[text](ctx)); return; }
     reply = { said: text, text: 'That order is not available yet.', stub: true }; page = 'reply'; render();
