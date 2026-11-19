@@ -1,7 +1,7 @@
 // Sensors station: sonar, contacts around the ship, scans, and the WSKRs (autonomous remote sensors).
 // A scan files a finding (PED → Findings). Scanning needs the ship at the site, or a WSKR sent to investigate it.
 // WSKRs are launched only here. They hold a ring round the ship, can be sent to a contact, and can be recalled.
-import { sim, toward } from '../sim.js';
+import { sim, toward, wskrName } from '../sim.js';
 import { el, toast } from '../util.js';
 import { findings, scanned, fileScan } from '../findings.js';
 
@@ -17,7 +17,7 @@ export function mount(body) {
   const wRow = el('div', { class: 'row' });
   const depBtn = el('button', { class: 'btn chip', text: 'Deploy WSKR', onclick: () => {
     const r = sim.deployWskr();
-    toast(r.ok ? `WSKR ${r.n} deployed` : r.why === 'docked' ? 'Undock first' : 'All four WSKRs are out', r.ok ? '' : 'error'); sig = ''; update(); } });
+    toast(r.ok ? `${wskrName({ n: r.n })} launched from the bay` : r.why === 'docked' ? 'Undock first' : 'All four WSKRs are out', r.ok ? '' : 'error'); sig = ''; update(); } });
   const recBtn = el('button', { class: 'btn chip', text: 'Recall all', onclick: () => { sim.recallWskrs(); toast('WSKRs recalled'); sig = ''; update(); } });
   wRow.append(depBtn, recBtn); wsk.append(wRow);
   const list = el('div', { class: 'tab-body', style: 'flex:1;min-height:0' });
@@ -37,7 +37,7 @@ export function mount(body) {
     head.children[2].textContent = s.sonar ? `Contacts within ${SONAR_RANGE_NM} nm. The chart shows detailed contours ${sweeping ? '8' : '4'} nm round the ship. ${findings().length} scan${findings().length === 1 ? '' : 's'} filed.` : 'Sonar off: contacts hidden and only the nearest 0.8 nm is charted in detail.';
     sonarBtn.textContent = 'Sonar'; sonarBtn.classList.toggle('on', !!s.sonar);
     wsk.children[1].textContent = `${s.wskrs.length} of 4 out`;
-    wsk.children[2].textContent = s.wskrs.length ? s.wskrs.map((w) => `WSKR ${w.n}: ${wText(w, s)}`).join(' · ') : 'Autonomous remote sensors. Out, they spread round the ship for better readings, and each charts the sea floor in detail around itself. Send one to a contact to investigate it.';
+    wsk.children[2].textContent = s.wskrs.length ? s.wskrs.map((w) => `${wskrName(w)}: ${wText(w, s)}`).join(' · ') : 'Autonomous remote sensors. Out, they spread round the ship for better readings, and each charts the sea floor in detail around itself. Send one to a contact to investigate it.';
     depBtn.disabled = s.docked || s.wskrs.length >= 4; recBtn.disabled = !s.wskrs.length;
     const rows = s.sonar ? s.pois.map((p) => ({ p, ...toward(s, p) })).filter((r) => r.nm <= SONAR_RANGE_NM).sort((a, b) => a.nm - b.nm) : [];
     const idle = s.wskrs.some((w) => w.mode === 'escort');
@@ -50,7 +50,7 @@ export function mount(body) {
         el('div', { class: 'grow' }, el('h3', { text: r.p.name }), el('p', { style: 'color:var(--dim)', text: `${r.nm.toFixed(1)} nm · bearing ${String(Math.round(r.brg)).padStart(3, '0')}° · ${r.p.type.replace(/_/g, ' ')}` })),
         done ? el('span', { class: 'ok', text: 'Scanned' }) : busy ? el('span', { style: 'color:var(--amber)', text: 'WSKR investigating' })
           : [here && el('button', { class: 'btn primary', text: 'Scan', onclick: () => scan(r.p) }),
-             r.p.type !== 'dock' && (idle ? el('button', { class: 'btn chip', text: 'Send WSKR', onclick: () => { const w = sim.taskWskr(r.p); toast(`WSKR ${w.n} sent to ${r.p.name}`); sig = ''; update(); } }) : !here && el('span', { style: 'color:var(--dim)', text: s.wskrs.length ? 'No free WSKR' : 'Deploy a WSKR or move closer' }))]);
+             r.p.type !== 'dock' && (idle ? el('button', { class: 'btn chip', text: 'Send WSKR', onclick: () => { const w = sim.taskWskr(r.p); toast(`${wskrName(w)} sent to ${r.p.name}`); sig = ''; update(); } }) : !here && el('span', { style: 'color:var(--dim)', text: s.wskrs.length ? 'No free WSKR' : 'Deploy a WSKR or move closer' }))]);
     }) : [el('div', { class: 'empty', text: s.sonar ? 'No contacts in range.' : 'Sonar is off.' })]));
   }
   update();

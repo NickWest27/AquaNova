@@ -46,11 +46,17 @@ def main():
         check("to walkway", tap("TO WALKWAY") or tap("◂ WALKWAY")); page.wait_for_timeout(300)
         check("walkway to science", tap("SCIENCE / MEDICAL")); page.wait_for_timeout(500)
         page.screenshot(path=os.path.join(ROOT, "tools", "shots", "science_room.png"))
-        for label, text in [("SAMPLES", "Samples"), ("ANALYSIS", "Analysis"), ("RESEARCH", "Research"), ("LAUNCH BAY", "Launch Bay")]:
+        for label, text in [("SAMPLES", "Samples"), ("ANALYSIS", "Analysis"), ("RESEARCH", "Research"), ("REMORA", "Remora")]:
             check("open " + label, tap(label)); page.wait_for_timeout(600)
             check(label + " station shows", page.is_visible("#station") and text.lower() in page.inner_text("#station").lower(), page.inner_text("#station")[:80])
             page.screenshot(path=os.path.join(ROOT, "tools", "shots", "science_" + label.lower().replace(" ", "_") + ".png"))
             page.evaluate("document.querySelector('#station .st-head .btn').click()"); page.wait_for_timeout(300)
+        check("science to walkway", tap("WALKWAY ▸")); page.wait_for_timeout(300)
+        check("walkway to launch bay", tap("LAUNCH BAY")); page.wait_for_timeout(500)
+        check("open BAY CONTROL", tap("BAY CONTROL")); page.wait_for_timeout(600)
+        txt = page.inner_text("#station").lower()
+        check("bay shows Remora, WSKR names and Sea Crab", "remora" in txt and "mother" in txt and "sea crab" in txt, txt[:120])
+        page.screenshot(path=os.path.join(ROOT, "tools", "shots", "launch_bay.png"))
         check("no page errors", not errors, errors[:3])
         browser.close()
     server.shutdown()

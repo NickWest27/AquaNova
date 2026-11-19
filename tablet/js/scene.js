@@ -78,6 +78,7 @@ export function createScene(stage, { onOpen }) {
     door('BRIDGE', 790, 360, 340, 400, 'bridge', 'far'),
     door('QUARTERS', 120, 300, 340, 520, 'quarters'),
     door('ENGINEERING', 470, 360, 190, 400, 'engineering', 'near-l'),
+    door('LAUNCH BAY', 1240, 360, 190, 400, 'launchbay', 'near-l'),
     door('SCIENCE / MEDICAL', 1460, 300, 340, 520, 'science'),
     el('div', { class: 'art-note', text: 'Placeholder art' }));
   // science lab: placeholder art (medbay concept). Samples, analysis and research live in the Lab station; the ROV in the Launch Bay.
@@ -86,17 +87,27 @@ export function createScene(stage, { onOpen }) {
     hs('SAMPLES', 20, 400, 780, 560, () => onOpen('lab'), 'top'),
     hs('ANALYSIS', 520, 250, 300, 340, () => onOpen('lab-analysis'), 'top'),
     hs('RESEARCH', 1660, 440, 260, 560, () => onOpen('lab-research'), 'bottom'),
-    hs('LAUNCH BAY', 1500, 320, 260, 330, () => onOpen('launch'), 'mid'),
+    hs('REMORA', 830, 300, 190, 220, () => onOpen('remora'), 'top'),
+    hs('WALKWAY ▸', 1500, 320, 260, 330, () => onOpen('walkway'), 'mid'),
     hs('MEDBAY', 1040, 540, 520, 300, () => onOpen('medbay'), 'mid', 'locked'),
-    hs('WALKWAY ▸', 840, 900, 320, 180, () => onOpen('walkway'), 'mid'),
     el('div', { class: 'art-note', text: 'Placeholder art' }));
-  stage.append(bridge, quarters, walkway, science);
+  // launch bay: placeholder art. Where Remora, the WSKRs and the away boats physically leave and return.
+  const bay = el('div', { class: 'scene bay', hidden: true });
+  bay.innerHTML = `<svg viewBox="0 0 1920 1080" preserveAspectRatio="none" aria-hidden="true"><rect width="1920" height="1080" fill="#04101f"/>
+    <rect x="0" y="700" width="1920" height="380" fill="#0a2536"/><rect x="260" y="180" width="1400" height="520" rx="30" fill="#06202e" stroke="#2f8f9d" stroke-width="4" opacity=".9"/>
+    <rect x="300" y="620" width="1320" height="40" fill="#14465a"/><g stroke="#f2d9a0" stroke-width="6" opacity=".6"><line x1="260" y1="700" x2="1660" y2="700"/></g>
+    <g fill="none" stroke="#2f8f9d" stroke-width="3" opacity=".6"><rect x="420" y="330" width="360" height="200" rx="20"/><rect x="1140" y="330" width="360" height="200" rx="20"/></g>
+    <text x="600" y="440" fill="#2f8f9d" font-size="34" font-family="sans-serif" text-anchor="middle" opacity=".7">REMORA</text><text x="1320" y="440" fill="#2f8f9d" font-size="34" font-family="sans-serif" text-anchor="middle" opacity=".7">WSKR RACK</text></svg>`;
+  bay.append(hs('BAY CONTROL', 760, 560, 400, 200, () => onOpen('bay'), 'mid'),
+    hs('◂ WALKWAY', 0, 890, 330, 190, () => onOpen('walkway'), 'mid'),
+    el('div', { class: 'art-note', text: 'Placeholder art' }));
+  stage.append(bridge, quarters, walkway, science, bay);
 
   const api = {
     inQuarters: false, where: 'bridge',
     show(which) {
       api.where = which; api.inQuarters = which === 'quarters';
-      bridge.hidden = which !== 'bridge'; quarters.hidden = which !== 'quarters'; walkway.hidden = which !== 'walkway'; science.hidden = which !== 'science';
+      bridge.hidden = which !== 'bridge'; quarters.hidden = which !== 'quarters'; walkway.hidden = which !== 'walkway'; science.hidden = which !== 'science'; bay.hidden = which !== 'launchbay';
       cache.clear(); api.update();
     },
     update() {

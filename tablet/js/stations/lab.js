@@ -27,7 +27,7 @@ export function mount(body, ctx) {
           el('p', { style: 'color:var(--dim)', text: `${q.site} · ${q.tool} · ${q.status === 'done' ? q.result : q.status === 'running' ? 'being analysed' : 'waiting for analysis'}` })),
         q.status === 'done' ? el('span', { class: 'ok', text: 'Done' }) : q.status === 'running' ? el('span', { style: 'color:var(--amber)', text: 'Running' })
           : el('button', { class: 'btn chip', text: 'Analyse', onclick: () => go('analysis') }))) :
-        [el('div', { class: 'empty', text: 'No samples yet. Launch the Science ROV from the Launch Bay and collect some.' })]));
+        [el('div', { class: 'empty', text: 'No samples yet. Launch Remora from the Science Lab and collect some.' })]));
     } else if (tab === 'analysis') {
       view.replaceChildren(...Object.entries(LABS).map(([id, lab]) => {
         const job = jb.find((j) => j.lab === id), raw = sm.filter((q) => q.status === 'raw' && SAMPLE_KINDS[q.kind].lab === id);

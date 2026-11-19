@@ -33,7 +33,7 @@ export function snapshotSim() {
     gameState.updateProperty('navigation.destination', s.wpt ? s.wpt.name : null);
     gameState.updateProperty('navigation.waypoint', s.wpt && s.wpt.type === 'waypoint' ? { name: s.wpt.name, lat: +s.wpt.lat.toFixed(5), lon: +s.wpt.lon.toFixed(5) } : null);
     gameState.updateProperty('navigation.docked', !!s.docked);
-    gameState.updateProperty('navigation.wskrs', s.wskrs.map((w) => ({ lat: +w.lat.toFixed(5), lon: +w.lon.toFixed(5), n: w.n, mode: w.mode, target: w.target })));
+    gameState.updateProperty('navigation.wskrs', s.wskrs.map((w) => ({ lat: +w.lat.toFixed(5), lon: +w.lon.toFixed(5), n: w.n, name: w.name, mode: w.mode, target: w.target })));
     gameState.updateProperty('navigation.rov', s.rov ? { lat: +s.rov.lat.toFixed(5), lon: +s.rov.lon.toFixed(5), heading: Math.round(s.rov.heading), depth: Math.round(s.rov.depth) } : null);
     gameState.updateProperty('progress.gameClock', Math.round(s.clock));
     gameState.updateProperty('shipSystems.vitals', { battery: +s.battery.toFixed(1), oxygen: +s.oxygen.toFixed(1) });
