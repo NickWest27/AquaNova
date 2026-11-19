@@ -18,7 +18,7 @@ export const sim = {
     throttle: 0, speed: 0, depth: 0, targetDepth: 0,
     battery: 100, oxygen: 100, hull: 100, co2: 0.04, temp: 4.1, power: 0,
     ballast: 100, comms: true, sonar: true, lights: true, pois: [], wpt: null, route: [], routeSnapped: false, _routeFor: null, at: null,
-    clock: 6 * 3600, docked: false, damage: 0, floor: null, wskrs: [], sweepUntil: 0,     // clock = game seconds since Day 1 00:00
+    clock: 6 * 3600, docked: false, damage: 0, floor: null, wskrs: [], wskrForm: 'loose', sweepUntil: 0,     // clock = game seconds since Day 1 00:00
   },
   listeners: new Set(),
   dirty: true,
@@ -85,6 +85,11 @@ sim.stop = () => { sim.s.throttle = 0; sim.s.wpt = null; sim.touch(); };
  *  can be sent to investigate a site, and can be recalled. Launched only from the Sensors station. Up to 4.
  *  Each: { n, lat, lon, mode: 'escort' | 'task' | 'recall', target: poi id | null, busy: game seconds spent investigating } */
 const WSKR_KT = 10, WSKR_RING_NM = 1.5, WSKR_INVESTIGATE_S = 90;
+export const WSKR_TIGHT_NM = 0.5, WSKR_LINK_NM = 3, SEARCH_LEG_NM = 0.45, SEARCH_LEGS = 14, WSKR_TURN_DPS = 30;
+/** Orders: escort (hold formation), manual (touch control, link range 3 nm from the ship or a relay), search (expanding square),
+ *  relay (hold here and extend the manual link), task, recall. Depth: auto (12 m above the floor), shallow (8 m), deep (4 m above the floor).
+ *  Formation is one setting for the fleet: loose (1.5 nm ring) or tight (0.5 nm). */
+export const WSKR_DEPTHS = { auto: 'Auto', shallow: 'Shallow', deep: 'Deep' };
 export const WSKR_NAMES = ['Scout', 'Lantern', 'Drifter', 'Sprat'];   // placeholders, our own names
 /** Each WSKR has a small edge that fits its name. Sizes are small on purpose. */
 export const WSKR_PERKS = {
@@ -94,8 +99,28 @@ export const WSKR_PERKS = {
   4: { text: 'Sprat is quicker (12 kt) and finishes a site in 70 s.', kt: 12, investigate: 70 },
 };
 /** A WSKR as a craft for the craft page: position, heading, depth (about 12 m above the floor, at most 40 m) and speed. */
-export const wskrCraft = (w) => { const fl = seafloor.ready ? seafloor.depthAt(w.lat, w.lon) : null; return { lat: w.lat, lon: w.lon, heading: w.heading == null ? sim.s.heading : w.heading, depth: fl == null ? 10 : Math.max(2, Math.min(40, fl - 12)), kt: w.moving ? (wskrPerk(w).kt || WSKR_KT) : 0 }; };
+export const wskrCraft = (w) => { const fl = seafloor.ready ? seafloor.depthAt(w.lat, w.lon) : null; return { lat: w.lat, lon: w.lon, heading: w.heading == null ? sim.s.heading : w.heading, depth: fl == null ? 10 : w.dep === 'shallow' ? Math.max(2, Math.min(fl - 3, 8)) : w.dep === 'deep' ? Math.max(2, Math.min(fl - 4, 200)) : Math.max(2, Math.min(40, fl - 12)), kt: w.moving ? (wskrPerk(w).kt || WSKR_KT) : 0 }; };
 sim.recallWskr = (n) => { const w = sim.s.wskrs.find((q) => q.n === n); if (!w) return false; w.mode = 'recall'; w.target = null; w.route = null; sim.touch(); return true; };
+/** Give an order to one WSKR. order: 'escort' | 'manual' | 'search' | 'relay'. Returns false if there is no such WSKR. */
+sim.orderWskr = (n, order) => {
+  const w = sim.s.wskrs.find((q) => q.n === n); if (!w || !['escort', 'manual', 'search', 'relay'].includes(order)) return false;
+  w.mode = order; w.target = null; w.route = null; w.thr = 0; w.turn = 0; w.limited = false;
+  if (w.heading == null) w.heading = sim.s.heading;
+  if (order === 'search') w.pat = { lat: w.lat, lon: w.lon, k: 1, t: 0 };
+  if (order === 'relay') w.hold = { lat: w.lat, lon: w.lon };
+  sim.touch(); return true;
+};
+sim.setWskrDepth = (n, dep) => { const w = sim.s.wskrs.find((q) => q.n === n); if (!w || !WSKR_DEPTHS[dep]) return false; w.dep = dep; sim.touch(); return true; };
+sim.setWskrForm = (f) => { if (f !== 'loose' && f !== 'tight') return false; sim.s.wskrForm = f; sim.s.wskrs.forEach((w) => { if (w.mode === 'escort') w.route = null; }); sim.touch(); return true; };
+/** Manual helm: turn -1/0/1 (held), thr 0..1 (share of top speed). */
+sim.wskrHelm = (n, { turn, thr } = {}) => { const w = sim.s.wskrs.find((q) => q.n === n); if (!w || w.mode !== 'manual') return false; if (turn != null) w.turn = turn; if (thr != null) w.thr = Math.max(0, Math.min(1, thr)); return true; };
+/** Control link: distance to the nearest of the ship and any relay WSKR (not itself). */
+sim.wskrLink = (w, at = w) => { const s = sim.s; let nm = toward(s, at).nm; for (const r of s.wskrs) if (r !== w && r.mode === 'relay') nm = Math.min(nm, toward(r, at).nm); return { nm, max: WSKR_LINK_NM, ok: nm <= WSKR_LINK_NM }; };
+function searchPoint(p, k) {
+  let x = 0, y = 0; const dirs = [[0, 1], [1, 0], [0, -1], [-1, 0]];
+  for (let i = 0; i < k; i++) { const len = SEARCH_LEG_NM * (Math.floor(i / 2) + 1), d = dirs[i % 4]; x += d[0] * len; y += d[1] * len; }
+  return { lat: p.lat + y / NM_PER_DEG_LAT, lon: p.lon + x / (NM_PER_DEG_LAT * Math.cos((p.lat * Math.PI) / 180)) };
+}
 export const wskrPerk = (w) => WSKR_PERKS[w.n] || {};
 export const wskrName = (w) => w.name || WSKR_NAMES[w.n - 1] || `WSKR ${w.n}`;
 sim.deployWskr = () => {
@@ -127,8 +152,24 @@ function stepWskrs(dt) {
     w.moving = false;
     if (seafloor.ready && !wskrPassable(w.lat, w.lon)) { const sp = nearestWater(w.lat, w.lon); if (sp) { w.lat = sp.lat; w.lon = sp.lon; w.route = null; } }   // never sit on land (after a load, a ship move, or a thin spit)
     let goal = null; const perk = wskrPerk(w), step = (((perk.kt || WSKR_KT) * dt) * TIMESCALE) / 3600;
-    const ring = perk.drift ? WSKR_RING_NM + 0.9 * (0.5 + 0.5 * Math.sin((s.clock / 3600) * 2 * Math.PI)) : WSKR_RING_NM;
+    const ring = s.wskrForm === 'tight' ? WSKR_TIGHT_NM : perk.drift ? WSKR_RING_NM + 0.9 * (0.5 + 0.5 * Math.sin((s.clock / 3600) * 2 * Math.PI)) : WSKR_RING_NM;
+    if (w.mode === 'manual') {
+      const kt = (perk.kt || WSKR_KT) * (w.thr || 0), nm = (kt * dt * TIMESCALE) / 3600;
+      w.heading = (((w.heading == null ? s.heading : w.heading) + (w.turn || 0) * WSKR_TURN_DPS * dt) % 360 + 360) % 360;
+      if (nm > 0 && seafloor.ready) {
+        w.limited = false;
+        const a = (w.heading * Math.PI) / 180, lat = w.lat + (Math.cos(a) * nm) / NM_PER_DEG_LAT, lon = w.lon + (Math.sin(a) * nm) / (NM_PER_DEG_LAT * Math.cos((w.lat * Math.PI) / 180));
+        let clear = true, nl; const pieces = Math.max(1, Math.ceil(nm / 0.02));
+        for (let k = 1; clear && k <= pieces; k++) clear = wskrPassable(w.lat + ((lat - w.lat) * k) / pieces, w.lon + ((lon - w.lon) * k) / pieces);
+        if (!clear) { w.thr = 0; w.blockedNow = true; }
+        else if (!(nl = sim.wskrLink(w, { lat, lon })).ok && nl.nm > sim.wskrLink(w).nm) { w.thr = 0; w.limited = true; }
+        else { w.lat = lat; w.lon = lon; w.moving = true; w.blockedNow = false; }
+      }
+      return true;
+    }
     if (w.mode === 'escort') { const i = esc.indexOf(w), a = ((s.heading + (360 / esc.length) * i + (wskrPerk(esc[0]).lead ? 0 : 45)) * Math.PI) / 180; goal = { lat: s.lat + (Math.cos(a) * ring) / NM_PER_DEG_LAT, lon: s.lon + (Math.sin(a) * ring) / (NM_PER_DEG_LAT * Math.cos((s.lat * Math.PI) / 180)) }; }
+    else if (w.mode === 'search') goal = searchPoint(w.pat || (w.pat = { lat: w.lat, lon: w.lon, k: 1, t: 0 }), w.pat.k);
+    else if (w.mode === 'relay') goal = w.hold || (w.hold = { lat: w.lat, lon: w.lon });
     else if (w.mode === 'task') { goal = s.pois.find((p) => p.id === w.target); if (!goal) { w.mode = 'escort'; return true; } }
     else goal = s;
     // Route round land. Replanned when the goal has moved on (escorts and recalls follow the ship) or after a failed attempt.
@@ -145,8 +186,12 @@ function stepWskrs(dt) {
       if (w.busy >= (perk.investigate || WSKR_INVESTIGATE_S)) { const p = s.pois.find((q) => q.id === w.target); w.mode = 'escort'; w.target = null; w.route = null; sim.emit('wskr-found', { wskr: w, poi: p }); }
       return true;
     }
+    if (w.mode === 'search') {                  // expanding square: next corner when this one is reached (or after 30 game minutes)
+      w.pat.t += dt * TIMESCALE;
+      if (onSite || w.pat.t > 1800) { w.pat.k++; w.pat.t = 0; w.route = null; if (w.pat.k > SEARCH_LEGS) { w.mode = 'escort'; w.pat = null; sim.emit('wskr-search-done', w); } return true; }
+    }
     const aim = w.route[0] || goal, ta = toward(w, aim);
-    if (ta.nm > 0.02 && !(w.mode === 'escort' && t.nm < 0.05)) {
+    if (ta.nm > 0.02 && !((w.mode === 'escort' || w.mode === 'relay') && t.nm < 0.05)) {
       const f = Math.min(1, step / ta.nm), lat = w.lat + (aim.lat - w.lat) * f, lon = w.lon + (aim.lon - w.lon) * f;
       // walk the step in small pieces so a thin strip of land cannot be jumped; no data yet means hold still
       let clear = seafloor.ready; const pieces = Math.max(1, Math.ceil(Math.min(step, ta.nm) / 0.02));

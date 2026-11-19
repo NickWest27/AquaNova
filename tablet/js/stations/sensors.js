@@ -30,7 +30,7 @@ export function mount(body, ctx) {
     if (!fileScan(p)) { tell('sensors', 'Already scanned'); return; }
     ctx.flag('scanned'); tell('sensors', `Scan filed: ${p.name}`, 'mission'); sig = ''; update();
   };
-  const wText = (w, s) => w.mode === 'escort' ? 'holding formation' : w.mode === 'recall' ? 'returning' : `investigating ${(s.pois.find((p) => p.id === w.target) || {}).name || 'a contact'}`;
+  const wText = (w, s) => ({ escort: 'holding formation', recall: 'returning', manual: 'manual control', search: 'searching', relay: 'relay' })[w.mode] || `investigating ${(s.pois.find((p) => p.id === w.target) || {}).name || 'a contact'}`;
 
   function update() {
     const s = sim.s, sweeping = s.clock < (s.sweepUntil || 0);
