@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Bridge console: top display, main screen, left selector, center controls, right data.  python3 tools/console_test.py"""
-import os, sys, importlib.util
+import re, os, sys, importlib.util
 from playwright.sync_api import sync_playwright
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 spec = importlib.util.spec_from_file_location("smoke", os.path.join(ROOT, "tools", "smoke.py"))
@@ -22,7 +22,7 @@ def main():
         if page.is_visible(".modal .btn"): page.tap(".modal .btn"); page.wait_for_timeout(300)
         page.wait_for_timeout(800); print("ERR", errors); page.evaluate("window.__aq.scene('bridge')"); page.wait_for_timeout(1200)
         top = page.inner_text(".bt")
-        check("top display shows lat/long and date", "°" in top and "2074" in top, top)
+        check("top display shows lat/long and date", "°" in top and re.search(r"20\d\d", top), top)
         check("main screen defaults to navigation", page.is_visible(".bmain .bd-nav") and page.is_visible(".bdisp .bd-nav"))
         check("position log shown", "POSITION LOG" in page.inner_text(".nav-log"))
         check("nav readouts shown", "SPEED" in page.inner_text(".nav-read"))

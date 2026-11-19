@@ -18,7 +18,7 @@ def main():
         page = ctx.new_page(); errors = []
         page.on("pageerror", lambda e: errors.append(str(e)[:200]))
         page.on("console", lambda m: errors.append(m.text[:200]) if m.type == "error" else None)
-        js = lambda code: page.evaluate("(async()=>{const sim=(await import('./js/sim.js')).sim;const sf=(await import('./js/seafloor.js')).seafloor;" + code + "})()")
+        js = lambda code: page.evaluate("(async()=>{const sim=(await import('./js/sim.js')).sim;const sf=(await import('./js/seafloor.js')).seafloor;sim.s.autoAvoid=false;(await import('./js/sim.js')).setTimeScale(30);" + code + "})()")
         page.goto(base); page.wait_for_function("!document.getElementById('board-btn').disabled", timeout=20000)
         page.tap("#board-btn"); page.wait_for_timeout(1500)
         if page.is_visible(".modal .btn"): page.tap(".modal .btn"); page.wait_for_timeout(300)

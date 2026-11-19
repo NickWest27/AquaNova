@@ -90,7 +90,7 @@ function superWaterAhead() {
 }
 sim.setThrottle = (v) => { if (sim.s.docked) return; sim.s.throttle = clamp(v, 0, 1); sim.touch(); };
 sim.setHeading = (h) => { sim.s.targetHeading = norm360(h); sim.touch(); };
-sim.setDepth = (d) => { if (sim.s.docked) return; sim.s.hug = false; sim.s.targetDepth = clamp(d, 0, 6000); sim.touch(); };   // a depth order ends "hug the floor"
+sim.setDepth = (d) => { if (sim.s.docked) return; sim.s.hug = false; sim.s.avoiding = false; sim.s.targetDepth = clamp(d, 0, 6000); sim.touch(); };   // a depth order ends "hug the floor"
 /** "Hug the floor": the helm keeps the ship HUG_ALT metres above the sea floor, looking ahead along the course so it climbs before a rise. */
 export const HUG_ALT = 10, HUG_MIN_FLOOR = KEEL + HUG_ALT + 2;
 sim.setHug = (on) => {
@@ -390,7 +390,18 @@ const stepOnce = (dt) => {
     if (t == null || (s.floor != null && s.floor < HUG_MIN_FLOOR)) { s.hug = false; sim.emit('hug-off', { why: s.docked ? 'docked' : 'shallow' }); }
     else s.targetDepth = Math.round(t);
   }
-  const dd = s.targetDepth - s.depth;
+  // Terrain protection: the helm never lets a depth order put the ship into the floor. If the ground within a minute
+  // of travel is shallower than the ordered depth, it holds HUG_ALT above it; when the ground falls away it goes back
+  // to the ordered depth (never deeper). s.targetDepth stays the Captain's order.
+  let want = s.targetDepth;
+  if (!s.hug && !s.docked && s.autoAvoid !== false && seafloor.ready && seafloor.inside(s.lat, s.lon)) {
+    const dock = sim.dockPoi(), harbor = dock && toward(s, dock).nm < HARBOR_NM, lim = harbor ? null : hugTarget();
+    if (lim != null && lim < s.targetDepth) {
+      want = lim;
+      if (!s.avoiding) { s.avoiding = true; const now = Date.now(); if (now - (sim.lastAvoid || 0) > 20000) { sim.lastAvoid = now; sim.emit('avoid-on', { hold: Math.round(lim), ordered: Math.round(s.targetDepth), ahead: s.speed > 0.5 }); } }
+    } else if (s.avoiding) { s.avoiding = false; if (Date.now() - (sim.lastAvoid || 0) > 3000) sim.emit('avoid-off', { ordered: Math.round(s.targetDepth) }); }
+  } else s.avoiding = false;
+  const dd = want - s.depth;
   const vz = diveRate(s.speed, s.cruise) * dt * pace();
   s.depth = clamp(s.depth + clamp(dd, -vz, vz), 0, 6000);
   // move, then check the sea floor
