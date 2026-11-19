@@ -63,6 +63,7 @@ def main():
         fly(10, 1); page.wait_for_timeout(300)
         o = objs(); check("surface complete at 10 m", "surface:completed" in o and "report:active" in o, o)
         page.evaluate("window.__aq.open('comms')"); page.wait_for_timeout(500)
+        page.evaluate("[...document.querySelectorAll('#station .tabs .btn')].find(b=>b.textContent.startsWith('Mail')).click()"); page.wait_for_timeout(200)
         check("link up at 10 m", page.is_visible("text=LINK UP"))
         page.screenshot(path=f"{SHOTS}/m-2link.png")
         page.tap('button:text-is("Transmit report")'); page.wait_for_timeout(600)

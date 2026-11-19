@@ -517,3 +517,25 @@ textarea.field { min-height: 6rem; resize: none; }
 
 .btn.chip.comm-btn { border-color: #d9b93a; color: #e8d27a; }
 .btn.chip.comm-btn.unread { background: #d9b93a; color: #04101f; animation: pinglow 1.2s ease-in-out infinite; }
+
+/* ---- comms console: Links page ---- */
+.cl-grid { display: grid !important; grid-template-columns: repeat(4, minmax(0, 1fr)) 21rem; grid-template-rows: auto auto minmax(9rem, 1fr); gap: 0.7rem; }
+.cl-card { text-align: left; font: inherit; color: inherit; background: var(--panel); border: 2px solid #2f5fa8; border-radius: 0.9rem 0.9rem 0.4rem 0.4rem; padding: 0.7rem 0.9rem; display: flex; flex-direction: column; gap: 0.15rem; min-height: 8rem; cursor: pointer; }
+.cl-card.on { border-color: #e6e66a; box-shadow: 0 0 0 1px #e6e66a inset; }
+.cl-tag { font: 800 1.3rem var(--mono); color: #6fa8ff; text-align: right; }
+.cl-v { font: 700 1.05rem var(--mono); color: #e6e66a; letter-spacing: 0.04em; }
+.cl-k { font: 600 0.85rem var(--mono); color: #6fa8ff; letter-spacing: 0.08em; }
+.cl-st { font: 800 1.05rem var(--mono); letter-spacing: 0.06em; }
+.cl-panel { background: rgba(10, 31, 51, 0.7); border: 1px solid var(--line-soft); border-radius: 0.6rem; padding: 0.7rem 0.9rem; min-width: 0; }
+.cl-sig { grid-column: 1 / 3; grid-row: 2; } .cl-bands { grid-column: 3 / 5; grid-row: 2; }
+.cl-sat { grid-column: 5; grid-row: 1 / 3; }
+.cl-spec { grid-column: 1 / 5; grid-row: 3; display: flex; padding: 0.4rem; } .cl-mapbox { grid-column: 5; grid-row: 3; display: flex; padding: 0.4rem; }
+.cl-row { display: flex; justify-content: space-between; gap: 0.6rem; padding: 0.12rem 0; }
+.cl-banner { margin-top: 0.5rem; padding: 0.4rem 0.6rem; border: 2px solid #2f5fa8; border-radius: 0.3rem; font: 800 0.95rem var(--mono); letter-spacing: 0.08em; text-align: center; }
+.cl-banner.ok { color: #e6e66a; border-color: #e6e66a; } .cl-banner.warn { color: var(--amber); border-color: var(--amber); } .cl-banner.bad { color: var(--red); border-color: var(--red); }
+.cl-band { display: grid; grid-template-columns: 1rem 3.2rem 7.6rem 3.4rem minmax(0, 1fr); white-space: nowrap; gap: 0.35rem; font-size: 0.9rem; align-items: center; gap: 0.5rem; padding: 0.1rem 0; }
+.cl-bid { font: 800 1rem var(--mono); color: #e6e66a; } .cl-band .cl-v, .cl-band .cl-k { font-size: 0.85rem; } .cl-band .cl-v { text-align: right; }
+.lamp { width: 0.8rem; height: 0.8rem; border-radius: 50%; background: #444; display: block; }
+.lamp.ok { background: var(--green); box-shadow: 0 0 6px var(--green); } .lamp.bad { background: var(--red); opacity: 0.7; }
+.cl-canvas { width: 100%; height: 100%; min-height: 0; object-fit: fill; }
+.cl-map { image-rendering: pixelated; }

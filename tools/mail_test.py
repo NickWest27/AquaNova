@@ -22,6 +22,7 @@ def main():
         if page.is_visible(".modal .btn"): page.tap(".modal .btn"); page.wait_for_timeout(300)
         page.evaluate("""(async()=>{const m=(await import('../game/systems/missionManager.js')).default; m.sendMessage({id:'t1',from:'OERA Operations',subject:'Sea Trials Order',missionId:'seaTrials',text:'Line one.\\n\\nLine two.'}); window.__aq.open('comms');})()""")
         page.wait_for_timeout(700)
+        page.evaluate("[...document.querySelectorAll('#station .tabs .btn')].find(b=>b.textContent.startsWith('Mail')).click()"); page.wait_for_timeout(200)
         row = page.query_selector(".mail-row")
         check("inbox row shows sender and subject", row is not None and "OERA Operations" in row.inner_text() and "Sea Trials Order" in row.inner_text(), row and row.inner_text())
         page.evaluate("window.__fr=[]; new MutationObserver(()=>{const f=document.querySelector('.mail-zoom'); if(f) window.__fr.push(f.style.cssText)}).observe(document.getElementById('station'),{subtree:true,attributes:true,childList:true}); document.querySelector('.mail-row').click()")
