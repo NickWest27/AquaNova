@@ -19,7 +19,7 @@ export function mount(body) {
 
   const renderPick = () => {
     pick.replaceChildren();
-    if (!sel) { pick.append(el('div', { class: 'lbl', text: 'Destination' }), el('p', { class: 'empty', text: sim.s.wpt ? 'Course set: ' + sim.s.wpt.name : 'None selected' }), plotAny, ...(sim.s.wpt ? [el('button', { class: 'btn warn', text: 'Cancel course', onclick: () => { sim.stop(); renderPick(); } })] : [])); return; }
+    if (!sel) { pick.append(el('div', { class: 'lbl', text: 'Destination' }), el('p', { class: 'empty', text: sim.s.wpt ? 'Course set: ' + sim.s.wpt.name : 'None selected' }), plotAny, ...(sim.s.wpt ? [el('button', { class: 'btn warn', text: 'Cancel course', onclick: () => { sim.cancelCourse(); renderPick(); } })] : [])); return; }
     const t = toward(sim.s, sel);
     pick.append(
       el('div', { class: 'lbl', text: sel.type }), el('div', { class: 'num wpt', text: sel.name }),

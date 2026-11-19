@@ -50,7 +50,7 @@
     {
       "type": "crew_say",
       "role": "aria",
-      "text": "Navigation is signed off, Captain. Open it and plot a course to Mystic Reef. It is only a short way from the dock."
+      "text": "Navigation is signed off, Captain. Open it and plot a course to Mystic Reef. It is only a short way from the dock. Plotting steers the ship but does not change speed, so set a speed at the Helm as well."
     }
   ],
   "onComplete": [

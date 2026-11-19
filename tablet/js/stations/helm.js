@@ -7,7 +7,7 @@ import { toggleDock } from '../dock.js';
 
 export function mount(body) {
   body.classList.add('helm-st');
-  const thr = createLever({ ticks: [{ v: 1, label: 'FULL' }, { v: 0.5, label: 'HALF' }, { v: 0, label: 'STOP' }], onInput: (v) => { sim.setThrottle(Math.round(v * 20) / 20); sim.s.wpt = null; } });
+  const thr = createLever({ ticks: [{ v: 1, label: 'FULL' }, { v: 0.5, label: 'HALF' }, { v: 0, label: 'STOP' }], onInput: (v) => { sim.setThrottle(Math.round(v * 20) / 20); } });
   const dep = createLever({ ticks: [{ v: 1, label: '0' }, { v: 0.5, label: '3000' }, { v: 0, label: '6000' }], onInput: (v) => sim.setDepth(Math.round((1 - v) * 600) * 10) });
   const dial = createDial({ onInput: (h) => { sim.setHeading(h); sim.s.wpt = null; } });
   const spd = el('div', { class: 'num' }), dp = el('div', { class: 'num' });

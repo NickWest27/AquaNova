@@ -66,7 +66,11 @@ def main():
         page.evaluate("[...document.querySelectorAll('#station .tabs .btn')].find(b=>b.textContent.startsWith('Mail')).click()"); page.wait_for_timeout(200)
         check("link up at 10 m", page.is_visible("text=LINK UP"))
         page.screenshot(path=f"{SHOTS}/m-2link.png")
-        page.tap('button:text-is("Transmit report")'); page.wait_for_timeout(600)
+        page.tap('button:text-is("Transmit report")')
+        for _ in range(80):   # the upload takes real time now (a few seconds to a minute by link); the report counts when it is out
+            page.wait_for_timeout(500)
+            if js(G + "return (g.getProperty('mission.outbox')||[]).length")  >= 1: break
+        page.wait_for_timeout(600)
         done = js(G + "return [g.getProperty('mission.completedIds'), (g.getProperty('mission.objectives')||[]).filter(o=>o.missionId==='seaTrials').length, (g.getProperty('mission.inbox')||[]).map(m=>m.id), g.getProperty('mission.outbox').length]")
         check("report completes Sea Trials", "seaTrials" in done[0] and done[1] == 0, done)
         check("OERA reply arrives", "oera-trials-done" in done[2], done)

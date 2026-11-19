@@ -1,7 +1,7 @@
 // Crew comms through the communicator pin (Star Trek style): crew on the left, the voice channel (transcript) in the middle, things to say on the right.
 import { pendingDecisions, decide } from '../aria.js';
 import { fill } from '../player.js';
-import { reply as chatReply } from '../chat.js';
+import { reply as chatReply, statusReport } from '../chat.js';
 import { sim, toward, wskrName, HUG_ALT, HUG_MIN_FLOOR } from '../sim.js';
 import { GATES_ON } from '../unlocks.js';
 import { research } from '../science.js';
@@ -43,7 +43,9 @@ const hdgText = (h) => String(Math.round(((h % 360) + 360) % 360)).padStart(3, '
 
 // Orders that do something. Anything not listed here (or in PARAM) is shown in the "not yet" colour.
 // Orders added here show up even in old saves (a save keeps its own copy of the crew's lines).
-const EXTRA = { helm: ['Undock', 'Dock', 'Hug the floor', 'Stop hugging the floor', 'Engage super cruise', 'Disengage super cruise'], sensors: ['Set up a relay', 'Stand down the relay'], communications: ['Transmit a report'] };
+const unreadMail = () => (gameState.getProperty('mission.inbox') || []).filter((m) => !m.read).length;
+const reportFor = (ctx, id) => statusReport(id, { mail: unreadMail(), objective: (() => { try { const o = ctx.objectives().find((x) => !x.done); return o ? o.text : null; } catch (e) { return null; } })() });
+const EXTRA = { helm: ['Status report', 'Undock', 'Dock', 'Hug the floor', 'Stop hugging the floor', 'Engage super cruise', 'Disengage super cruise'], sensors: ['Status report', 'Set up a relay', 'Stand down the relay'], communications: ['Status report', 'Transmit a report'], science: ['Status report'], security: ['Status report'] };
 const ORDERS = {
   'Undock': () => { if (!docked()) return 'We are already undocked, Captain.'; setTimeout(() => toggleDock(), 600); return 'Undocking. Disconnecting shore power and releasing the clamps.'; },
   'Dock': () => {
@@ -51,8 +53,9 @@ const ORDERS = {
     if (!sim.canDock()) return sim.s.at && sim.s.at.type === 'dock' ? 'We need to be at the surface and under 1.5 knots to dock, Captain.' : 'We need to be at a dock first, Captain.';
     setTimeout(() => toggleDock(), 600); return 'Docking. Aligning with the berth.';
   },
-  'Status Report': () => { const s = sim.s; return `Battery ${Math.round(s.battery)}%, oxygen ${Math.round(s.oxygen)}%, hull ${Math.round(s.hull)}%. Depth ${Math.round(s.depth)} metres.`; },
-  'Engineering status report': () => { const s = sim.s; return `Power draw ${Math.round(s.power)} kilowatts, battery ${Math.round(s.battery)}%, hull ${Math.round(s.hull)}%. All engineering stations report ready.`; },
+  'Status Report': (ctx, id) => reportFor(ctx, id || 'executiveOfficer'),
+  'Status report': (ctx, id) => reportFor(ctx, id),
+  'Engineering status report': (ctx) => reportFor(ctx, 'engineering'),
   "Let's take her to sea": (ctx) => {
     const go = () => {
       const c = sim.safeHeading();
@@ -106,7 +109,7 @@ const PARAM = {
   'Come left': () => ({ title: 'Come left …', opts: [5, 10, 20, 45, 90].map((d) => [`${d}°`, () => { sim.setHeading(sim.s.targetHeading - d); sim.s.wpt = null; return `Coming left to ${hdgText(sim.s.targetHeading)}, aye.`; }]) }),
   'Come right': () => ({ title: 'Come right …', opts: [5, 10, 20, 45, 90].map((d) => [`${d}°`, () => { sim.setHeading(sim.s.targetHeading + d); sim.s.wpt = null; return `Coming right to ${hdgText(sim.s.targetHeading)}, aye.`; }]) }),
   'Make your heading': () => ({ title: 'Make your heading …', opts: HEADINGS.map(([l, v]) => [l, () => { sim.setHeading(v); sim.s.wpt = null; return `Steering ${hdgText(v)}, aye.`; }]) }),
-  'Make your speed': () => ({ title: 'Make your speed …', opts: [['All stop', 0], ['20%', 0.2], ['40%', 0.4], ['60%', 0.6], ['80%', 0.8], ['Flank', 1]].map(([l, v]) => [l, () => { if (docked()) return 'We are docked, Captain.'; if (v) sim.setThrottle(v); else sim.stop(); sim.s.wpt = null; return v ? `Speed ${Math.round(v * 100)} percent, aye.` : 'All stop, aye.'; }]) }),
+  'Make your speed': () => ({ title: 'Make your speed …', opts: [['All stop', 0], ['20%', 0.2], ['40%', 0.4], ['60%', 0.6], ['80%', 0.8], ['Flank', 1]].map(([l, v]) => [l, () => { if (docked()) return 'We are docked, Captain.'; if (v) sim.setThrottle(v); else sim.stop(); return v ? `Speed ${Math.round(v * 100)} percent, aye.` : 'All stop, aye.'; }]) }),
 };
 PARAM['Make you speed'] = PARAM['Make your speed']; // old saves keep the typo
 const works = (t, pleasantry) => pleasantry || t in ORDERS || t in PARAM;
@@ -139,7 +142,7 @@ export function mount(body, ctx) {
     const isOrder = [...(o.commands || []), ...(EXTRA[cur.id] || []), ...(o.emergency || [])].includes(text);
     if (!isOrder) { say(text, chatReply(cur.id, text, { mail: (gameState.getProperty('mission.inbox') || []).filter((m) => !m.read).length }) || fill(pick(o.pleasantries || ['Aye.'])), false); return; }
     if (PARAM[text]) { const p = PARAM[text](); param = { said: text, ...p }; page = 'param'; render(); return; }
-    if (ORDERS[text]) { say(text, ORDERS[text](ctx), false); return; }
+    if (ORDERS[text]) { say(text, ORDERS[text](ctx, cur.id), false); return; }
     reply = { said: text, text: 'That order is not available yet.', stub: true }; page = 'reply'; render();
   }
 

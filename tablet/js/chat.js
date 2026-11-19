@@ -1,7 +1,7 @@
 // Small talk for the communicator. A reply is chosen from what the person is like and what is happening on the ship,
 // not at random. Each crew member remembers which lines they have used and cycles through the rest first.
 // Memory is saved under progress.talk.<id> = { n, used: { intent: [index, ...] } }.
-import { sim } from './sim.js';
+import { sim, wskrName, toward } from './sim.js';
 import { gameState } from './persist.js';
 import { fill } from './player.js';
 import { cm, loadContacts, linkState, LINKS, antDepth, isActive, distNm } from './commsModel.js';
@@ -199,4 +199,44 @@ export function reply(id, text, extra) {
   } else out = person[intent][choose(m, intent, person[intent])];
   gameState.updateProperty('progress.talk.' + id, m);
   return fill(out);
+}
+
+// ---- status reports: what a station officer, or the XO for the whole ship, says when the Captain asks for a report ----
+const dur = (h) => { const m = Math.max(1, Math.round(h * 60)); return m < 60 ? `${m} minutes` : `${Math.floor(m / 60)} hour${Math.floor(m / 60) === 1 ? '' : 's'}${m % 60 ? ' ' + (m % 60) + ' minutes' : ''}`; };
+const courseLine = (s, c) => {
+  if (!s.wpt) return c.moving ? 'No course is plotted; we are steering by hand.' : 'No course is plotted.';
+  const t = toward(s, s.wpt), eta = c.moving ? sim.etaHours() : null;
+  return `Course is plotted to ${s.wpt.name}, ${t.nm.toFixed(1)} nautical miles, bearing ${Math.round(t.brg)}.${eta != null ? ` Estimated arrival in ${dur(eta)}.` : ' We are not making way, so there is no arrival time.'}`;
+};
+const REPORT = {
+  helm: (c, s) => [c.docked ? 'Helm report, Captain. We are docked and the lines are secure.' : `Helm report, Captain. Heading ${String(c.hdg).padStart(3, '0')}, ${c.kt} knots, ${c.depth} metres${c.under != null ? `, ${c.under} metres under the keel` : ''}.`,
+    `Throttle is at ${Math.round(s.throttle * 100)} percent. Ordered depth is ${Math.round(s.targetDepth)} metres.`, courseLine(s, c),
+    s.hug ? 'We are following the sea floor.' : null, s.avoiding ? 'I am holding off the floor ahead of us, above your ordered depth.' : null, c.cruise ? 'Super cruise is engaged.' : null],
+  sensors: (c, s) => [`Sensors report, Captain. ${s.sonar ? (s.sweepUntil > s.clock ? 'Active sweep is running.' : 'Sonar is active.') : 'We are listening passively.'}`,
+    c.floor != null ? `The floor is ${c.floor} metres below the surface here.` : null,
+    `${c.wskrs ? (c.wskrs === 1 ? 'One WSKR is' : c.wskrs + ' WSKRs are') + ' out: ' + (s.wskrs || []).map((w) => wskrName(w)).join(', ') + '.' : 'No WSKRs are out.'}`,
+    c.rov ? 'Remora is on the tether.' : null, `${(s.pois || []).filter((p) => toward(s, p).nm <= 4).length} known contacts within four miles.`],
+  engineering: (c, s) => [`Engineering report, Captain. Battery is at ${c.bat} percent and power draw is ${Math.round(s.power || 0)} kilowatts.`,
+    c.docked ? 'We are on shore power.' : `The plant is steady at ${c.kt} knots.`, `Hull integrity is ${c.hull} percent.`, `Oxygen is ${c.o2} percent.`,
+    c.cruise ? 'Super cruise is drawing heavily.' : null, c.bat < 30 ? 'The battery is low. I would not stay out long.' : null],
+  science: (c, s) => [`Science and medical report, Captain. The crew are healthy and rested. Air quality is ${c.o2} percent oxygen.`,
+    c.rov ? 'Remora is out.' : 'Remora is aboard.', c.hull < 95 ? 'The hull took a knock; nobody is hurt.' : null],
+  security: (c) => [`Security report, Captain. All secure.`, c.docked ? 'The gangway is secure and logged.' : 'The boat is sealed for sea.', 'No incidents on the watch.'],
+  communications: (c) => [`Communications report, Captain. ${c.mail ? `${c.mail === 1 ? 'One message is' : c.mail + ' messages are'} waiting.` : 'No new traffic.'}`,
+    linkLine(c, 'LASER', 'laser'), linkLine(c, 'SAT-COM', 'satellite'), linkLine(c, 'HF', 'HF'), c.relay ? 'A WSKR relay is up.' : null,
+    !c.mastOpen && !c.docked ? 'The mast is too deep for VHF and HF.' : null],
+};
+/** The full ship report from the executive officer. */
+const fullReport = (c, s) => [`Status report, ${'{captain}'}. ${c.docked ? `We are docked${c.place ? ' at ' + c.place : ''} on shore power.` : `We are ${c.place ? 'at ' + c.place + ', ' : ''}heading ${String(c.hdg).padStart(3, '0')} at ${c.kt} knots, ${c.depth} metres down${c.under != null ? ` with ${c.under} under the keel` : ''}.`}`,
+  courseLine(s, c), `Battery ${c.bat} percent, oxygen ${c.o2} percent, hull ${c.hull} percent. Power draw is ${Math.round(s.power || 0)} kilowatts.`,
+  [c.cruise ? 'Super cruise is on.' : null, s.hug ? 'Helm is following the floor.' : null, s.avoiding ? 'Helm is holding us off the floor ahead.' : null].filter(Boolean).join(' ') || null,
+  `Sonar is ${s.sonar ? 'active' : 'passive'}. ${c.wskrs ? (c.wskrs === 1 ? 'One WSKR is' : c.wskrs + ' WSKRs are') + ' out.' : 'No WSKRs are out.'}${c.rov ? ' Remora is out.' : ''}`,
+  ['LASER', 'SAT-COM', 'HF'].map((k) => c.links[k] && `${k} ${c.links[k].up ? 'up, ' + c.links[k].dB + ' dB' : c.links[k].fading ? 'fading' : 'no carrier'}`).filter(Boolean).join(', ').replace(/^/, 'Links: ') + '.',
+  c.mail ? `${c.mail === 1 ? 'One message is' : c.mail + ' messages are'} waiting at Comms.` : 'No mail waiting.',
+  c.objective ? `Current objective: ${c.objective}` : null, 'Crew are healthy and all stations report ready.'].filter(Boolean).join(' ');
+/** A status report for a crew id, or null. extra: { mail, objective }. */
+export function statusReport(id, extra) {
+  const c = context(extra), s = sim.s;
+  if (id === 'executiveOfficer') return fill(fullReport(c, s));
+  return REPORT[id] ? fill(REPORT[id](c, s).filter(Boolean).join(' ')) : null;
 }

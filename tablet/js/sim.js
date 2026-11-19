@@ -131,7 +131,8 @@ sim.setWpt = (p) => {
   if (p) { const r = sim.routeTo(p); s.route = r ? [...r] : []; s.routeSnapped = !!(r && r.snapped); s.targetHeading = toward(s, s.route[0] || p).brg; }
   sim.touch();
 };
-sim.stop = () => { sim.s.throttle = 0; sim.s.wpt = null; sim.touch(); };
+sim.stop = () => { sim.s.throttle = 0; sim.touch(); };   // speed only: a plotted course stays
+sim.cancelCourse = () => { sim.s.wpt = null; sim.touch(); };   // course only: speed stays
 /** WSKRs: autonomous remote sensors. They hold a ring formation round the ship (better readings, stereoscopic data),
  *  can be sent to investigate a site, and can be recalled. Launched only from the Sensors station. Up to 4.
  *  Each: { n, lat, lon, mode: 'escort' | 'task' | 'recall', target: poi id | null, busy: game seconds spent investigating } */

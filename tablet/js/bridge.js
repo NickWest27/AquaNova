@@ -108,7 +108,7 @@ export function createBridgeConsole({ top, main, display, center, left, right, o
       m.append(rd('SPEED KT', hSpd), dial.root, rd('DEPTH M', hDep));
       return { m, update() { const s = sim.s; set(hSpd, s.speed.toFixed(1)); set(hDep, String(Math.round(s.depth))); dial.update(s.heading, s.targetHeading); } };
     };
-    const thr = (d) => { sim.setThrottle(Math.round(Math.min(1, Math.max(0, sim.s.throttle + d)) * 20) / 20); sim.s.wpt = null; };
+    const thr = (d) => { sim.setThrottle(Math.round(Math.min(1, Math.max(0, sim.s.throttle + d)) * 20) / 20); };
     const dep = (d) => sim.setDepth(Math.min(6000, Math.max(0, Math.round((sim.s.targetDepth + d) / 10) * 10)));
     const dockB = bbtn('Dock', () => toggleDock());
     const cruiseB = bbtn('Cruise', () => { const r = sim.setCruise(!sim.s.cruise); tell('helm', r.ok ? (sim.s.cruise ? 'Super cruise engaged, Captain.' : 'Super cruise disengaged.') : r.why === 'docked' ? 'We are docked, Captain.' : 'Not enough deep water ahead, Captain. Super cruise needs 120 m under us for the next 9 miles.', r.ok ? '' : 'error'); });
