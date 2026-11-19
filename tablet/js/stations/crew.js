@@ -9,6 +9,17 @@ import { gameState } from '../persist.js';
 import { toggleDock } from '../dock.js';
 import { say as crewSay, takeHeld, unreadFor, unreadCount } from '../notify.js';
 
+// First meeting with each crew member. Spoken once, saved in progress.met.<id>. {captain} = "Captain Surname".
+const INTRO = {
+  executiveOfficer: 'Welcome aboard, {captain}. I am ARIA, the Aqua Nova\'s executive officer. I run the ship\'s systems, watch the sea around us and keep the log. I answer to you, and I will tell you plainly when I think something is unwise. Admiral Vasquez speaks highly of you. I hope to earn the same opinion. Ask me for anything, any time.',
+  helm: 'Marcus Chen, helm, {captain}. I have flown her through every sea trial and she handles like a dream. Tell me where you want to go and I will get us there. I will also tell you if the floor comes up to meet us.',
+  science: 'Dr. Sam Patel, {captain}. I look after the laboratory and the sick bay, so I suppose I am responsible for both the samples and the people. Bring me something strange from the deep and I will be happy. Bring me yourself with a headache and I will be almost as happy.',
+  sensors: 'Alex Torres, sensors, {captain}. I look after the sonar and the WSKRs. If something is out there, big or small, I will find it before it finds us. Mostly.',
+  engineering: 'Riley Chen, chief engineer, {captain}. No relation to Marcus. Everyone asks. The reactor, the pumps and the hull are mine, so please bring her back in one piece. If you hear a noise you do not like, call me before you worry.',
+  security: 'Lieutenant Jordan Kim, head of security, {captain}. Nothing is wrong, and I intend to keep it that way. If that changes, you will hear it from me first.',
+  communications: 'Nicole Brooks, communications, {captain}. Every message in and out of this boat comes through me. Satellite, laser, radio, whatever reaches us. I will tell you when O.E.R.A. calls.'
+};
+
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
 
 export const knownCrew = () => Object.values(gameState.getProperty('contacts.crew') || {})
@@ -128,7 +139,7 @@ export function mount(body, ctx) {
           if (c.id === 'executiveOfficer' && pendingDecisions().length) { greeted = true; page = 'decision'; render(); return; }   // ARIA is waiting for an answer
           const held = takeHeld(c.id);   // what they tried to tell the Captain while he was elsewhere
           if (held.length) { greeted = greeted || c.id === 'executiveOfficer'; reply = { said: null, text: held.map((h) => (/^Captain\b/.test(h) ? h : `Captain, ${h.charAt(0).toLowerCase()}${h.slice(1)}`)).join(' '), held: true }; page = 'reply'; }
-          else if (c.id === 'executiveOfficer' && !greeted) { greeted = true; reply = { said: null, text: 'Welcome aboard, Captain. I am ARIA, your executive officer. How may I assist you?' }; page = 'reply'; } else page = 'cat';
+          else if (INTRO[c.id] && !gameState.getProperty('progress.met.' + c.id)) { gameState.updateProperty('progress.met.' + c.id, true); greeted = true; reply = { said: null, text: fill(INTRO[c.id]) }; page = 'reply'; } else page = 'cat';
           render();
         } }, el('span', { class: `avatar ${c.id === 'executiveOfficer' ? 'aria' : ''}`, text: initial(c) }), el('span', {}, el('b', { text: c.name }), el('small', { text: c.role })), unreadFor(c.id) > 0 && el('span', { class: 'comm-badge', text: String(unreadFor(c.id)) })))];
     } else if (page === 'cat') {

@@ -153,8 +153,8 @@ export function mount(body, ctx) {
               await syncNow({ manual: true }); render();
             } }))]));
 
-      // time compression: how many game seconds pass in one real second (default 30). 1 = real time.
-      const ts = TIMESCALE, tsLabel = (n) => (n === 1 ? 'Real time' : `${n}×${n === 30 ? ' (default)' : ''}`);
+      // time compression: how many game seconds pass in one real second (default 1 = real time).
+      const ts = TIMESCALE, tsLabel = (n) => (n === 1 ? 'Real time (default)' : `${n}×`);
       const time = el('div', { class: 'card setting' }, el('div', { class: 'lbl', text: 'Time compression' }),
         el('p', { text: ts === 1 ? 'Real time: one game second per real second.' : `1 real second = ${ts} game seconds, so 1 real minute = ${ts} game minutes${ts >= 60 ? ` (${ts / 60} hours)` : ''}.` }),
         el('div', { class: 'row' }, ...TIME_SCALES.map((n) => el('button', { class: 'btn' + (n === ts ? ' primary' : ''), text: tsLabel(n), onclick: () => { setTimeScale(n); gameState.updateProperty('settings.timeScale', n); render(); } }))),

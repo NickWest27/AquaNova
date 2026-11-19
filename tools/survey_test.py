@@ -20,6 +20,7 @@ def main():
         js = lambda code: page.evaluate("(async()=>{const sim=(await import('./js/sim.js')).sim;const sc=await import('./js/science.js');const g=(await import('./js/persist.js')).gameState;const M=(await import('../game/systems/missionManager.js')).default;" + code + "})()")
         page.goto(base); page.wait_for_function("!document.getElementById('board-btn').disabled", timeout=20000)
         page.tap("#board-btn"); page.wait_for_timeout(800)
+        page.evaluate("import('./js/sim.js').then(m=>m.setTimeScale(30))"); page.wait_for_timeout(200)   # these tests were written for the old 30x pace
         if page.is_visible(".modal .btn"): page.tap(".modal .btn"); page.wait_for_timeout(300)
         # the offer arrives after Sea Trials finish
         r = js("""M.delayScale=0; M.startMission('seaTrials'); for (const o of ['undock','dive','speed','surface','report']) M.completeObjective('seaTrials',o); await new Promise(r=>setTimeout(r,300)); for (const o of ['open','plot','arrive']) M.completeObjective('navLesson',o); await new Promise(r=>setTimeout(r,300)); for (const o of ['open','sweep','scan']) M.completeObjective('sensorsLesson',o); await new Promise(r=>setTimeout(r,300)); const m=(g.getProperty('mission.inbox')||[]).find(x=>x.id==='oera-first-survey'); return {done:M.completedMissions.has('seaTrials'), msg:!!m, mid:m&&m.missionId}""")

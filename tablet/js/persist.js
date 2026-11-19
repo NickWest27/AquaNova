@@ -52,7 +52,7 @@ export function liveNav() {
 
 /** Copy GameState into the sim. The ship holds still after a load (safer than resuming at speed). */
 export function restoreSim() {
-  { const ts = gameState.getProperty('settings.timeScale'); setTimeScale(typeof ts === 'number' ? ts : 30); }
+  { const ts = gameState.getProperty('settings.timeScale'); setTimeScale(typeof ts === "number" ? ts : 1); }
   const nav = gameState.getProperty('navigation');
   if (!nav || !nav.location || !nav.location.geometry) return;
   const s = sim.s;

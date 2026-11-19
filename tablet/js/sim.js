@@ -5,7 +5,7 @@ import { planRoute } from './route.js';
 import { seafloor } from './seafloor.js';
 
 const TICK_MS = 200;
-export let TIMESCALE = 30;        // 1 real second = 30 game seconds (default). Settings can change it; everything below reads this live.
+export let TIMESCALE = 1;         // 1 real second = 1 game second (real time, the default). Settings can change it (5x to 120x); everything below reads this live.
 export const TIME_SCALES = [1, 5, 15, 30, 60, 120];   // 1 = real time
 export const setTimeScale = (n) => { if (TIME_SCALES.includes(n)) TIMESCALE = n; return TIMESCALE; };
 /** Turns, speed changes and depth changes happen in game time, so the turning circle stays the same at any time compression (30 = the old pace). */

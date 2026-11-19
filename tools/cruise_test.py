@@ -22,8 +22,9 @@ def main():
         page.tap("#board-btn"); page.wait_for_timeout(800)
         if page.is_visible(".modal .btn"): page.tap(".modal .btn"); page.wait_for_timeout(300)
         place = "const s=sim.s; const c=s.pois.find(p=>p.name==='Deep Trench Alpha'); Object.assign(s,{lat:c.lat,lon:c.lon,docked:false,at:null,wpt:null,rov:null,wskrs:[],cruise:false,speed:0,throttle:0,depth:50,targetDepth:50,heading:200,targetHeading:200,battery:100});"
-        # default pace is 30
-        check("default time compression is 30", js("return T.TIMESCALE") == 30)
+        # default pace is real time
+        check("default time compression is real time", js("return T.TIMESCALE") == 1)
+        js("T.setTimeScale(30); return 1")
         # same game time, different compression: same result
         def run(ts, n, dt):
             return js(place + f"T.setTimeScale({ts}); const c0=s.clock; sim.setThrottle(1); sim.setHeading(250); for(let i=0;i<{n};i++) sim.step({dt}); const r={{lat:s.lat,lon:s.lon,hd:s.heading,sp:s.speed,d:s.depth,clock:s.clock-c0}}; T.setTimeScale(30); return r")
@@ -41,7 +42,8 @@ def main():
         r = js("const P=await import('./js/persist.js'); return {ts:T.TIMESCALE, saved:P.gameState.getProperty('settings.timeScale')}")
         check("choosing 60× changes the pace and is saved", r["ts"] == 60 and r["saved"] == 60, r)
         page.locator("button", has_text="(default)").first.tap(); page.wait_for_timeout(300)
-        check("30× default restores", js("return T.TIMESCALE") == 30)
+        check("Real time default restores", js("return T.TIMESCALE") == 1)
+        js("T.setTimeScale(30); return 1")
         # super cruise
         r = js(place + "const ok=sim.setCruise(true); return {ok:ok.ok, floor:(await import('./js/seafloor.js')).seafloor.depthAt(s.lat,s.lon)}")
         check("super cruise engages in deep water", r["ok"], r)

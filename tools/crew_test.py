@@ -29,6 +29,7 @@ def main():
         line = lambda t: page.locator(".comm-line", has_text=t).first.tap()
         tap = lambda: page.wait_for_timeout(350)
         who("Helm") if page.locator(".comm-who", has_text="Helm").count() else None; tap()
+        if page.locator(".comm-reply", has_text="Marcus Chen").count(): line("I need something"); tap()   # first meeting: Marcus introduces himself
         line("Give an order"); tap()
         check("working order is not marked", "stub" not in (page.locator(".comm-line", has_text="Come left").first.get_attribute("class") or ""))
         line("Make your depth"); tap(); line("100 m"); tap()

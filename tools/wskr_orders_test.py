@@ -22,6 +22,7 @@ def main():
             js = lambda code: page.evaluate("(async()=>{const sim=(await import('./js/sim.js')).sim;const T=await import('./js/sim.js');" + code + "})()")
             page.goto(base); page.wait_for_function("!document.getElementById('board-btn').disabled", timeout=20000)
             page.tap("#board-btn"); page.wait_for_timeout(800)
+            page.evaluate("import('./js/sim.js').then(m=>m.setTimeScale(30))"); page.wait_for_timeout(200)   # these tests were written for the old 30x pace
             if page.is_visible(".modal .btn"): page.tap(".modal .btn"); page.wait_for_timeout(300)
             js("const s=sim.s; const c=s.pois.find(p=>p.name==='Canyon Head'); Object.assign(s,{lat:c.lat,lon:c.lon,wskrs:[],rov:null,docked:false,wpt:null,speed:0,throttle:0,depth:20,targetDepth:20,heading:90,targetHeading:90}); sim.deployWskr(); sim.deployWskr(); for(let i=0;i<300;i++) sim.step(0.1); return 1")
             if gated: js("const g=(await import('./js/persist.js')).gameState; g.updateProperty('progress.stationsUnlocked',['sensors','wskr']); return 1")

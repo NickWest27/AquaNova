@@ -21,6 +21,7 @@ def main():
         js = lambda code: page.evaluate("(async()=>{const sim=(await import('./js/sim.js')).sim;const sf=(await import('./js/seafloor.js')).seafloor;const N=await import('./js/notify.js');const g=(await import('./js/persist.js')).gameState;" + code + "})()")
         page.goto(base); page.wait_for_function("!document.getElementById('board-btn').disabled", timeout=20000)
         page.tap("#board-btn"); page.wait_for_timeout(1500)
+        page.evaluate("import('./js/sim.js').then(m=>m.setTimeScale(30))"); page.wait_for_timeout(200)   # these tests were written for the old 30x pace
         if page.is_visible(".modal .btn"): page.tap(".modal .btn"); page.wait_for_timeout(300)
         js("const m=(await import('../game/systems/missionManager.js')).default; m.forceCompleteMission('meetTheCrew')")
         page.evaluate("window.__aq.scene('bridge')"); page.wait_for_timeout(500)
@@ -64,6 +65,7 @@ def main():
         page.locator(".comm-line", has_text="Someone else").first.tap(); page.wait_for_timeout(300)
         page.locator(".comm-who").filter(has_text="Marcus").first.tap() if page.locator(".comm-who", has_text="Marcus").count() else None
         page.wait_for_timeout(300)
+        if page.locator(".comm-line", has_text="Give an order").count() == 0: page.locator(".comm-line", has_text=re.compile("One more thing|I need something")).first.tap(); page.wait_for_timeout(300)   # first meeting intro
         page.locator(".comm-line", has_text="Give an order").first.tap(); page.wait_for_timeout(300)
         page.locator(".comm-line", has_text="Make your depth").first.tap(); page.wait_for_timeout(300)
         page.locator(".comm-line", has_text="1000 m").first.tap(); page.wait_for_timeout(400)
