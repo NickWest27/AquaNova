@@ -19,6 +19,7 @@ def main():
         js = lambda code: page.evaluate("(async()=>{const sim=(await import('./js/sim.js')).sim;const sf=(await import('./js/seafloor.js')).seafloor;" + code + "})()")
         page.goto(base); page.wait_for_function("!document.getElementById('board-btn').disabled", timeout=20000)
         page.tap("#board-btn"); page.wait_for_timeout(800)
+        page.evaluate("import('./js/sim.js').then(m=>m.setTimeScale(30))"); page.wait_for_timeout(200)   # written for the old 30x pace
         if page.is_visible(".modal .btn"): page.tap(".modal .btn"); page.wait_for_timeout(300)
         # find a pair of water points whose straight line crosses land but which a route can join
         pair = js("""
