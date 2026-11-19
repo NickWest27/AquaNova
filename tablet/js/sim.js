@@ -18,7 +18,7 @@ export const sim = {
     throttle: 0, speed: 0, depth: 0, targetDepth: 0,
     battery: 100, oxygen: 100, hull: 100, co2: 0.04, temp: 4.1, power: 0,
     ballast: 100, comms: true, sonar: true, lights: true, pois: [], wpt: null, route: [], routeSnapped: false, _routeFor: null, at: null,
-    clock: 6 * 3600, docked: false, damage: 0, floor: null, wskrs: [], wskrForm: 'loose', sweepUntil: 0,     // clock = game seconds since Day 1 00:00
+    clock: 6 * 3600, docked: false, damage: 0, floor: null, wskrs: [], wskrForm: 'loose', wskrDepth: 'auto', sweepUntil: 0,     // clock = game seconds since Day 1 00:00
   },
   listeners: new Set(),
   dirty: true,
@@ -65,7 +65,7 @@ export const WSKR_CHART_NM = 3;
 function chartSurroundings() {
   const s = sim.s; if (!seafloor.ready) return;
   seafloor.mark('ship', s.lat, s.lon, sim.fineNm(s));
-  for (const w of s.wskrs) seafloor.mark('w' + w.n, w.lat, w.lon, WSKR_CHART_NM + (wskrPerk(w).chart || 0));
+  for (const w of s.wskrs) if (!w.dead) seafloor.mark('w' + w.n, w.lat, w.lon, WSKR_CHART_NM + (wskrPerk(w).chart || 0));
 }
 
 /** Is this point safe water for the ship? (Inside the dredged harbour only land stops us.) */
@@ -85,21 +85,46 @@ sim.stop = () => { sim.s.throttle = 0; sim.s.wpt = null; sim.touch(); };
  *  can be sent to investigate a site, and can be recalled. Launched only from the Sensors station. Up to 4.
  *  Each: { n, lat, lon, mode: 'escort' | 'task' | 'recall', target: poi id | null, busy: game seconds spent investigating } */
 const WSKR_KT = 10, WSKR_RING_NM = 1.5, WSKR_INVESTIGATE_S = 90;
-export const WSKR_TIGHT_NM = 0.5, WSKR_LINK_NM = 3, SEARCH_LEG_NM = 0.45, SEARCH_LEGS = 14, WSKR_TURN_DPS = 30;
+export const WSKR_LINK_NM = 3, SEARCH_LEG_NM = 0.45, SEARCH_LEGS = 14, WSKR_TURN_DPS = 30;
 /** Orders: escort (hold formation), manual (touch control, link range 3 nm from the ship or a relay), search (expanding square),
- *  relay (hold here and extend the manual link), task, recall. Depth: auto (12 m above the floor), shallow (8 m), deep (4 m above the floor).
- *  Formation is one setting for the fleet: loose (1.5 nm ring) or tight (0.5 nm). */
+ *  relay (follows the ship just below the surface and carries comms and a GPS fix when Aqua Nova is deep), task, recall.
+ *  Depth is one fleet setting, staggered so no two WSKRs share a layer: auto (the whole water column in equal layers),
+ *  shallow (the surface down to just below Aqua Nova), deep (from just above Aqua Nova to the floor).
+ *  Formation is one fleet setting, set by how much neighbouring scan rings overlap: loose 5%, tight 50%.
+ *  Battery: 6 hours at normal draw (`WSKR_BATTERY_H`; research can change it later). */
+export const WSKR_BATTERY_H = 6, WSKR_LOW_PCT = 15, WSKR_STAGGER_M = 10, WSKR_RELAY_DEPTH = 4;
+export const wskrBatteryHours = () => WSKR_BATTERY_H;
+export const WSKR_OVERLAP = { loose: 0.05, tight: 0.5 };
+/** Spacing (in scan-ring radii) at which two rings overlap by this share of one ring's area. */
+export function ringSpacing(frac) {
+  const lens = (d) => (2 * Math.acos(d / 2) - (d / 2) * Math.sqrt(4 - d * d)) / Math.PI;   // unit radius, share of one ring
+  let lo = 0, hi = 2; for (let k = 0; k < 40; k++) { const m = (lo + hi) / 2; if (lens(m) > frac) lo = m; else hi = m; }
+  return (lo + hi) / 2;
+}
+/** Ring radius round the ship so the neighbours (and, for one WSKR, the ship) overlap as asked. */
+export const formationRadius = (form, n) => { const d = ringSpacing(WSKR_OVERLAP[form] ?? WSKR_OVERLAP.loose) * WSKR_CHART_NM; return n < 2 ? d : Math.max(0.4, d / (2 * Math.sin(Math.PI / n))); };
 export const WSKR_DEPTHS = { auto: 'Auto', shallow: 'Shallow', deep: 'Deep' };
 export const WSKR_NAMES = ['Scout', 'Lantern', 'Drifter', 'Sprat'];   // placeholders, our own names
 /** Each WSKR has a small edge that fits its name. Sizes are small on purpose. */
 export const WSKR_PERKS = {
   1: { text: 'Scout charts the sea floor further out (+0.6 nm).', chart: 0.6 },
   2: { text: 'Lantern holds the lead, ahead of the ship.', lead: true },
-  3: { text: 'Drifter swings wide, sometimes out to 2.4 nm from the ship.', drift: true },
+  3: { text: 'Drifter swings wide, drifting in and out of the loose formation.', drift: true },
   4: { text: 'Sprat is quicker (12 kt) and finishes a site in 70 s.', kt: 12, investigate: 70 },
 };
 /** A WSKR as a craft for the craft page: position, heading, depth (about 12 m above the floor, at most 40 m) and speed. */
-export const wskrCraft = (w) => { const fl = seafloor.ready ? seafloor.depthAt(w.lat, w.lon) : null; return { lat: w.lat, lon: w.lon, heading: w.heading == null ? sim.s.heading : w.heading, depth: fl == null ? 10 : w.dep === 'shallow' ? Math.max(2, Math.min(fl - 3, 8)) : w.dep === 'deep' ? Math.max(2, Math.min(fl - 4, 200)) : Math.max(2, Math.min(40, fl - 12)), kt: w.moving ? (wskrPerk(w).kt || WSKR_KT) : 0 }; };
+/** Depth of a WSKR: relays sit just under the surface; the rest are staggered through their band. */
+export function wskrDepthFor(w) {
+  const st = sim.s, fl = seafloor.ready ? seafloor.depthAt(w.lat, w.lon) : null; if (fl == null) return 10;
+  const bot = Math.max(2, fl - 3);
+  if (w.mode === 'relay') return Math.min(WSKR_RELAY_DEPTH, bot);
+  const list = st.wskrs.filter((q) => q.mode !== 'relay').sort((a, b) => a.n - b.n), N = list.length || 1, i = Math.max(0, list.indexOf(w));
+  let lo = 2, hi = bot;
+  if (st.wskrDepth === 'shallow') hi = Math.min(bot, Math.max(lo + 4, st.depth + WSKR_STAGGER_M));
+  else if (st.wskrDepth === 'deep') lo = Math.min(bot, Math.max(2, st.depth - WSKR_STAGGER_M));
+  return Math.max(2, Math.min(bot, Math.round(lo + ((hi - lo) * (i + 0.5)) / N)));
+}
+export const wskrCraft = (w) => ({ lat: w.lat, lon: w.lon, heading: w.heading == null ? sim.s.heading : w.heading, depth: wskrDepthFor(w), kt: w.moving ? (wskrPerk(w).kt || WSKR_KT) : 0 });
 sim.recallWskr = (n) => { const w = sim.s.wskrs.find((q) => q.n === n); if (!w) return false; w.mode = 'recall'; w.target = null; w.route = null; sim.touch(); return true; };
 /** Give an order to one WSKR. order: 'escort' | 'manual' | 'search' | 'relay'. Returns false if there is no such WSKR. */
 sim.orderWskr = (n, order) => {
@@ -107,15 +132,26 @@ sim.orderWskr = (n, order) => {
   w.mode = order; w.target = null; w.route = null; w.thr = 0; w.turn = 0; w.limited = false;
   if (w.heading == null) w.heading = sim.s.heading;
   if (order === 'search') w.pat = { lat: w.lat, lon: w.lon, k: 1, t: 0 };
-  if (order === 'relay') w.hold = { lat: w.lat, lon: w.lon };
   sim.touch(); return true;
 };
-sim.setWskrDepth = (n, dep) => { const w = sim.s.wskrs.find((q) => q.n === n); if (!w || !WSKR_DEPTHS[dep]) return false; w.dep = dep; sim.touch(); return true; };
+sim.setWskrDepth = (dep) => { if (!WSKR_DEPTHS[dep]) return false; sim.s.wskrDepth = dep; sim.touch(); return true; };
 sim.setWskrForm = (f) => { if (f !== 'loose' && f !== 'tight') return false; sim.s.wskrForm = f; sim.s.wskrs.forEach((w) => { if (w.mode === 'escort') w.route = null; }); sim.touch(); return true; };
 /** Manual helm: turn -1/0/1 (held), thr 0..1 (share of top speed). */
 sim.wskrHelm = (n, { turn, thr } = {}) => { const w = sim.s.wskrs.find((q) => q.n === n); if (!w || w.mode !== 'manual') return false; if (turn != null) w.turn = turn; if (thr != null) w.thr = Math.max(0, Math.min(1, thr)); return true; };
 /** Control link: distance to the nearest of the ship and any relay WSKR (not itself). */
-sim.wskrLink = (w, at = w) => { const s = sim.s; let nm = toward(s, at).nm; for (const r of s.wskrs) if (r !== w && r.mode === 'relay') nm = Math.min(nm, toward(r, at).nm); return { nm, max: WSKR_LINK_NM, ok: nm <= WSKR_LINK_NM }; };
+sim.wskrLink = (w, at = w) => { const s = sim.s; let nm = toward(s, at).nm; for (const r of s.wskrs) if (r !== w && r.mode === 'relay' && !r.dead) nm = Math.min(nm, toward(r, at).nm); return { nm, max: WSKR_LINK_NM, ok: nm <= WSKR_LINK_NM }; };
+/** A relay WSKR following within link range lets the ship use its antennas as if it were at the surface (comms) and gives a GPS fix. */
+sim.relayUp = () => { const s = sim.s; return s.depth <= 2000 && s.wskrs.some((w) => w.mode === 'relay' && !w.dead && toward(s, w).nm <= WSKR_LINK_NM); };
+sim.hasGps = () => sim.s.depth <= 15 || sim.relayUp();
+/** Set up a relay for the Captain: the nearest WSKR holding formation (or none). Returns { ok, why, wskr }. */
+sim.setupRelay = () => {
+  const s = sim.s; if (s.wskrs.some((w) => w.mode === 'relay' && !w.dead)) return { ok: false, why: 'already' };
+  if (!s.wskrs.length) return { ok: false, why: 'none' };
+  const free = s.wskrs.filter((w) => (w.mode === 'escort' || w.mode === 'search') && !w.dead).sort((a, b) => toward(s, a).nm - toward(s, b).nm)[0];
+  if (!free) return { ok: false, why: 'busy' };
+  sim.orderWskr(free.n, 'relay'); return { ok: true, wskr: free };
+};
+sim.standDownRelay = () => { const w = sim.s.wskrs.find((q) => q.mode === 'relay'); if (!w) return { ok: false }; sim.orderWskr(w.n, 'escort'); return { ok: true, wskr: w }; };
 function searchPoint(p, k) {
   let x = 0, y = 0; const dirs = [[0, 1], [1, 0], [0, -1], [-1, 0]];
   for (let i = 0; i < k; i++) { const len = SEARCH_LEG_NM * (Math.floor(i / 2) + 1), d = dirs[i % 4]; x += d[0] * len; y += d[1] * len; }
@@ -128,7 +164,7 @@ sim.deployWskr = () => {
   if (s.docked) return { ok: false, why: 'docked' };
   if (s.wskrs.length >= 4) return { ok: false, why: 'full' };
   const used = new Set(s.wskrs.map((w) => w.n)); let n = 1; while (used.has(n)) n++;
-  s.wskrs.push({ n, lat: s.lat, lon: s.lon, mode: 'escort', target: null, busy: 0 }); sim.touch(); return { ok: true, n };
+  s.wskrs.push({ n, lat: s.lat, lon: s.lon, mode: 'escort', target: null, busy: 0, bat: 100 }); sim.touch(); return { ok: true, n };
 };
 sim.taskWskr = (poi) => {
   const w = sim.s.wskrs.find((q) => q.mode === 'escort');
@@ -150,9 +186,17 @@ function stepWskrs(dt) {
   const esc = s.wskrs.filter((w) => w.mode === 'escort').sort((a, b) => (wskrPerk(b).lead ? 1 : 0) - (wskrPerk(a).lead ? 1 : 0));
   s.wskrs = s.wskrs.filter((w) => {
     w.moving = false;
+    if (w.bat == null) w.bat = 100;
+    if (w.dead) { if (toward(s, w).nm < 0.15) { sim.emit('wskr-recovered', w); return false; } return true; }   // adrift: the ship must come to it
     if (seafloor.ready && !wskrPassable(w.lat, w.lon)) { const sp = nearestWater(w.lat, w.lon); if (sp) { w.lat = sp.lat; w.lon = sp.lon; w.route = null; } }   // never sit on land (after a load, a ship move, or a thin spit)
     let goal = null; const perk = wskrPerk(w), step = (((perk.kt || WSKR_KT) * dt) * TIMESCALE) / 3600;
-    const ring = s.wskrForm === 'tight' ? WSKR_TIGHT_NM : perk.drift ? WSKR_RING_NM + 0.9 * (0.5 + 0.5 * Math.sin((s.clock / 3600) * 2 * Math.PI)) : WSKR_RING_NM;
+    const ring = formationRadius(s.wskrForm, esc.length) * (perk.drift && s.wskrForm !== 'tight' ? 1 + 0.35 * (0.5 + 0.5 * Math.sin((s.clock / 3600) * 2 * Math.PI)) : 1);
+    { // battery: 6 h at normal draw; holding station and relaying draw less, hard running draws more
+      const draw = w.mode === 'relay' ? 0.6 : w.mode === 'manual' ? 0.7 + 0.6 * (w.thr || 0) : w.moving ? 1 : 0.8;
+      w.bat = Math.max(0, w.bat - (100 / (wskrBatteryHours() * 3600)) * draw * dt * TIMESCALE);
+      if (w.bat <= 0) { w.dead = true; w.mode = 'recall'; w.route = null; sim.emit('wskr-dead', w); return true; }
+      if (w.bat <= WSKR_LOW_PCT && w.mode !== 'recall') { w.mode = 'recall'; w.target = null; w.route = null; w.thr = 0; sim.emit('wskr-low', w); }
+    }
     if (w.mode === 'manual') {
       const kt = (perk.kt || WSKR_KT) * (w.thr || 0), nm = (kt * dt * TIMESCALE) / 3600;
       w.heading = (((w.heading == null ? s.heading : w.heading) + (w.turn || 0) * WSKR_TURN_DPS * dt) % 360 + 360) % 360;
@@ -169,7 +213,7 @@ function stepWskrs(dt) {
     }
     if (w.mode === 'escort') { const i = esc.indexOf(w), a = ((s.heading + (360 / esc.length) * i + (wskrPerk(esc[0]).lead ? 0 : 45)) * Math.PI) / 180; goal = { lat: s.lat + (Math.cos(a) * ring) / NM_PER_DEG_LAT, lon: s.lon + (Math.sin(a) * ring) / (NM_PER_DEG_LAT * Math.cos((s.lat * Math.PI) / 180)) }; }
     else if (w.mode === 'search') goal = searchPoint(w.pat || (w.pat = { lat: w.lat, lon: w.lon, k: 1, t: 0 }), w.pat.k);
-    else if (w.mode === 'relay') goal = w.hold || (w.hold = { lat: w.lat, lon: w.lon });
+    else if (w.mode === 'relay') goal = s;                          // follows the ship, just under the surface
     else if (w.mode === 'task') { goal = s.pois.find((p) => p.id === w.target); if (!goal) { w.mode = 'escort'; return true; } }
     else goal = s;
     // Route round land. Replanned when the goal has moved on (escorts and recalls follow the ship) or after a failed attempt.
@@ -191,7 +235,7 @@ function stepWskrs(dt) {
       if (onSite || w.pat.t > 1800) { w.pat.k++; w.pat.t = 0; w.route = null; if (w.pat.k > SEARCH_LEGS) { w.mode = 'escort'; w.pat = null; sim.emit('wskr-search-done', w); } return true; }
     }
     const aim = w.route[0] || goal, ta = toward(w, aim);
-    if (ta.nm > 0.02 && !((w.mode === 'escort' || w.mode === 'relay') && t.nm < 0.05)) {
+    if (ta.nm > 0.02 && !(w.mode === 'escort' && t.nm < 0.05) && !(w.mode === 'relay' && t.nm < 0.1)) {
       const f = Math.min(1, step / ta.nm), lat = w.lat + (aim.lat - w.lat) * f, lon = w.lon + (aim.lon - w.lon) * f;
       // walk the step in small pieces so a thin strip of land cannot be jumped; no data yet means hold still
       let clear = seafloor.ready; const pieces = Math.max(1, Math.ceil(Math.min(step, ta.nm) / 0.02));

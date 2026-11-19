@@ -295,6 +295,9 @@ async function boot() {
       else if (type === 'arrived') { flag('arrived'); say('helm', 'Destination reached, Captain.'); }
       else if (type === 'wskr-found') { const fresh = fileScan(data.poi); say('sensors', fresh ? `${wskrName(data.wskr)} has finished investigating ${data.poi.name}. Scan filed, Captain.` : `${wskrName(data.wskr)} re-checked ${data.poi.name}. Nothing new.`, 'mission'); }
       else if (type === 'rov-sample') say('science', `The ROV has a ${SAMPLE_KINDS[data.kind].label.toLowerCase()} sample from ${data.site}. It is in the lab, Captain.`);
+      else if (type === 'wskr-low') say('sensors', `${wskrName(data)} is down to its last charge, Captain. Recalling it.`, 'mission');
+      else if (type === 'wskr-dead') say('sensors', `${wskrName(data)} has lost power and is adrift, Captain. Bring the ship alongside to recover it.`, 'mission');
+      else if (type === 'wskr-search-done') say('sensors', `${wskrName(data)} has finished its search pattern and is rejoining the formation.`);
       else if (type === 'wskr-recovered') say('sensors', `${wskrName(data)} is back in the launch bay.`);
       else if (type === 'bump') {
         const k = data.kind;

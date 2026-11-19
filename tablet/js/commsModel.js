@@ -18,7 +18,7 @@ export const ANTS = {
 sim.s.ants = sim.s.ants || { mast: { set: 0, ext: 0 }, buoy: { set: 0, ext: 0 }, wire: { set: 0, ext: 0 } };
 export const ant = (k) => sim.s.ants[k];
 export const setAnt = (k, m) => { ant(k).set = Math.max(0, Math.min(ANTS[k].max, m)); };
-export const antDepth = (k, s = sim.s) => Math.max(0, s.depth - ant(k).ext);
+export const antDepth = (k, s = sim.s) => (s === sim.s && sim.relayUp && sim.relayUp() ? 0 : Math.max(0, s.depth - ant(k).ext));   // a relay WSKR at the surface stands in for the antenna
 sim.hooks.push((dt) => {
   for (const k in ANTS) {
     const a = ant(k), D = ANTS[k];

@@ -1,7 +1,9 @@
 // Crew comms through the communicator pin (Star Trek style): crew on the left, the voice channel (transcript) in the middle, things to say on the right.
 import { pendingDecisions, decide } from '../aria.js';
 import { fill } from '../player.js';
-import { sim, toward } from '../sim.js';
+import { sim, toward, wskrName } from '../sim.js';
+import { GATES_ON } from '../unlocks.js';
+import { research } from '../science.js';
 import { el, toast } from '../util.js';
 import { gameState } from '../persist.js';
 import { toggleDock } from '../dock.js';
@@ -26,7 +28,7 @@ const hdgText = (h) => String(Math.round(((h % 360) + 360) % 360)).padStart(3, '
 
 // Orders that do something. Anything not listed here (or in PARAM) is shown in the "not yet" colour.
 // Orders added here show up even in old saves (a save keeps its own copy of the crew's lines).
-const EXTRA = { helm: ['Undock', 'Dock'] };
+const EXTRA = { helm: ['Undock', 'Dock'], sensors: ['Set up a relay', 'Stand down the relay'] };
 const ORDERS = {
   'Undock': () => { if (!docked()) return 'We are already undocked, Captain.'; setTimeout(() => toggleDock(), 600); return 'Undocking. Disconnecting shore power and releasing the clamps.'; },
   'Dock': () => {
@@ -62,6 +64,13 @@ const ORDERS = {
   'Emergency dive': () => { if (docked()) return 'We are docked, Captain.'; return dive(500, 'Diving!'); },
   'Full sensor sweep': () => { sim.s.sonar = true; sim.s.sweepUntil = sim.s.clock + 1800; sim.touch(); const n = sim.s.pois.filter((p) => toward(sim.s, p).nm <= 4).length; return `Active sweep. ${n} contact${n === 1 ? '' : 's'} within four miles, and the chart shows more detail for a minute.`; },
   'Deploy sensor buoys': () => `WSKRs launch from the Sensors station, Captain. ${sim.s.wskrs.length} of 4 are out. Once they are out they spread round us on their own, and you can send one to investigate a contact.`,
+  'Set up a relay': () => {
+    if (GATES_ON && !research.has('wskr-orders')) return 'We have not got the relay procedures yet, Captain. Science needs to finish the WSKR orders research.';
+    const r = sim.setupRelay();
+    if (r.ok) return `${wskrName(r.wskr)} is going to the surface to follow us as a relay, Captain. Once it is up, comms and a GPS fix work at any depth.`;
+    return r.why === 'already' ? 'We already have a relay up, Captain.' : r.why === 'none' ? 'No WSKRs are out. Launch one from the Sensors station first.' : 'Every WSKR is busy, Captain. Recall one or let it finish.';
+  },
+  'Stand down the relay': () => { const r = sim.standDownRelay(); return r.ok ? `${wskrName(r.wskr)} is rejoining the formation.` : 'There is no relay up, Captain.'; },
   'Passive listening mode': () => { sim.s.sonar = false; sim.touch(); return 'Sonar secured. Listening passively.'; },
   'Run crew diagnostics': () => 'Crew diagnostics complete. Everyone aboard is healthy, Captain.',
   'Request departure clearance': () => (docked() ? 'Woods Hole Harbor Control: you are cleared to depart at your discretion. Safe travels.' : 'Harbor Control: you are already underway, Captain.'),

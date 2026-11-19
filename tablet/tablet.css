@@ -632,3 +632,9 @@ input.mix { width: 100%; height: 2.4rem; accent-color: var(--cyan); }
 .bd-synth .synth-canvas { width: 100%; height: 100%; display: block; }
 .bd.view.synth-on .bd-synth { display: block; }
 .bd.view.synth-on .water, .bd.view.synth-on .dark, .bd.view.synth-on .bubbles, .bd.view.synth-on .hud-place, .bd.view.synth-on .hud-row { display: none; }
+
+/* WSKR page (Sensors console) */
+.wst { display: flex; flex-direction: column; gap: 0.4rem; }
+.wsk-row { display: flex; align-items: center; gap: 1rem; width: 100%; text-align: left; cursor: pointer; font: inherit; color: inherit; }
+.wsk-row.sel { border-color: var(--amber); box-shadow: inset 0 0 0 1px var(--amber); }
+.wsk-row span { white-space: nowrap; font-size: 0.9em; }
