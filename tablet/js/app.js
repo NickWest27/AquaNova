@@ -11,6 +11,7 @@ import { tickLab, SAMPLE_KINDS, awardSurveyBonus } from './science.js';
 import { el, $, toast, pad, modal, frameThrottle, viewProbe } from './util.js';
 import { ICONS } from './ui.js';
 import { startSync, syncAtBoot } from './sync.js';
+import { isCommissioned, excuse } from './unlocks.js';
 import { initAudio, updateHum, chirp, ping } from './audio.js';
 import { gameState, loadGame, liveNav, startExitSave, saveBeforeSleep, checkpoint, addLogEntry, restoreSim } from './persist.js';
 
@@ -132,6 +133,7 @@ async function openStation(name) {
   if (name === 'crew') return toggleComm();
   if (current) closeStation();
   const def = STATIONS[name]; if (!def) return;
+  if (!isCommissioned(name)) { toast(excuse(name), 'warn'); return; }
   const root = $('#station');
   const chips = el('div', { class: 'st-chips' });
   const body = el('div', { class: 'st-body' });
