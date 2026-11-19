@@ -62,25 +62,23 @@ export function createScene(stage, { onOpen }) {
     hs('SLEEP', 640, 610, 580, 250, () => onOpen('sleep'), 'mid'),
     hs('TO WALKWAY', 1236, 120, 560, 700, () => onOpen('walkway'), 'mid'),
     pickup);
-  // walkway hub: placeholder art. Doors to the bridge, quarters, engineering and science/medical.
-  const door = (label, x, y, w, h, target, cls = '') => el('button', { class: `door ${cls}`, style: `left:${x}px;top:${y}px;width:${w}px;height:${h}px`, 'aria-label': label, onclick: () => onOpen(target) }, el('span', { text: label }));
+  // walkway hub (concept art A1): a tap area on each door, a lit sign on each black panel above a door.
+  // Corners are the four corners of the glass in stage pixels (art is cropped to 1920x1080).
+  const door = (label, x, y, w, h, target, tagged = false) => el('button', { class: `door${tagged ? ' tagged' : ''}`, style: `left:${x}px;top:${y}px;width:${w}px;height:${h}px`, 'aria-label': label, onclick: () => onOpen(target) }, tagged ? el('span', { text: label }) : null);
+  const sign = (text, corners, h = 120) => slanted('wsign-box', el('div', { class: 'wsign', style: `height:${h}px`, text }), 412, h, corners);
   const walkway = el('div', { class: 'scene walkway', hidden: true });
-  walkway.innerHTML = `<svg viewBox="0 0 1920 1080" preserveAspectRatio="none" aria-hidden="true">
-    <defs><linearGradient id="wf" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0d2c3c"/><stop offset="1" stop-color="#051722"/></linearGradient>
-    <linearGradient id="ww" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#14465a"/><stop offset="1" stop-color="#0b2a3a"/></linearGradient></defs>
-    <rect width="1920" height="1080" fill="#04101f"/>
-    <polygon points="0,0 700,300 700,780 0,1080" fill="url(#ww)"/><polygon points="1920,0 1220,300 1220,780 1920,1080" fill="url(#ww)" transform="scale(1,1)"/>
-    <polygon points="0,0 1920,0 1220,300 700,300" fill="#0a2536"/><polygon points="0,1080 700,780 1220,780 1920,1080" fill="url(#wf)"/>
-    <rect x="700" y="300" width="520" height="480" fill="#06202e"/>
-    <g stroke="#2f8f9d" stroke-width="3" opacity=".55"><line x1="0" y1="0" x2="700" y2="300"/><line x1="1920" y1="0" x2="1220" y2="300"/><line x1="0" y1="1080" x2="700" y2="780"/><line x1="1920" y1="1080" x2="1220" y2="780"/><line x1="960" y1="780" x2="960" y2="1080"/><line x1="830" y1="780" x2="560" y2="1080"/><line x1="1090" y1="780" x2="1360" y2="1080"/></g>
-    <rect x="600" y="0" width="720" height="22" rx="11" fill="#f2d9a0" opacity=".55"/></svg>`;
   walkway.append(
-    door('BRIDGE', 790, 360, 340, 400, 'bridge', 'far'),
-    door('QUARTERS', 120, 300, 340, 520, 'quarters'),
-    door('ENGINEERING', 470, 360, 190, 400, 'engineering', 'near-l'),
-    door('LAUNCH BAY', 1240, 360, 190, 400, 'launchbay', 'near-l'),
-    door('SCIENCE / MEDICAL', 1460, 300, 340, 520, 'science'),
-    el('div', { class: 'art-note', text: 'Placeholder art' }));
+    el('img', { class: 'frame', src: 'assets/walkway.webp', alt: '', draggable: 'false', decoding: 'async' }),
+    sign('SCIENCE', [[222, 45], [437, 165], [435, 227], [237, 142]]),
+    sign('MEDICAL', [[463, 177], [570, 235], [568, 290], [463, 243]]),
+    sign('QUARTERS', [[1483, 172], [1683, 62], [1680, 155], [1483, 238]]),
+    sign('BRIDGE', [[862, 312], [1068, 312], [1068, 355], [862, 355]], 86),
+    door('SCIENCE', 165, 240, 230, 720, 'science'),
+    door('MEDICAL', 446, 304, 116, 536, 'medbay'),
+    door('QUARTERS', 1524, 240, 237, 710, 'quarters'),
+    door('BRIDGE', 805, 377, 323, 293, 'bridge'),
+    door('ENGINEERING', 600, 380, 100, 320, 'engineering', true),
+    door('LAUNCH BAY', 1235, 380, 95, 320, 'launchbay', true));
   // science lab: placeholder art (medbay concept). Samples, analysis and research live in the Lab station; the ROV in the Launch Bay.
   const science = el('div', { class: 'scene science', hidden: true });
   science.append(el('img', { src: 'assets/science.webp', alt: '', draggable: 'false', style: 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover' }),
