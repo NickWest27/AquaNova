@@ -40,7 +40,7 @@ def main():
         check("comms hotspot glows for 1 unread", "glow" in (page.locator('.hs[aria-label="COMMS"]').get_attribute("class") or ""))
         check("mission is not started until accepted", (js(G + "return (g.getProperty('mission.objectives')||[]).length")) == 0)
         page.evaluate("window.__aq.open('comms')"); page.wait_for_timeout(500)
-        page.tap(".msg-head"); page.wait_for_timeout(300)
+        page.tap(".mail-row"); page.wait_for_timeout(800)
         check("message text and Accept button show after opening", page.is_visible("text=Take her below 30 meters") and page.is_visible('button:text-is("Accept mission")'))
         page.screenshot(path=f"{SHOTS}/m-1message.png")
         page.tap('button:text-is("Accept mission")'); page.wait_for_timeout(500)

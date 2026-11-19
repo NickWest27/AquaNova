@@ -66,6 +66,12 @@ export function chirp() {
   if (!ac || !pref.on) return;
   blip(1100, 1900, 0, 0.11); blip(1400, 2300, 0.14, 0.14); blip(1500, 2400, 0.34, 0.09, 0.3);
 }
+/** 90s window zoom: eight quick ticks, rising as a message opens, falling as it closes. */
+export function mailZoom(up = true) {
+  if (!ac || !pref.on) return;
+  for (let k = 0; k < 8; k++) { const f = up ? 280 + k * 120 : 1120 - k * 120; blip(f, f * 1.15, k * 0.036, 0.05, 0.2, 'square'); }
+  blip(up ? 1500 : 220, up ? 1900 : 160, 0.3, 0.09, 0.18, 'triangle');
+}
 /** A soft notice. */
 export function ping() {
   if (!ac || !pref.on) return;

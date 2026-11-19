@@ -2,7 +2,8 @@
 // (Crew talk goes through the communicator pin, not here.)
 // Messages arrive from missions (send_message action). A message can offer a mission to accept.
 // The link needs the antenna near the surface, so reports go out only at 15 m or shallower.
-import { sim } from '../sim.js';
+import { sim, gameDateText } from '../sim.js';
+import { mailZoom } from '../audio.js';
 import { el, toast } from '../util.js';
 import { gameState } from '../persist.js';
 import missions from '../../../game/systems/missionManager.js';
@@ -33,17 +34,50 @@ export function mount(body) {
     el('div', { class: 'card' }, el('div', { class: 'lbl', text: 'Outbox' }), el('p', { style: 'margin:0.4rem 0 0.8rem;color:var(--dim)', text: 'Send a status report and your findings to OERA.' }), send, sentList));
   body.append(side, list);
 
+  // ---- reading a message: a 90s style zoom (8 outline frames) into a large window, and back out ----
+  const FROM_FULL = { 'OERA Operations': 'O.E.R.A. - Ocean Exploration and Research Alliance (Operations)' };
+  const stamp = (m) => (m.gameClock != null ? gameDateText(m.gameClock).replace('  ', ', ').slice(0, -3) : when(m.receivedAt));
+  let reading = null;   // { m, win, back, rowEl }
+  const container = () => body.closest('#station') || body;
+  const rectIn = (box, host) => { const r = box.getBoundingClientRect(), h = host.getBoundingClientRect(); return { x: r.left - h.left, y: r.top - h.top, w: r.width, h: r.height }; };
+  function zoom(host, from, to, done) {
+    const frame = el('div', { class: 'mail-zoom' }); host.append(frame);
+    let k = 0; const place = (t) => { frame.style.cssText = `left:${from.x + (to.x - from.x) * t}px;top:${from.y + (to.y - from.y) * t}px;width:${from.w + (to.w - from.w) * t}px;height:${from.h + (to.h - from.h) * t}px`; };
+    const tick = () => { k++; place(k / 8); if (k < 8) setTimeout(tick, 36); else { frame.remove(); done(); } };
+    place(0); setTimeout(tick, 36);
+  }
+  function openMessage(m, rowEl) {
+    if (reading) return;
+    if (!m.read) { setInbox(inbox().map((x) => x.id === m.id ? { ...x, read: true } : x)); m = { ...m, read: true }; }
+    const host = container(), mid = m.missionId || MISSION_OF[m.id];
+    const back = el('div', { class: 'mail-back', onclick: (e) => { if (e.target === back) closeMessage(); } });
+    const field = (k, v) => el('div', { class: 'mail-field' }, el('span', { text: k }), el('b', { text: v }));
+    const tail = el('div', { class: 'mail-tail' });
+    const fillTail = () => { const st = mid ? stateOf(mid) : null; tail.replaceChildren(...(!mid ? [] : st === 'new'
+      ? [el('button', { class: 'btn primary', text: 'Accept mission', onclick: () => { missions.startMission(mid); fillTail(); render(); } })]
+      : [el('p', { class: st === 'done' ? 'ok' : 'warn', text: st === 'done' ? 'Mission complete' : 'Mission accepted. See PED → Missions.' })])); };
+    fillTail();
+    const win = el('div', { class: 'mail-win', hidden: true },
+      field('From:', FROM_FULL[m.from] || m.from), field('To:', 'Captain of the Aqua Nova'), field('Date:', stamp(m)), field('Subject:', m.subject),
+      el('div', { class: 'mail-text', text: m.text }), tail);
+    back.append(win); host.append(back);
+    const to = rectIn(win, host); win.hidden = true;
+    reading = { m, win, back, rowEl };
+    mailZoom(true);
+    zoom(host, rectIn(rowEl, host), to, () => { win.hidden = false; render(); });
+  }
+  function closeMessage() {
+    if (!reading) return;
+    const { win, back, rowEl } = reading, host = container(), from = rectIn(win, host);
+    win.hidden = true; back.classList.add('clear');
+    const target = rowEl.isConnected ? rectIn(rowEl, host) : { x: from.x + from.w / 2, y: from.y + from.h / 2, w: 10, h: 10 };
+    mailZoom(false);
+    zoom(host, from, target, () => { back.remove(); reading = null; render(); });
+  }
   function messageCard(m) {
-    const mid = m.missionId || MISSION_OF[m.id], st = mid ? stateOf(mid) : null;
-    const open = () => { if (!m.read) setInbox(inbox().map((x) => x.id === m.id ? { ...x, read: true } : x)); render(); };
-    return el('div', { class: 'card msg' },
-      el('button', { class: 'msg-head', style: 'all:unset;display:block;width:100%;cursor:pointer', onclick: open },
-        el('div', { class: 'meta' }, el('b', { text: m.from }), el('span', { text: when(m.receivedAt) }), !m.read && el('span', { class: 'warn', text: 'NEW' })),
-        el('h3', { text: m.subject })),
-      m.read ? el('p', { text: m.text }) : el('p', { text: 'Tap to read', style: 'color:var(--dim)' }),
-      m.read && mid && (st === 'new'
-        ? el('button', { class: 'btn primary', text: 'Accept mission', onclick: () => { missions.startMission(mid); render(); } })
-        : el('p', { class: st === 'done' ? 'ok' : 'warn', text: st === 'done' ? 'Mission complete' : 'Mission accepted. See PED → Missions.' })));
+    const row = el('button', { class: 'card msg mail-row' + (m.read ? '' : ' unread'), onclick: () => openMessage(m, row) },
+      el('span', { class: 'dot', text: m.read ? '' : '●' }), el('b', { class: 'from', text: m.from }), el('span', { class: 'subj', text: m.subject }), el('span', { class: 'when', text: stamp(m) }));
+    return row;
   }
   function render() {
     const msgs = [...inbox()].reverse();
@@ -62,5 +96,5 @@ export function mount(body) {
   const onMsg = () => render();
   document.addEventListener('comms-message', onMsg);
   render(); update();
-  return { update, destroy() { document.removeEventListener('comms-message', onMsg); } };
+  return { update, destroy() { document.removeEventListener('comms-message', onMsg); if (reading) { reading.back.remove(); reading = null; } } };
 }

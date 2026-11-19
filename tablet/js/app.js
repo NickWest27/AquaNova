@@ -27,6 +27,11 @@ const SYSTEM_TEXT = {
 };
 const modules = {};
 let tickN = 0;
+// stamp each new message with the game date and time it arrived (the mission code knows nothing of the game clock)
+document.addEventListener('comms-message', () => {
+  const list = gameState.getProperty('mission.inbox') || [], last = list[list.length - 1];
+  if (last && last.gameClock == null) gameState.updateProperty('mission.inbox', list.map((m, i) => i === list.length - 1 ? { ...m, gameClock: Math.round(sim.s.clock) } : m));
+});
 let scene, current = null, missions = null, boarded = false;
 const pendingModals = [];
 let zoom = 1;
