@@ -114,7 +114,7 @@ async function toggleComm() {
   root.replaceChildren(el('div', { class: 'comm-panel' },
     el('div', { class: 'comm-top' }, el('small', { class: 'comm-live', text: '● voice channel open' })),
     body));
-  root.onclick = (e) => { if (!e.target.closest('button, .comm-reply, .comm-head, .comm-you, .comm-who-label')) closeComm(); };   // a tap anywhere but a button or text closes it
+  root.onclick = (e) => { if (!e.target.closest('.comm-page')) closeComm(); };   // a tap outside the channel closes it
   root.hidden = false;
   try {
     modules.crew ||= await import('./stations/crew.js');

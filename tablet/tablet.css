@@ -571,3 +571,11 @@ textarea.field { min-height: 6rem; resize: none; }
 .comm-grid .comm-line { min-width: 0; min-height: 3.2rem; padding: 0.4rem 0.8rem; font-size: 1rem; }
 .comm-line.out { align-self: center; min-width: 12rem; min-height: 2.8rem; }
 .cl-card .cl-v, .cl-card .cl-st { font-size: 0.9rem; white-space: nowrap; } .cl-tag, .cl-tx { white-space: nowrap; }
+
+/* communicator: a voice channel. A transcript, a hint and one line to speak or type. No buttons. */
+.comm-menu .comm-page { gap: 0.7rem; }
+.comm-hint { color: var(--dim); font-size: 0.95rem; font-style: italic; text-align: center; }
+.comm-mic { min-height: 1.1rem; text-align: center; font: 700 0.8rem var(--mono); letter-spacing: 0.1em; color: #7dffc4; text-transform: uppercase; }
+.comm-say { display: flex; } .comm-input { flex: 1; min-height: 3.2rem; padding: 0 1.1rem; border-radius: 16px; border: 1px solid var(--line-soft); background: rgba(0,10,20,0.55); color: var(--text); font: 1.1rem var(--font); }
+.comm-input:focus { outline: none; border-color: var(--cyan); }
+.comm-log { max-height: 20rem; min-height: 8rem; }

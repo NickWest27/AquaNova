@@ -1,5 +1,5 @@
 // Crew comms through the communicator pin (Star Trek style): crew on the left, the voice channel (transcript) in the middle, things to say on the right.
-import { sim, toward } from '../sim.js';
+import { sim, toward, MAX_SPEED } from '../sim.js';
 import { el, toast } from '../util.js';
 import { gameState } from '../persist.js';
 import { toggleDock } from '../dock.js';
@@ -75,69 +75,160 @@ const PARAM = {
 PARAM['Make you speed'] = PARAM['Make your speed']; // old saves keep the typo
 const works = (t, pleasantry) => pleasantry || t in ORDERS || t in PARAM;
 
-// The conversation is kept while the game runs, so reopening the pin picks up where you left off.
-const hist = {};      // crew id -> [{ you, text, stub, held }]
-let lastId = null;
-const TABS = [['Pleasantries', 'Talk'], ['Commands', 'Orders'], ['Emergency', 'Emergency']];
+// ---------------------------------------------------------------------------------------------
+// The communicator is a voice channel, like the badge in the show: no menus and no buttons.
+// Speak (the microphone listens while the channel is open), or type a line / use the keyboard's dictation key.
+// "Helm, make your depth one hundred metres."  "ARIA, status report."  "Hello."  "That's all."
+// ---------------------------------------------------------------------------------------------
+const ONES = { zero: 0, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12, thirteen: 13, fourteen: 14, fifteen: 15, sixteen: 16, seventeen: 17, eighteen: 18, nineteen: 19 };
+const TENS = { twenty: 20, thirty: 30, forty: 40, fifty: 50, sixty: 60, seventy: 70, eighty: 80, ninety: 90 };
+/** "one hundred and twenty" -> "120"; the rest of the line is left alone. */
+export function normalize(raw) {
+  const toks = String(raw).toLowerCase().replace(/[^a-z0-9%' ]+/g, ' ').replace(/\band\b(?=\s+(?:one|two|three|four|five|six|seven|eight|nine|ten|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety))/g, ' ').split(/\s+/).filter(Boolean);
+  const out = []; let run = null;
+  const flush = () => { if (run) { out.push(String(run.total + run.cur)); run = null; } };
+  for (const w of toks) {
+    if (!(w in ONES || w in TENS || w === 'hundred' || w === 'thousand')) { flush(); out.push(w); continue; }
+    run ||= { total: 0, cur: 0 };
+    if (w in ONES) run.cur += ONES[w]; else if (w in TENS) run.cur += TENS[w];
+    else if (w === 'hundred') run.cur = (run.cur || 1) * 100; else { run.total += (run.cur || 1) * 1000; run.cur = 0; }
+  }
+  flush(); return out.join(' ');
+}
+// who answers to what
+const ALIAS = {
+  executiveOfficer: ['aria', 'xo', 'executive officer', 'number one', 'computer'], helm: ['helm', 'helmsman', 'marcus'], engineering: ['engineering', 'engineer', 'riley', 'chief'],
+  science: ['science', 'doctor', 'patel', 'sam', 'medical'], sensors: ['sensors', 'sensor', 'alex', 'torres'], communications: ['comms', 'communications', 'nicole', 'brooks'], security: ['security', 'jordan', 'kim'],
+};
+const CARD = { north: 0, south: 180, east: 90, west: 270 };
+const num = (m, i = 1) => (m && m[i] != null ? parseInt(m[i], 10) : null);
+/** Turn what was said into { dept, run(ctx) } (or a special word). The department is the crew member whose job it is. */
+export function understand(t) {
+  const has = (re) => re.test(t);
+  if (has(/\b(that'?s all|that is all|over and out|signing off|close (the )?channel|dismissed)\b/) || /(^| )out$/.test(t)) return { kind: 'close' };
+  if (has(/\b(what can you do|what can i ask|options|help)\b/)) return { kind: 'help' };
+  if (has(/\bemergency surface\b|\bblow (the )?ballast\b/)) return { dept: 'helm', run: () => ORDERS['Emergency surface']() };
+  if (has(/\bemergency dive\b/)) return { dept: 'helm', run: () => ORDERS['Emergency dive']() };
+  if (has(/\bundock\b|release (the )?clamps|cast off/)) return { dept: 'helm', run: () => ORDERS['Undock']() };
+  if (has(/\bdock\b|\bberth\b/) && !has(/\bdock to\b/)) return { dept: 'helm', run: () => ORDERS['Dock']() };
+  if (has(/\ball stop\b|\bstop (the )?(engines?|ship)\b|\bhold position\b/)) return { dept: 'helm', run: () => ORDERS['All stop']() };
+  if (has(/\bflank\b/)) return { dept: 'helm', run: () => ORDERS['All ahead flank']() };
+  if (has(/\btake her (out )?to sea\b|\bget us underway\b|\bset sail\b|\bhead out\b/)) return { dept: 'executiveOfficer', run: (c) => ORDERS["Let's take her to sea"](c) };
+  if (has(/\b(go|take us|head|return|bring us) (back )?(to )?(home|the dock|port|base)\b|\bgo home\b|\btake us home\b/)) return { dept: 'executiveOfficer', run: () => ORDERS["Let's go home"]() };
+  if (has(/\bquarters\b/)) return { dept: 'executiveOfficer', run: (c) => ORDERS['Report to my quarters'](c) };
+  if (has(/\bgeneral alarm\b|\bsound the alarm\b/)) return { dept: 'executiveOfficer', run: () => ORDERS['Sound General Alarm']() };
+  if (has(/\bengineering status\b|\bpower status\b/)) return { dept: 'engineering', run: () => ORDERS['Engineering status report']() };
+  if (has(/\bstatus\b|\breport in\b|\bhow are we\b/)) return { dept: 'executiveOfficer', run: () => ORDERS['Status Report']() };
+  if (has(/\bprepare (for|to) dive\b|\bmake ready to dive\b/)) return { dept: 'engineering', run: () => ORDERS['Prepare for dive']() };
+  if (has(/\b(sensor|sonar) sweep\b|\bping\b/)) return { dept: 'sensors', run: () => ORDERS['Full sensor sweep']() };
+  if (has(/\bpassive\b|\bgo quiet\b|\bsilent running\b/)) return { dept: 'sensors', run: () => ORDERS['Passive listening mode']() };
+  if (has(/\bdeploy\b.*\b(buoys?|wskrs?)\b|\blaunch\b.*\bwskrs?\b/)) return { dept: 'sensors', run: () => ORDERS['Deploy sensor buoys']() };
+  if (has(/\bcrew diagnostics?\b/)) return { dept: 'science', run: () => ORDERS['Run crew diagnostics']() };
+  if (has(/\bdeparture clearance\b/)) return { dept: 'communications', run: () => ORDERS['Request departure clearance']() };
+  let m;
+  if (has(/\b(heading|steer|course|bearing)\b/) && ((m = t.match(/\b(\d{1,3})\b/)) || (m = t.match(/\b(north|south|east|west)\b/)))) {
+    const v = /\d/.test(m[1]) ? parseInt(m[1], 10) % 360 : CARD[m[1]];
+    return { dept: 'helm', run: () => { sim.setHeading(v); sim.s.wpt = null; return `Steering ${hdgText(v)}, aye.`; } };
+  }
+  if ((m = t.match(/\b(?:come|turn|steer)?\s*(left|right|port|starboard)(?: (\d{1,3}))?\b/)) && has(/\b(left|right|port|starboard)\b/)) {
+    const d = Math.min(180, num(m, 2) || 10), left = m[1] === 'left' || m[1] === 'port';
+    return { dept: 'helm', run: () => { sim.setHeading(sim.s.targetHeading + (left ? -d : d)); sim.s.wpt = null; return `Coming ${left ? 'left' : 'right'} to ${hdgText(sim.s.targetHeading)}, aye.`; } };
+  }
+  if (has(/\b(speed|knots?|percent|ahead|slow|half|full)\b|%/) && !has(/\bdepth\b/)) {
+    let v = null;
+    if ((m = t.match(/\b(\d{1,3}) ?(percent|%)/))) v = Math.min(1, parseInt(m[1], 10) / 100);
+    else if ((m = t.match(/\b(\d{1,2}) knots?\b/))) v = Math.min(1, parseInt(m[1], 10) / MAX_SPEED);
+    else if (has(/\bslow\b/)) v = 0.2; else if (has(/\bhalf\b/)) v = 0.5; else if (has(/\bfull\b/)) v = 0.8;
+    if (v != null) return { dept: 'helm', run: () => { if (docked()) return 'We are docked, Captain.'; if (v) sim.setThrottle(v); else sim.stop(); sim.s.wpt = null; return v ? `Speed ${Math.round(v * 100)} percent, aye.` : 'All stop, aye.'; } };
+  }
+  if (has(/\b(depth|dive|descend|metres?|meters?)\b/) && (m = t.match(/\b(\d{1,4})\b/))) {
+    const v = parseInt(m[1], 10);
+    return { dept: 'helm', run: () => (docked() ? 'We are docked, Captain.' : v ? dive(v, 'Aye.') : (sim.setDepth(0), 'Coming to the surface, aye.')) };
+  }
+  if (has(/\b(surface|come up)\b/)) return { dept: 'helm', run: () => (docked() ? 'We are docked, Captain.' : (sim.setDepth(0), 'Coming to the surface, aye.')) };
+  if (has(/\b(hello|hi|hey|good (morning|evening|day)|thank you|thanks|how are you|goodbye|bye)\b/)) return { kind: 'pleasantry', bye: has(/\b(goodbye|bye)\b/) };
+  return null;
+}
+const SAMPLES = [
+  'Helm, make your depth one hundred metres.', 'ARIA, status report.', 'Helm, come right forty five.', 'Make your heading two seven zero.',
+  'Helm, speed sixty percent.', 'ARIA, let\'s take her to sea.', 'Sensors, full sensor sweep.', 'Hello, ARIA.', 'Helm, undock.', 'Engineering, status report.',
+];
+const hist = [];      // the conversation, kept while the game runs: { you, who, text }
+let hintAt = 0;
 
 export function mount(body, ctx) {
   body.classList.add('comm-menu');
   const crew = knownCrew();
-  let cur = null, tab = 'Commands', param = null;
-  const mineP = () => gameState.getProperty('contacts.crew.captain.dialogueOptions.pleasantries') || ['Hello', 'Goodbye', 'Thank you'];
-  const linesOf = (name) => {
-    const o = (cur && cur.dialogueOptions) || {};
-    if (name === 'Pleasantries') return mineP();
-    if (name === 'Commands') return [...(o.commands || []), ...((EXTRA[cur && cur.id]) || []).filter((c) => !(o.commands || []).includes(c))];
-    return o.emergency || [];
-  };
-  const tabsFor = () => TABS.filter(([n]) => linesOf(n).length);
-  const line = (text, onclick, cls = '') => el('button', { class: `comm-line ${cls}`, text, onclick });
+  const byId = (id) => crew.find((c) => c.id === id);
+  const aria = () => byId('executiveOfficer') || crew[0];
   const first = (c) => (c.id === 'executiveOfficer' ? 'ARIA' : c.name.replace(/^(Captain|Commander|Dr\.|Specialist|Engineer|Lieutenant) /, '').split(' ')[0]);
-  const initial = (c) => c.name.replace(/^(Captain|Commander|Dr\.|Specialist|Engineer|Lieutenant) /, '')[0];
-  const log = () => (hist[cur.id] ||= []);
+  const pleasantries = (c) => (c.dialogueOptions && c.dialogueOptions.pleasantries) || ['Aye.'];
+  let alive = true, fails = 0, last = null;
+  const log = el('div', { class: 'comm-log' });
+  const hint = el('div', { class: 'comm-hint' });
+  const listen = el('span', { class: 'comm-mic' });
+  const input = el('input', { class: 'comm-input', type: 'text', placeholder: 'Speak, or type here…', autocomplete: 'off', autocapitalize: 'sentences', enterkeyhint: 'send', 'aria-label': 'Say something to the crew' });
+  const form = el('form', { class: 'comm-say', onsubmit: (e) => { e.preventDefault(); const t = input.value.trim(); input.value = ''; if (t) heard(t); } }, input);
+  body.replaceChildren(el('div', { class: 'comm-page' }, log, hint, listen, form));
 
-  function select(c) {
-    cur = c; lastId = c.id; param = null;
-    const held = takeHeld(c.id);   // what they tried to tell the Captain while he was elsewhere
-    if (held.length) log().push({ text: held.map((h) => `Captain, ${h.charAt(0).toLowerCase()}${h.slice(1)}`).join(' '), held: true });
-    else if (c.id === 'executiveOfficer' && !log().length) log().push({ text: 'Welcome aboard, Captain. I am ARIA, your executive officer. How may I assist you?' });
-    const t = tabsFor().map(([n]) => n); if (!t.includes(tab)) tab = t.includes('Commands') ? 'Commands' : t[0];
-    render();
-  }
-  function say(text, done) {
-    log().push({ you: text, text: done }); param = null;
-    document.dispatchEvent(new CustomEvent('dialogue-complete', { detail: { characterId: cur.id, dialogueId: 'first_contact' } }));
-    render();
-  }
-  function speak(text) {
-    const o = cur.dialogueOptions || {};
-    const isOrder = [...(o.commands || []), ...(EXTRA[cur.id] || []), ...(o.emergency || [])].includes(text);
-    if (!isOrder) { say(text, pick(o.pleasantries || ['Aye.'])); return; }
-    if (PARAM[text]) { param = { said: text, ...PARAM[text]() }; render(); return; }
-    if (ORDERS[text]) { say(text, ORDERS[text](ctx)); return; }
-    log().push({ you: text, text: 'That order is not available yet.', stub: true }); render();
-  }
-
-  function render() {
-    if (!crew.length) { body.replaceChildren(el('div', { class: 'comm-page' }, el('div', { class: 'comm-head', text: 'No one else seems to be available right now…' }))); return; }
-    const strip = el('div', { class: 'comm-crew' }, ...crew.map((c) => el('button', { class: 'comm-who' + (cur && cur.id === c.id ? ' on' : ''), 'aria-label': c.name, onclick: () => select(c) },
-      el('span', { class: `avatar ${c.id === 'executiveOfficer' ? 'aria' : ''}`, text: initial(c) }), el('span', {}, el('b', { text: first(c) }), el('small', { text: c.role })),
-      unreadFor(c.id) > 0 && el('span', { class: 'comm-badge', text: String(unreadFor(c.id)) }))));
-    const entries = log().slice(-3);
-    const talk = el('div', { class: 'comm-log' }, ...(entries.length ? entries.map((e) => el('div', { class: 'comm-entry' },
+  function draw() {
+    log.replaceChildren(...(hist.length ? hist.slice(-5).map((e) => el('div', { class: 'comm-entry' },
       e.you && el('div', { class: 'comm-you', text: `You: ${e.you}` }),
-      el('div', { class: 'comm-reply' + (e.stub ? ' stub' : '') }, el('small', { text: cur.name }), el('p', { text: e.text })))) : [el('div', { class: 'comm-quiet', text: `${cur.name} is on the channel.` })]));
-    let controls;
-    if (param) controls = [el('div', { class: 'comm-head', text: param.title }), el('div', { class: 'comm-chips' }, ...param.opts.map(([l, fn]) => line(l, () => say(`${param.said}: ${l}`, fn(ctx)), 'chip'))), line('Belay that', () => { param = null; render(); }, 'back')];
-    else controls = [el('div', { class: 'comm-tabs' }, ...tabsFor().map(([n, label]) => el('button', { class: `comm-tab${tab === n ? ' on' : ''}${n === 'Emergency' ? ' danger' : ''}`, text: label, onclick: () => { tab = n; render(); } }))),
-      el('div', { class: 'comm-grid' }, ...linesOf(tab).map((t) => { const ok = works(t, tab === 'Pleasantries'); return line(t, () => speak(t), ok ? (tab === 'Emergency' ? 'danger' : '') : 'stub'); }))];
-    body.replaceChildren(el('div', { class: 'comm-page' }, strip, cur ? talk : el('div', { class: 'comm-quiet', text: 'Who would you like to reach?' }),
-      ...(cur ? controls : []), line("That's all. Out.", () => ctx.closeComm(), 'back out')));
-    const lg = body.querySelector('.comm-log'); if (lg) lg.scrollTop = lg.scrollHeight;
+      el('div', { class: 'comm-reply' }, el('small', { text: e.who ? e.who.name : '' }), el('p', { text: e.text })))) : [el('div', { class: 'comm-quiet', text: 'Channel open. Who do you want to talk to?' })]));
+    log.scrollTop = log.scrollHeight;
+    hint.textContent = `Try: “${SAMPLES[hintAt % SAMPLES.length]}”`;
   }
-  const withMail = crew.slice().sort((a, b) => unreadFor(b.id) - unreadFor(a.id))[0];
-  const start = (withMail && unreadFor(withMail.id) > 0 && withMail) || crew.find((c) => c.id === lastId) || crew[0];
-  if (start) select(start); else render();
-  return { update() {}, destroy() {} };
+  function reply(who, text, you) {
+    hist.push({ you, who, text }); draw();
+    document.dispatchEvent(new CustomEvent('dialogue-complete', { detail: { characterId: who.id, dialogueId: 'first_contact' } }));
+  }
+  function heard(raw) {
+    const t = normalize(raw);
+    // who was spoken to
+    let addressed = null;
+    for (const c of crew) if ((ALIAS[c.id] || [first(c).toLowerCase()]).some((a) => new RegExp(`\\b${a}\\b`).test(t))) { addressed = c; break; }
+    const u = understand(t);
+    if (!u) {
+      const who = addressed || last || aria(); last = who; fails++;
+      reply(who, fails > 1 ? `Say again, Captain? ${first(who)} can take orders for depth, heading, speed, docking, status, sweeps and more. Try “${SAMPLES[(hintAt++) % SAMPLES.length]}”.` : 'Say again, Captain?', raw);
+      return;
+    }
+    fails = 0;
+    if (u.kind === 'close') { hist.push({ you: raw, who: addressed || last || aria(), text: 'Aye, Captain. Out.' }); draw(); setTimeout(() => ctx.closeComm(), 700); return; }
+    if (u.kind === 'help') { const who = addressed || aria(); last = who; reply(who, 'Try giving an order: depth, heading, come left or right, speed, dock or undock, status report, sensor sweep. Start with a name, like “Helm, …”.', raw); return; }
+    if (u.kind === 'pleasantry') { const who = addressed || last || aria(); last = who; reply(who, pleasantries(who)[Math.floor(Math.random() * pleasantries(who).length)], raw); if (u.bye) setTimeout(() => ctx.closeComm(), 1400); return; }
+    // an order: the right officer takes it (the XO takes anything, as a relay)
+    const owner = byId(u.dept) || aria();
+    let who = addressed || owner;
+    if (addressed && addressed.id !== 'executiveOfficer' && addressed.id !== owner.id) { last = addressed; reply(addressed, `That is a matter for ${first(owner)}, Captain.`, raw); return; }
+    if (addressed && addressed.id === 'executiveOfficer' && owner.id !== 'executiveOfficer') who = addressed;
+    last = who;
+    reply(who, u.run(ctx) || 'Aye.', raw);
+  }
+
+  // the microphone, where the browser allows it (it listens while the channel is open)
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let rec = null, quiet = 0;
+  function startMic() {
+    if (!SR || !alive) { listen.textContent = ''; return; }
+    try {
+      rec = new SR(); rec.lang = 'en-US'; rec.interimResults = false; rec.maxAlternatives = 1;
+      rec.onstart = () => { listen.textContent = '● listening'; };
+      rec.onresult = (e) => { quiet = 0; const t = e.results[e.results.length - 1][0].transcript; if (t) heard(t); };
+      rec.onerror = (e) => { if (e.error === 'not-allowed' || e.error === 'service-not-allowed') { alive = false; listen.textContent = 'Microphone is off. Type, or use the keyboard’s dictation key.'; } };
+      rec.onend = () => { if (alive && ++quiet < 6) setTimeout(() => { try { rec.start(); } catch (e) { /* already running */ } }, 250); else if (alive) listen.textContent = 'Not listening. Tap and type, or use dictation.'; };
+      rec.start();
+    } catch (e) { listen.textContent = ''; }
+  }
+
+  // anything that was waiting for the Captain is said first, then the greeting
+  let spoke = false;
+  for (const c of crew) {
+    const held = takeHeld(c.id);
+    if (held.length) { hist.push({ who: c, text: held.map((h) => `Captain, ${h.charAt(0).toLowerCase()}${h.slice(1)}`).join(' '), held: true }); last = c; spoke = true; }
+  }
+  if (!spoke && !hist.length && byId('executiveOfficer')) { hist.push({ who: aria(), text: 'Welcome aboard, Captain. I am ARIA, your executive officer. How may I assist you?' }); last = aria(); }
+  hintAt = Math.floor(Math.random() * SAMPLES.length);
+  draw(); startMic();
+  return { update() {}, destroy() { alive = false; try { rec && rec.abort(); } catch (e) { /* ignore */ } } };
 }
