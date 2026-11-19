@@ -9,7 +9,7 @@
   "theme_color": "#04101f",
   "icons": [
     {
-      "src": "assets/icon-180.png",
+      "src": "assets/icon-v2-180.png",
       "sizes": "180x180",
       "type": "image/png"
     }
