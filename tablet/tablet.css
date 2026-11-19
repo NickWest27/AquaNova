@@ -553,29 +553,3 @@ textarea.field { min-height: 6rem; resize: none; }
 .cp-freq { font: 800 2.4rem var(--mono); color: #e6e66a; margin: 0.4rem 0; }
 .cp-msg { min-height: 1.4rem; color: var(--cyan); font-size: 0.95rem; margin-top: 0.5rem; }
 .cp-reply { margin-top: 0.6rem; font-size: 0.95rem; line-height: 1.35; } .cp-reply.sos { color: var(--red); }
-
-/* communicator: one screen. Crew across the top, the conversation, then talk / orders / emergency. */
-.comm-menu .comm-page { width: 100%; align-items: stretch; gap: 0.6rem; }
-.comm-crew { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; }
-.comm-crew .comm-who { display: flex; align-items: center; gap: 0.6rem; min-width: 0; flex: 1 1 9rem; max-width: 14rem; min-height: 3.4rem; padding: 0.3rem 0.8rem; border-radius: 16px; background: rgba(100,255,218,0.07); border: 1px solid var(--line-soft); color: var(--text); font: inherit; text-align: left; }
-.comm-crew .comm-who.on { border-color: var(--cyan); background: rgba(100,255,218,0.2); }
-.comm-crew .comm-who b { font-size: 1.05rem; } .comm-crew .comm-who small { font-size: 0.75rem; }
-.comm-crew .avatar { flex: none; width: 2.2rem; height: 2.2rem; border-radius: 50%; display: grid; place-items: center; background: #0e3a50; color: var(--cyan); font-weight: 800; }
-.comm-log { max-height: 13rem; min-height: 6rem; overflow-y: auto; -webkit-overflow-scrolling: touch; text-align: left; padding: 0.4rem 0.6rem; border-radius: 14px; background: rgba(0,10,20,0.45); }
-.comm-entry { margin-bottom: 0.5rem; } .comm-log .comm-reply { margin: 0.2rem 0 0; } .comm-log .comm-reply p { font-size: 1.2rem; line-height: 1.3; margin: 0.1rem 0 0; }
-.comm-quiet { color: var(--dim); text-align: center; padding: 1rem 0; }
-.comm-tabs { display: flex; gap: 0.5rem; justify-content: center; }
-.comm-tab { min-height: 2.8rem; padding: 0 1.2rem; border-radius: 999px; background: none; border: 1px solid var(--line-soft); color: var(--dim); font: 700 0.95rem var(--font); }
-.comm-tab.on { background: var(--cyan); color: #04101f; border-color: var(--cyan); } .comm-tab.danger { color: #ff9a9a; border-color: rgba(255,92,92,0.45); } .comm-tab.danger.on { background: #ff5c5c; color: #04101f; }
-.comm-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
-.comm-grid .comm-line { min-width: 0; min-height: 3.2rem; padding: 0.4rem 0.8rem; font-size: 1rem; }
-.comm-line.out { align-self: center; min-width: 12rem; min-height: 2.8rem; }
-.cl-card .cl-v, .cl-card .cl-st { font-size: 0.9rem; white-space: nowrap; } .cl-tag, .cl-tx { white-space: nowrap; }
-
-/* communicator: a voice channel. A transcript, a hint and one line to speak or type. No buttons. */
-.comm-menu .comm-page { gap: 0.7rem; }
-.comm-hint { color: var(--dim); font-size: 0.95rem; font-style: italic; text-align: center; }
-.comm-mic { min-height: 1.1rem; text-align: center; font: 700 0.8rem var(--mono); letter-spacing: 0.1em; color: #7dffc4; text-transform: uppercase; }
-.comm-say { display: flex; } .comm-input { flex: 1; min-height: 3.2rem; padding: 0 1.1rem; border-radius: 16px; border: 1px solid var(--line-soft); background: rgba(0,10,20,0.55); color: var(--text); font: 1.1rem var(--font); }
-.comm-input:focus { outline: none; border-color: var(--cyan); }
-.comm-log { max-height: 20rem; min-height: 8rem; }

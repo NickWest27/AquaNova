@@ -70,9 +70,3 @@ export function frameThrottle(fn) {
   let queued = false;
   return () => { if (queued) return; queued = true; requestAnimationFrame(() => { queued = false; fn(); }); };
 }
-
-/** Voice commands for the communicator (PED -> Settings). Off by default: the browser's speech service may send audio to its maker. Saved on this device only. */
-export const voiceCmd = {
-  get on() { try { return localStorage.getItem('aqua.voiceCommands') === '1'; } catch (e) { return false; } },
-  set(v) { try { localStorage.setItem('aqua.voiceCommands', v ? '1' : '0'); } catch (e) { /* ignore */ } },
-};

@@ -1,6 +1,6 @@
 // PED (personal electronic device): ship status, missions, findings, tasks, journal, settings.
 // The iPhone PED (ped/ at the site root) shows the same things, kept in step through GitHub.
-import { el, modal, pad, toast, voiceCmd } from '../util.js';
+import { el, modal, pad, toast } from '../util.js';
 import { sim } from '../sim.js';
 import { gameState, saveManager, restartGame } from '../persist.js';
 import { syncNow, requestSync, syncState, onSyncChange } from '../sync.js';
@@ -109,10 +109,6 @@ export function mount(body, ctx) {
             el('button', { class: 'btn primary', text: 'Test sound', onclick: () => { const st = testSound(); toast(`Sound engine: ${st.state}`); setTimeout(render, 400); } }),
             el('button', { class: 'btn', text: getSound().on ? 'Turn sound off' : 'Turn sound on', onclick: () => { setSound({ on: !getSound().on }); if (getSound().on) chirp(); render(); } }),
             ...[['Quiet', 0.25], ['Medium', 0.6], ['Loud', 1]].map(([t, v]) => el('button', { class: `btn ${Math.abs(getSound().vol - v) < 0.01 ? 'primary' : ''}`, text: t, onclick: () => { setSound({ vol: v }); chirp(); render(); } })))),
-        el('div', { class: 'card setting' }, el('div', { class: 'lbl', text: 'Voice commands' }),
-          el('p', { text: voiceCmd.on ? 'On. Press and hold the communicator pin to talk to the crew. A single tap opens it for typing.' : 'Off. The microphone is never used. A single tap on the pin opens the communicator for typing.' }),
-          el('p', { text: 'Voice uses your browser’s speech service, which may send the audio to Apple or Google to turn it into text. The game itself never records or stores audio. Typing and the keyboard’s dictation key do not use this setting.' }),
-          el('button', { class: `btn ${voiceCmd.on ? '' : 'primary'}`, text: voiceCmd.on ? 'Turn voice commands off' : 'Turn voice commands on', onclick: () => { voiceCmd.set(!voiceCmd.on); render(); } })),
         el('div', { class: 'card setting' }, el('div', { class: 'lbl', text: 'Engine hum' }), el('div', { class: 'row' },
           ...[['Off', 0], ['Faint', 0.25], ['Normal', 1]].map(([t, v]) => el('button', { class: `btn ${Math.abs((getSound().hum ?? 0.25) - v) < 0.01 ? 'primary' : ''}`, text: t, onclick: () => { setSound({ hum: v }); render(); } })))),
         el('div', { class: 'card setting' }, el('div', { class: 'lbl', text: 'Game version' }), el('p', { text: `Build ${appVersion}. The game checks for updates each time it opens. If a change is missing, tap Update now. Your saves stay.` }),
