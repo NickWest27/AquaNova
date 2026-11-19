@@ -8,7 +8,7 @@ import { research } from '../science.js';
 import { el, toast } from '../util.js';
 import { gameState } from '../persist.js';
 import { toggleDock } from '../dock.js';
-import { say as crewSay, takeHeld, unreadFor, unreadCount } from '../notify.js';
+import { say as crewSay, takeHeld, unreadFor, unreadCount, transcript, logLine } from '../notify.js';
 
 // First meeting with each crew member. Spoken once, saved in progress.met.<id>. {captain} = "Captain Surname".
 const INTRO = {
@@ -114,7 +114,9 @@ export function mount(body, ctx) {
   const first = (c) => (c.id === 'executiveOfficer' ? 'ARIA' : c.name.replace(/^(Captain|Commander|Dr\.|Specialist|Engineer|Lieutenant) /, '').split(' ')[0]);
   const initial = (c) => c.name.replace(/^(Captain|Commander|Dr\.|Specialist|Engineer|Lieutenant) /, '')[0];
 
-  function say(text, done) {
+  function say(text, done, you = true) {
+    if (you && text) logLine(cur.id, 'you', text);
+    if (done) logLine(cur.id, 'crew', done);
     reply = { said: text, text: done };
     page = 'reply';
     document.dispatchEvent(new CustomEvent('dialogue-complete', { detail: { characterId: cur.id, dialogueId: 'first_contact' } }));
@@ -122,12 +124,24 @@ export function mount(body, ctx) {
   }
   function speak(text) {
     const o = cur.dialogueOptions || {};
+    logLine(cur.id, 'you', text);   // before the order runs, so the running notes it starts land after it
     const isOrder = [...(o.commands || []), ...(EXTRA[cur.id] || []), ...(o.emergency || [])].includes(text);
-    if (!isOrder) { say(text, chatReply(cur.id, text, { mail: (gameState.getProperty('mission.inbox') || []).filter((m) => !m.read).length }) || fill(pick(o.pleasantries || ['Aye.']))); return; }
+    if (!isOrder) { say(text, chatReply(cur.id, text, { mail: (gameState.getProperty('mission.inbox') || []).filter((m) => !m.read).length }) || fill(pick(o.pleasantries || ['Aye.'])), false); return; }
     if (PARAM[text]) { const p = PARAM[text](); param = { said: text, ...p }; page = 'param'; render(); return; }
-    if (ORDERS[text]) { say(text, ORDERS[text](ctx)); return; }
+    if (ORDERS[text]) { say(text, ORDERS[text](ctx), false); return; }
     reply = { said: text, text: 'That order is not available yet.', stub: true }; page = 'reply'; render();
   }
+
+  // Earlier lines scroll above; the newest thing the crew member said is always the big reply block below.
+  const logView = (n, dropLast = false) => {
+    let L = transcript(cur.id).slice(-n); if (dropLast && L.length && L[L.length - 1].from === 'crew') L = L.slice(0, -1);
+    if (!L.length) return null;
+    const box = el('div', { class: 'comm-log' }, ...L.map((l) => l.from === 'you' ? el('div', { class: 'cl you', text: `You: ${l.text}` }) : el('div', { class: 'cl crew' }, el('small', { text: first(cur) }), l.text)));
+    requestAnimationFrame(() => { box.scrollTop = box.scrollHeight; });
+    return box;
+  };
+  const onLine = (e) => { if (cur && e.detail.id === cur.id && (page === 'reply' || page === 'cat')) render(); };
+  document.addEventListener('crew-line', onLine);
 
   function render() {
     let kids;
@@ -139,13 +153,13 @@ export function mount(body, ctx) {
           cur = c; cat = null;
           const met = !!gameState.getProperty('progress.met.' + c.id);
           if (c.id === 'executiveOfficer' && pendingDecisions().length) { gameState.updateProperty('progress.met.' + c.id, true); greeted = true; page = 'decision'; render(); return; }   // ARIA is waiting for an answer
-          if (INTRO[c.id] && !met) { gameState.updateProperty('progress.met.' + c.id, true); greeted = true; reply = { said: null, text: fill(INTRO[c.id]) }; page = 'reply'; render(); return; }   // first meeting comes before anything they were holding back
+          if (INTRO[c.id] && !met) { gameState.updateProperty('progress.met.' + c.id, true); greeted = true; logLine(c.id, 'crew', fill(INTRO[c.id])); reply = { said: null, text: fill(INTRO[c.id]) }; page = 'reply'; render(); return; }   // first meeting comes before anything they were holding back
           const held = takeHeld(c.id);   // what they tried to tell the Captain while he was elsewhere
           if (held.length) { greeted = true; reply = { said: null, text: held.map((h) => (/^Captain\b/.test(h) ? h : `Captain, ${h.charAt(0).toLowerCase()}${h.slice(1)}`)).join(' '), held: true }; page = 'reply'; } else page = 'cat';
           render();
         } }, el('span', { class: `avatar ${c.id === 'executiveOfficer' ? 'aria' : ''}`, text: initial(c) }), el('span', {}, el('b', { text: c.name }), el('small', { text: c.role })), unreadFor(c.id) > 0 && el('span', { class: 'comm-badge', text: String(unreadFor(c.id)) })))];
     } else if (page === 'cat') {
-      kids = [el('div', { class: 'comm-head', text: `What is on your mind, Captain?` }), el('div', { class: 'comm-who-label', text: `${cur.name} · ${cur.role}` }),
+      kids = [logView(5), el('div', { class: 'comm-head', text: `What is on your mind, Captain?` }), el('div', { class: 'comm-who-label', text: `${cur.name} · ${cur.role}` }),
         ...cats().map(([n, l, label]) => line(label, () => { cat = [n, l, label]; page = 'lines'; render(); }, n === 'Emergency' ? 'danger' : '')),
         line('Actually, let me call someone else …', () => { page = 'crew'; render(); }, 'back')];
     } else if (page === 'lines') {
@@ -163,14 +177,16 @@ export function mount(body, ctx) {
         el('div', { class: 'comm-chips' }, ...param.opts.map(([l, fn]) => line(l, () => say(`${param.said}: ${l}`, fn(ctx)), 'chip'))),
         line('Belay that …', () => { page = 'lines'; render(); }, 'back')];
     } else {
-      kids = [reply.said && el('div', { class: 'comm-you', text: `You: ${reply.said}` }),
-        el('div', { class: 'comm-reply' + (reply.stub ? ' stub' : '') }, el('small', { text: cur.name }), el('p', { text: reply.text })),
+      const T = transcript(cur.id), last = T[T.length - 1], live = !reply.stub && !reply.held && last && last.from === 'crew' ? last.text : null;
+      kids = [!reply.stub && logView(8, true),
+        reply.said && !live && el('div', { class: 'comm-you', text: `You: ${reply.said}` }),
+        el('div', { class: 'comm-reply' + (reply.stub ? ' stub' : '') }, el('small', { text: cur.name }), el('p', { text: live || reply.text })),
         line(reply.said ? `One more thing, ${first(cur)} …` : `I need something, ${first(cur)} …`, () => { page = 'cat'; render(); }, 'back'),
         line('Someone else …', () => { page = 'crew'; render(); }, 'back'),
         line("That's all. Out.", () => ctx.closeComm(), 'back')];
     }
-    body.replaceChildren(el('div', { class: 'comm-page' }, ...kids));
+    body.replaceChildren(el('div', { class: 'comm-page' }, ...kids.filter(Boolean)));
   }
   render();
-  return { update() {}, destroy() {} };
+  return { update() {}, destroy() { document.removeEventListener('crew-line', onLine); } };
 }

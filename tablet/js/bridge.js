@@ -36,10 +36,23 @@ const labels = { nav: 'NAV', helm: 'HELM', sys: 'SYS', view: 'VIEW' };
 
 export function createBridgeConsole({ top, main, display, center, left, right, onExpand }) {
   // ---------- top display ----------
-  const tPlace = el('div', { class: 'bt-place' }), tPos = el('div', { class: 'bt-pos' }), tNote = el('div', { class: 'bt-note' });
-  top.append(tPlace, tPos, tNote);
-  let noteUntil = 0, noteText = '', noteKind = '';
-  document.addEventListener('notice', (e) => { noteText = e.detail.text; noteKind = e.detail.kind; noteUntil = Date.now() + 6000; });
+  const tPlace = el('div', { class: 'bt-place' }), tPos = el('div', { class: 'bt-pos' }), tNote = el('div', { class: 'bt-note' }), tStack = el('div', { class: 'bt-stack' });
+  top.append(tPlace, tPos, tNote, tStack);
+  // Notices stack: the newest is the big bright title, the one before it drops to a body line, and so on (three at most).
+  // After NOTE_HOLD ms with nothing new they all clear and the normal readout returns.
+  const NOTE_HOLD = 5000, notes = []; let noteAt = 0, noteKey = '';
+  document.addEventListener('notice', (e) => {
+    const d = e.detail || {};
+    notes.unshift({ text: String(d.text || ''), kind: d.kind || '', who: d.who || '' }); notes.length = Math.min(notes.length, 3); noteAt = Date.now();
+  });
+  function paintNotes() {
+    const key = notes.map((n) => n.kind + n.who + n.text).join('|');
+    if (key === noteKey) return; noteKey = key;
+    if (!notes.length) { tStack.replaceChildren(); return; }
+    const t = notes[0], size = t.text.length <= 26 ? 'big' : t.text.length <= 46 ? 'mid' : 'small';
+    tStack.replaceChildren(el('div', { class: `bt-title ${size} ${t.kind}`, text: t.text }),
+      ...notes.slice(1).map((n) => el('div', { class: 'bt-body', text: (n.who ? n.who + ' · ' : '') + n.text })));
+  }
 
   const views = {};
 
@@ -217,9 +230,9 @@ export function createBridgeConsole({ top, main, display, center, left, right, o
     const s = sim.s;
     set(tPlace, s.at ? s.at.name.toUpperCase() : s.wpt ? 'EN ROUTE: ' + s.wpt.name.toUpperCase() : 'OPEN WATER');
     set(tPos, `${deg(s.lat, 'N', 'S', 2)}  ${deg(s.lon, 'E', 'W', 3)}  ·  ${gameDateText()}`);
-    const noting = Date.now() < noteUntil;
-    set(tNote, noting ? noteText : `BAT ${Math.round(s.battery)}%   O₂ ${Math.round(s.oxygen)}%   HULL ${Math.round(s.hull)}%`);
-    tNote.className = 'bt-note' + (noting ? ' on ' + noteKind : '');
+    if (notes.length && Date.now() - noteAt > NOTE_HOLD) notes.length = 0;
+    paintNotes(); top.classList.toggle('noting', notes.length > 0);
+    set(tNote, `BAT ${Math.round(s.battery)}%   O₂ ${Math.round(s.oxygen)}%   HULL ${Math.round(s.hull)}%`);
     big[mainId].update(); if (current !== mainId) small[current].update(); else small[current].update();
     views[current].side();
   }

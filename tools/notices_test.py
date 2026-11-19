@@ -29,8 +29,18 @@ def main():
         # 1. bridge: upper display only
         shown0 = page.evaluate("window.__aq.notify.shown")
         js("N.say('helm', 'Test notice one'); (await import('./js/util.js')).toast('Test toast two')"); page.wait_for_timeout(700)
-        check("notice shows on the upper display", "TEST TOAST TWO" in page.inner_text(".bt-note").upper() or "TEST NOTICE ONE" in page.inner_text(".bt-note").upper(), page.inner_text(".bt-note"))
+        check("notice shows on the upper display", "TEST TOAST TWO" in page.inner_text(".bt-stack").upper() or "TEST NOTICE ONE" in page.inner_text(".bt-stack").upper(), page.inner_text(".bt-stack"))
         check("no pop-up toast on the bridge", page.locator("#console-line .toast").count() == 0)
+        # stack: newest is the big title, older ones drop to body lines, all clear after ~5 s
+        page.wait_for_timeout(5600)
+        check("notices clear after a few seconds", page.locator(".bt-stack .bt-title").count() == 0 and page.locator(".bt.noting").count() == 0)
+        js("N.say('helm', 'Disconnecting shore power'); await new Promise(r=>setTimeout(r,300)); N.say('helm', 'Releasing the clamps')"); page.wait_for_timeout(500)
+        check("newest notice is the title", "RELEASING THE CLAMPS" in page.inner_text(".bt-title").upper(), page.inner_text(".bt-stack"))
+        check("older notice moves down as body", "DISCONNECTING SHORE POWER" in page.inner_text(".bt-body").upper() if page.locator(".bt-body").count() else False)
+        check("title is large", page.evaluate("parseFloat(getComputedStyle(document.querySelector('.bt-title')).fontSize)") >= 30)
+        page.wait_for_timeout(5600)
+        check("normal readout returns", page.locator(".bt-title").count() == 0 and "BAT" in page.inner_text(".bt-note"), page.inner_text(".bt"))
+        tr = js("return (await import('./js/notify.js')).transcript('helm').map(l=>l.text).join('|')") or ""
         check("no crew card on the bridge", page.evaluate("window.__aq.notify.shown") == shown0)
         # undock with no modal
         js("sim.s.docked = true; sim.s.at = sim.dockPoi(); (await import('./js/dock.js')).toggleDock()"); page.wait_for_timeout(1500)
@@ -77,7 +87,7 @@ def main():
         # 3b. held messages: a missed message waits in the communicator
         page.evaluate("window.__aq.scene('bridge')"); page.wait_for_timeout(300)
         js("N.clearHeld && N.clearHeld(); N.say('comms', 'Captain, sorry to interrupt, but we have an incoming message.', 'mission', { notice: 'INCOMING MESSAGE', keep: 'We have an incoming message from Test. It is waiting at the Comms station.' })"); page.wait_for_timeout(500)
-        check("upper display says Incoming message", "INCOMING MESSAGE" in page.inner_text(".bt-note").upper(), page.inner_text(".bt-note"))
+        check("upper display says Incoming message", "INCOMING MESSAGE" in page.inner_text(".bt-stack").upper(), page.inner_text(".bt-stack"))
         page.wait_for_timeout(6500)
         check("pin glows while a message is unread", "unread" in page.get_attribute("#pin", "class"))
         js("g.updateProperty('progress.met.communications', true)")   # already introduced: the held message comes first
