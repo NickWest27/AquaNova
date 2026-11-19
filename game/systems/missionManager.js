@@ -281,7 +281,7 @@ class MissionManager {
 
     completeMission(missionId) {
         const mission = this.missions.get(missionId);
-        if (!mission) return;
+        if (!mission || this.completedMissions.has(missionId)) return;   // a mission completes once
 
         this.activeMissions.delete(missionId);
         this.completedMissions.add(missionId);

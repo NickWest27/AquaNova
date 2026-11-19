@@ -25,6 +25,11 @@ def main():
         n = page.evaluate("import('./js/notify.js').then(N=>N.transcript('helm').map(l=>l.text))")
         check("running notes are in the helm transcript", "Test running note one" in n and "Test running note two" in n, str(n))
         page.evaluate("import('./js/notify.js').then(N=>N.logLine('helm','crew','Live line while open'))")
+        n = page.evaluate("""(async()=>{const m=(await import('../game/systems/missionManager.js')).default;const L=await import('./js/missionLog.js');const P=await import('./js/persist.js');
+          m.startMission('seaTrials'); L.logAccepted('seaTrials'); P.gameState.updateProperty('mission.logged', []); L.logAccepted('seaTrials');   // second call, flag lost
+          m.completeMission('seaTrials'); m.completeMission('seaTrials'); await new Promise(r=>setTimeout(r,300));
+          return P.saveManager.getActiveLogbook().entries.map(e=>e.logbook.entryId+':'+e.logbook.content.slice(0,16)).join('|')})()""")
+        check("one accepted log and one complete log, no duplicates", n.count("Mission accepted") == 1 and n.count("Mission complete") == 1, n)
         check("no errors", not errors, str(errors))
     server.shutdown()
     print("\nAll checks passed." if not fails else f"\n{len(fails)} failed")

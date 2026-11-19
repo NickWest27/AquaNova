@@ -3,13 +3,16 @@
 // When the mission is complete (results sent), the captain writes up the outcome in a second mission log, with
 // another state save. Together they remind a returning player what was going on.
 import { tell } from './notify.js';
-import { gameState, addLogEntry } from './persist.js';
+import { gameState, saveManager, addLogEntry } from './persist.js';
 import { sim, gameDateText } from './sim.js';
 import { requestSync } from './sync.js';
 import { toast } from './util.js';
 import missionManager from '../../game/systems/missionManager.js';
 
 const logged = () => gameState.getProperty('mission.logged') || [];
+// The logbook itself is the record: a mission gets one 'accepted' and one 'complete' log, however often this is called
+// (a double event, an old save that lost its flag).
+const hasLog = (id, kind) => ((saveManager.getActiveLogbook() || {}).entries || []).some((e) => { const t = (e.logbook && e.logbook.tags) || []; return e.logbook && e.logbook.type === 'mission_log' && t.includes(id) && t.includes(kind); });
 const tasksOf = (m) => m.objectives.filter((o) => o.required !== false).map((o) => o.description);
 /** Fill {location}, {depth}, {date}, {findings} in the mission's outcome text. */
 const fill = (t) => t
@@ -27,7 +30,7 @@ function write(content, tags, tasks, completed) {
 /** Call right after a mission accepted in Comms has started. */
 export function logAccepted(id) {
   const m = missionManager.missions.get(id);
-  if (!m || logged().includes(id)) return;
+  if (!m || logged().includes(id) || hasLog(id, 'accepted')) return;
   gameState.updateProperty('mission.logged', [...logged(), id]);   // set first, so the saved moment knows this mission has its log
   const no = write(`Mission accepted: ${m.name}. ${m.logBriefing || m.description || ''}`.trim(), ['mission', 'accepted', id], tasksOf(m), []);
   tell('aria', `Mission log ${no} saved. You can revert to it from the logbook.`);
@@ -36,7 +39,7 @@ export function logAccepted(id) {
 /** The captain's account of the outcome, written once the mission is complete. */
 function logCompleted(id) {
   const m = missionManager.missions.get(id);
-  if (!m || !logged().includes(id)) return;
+  if (!m || (!logged().includes(id) && !hasLog(id, 'accepted')) || hasLog(id, 'complete')) return;
   const t = tasksOf(m);
   const no = write(`Mission complete: ${m.name}. ${fill(m.logOutcome || 'The orders are carried out and the results are with OERA.')}`, ['mission', 'complete', id], t, t);
   tell('aria', `Mission log ${no} saved.`);
