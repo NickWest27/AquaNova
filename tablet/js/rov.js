@@ -2,7 +2,7 @@
 // the instruments WSKRs lack. Stays on a tether to the ship. Working name: Remora (final name still to choose).
 import { sim, toward, TIMESCALE } from './sim.js';
 import { seafloor } from './seafloor.js';
-import { TOOLS, addSample, pickKind, research } from './science.js';
+import { TOOLS, addSample, pickKind, research, bumpStat } from './science.js';
 
 export const ROV_NAME = 'Remora';
 export const ROV_KT = 2, SITE_NM = 0.15, NM_PER_DEG = 60;
@@ -15,7 +15,7 @@ sim.launchRov = () => {
   if (s.rov) return { ok: false, why: 'out' };
   if (s.docked) return { ok: false, why: 'docked' };
   s.rov = { lat: s.lat, lon: s.lon, heading: s.heading, depth: s.depth, cmd: { thr: 0, turn: 0, dive: 0 }, job: null };
-  sim.touch(); return { ok: true };
+  bumpStat('launched'); sim.touch(); return { ok: true };
 };
 sim.recoverRov = () => {
   const s = sim.s; if (!s.rov) return { ok: false, why: 'aboard' };

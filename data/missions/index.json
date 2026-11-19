@@ -1,6 +1,7 @@
 {
     "missions": [
         "meetTheCrew.json",
-        "seaTrials.json"
+        "seaTrials.json",
+        "firstSurvey.json"
     ]
 }

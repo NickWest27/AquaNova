@@ -74,8 +74,8 @@ def main():
         # reload: nothing restarts, no duplicate messages
         page.goto(base); page.wait_for_function("!document.getElementById('board-btn').disabled", timeout=15000)
         page.tap("#board-btn"); page.wait_for_timeout(900)
-        done = js(G + "return [g.getProperty('mission.completedIds'), (g.getProperty('mission.objectives')||[]).length, (g.getProperty('mission.inbox')||[]).length]")
-        check("after reload: Sea Trials stays done, nothing restarts, no duplicate messages", "seaTrials" in done[0] and done[1] == 0 and done[2] == 2, done)
+        done = js(G + "return [g.getProperty('mission.completedIds'), (g.getProperty('mission.objectives')||[]).length, (g.getProperty('mission.inbox')||[]).map(m=>m.id)]")
+        check("after reload: Sea Trials stays done, nothing restarts, no duplicate messages", "seaTrials" in done[0] and done[1] == 0 and len(set(done[2])) == len(done[2]) and len(done[2]) >= 2, done)
         browser.close()
     server.shutdown(); shutil.rmtree(site, ignore_errors=True)
     check("no console errors", not errors, errors)

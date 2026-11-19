@@ -35,7 +35,10 @@ export const TOPICS = [
   { id: 'synthetic-view', name: 'Synthetic forward view', cost: 5, text: 'Builds a forward view on the main screen from charted sea floor. (Effect comes later.)' },
 ];
 
-const root = () => gameState.getProperty('mission.science') || { samples: [], jobs: [], done: [], points: 0, seq: 0 };
+const root = () => ({ samples: [], jobs: [], done: [], points: 0, seq: 0, stats: {}, bonus: {}, ...(gameState.getProperty('mission.science') || {}) });
+const slug = (s) => String(s).toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+/** Counters that missions watch, e.g. mission.science.stats.water_mystic_reef. */
+export function bumpStat(key) { const r = root(); save({ ...r, stats: { ...r.stats, [key]: (r.stats[key] || 0) + 1 } }); }
 const save = (v) => gameState.updateProperty('mission.science', v);
 export const samples = () => root().samples;
 export const jobs = () => root().jobs;
@@ -46,7 +49,8 @@ export const research = { has: (id) => root().done.includes(id), done: () => roo
 export function addSample(kind, site, tool) {
   const r = root(), id = r.seq + 1;
   const sm = { id, kind, site: site ? site.name : 'Open water', tool, at: sim.s.clock, status: 'raw' };
-  save({ ...r, seq: id, samples: [...r.samples, sm] });
+  const k = `${kind}_${slug(sm.site)}`;
+  save({ ...r, seq: id, samples: [...r.samples, sm], stats: { ...r.stats, samples: (r.stats.samples || 0) + 1, [k]: (r.stats[k] || 0) + 1 } });
   return sm;
 }
 /** Pick a sample kind for a tool at a site. */
@@ -84,7 +88,7 @@ export function tickLab() {
     found.push({ id: `sample-${q.id}`, name: `${SAMPLE_KINDS[q.kind].label} sample, ${q.site}`, description: res, type: 'sample', scannedAt: new Date().toISOString() });
     return n;
   });
-  save({ ...r, samples: smp, jobs: r.jobs.filter((j) => !due.includes(j)), points: pts });
+  save({ ...r, samples: smp, jobs: r.jobs.filter((j) => !due.includes(j)), points: pts, stats: { ...r.stats, analysed: (r.stats.analysed || 0) + out.length } });
   const d = gameState.getProperty('mission.discoveries') || [];
   gameState.updateProperty('mission.discoveries', [...d, ...found]);
   return out;
@@ -94,4 +98,10 @@ export function startTopic(id) {
   if (!t || r.done.includes(id) || r.points < t.cost) return false;
   save({ ...r, points: r.points - t.cost, done: [...r.done, id] });
   return true;
+}
+
+/** A finished survey pays a research budget, once. Returns the points granted (0 if none due). */
+export function awardSurveyBonus() {
+  const r = root(); if (r.bonus.firstSurvey || !gameState.getProperty('progress.firstSurveyComplete')) return 0;
+  save({ ...r, points: r.points + 3, bonus: { ...r.bonus, firstSurvey: true } }); return 3;
 }

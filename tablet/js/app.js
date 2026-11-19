@@ -6,7 +6,7 @@ import { say, unreadCount, stats as notifyStats } from './notify.js';
 import { seafloor } from './seafloor.js';
 import { fileScan } from './findings.js';
 import './rov.js';
-import { tickLab, SAMPLE_KINDS } from './science.js';
+import { tickLab, SAMPLE_KINDS, awardSurveyBonus } from './science.js';
 import { el, $, toast, pad, modal, frameThrottle, viewProbe } from './util.js';
 import { ICONS } from './ui.js';
 import { startSync, syncAtBoot } from './sync.js';
@@ -258,7 +258,7 @@ async function boot() {
       if (type === 'tick') {
         const s = sim.s;
         scene.update(); updateChips(); current && current.api.update(); ped && ped.api.update(); updateHum(s.speed);
-        if (++tickN % 5 === 0) { liveNav(); for (const q of tickLab()) say('science', `Analysis of sample #${q.id} (${SAMPLE_KINDS[q.kind].label.toLowerCase()}) is done: ${q.result} Finding filed.`, 'mission'); }            // about once a second
+        if (++tickN % 5 === 0) { liveNav(); if (awardSurveyBonus()) say('science', 'OERA has granted a research budget for the survey, Captain: 3 research points. Check the Research tab.', 'mission'); for (const q of tickLab()) say('science', `Analysis of sample #${q.id} (${SAMPLE_KINDS[q.kind].label.toLowerCase()}) is done: ${q.result} Finding filed.`, 'mission'); }            // about once a second
         const t = `${s.lat.toFixed(3)}°N ${Math.abs(s.lon).toFixed(3)}°W`;
         if (st.pos.textContent !== t) st.pos.textContent = t;
         const ck = clockText() + (s.docked ? ' · DOCKED' : ''); if (st.clock.textContent !== ck) st.clock.textContent = ck;

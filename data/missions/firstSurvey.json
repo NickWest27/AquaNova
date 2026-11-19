@@ -1,0 +1,89 @@
+{
+  "id": "firstSurvey",
+  "name": "First Survey",
+  "description": "Collect and analyse your first samples for OERA.",
+  "category": "main",
+  "priority": "high",
+  "autoStart": false,
+  "prerequisites": [],
+  "objectives": [
+    {
+      "id": "launch",
+      "description": "Launch Remora from the Science Lab or the Launch Bay",
+      "required": true,
+      "triggers": [
+        {
+          "type": "property_at_least",
+          "property": "mission.science.stats.launched",
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "reef",
+      "description": "Take a water sample at Mystic Reef with Remora's spectrometer",
+      "required": true,
+      "after": "launch",
+      "triggers": [
+        {
+          "type": "property_at_least",
+          "property": "mission.science.stats.water_mystic_reef",
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "ledge",
+      "description": "Drill a rock core at Vineyard Ledge, about 16 nm south of Woods Hole",
+      "required": true,
+      "after": "reef",
+      "triggers": [
+        {
+          "type": "property_at_least",
+          "property": "mission.science.stats.rock_vineyard_ledge",
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "analyse",
+      "description": "Analyse both samples in the Science Lab",
+      "required": true,
+      "after": "ledge",
+      "triggers": [
+        {
+          "type": "property_at_least",
+          "property": "mission.science.stats.analysed",
+          "value": 2
+        }
+      ]
+    },
+    {
+      "id": "report",
+      "description": "Send your findings to OERA from the Comms station",
+      "required": true,
+      "after": "analyse",
+      "triggers": [
+        {
+          "type": "report_sent"
+        }
+      ]
+    }
+  ],
+  "onComplete": [
+    {
+      "type": "set_property",
+      "property": "progress.firstSurveyComplete",
+      "value": true
+    },
+    {
+      "type": "send_message",
+      "message": {
+        "id": "oera-survey-done",
+        "from": "OERA Operations",
+        "subject": "Survey results: well done",
+        "text": "Captain,\n\nYour first survey data has reached the Directorate. The reef water readings and the ledge core are both useful, and Dr. Patel's analysis was thorough.\n\nWe have released a small research budget to the Aqua Nova science department. Dr. Patel will know how to spend it. Further survey requests for the shelf and the canyon will follow.\n\nO.E.R.A. Operations Directorate"
+      }
+    }
+  ]
+}
