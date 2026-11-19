@@ -11,6 +11,8 @@ import { tickLab, SAMPLE_KINDS, awardSurveyBonus } from './science.js';
 import { el, $, toast, pad, modal, frameThrottle, viewProbe } from './util.js';
 import { ICONS } from './ui.js';
 import { startSync, syncAtBoot } from './sync.js';
+import { getPlayer, setPlayer, fill } from './player.js';
+import { runIntake } from './intake.js';
 import { isCommissioned, excuse } from './unlocks.js';
 import { initMissionLog } from './missionLog.js';
 import { initAudio, updateHum, chirp, ping } from './audio.js';
@@ -25,7 +27,6 @@ const STATIONS = {
 const FILES = { sys: 'systems' };
 const WHERE = { bridge: 'Bridge', quarters: 'Quarters', walkway: 'Walkway', walkway2: 'Walkway AN-1', science: 'Science Lab', medbay: 'Medbay', launchbay: 'Launch Bay' };   // the back button returns to the room you came from
 const SYSTEM_TEXT = {
-  mission_start_tutorial: ['Welcome aboard, Captain', 'Captain Elena Voss was relieved of command at the last minute. OERA called you out of retirement to take her place on the Aqua Nova. Your quarters are ready, and your communicator pin is waiting on your desk.'],
   communicator_tutorial: ['Communicator ready', 'Pin on. Tap the badge in the top-right corner to talk to your crew. ARIA, your executive officer, is waiting to hear from you.'],
 };
 const modules = {};
@@ -46,6 +47,7 @@ applyZoom();
 // ---------- mission state helpers ----------
 const objectives = () => gameState.getProperty('mission.objectives') || [];
 const objStatus = (id) => (objectives().find((o) => o.id === id) || {}).status;
+const hasPed = () => gameState.getProperty('progress.got_ped') === true;   // the PED lies on the bed until you take it
 const commsLocked = () => objStatus('meetTheCrew_pickup_communicator') === 'active';
 
 viewProbe.fn = () => boarded && !!scene && scene.where === 'bridge' && !current && !ped && !comm;
@@ -68,9 +70,13 @@ let firstUI = true;
 const syncUI = frameThrottle(() => {
   if (!scene) return;
   const locked = commsLocked();
-  const readLog = gameState.getProperty('tutorial.opened_log') === true;
-  scene.showPickup(scene.inQuarters && locked && readLog && objStatus('meetTheCrew_find_communicator') === 'completed');   // the logbook tells you where the pin is
-  scene.glow('LOGBOOK', locked && !readLog);   // a new game: the laptop glows until the welcome entry is read
+  const readLog = gameState.getProperty('progress.read_welcome') === true;
+  const inside = scene.inQuarters;
+  scene.showItems({ pin: inside && locked && objStatus('meetTheCrew_find_communicator') === 'completed', ped: inside && !hasPed() });   // pin on the desk, PED on the bed: before or after the logbook
+  scene.glow('LOGBOOK', inside && locked && !readLog);   // a new game: the laptop glows until the welcome entry is read
+  const toQuarters = locked && !!getPlayer() && objStatus('meetTheCrew_find_communicator') !== 'completed';   // told to report to quarters: light the way
+  scene.glow('A1 DECK ▼', toQuarters); scene.glow('QUARTERS', toQuarters);
+  if ($('#station').hidden) $('#ped-btn').hidden = !hasPed();   // a station covers the screen: no round button
   const unread = (gameState.getProperty('mission.inbox') || []).filter((m) => !m.read).length;
   scene.glow('COMMS', unread > 0);   // new mail: the comms station glows on the bridge
   const pin = $('#pin');
@@ -143,6 +149,7 @@ async function openStation(name) {
   const def = STATIONS[name]; if (!def) return;
   if (!isCommissioned(name)) { toast(excuse(name), 'warn'); return; }
   flag('opened_' + name);
+  if (name === 'log') gameState.updateProperty('progress.read_welcome', true);
   const root = $('#station');
   const chips = el('div', { class: 'st-chips' });
   const body = el('div', { class: 'st-body' });
@@ -158,7 +165,7 @@ async function openStation(name) {
 function closeStation() {
   if (!current) return;
   try { current.api.destroy(); } catch (e) { console.error(e); }
-  current = null; document.body.classList.remove('has-line'); $('#station').hidden = true; $('#station').replaceChildren(); $('#ped-btn').hidden = false;
+  current = null; document.body.classList.remove('has-line'); $('#station').hidden = true; $('#station').replaceChildren(); $('#ped-btn').hidden = !hasPed();
   scene.update(); syncUI();
 }
 function updateChips() {
@@ -172,7 +179,7 @@ function openScene(name) {
   if (name === 'quarters') {
     closeStation(); scene.show('quarters');
     document.dispatchEvent(new CustomEvent('location-enter', { detail: { location: 'quarters' } }));
-  } else if (name === 'bridge') { closeStation(); scene.show('bridge'); }
+  } else if (name === 'bridge') { closeStation(); scene.show('bridge'); gameState.updateProperty('progress.been_bridge', true); }
   else if (name === 'walkway') { closeStation(); scene.show('walkway'); }
   else if (name === 'walkway2') { closeStation(); scene.show('walkway2'); }
   else if (name === 'sleep') sleepDialog();
@@ -183,6 +190,7 @@ function openScene(name) {
   else if (name === 'lab-analysis' || name === 'lab-research') { ctx.labTab = name.slice(4); openStation('lab'); }
   else if (name === 'lab') { ctx.labTab = 'samples'; openStation('lab'); }
   else if (name === 'engineering') toast('Engineering is not built yet. Talk to the crew on the communicator.');
+  else if (name === 'pickup-ped') { gameState.updateProperty('progress.got_ped', true); toast('PED collected. Its button is at the top of the screen.'); }
   else if (name === 'pickup') document.dispatchEvent(new CustomEvent('item-pickup', { detail: { itemId: 'communicator' } }));
   else openStation(name);
   syncUI();
@@ -270,7 +278,7 @@ async function boot() {
     gameState.addObserver(syncUI);
     $('#pin').addEventListener('click', toggleComm);
     document.addEventListener('inbox-change', () => $('#pin').classList.toggle('unread', unreadCount() > 0));
-    $('#ped-btn').hidden = false; $('#ped-btn').addEventListener('click', togglePed);
+    $('#ped-btn').hidden = !hasPed(); $('#ped-btn').addEventListener('click', togglePed);
     sim.on((type, data) => {
       if (type === 'tick') {
         const s = sim.s;
@@ -293,8 +301,17 @@ async function boot() {
         else say('engineering', `${k === 'shoal' ? 'We have run aground' : 'We touched bottom'}! Hull damage ${Math.round(data.damage)}%.`, 'error');
       }
     });
-    // A new game starts in your quarters, where the tutorial begins.
-    if (commsLocked()) openScene('quarters'); else scene.show('bridge');
+    // A new game starts in Walkway AN-1 with the arrival form. Saves from before the form keep their PED and get no name.
+    const fresh = !getPlayer() && commsLocked();
+    if (!fresh && !hasPed() && !getPlayer()) gameState.updateProperty('progress.got_ped', true);
+    const skip = navigator.webdriver && !/[?&]intake=1/.test(location.search);   // automated tests skip the form
+    if (fresh && !skip) {
+      openScene('walkway2');
+      runIntake({ dateText: clockText(), onDone: () => { checkpoint(); syncUI(); toast('Report to your quarters. The glowing markers show the way.'); } });
+    } else {
+      if (fresh) { setPlayer('Alex', 'Mercer'); gameState.updateProperty('progress.got_ped', true); }
+      if (commsLocked()) openScene('quarters'); else scene.show('bridge');
+    }
     pendingModals.splice(0).forEach((run) => run());
     syncUI();
     dlog('tablet: boarded');

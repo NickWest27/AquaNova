@@ -2,9 +2,9 @@
     "crew": {
         "captain": {
             "id": "captain",
-            "name": "Captain Nicholas Westmoreland",
+            "name": "Captain {name}",
             "role": "Captain",
-            "bio": "A seasoned explorer with a knack for leadership and quick decision-making. Nick helped design and build the Aqua Nova.",
+            "bio": "Called out of retirement by O.E.R.A. to take command of the Aqua Nova after the last-minute relief of Captain Elena Voss. The crew call you {first} when nobody senior is listening.",
             "image": "images/crew/nicholas_westmoreland.png",
             "dialogueOptions": {
                 "commands": [],

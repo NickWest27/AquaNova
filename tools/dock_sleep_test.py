@@ -27,7 +27,7 @@ def main():
         tap_hs = lambda label: page.locator(f'.hs[aria-label="{label}"]:visible').tap(force=True)
         page.goto(base); page.wait_for_function("!document.getElementById('board-btn').disabled", timeout=15000)
         page.tap("#board-btn"); page.wait_for_timeout(900)
-        page.tap(".modal .btn"); page.wait_for_timeout(300)
+        page.is_visible(".modal .btn") and page.tap(".modal .btn")
 
         # --- docked at the start ---
         check("new game starts docked at the dock", js("return [sim.s.docked, sim.s.at && sim.s.at.type]") == [True, "dock"])

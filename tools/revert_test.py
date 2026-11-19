@@ -33,7 +33,7 @@ def main():
         page.tap('.modal button:text-is("Revert")'); page.wait_for_timeout(800)
         r = js("const lb=P.saveManager.getActiveLogbook(); const s=sim.s; return {texts: lb.entries.map(e=>e.logbook.content||''), depth: Math.round(s.depth), lat: +s.lat.toFixed(2), bat: Math.round(s.battery), hrs: Math.round(s.clock/3600), cp: !!lb.checkpoint, rev: lb.revision}")
         t = " | ".join(r["texts"])
-        check("earlier entries kept (M.LOG-0001 and Alpha)", "Welcome onboard" in t and "Entry Alpha" in t, t[:200])
+        check("earlier entries kept (M.LOG-0001 and Alpha)", "Welcome aboard" in t and "Entry Alpha" in t, t[:200])
         check("the entry reverted to is kept", "Entry Bravo" in t)
         check("later entry removed (Charlie)", "Entry Charlie" not in t)
         check("journal note kept (notes are not save points)", "note after Bravo" in t)

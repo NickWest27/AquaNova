@@ -31,7 +31,7 @@ def main():
 
         page.goto(base); page.wait_for_function("!document.getElementById('board-btn').disabled", timeout=15000)
         page.tap("#board-btn"); page.wait_for_timeout(900)
-        page.tap(".modal .btn"); page.wait_for_timeout(300)
+        page.is_visible(".modal .btn") and page.tap(".modal .btn")
         check("no messages before First Contact", js(G + "return (g.getProperty('mission.inbox')||[]).length") == 0)
         js("const m=(await import('../game/systems/missionManager.js')).default; m.delayScale = 0.03; m.forceCompleteMission('meetTheCrew'); m.forceCompleteMission('shipTour')"); page.wait_for_timeout(400)
         check("sea trials orders are not delivered straight away", not js(G + "return (g.getProperty('mission.inbox')||[]).some(m=>m.id==='oera-sea-trials')"))

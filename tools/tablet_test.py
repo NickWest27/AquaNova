@@ -29,7 +29,7 @@ def main():
             page.goto(base); page.wait_for_function("!document.getElementById('board-btn').disabled", timeout=15000)
             page.screenshot(path=f"{SHOTS}/t-{tag}-0splash.png")
             page.tap("#board-btn"); page.wait_for_timeout(1200)
-            page.tap(".modal .btn"); page.wait_for_timeout(300)
+            page.is_visible(".modal .btn") and page.tap(".modal .btn")
             page.screenshot(path=f"{SHOTS}/t-{tag}-1quarters.png")
             page.evaluate("window.__aq.toggleQuarters()"); page.wait_for_timeout(500)
             page.screenshot(path=f"{SHOTS}/t-{tag}-1bridge.png")

@@ -28,7 +28,7 @@ def main():
             tap_hs = lambda label: page.locator(f'.hs[aria-label="{label}"]:visible').tap(force=True)
             page.goto(base); page.wait_for_function("!document.getElementById('board-btn').disabled", timeout=15000)
             page.tap("#board-btn"); page.wait_for_timeout(900)
-            page.tap(".modal .btn"); page.wait_for_timeout(300)
+            page.is_visible(".modal .btn") and page.tap(".modal .btn")
             page.evaluate("window.__aq.toggleQuarters()"); page.wait_for_timeout(500)   # quarters -> bridge
             page.screenshot(path=f"{SHOTS}/b-{tag}-1bridge.png")
             tap_hs("COMMS"); page.wait_for_timeout(500)

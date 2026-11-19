@@ -2,6 +2,7 @@
 // (Crew talk goes through the communicator pin, not here.)
 // Messages arrive from missions (send_message action). A message can offer a mission to accept.
 // The link needs the antenna near the surface, so reports go out only at 15 m or shallower.
+import { fill } from '../player.js';
 import { sim, gameDateText } from '../sim.js';
 import { mailZoom } from '../audio.js';
 import { el, toast } from '../util.js';
@@ -77,8 +78,8 @@ export function mount(body) {
       : [el('p', { class: st === 'done' ? 'ok' : 'warn', text: st === 'done' ? 'Mission complete' : 'Mission accepted. See PED → Missions.' })])); };
     fillTail();
     const win = el('div', { class: 'mail-win', style: 'visibility:hidden' },
-      field('From:', FROM_FULL[m.from] || m.from), field('To:', 'Captain of the Aqua Nova'), field('Date:', stamp(m)), field('Subject:', m.subject),
-      el('div', { class: 'mail-text', text: m.text }), tail);
+      field('From:', FROM_FULL[m.from] || m.from), field('To:', 'Captain of the Aqua Nova'), field('Date:', stamp(m)), field('Subject:', fill(m.subject)),
+      el('div', { class: 'mail-text', text: fill(m.text) }), tail);
     back.append(win); host.append(back);
     const to = rectIn(win, host);
     reading = { m, win, back, rowEl };

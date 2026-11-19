@@ -55,13 +55,23 @@ export function createScene(stage, { onOpen }) {
 
   // quarters
   const qimg = el('img', { src: 'assets/quarters.webp', alt: '', draggable: 'false', style: 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover' });
-  const pickup = el('button', { class: 'pickup', hidden: true, style: 'left:480px;top:560px;width:120px;height:180px', 'aria-label': 'Pick up communicator', onclick: () => onOpen('pickup') },
-    el('img', { src: 'assets/comm-pin.webp', alt: '' }), el('span', { class: 'tag', text: 'COMMUNICATOR' }));
+  // Two things to collect, lying flat: the communicator pin on the desk and the PED on the bed.
+  // flat(): a w x h item turned by `rot` degrees on a surface seen from the front, so it is squashed vertically.
+  const flat = (cx, cy, w, h, rot, squash) => [[-w / 2, -h / 2], [w / 2, -h / 2], [w / 2, h / 2], [-w / 2, h / 2]].map(([x, y]) => {
+    const a = rot * Math.PI / 180; return [cx + x * Math.cos(a) - y * Math.sin(a), cy + (x * Math.sin(a) + y * Math.cos(a)) * squash];
+  });
+  const pinArt = el('div', { class: 'item-pin' }, el('img', { src: 'assets/comm-pin.webp', alt: '', draggable: 'false' }));
+  const pedArt = el('div', { class: 'item-ped' }, el('i'), el('img', { src: 'assets/pda-frame.webp', alt: '', draggable: 'false' }));
+  const pinVis = slanted('item', pinArt, 90, 135, flat(565, 668, 90, 135, -32, 0.36));
+  const pedVis = slanted('item', pedArt, 120, 213, flat(1150, 688, 120, 213, 62, 0.37));
+  const grab = (label, tag, x, y, w, h, target) => el('button', { class: 'pickup', hidden: true, style: `left:${x}px;top:${y}px;width:${w}px;height:${h}px`, 'aria-label': label, onclick: () => onOpen(target) }, el('span', { class: 'tag', text: tag }));
+  const pinGrab = grab('Pick up communicator', 'COMMUNICATOR', 490, 610, 150, 110, 'pickup'), pedGrab = grab('Pick up PED', 'PED', 1060, 630, 180, 120, 'pickup-ped');
+  pinVis.hidden = pedVis.hidden = true;
   quarters.append(qimg,
     hs('LOGBOOK', 210, 516, 290, 190, () => onOpen('log'), 'top'),
     hs('SLEEP', 640, 610, 580, 250, () => onOpen('sleep'), 'mid'),
     hs('TO WALKWAY', 1236, 120, 560, 700, () => onOpen('walkway'), 'mid'),
-    pickup);
+    pinVis, pedVis, pinGrab, pedGrab);
   // walkway hub (concept art A1): a tap area on each door, a lit sign on each black panel above a door.
   // Corners are the four corners of the glass in stage pixels (art is cropped to 1920x1080).
   const door = (label, x, y, w, h, target, tagged = false) => el('button', { class: `door${tagged ? ' tagged' : ''}`, style: `left:${x}px;top:${y}px;width:${w}px;height:${h}px`, 'aria-label': label, onclick: () => onOpen(target) }, tagged ? el('span', { text: label }) : null);
@@ -133,9 +143,9 @@ export function createScene(stage, { onOpen }) {
       consoleApi.update();
     },
     console: consoleApi,
-    showPickup(on) { pickup.hidden = !on; },
+    showItems({ pin, ped }) { pinVis.hidden = pinGrab.hidden = !pin; pedVis.hidden = pedGrab.hidden = !ped; },
     lock(label, on) { stage.querySelectorAll('.hs').forEach((b) => { if (b.textContent === label) b.classList.toggle('locked', on); }); },
-    glow(label, on) { stage.querySelectorAll('.hs').forEach((b) => { if (b.textContent === label) b.classList.toggle('glow', on); }); },
+    glow(label, on) { stage.querySelectorAll('.hs, .door').forEach((b) => { if (b.textContent === label || b.getAttribute('aria-label') === label) b.classList.toggle('glow', on); }); },
   };
   return api;
 }

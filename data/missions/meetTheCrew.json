@@ -99,13 +99,6 @@
       ]
     }
   ],
-  "onStart": [
-    {
-      "type": "show_dialogue",
-      "characterId": "system",
-      "dialogueId": "mission_start_tutorial"
-    }
-  ],
   "onComplete": [
     {
       "type": "unlock_station",

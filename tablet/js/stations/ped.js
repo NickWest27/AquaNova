@@ -1,5 +1,6 @@
 // PED (personal electronic device): ship status, missions, findings, tasks, journal, settings.
 // The iPhone PED (ped/ at the site root) shows the same things, kept in step through GitHub.
+import { fill } from '../player.js';
 import { el, pad, toast } from '../util.js';
 import { sim, clockText } from '../sim.js';
 import { gameState, saveManager } from '../persist.js';
@@ -88,11 +89,13 @@ export function mount(body, ctx) {
       ];
     },
     contacts() {
-      const person = (c) => el('div', { class: 'card contact' }, el('h3', { text: c.name }),
-        el('div', { class: 'meta' }, el('span', { text: [c.role, c.company].filter(Boolean).join(' · ') })), el('p', { text: c.bio || 'No biography on file.' }));
+      const person = (c) => el('div', { class: 'card contact' }, el('h3', { text: fill(c.name) }),
+        el('div', { class: 'meta' }, el('span', { text: [c.role, c.company].filter(Boolean).join(' · ') })), el('p', { text: fill(c.bio) || 'No biography on file.' }));
+      const me = gameState.getProperty('contacts.crew.captain');
       const crew = knownCrew();
       const outside = Object.values(gameState.getProperty('contacts.contacts') || {}).filter((c) => c && c.known && c.name);
       return [
+        ...(me && me.name ? [el('div', { class: 'lbl', text: 'You' }), person(me)] : []),
         el('div', { class: 'lbl', text: 'Crew' }), ...(crew.length ? crew.map(person) : [el('div', { class: 'empty', text: 'You have not met the crew yet.' })]),
         ...(outside.length ? [el('div', { class: 'lbl', text: 'Outside the ship' }), ...outside.map(person)] : []),
       ];

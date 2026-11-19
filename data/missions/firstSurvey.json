@@ -82,7 +82,7 @@
         "id": "oera-survey-done",
         "from": "OERA Operations",
         "subject": "Survey results: well done",
-        "text": "Captain,\n\nYour first survey data has reached the Directorate. The reef water readings and the ledge core are both useful, and Dr. Patel's analysis was thorough.\n\nWe have released a small research budget to the Aqua Nova science department. Dr. Patel will know how to spend it. Further survey requests for the shelf and the canyon will follow.\n\nO.E.R.A. Operations Directorate"
+        "text": "{captain},\n\nYour first survey data has reached the Directorate. The reef water readings and the ledge core are both useful, and Dr. Patel's analysis was thorough.\n\nWe have released a small research budget to the Aqua Nova science department. Dr. Patel will know how to spend it. Further survey requests for the shelf and the canyon will follow.\n\nO.E.R.A. Operations Directorate"
       }
     },
     {
@@ -92,7 +92,7 @@
     {
       "type": "crew_say",
       "role": "sensors",
-      "text": "Captain, one more thing. The WSKRs are commissioned. They are small remote sensors that scout ahead of the ship. Deploy them from Sensors."
+      "text": "{captain}, one more thing. The WSKRs are commissioned. They are small remote sensors that scout ahead of the ship. Deploy them from Sensors."
     }
   ],
   "logBriefing": "OERA wants baseline samples from the shelf off Woods Hole. The plan: launch Remora and take a water sample at Mystic Reef with the spectrometer, take the ship about 16 nautical miles south to Vineyard Ledge and drill a rock core, have Dr. Patel analyse both samples, then send the findings to OERA from Comms.",

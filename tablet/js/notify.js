@@ -1,6 +1,7 @@
 // Crew notices. On the bridge they appear on the upper display only. Anywhere else (a station, quarters, the walkway)
 // the relevant crew member calls in: a communicator chirp and a short message under the top edge.
 // Anti-spam: the chirp sounds at most once every 20 s; messages from the same person within 8 s replace each other.
+import { fill } from './player.js';
 import { viewProbe, consoleLine } from './util.js';
 import { gameState } from './persist.js';
 import { chirp, ping } from './audio.js';
@@ -26,6 +27,7 @@ const who = (role) => {
 
 /** role: 'helm' | 'aria' | 'sensors' | 'engineering' | 'comms' | 'science'. kind: '' | 'mission' | 'error'. */
 export function say(role, text, kind = '', opts = {}) {
+  text = fill(text); if (opts.keep) opts = { ...opts, keep: fill(opts.keep) };
   const now = Date.now(), w = who(role);
   if ((kind === 'mission' || kind === 'error') && opts.hold !== false) {   // worth keeping until read
     const id = CREW_ID[role] || role, l = held.get(id) || []; l.push({ text: opts.keep || text, at: now }); held.set(id, l.slice(-5)); emitChange();

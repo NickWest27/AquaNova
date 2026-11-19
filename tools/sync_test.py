@@ -84,7 +84,7 @@ def main():
 
         # --- iPad boards and connects ---
         ipad.goto(base + "tablet/"); ipad.wait_for_function("!document.getElementById('board-btn').disabled", timeout=15000)
-        ipad.tap("#board-btn"); ipad.wait_for_timeout(800); ipad.tap(".modal .btn"); ipad.wait_for_timeout(300)
+        ipad.tap("#board-btn"); ipad.wait_for_timeout(800); ipad.is_visible(".modal .btn") and ipad.tap(".modal .btn")
         ipad.evaluate("window.__aq.open('ped')"); ipad.wait_for_timeout(500); ipad.tap('button.chip:text-is("Settings")'); ipad.wait_for_timeout(300)
         ipad.fill('input[placeholder^="GitHub token"]', "bad-token"); ipad.fill('input[placeholder^="Passphrase"]', "correct horse battery")
         ipad.tap('button:text-is("Connect")'); ipad.wait_for_timeout(800)
