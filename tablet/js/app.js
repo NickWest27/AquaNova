@@ -68,7 +68,9 @@ let firstUI = true;
 const syncUI = frameThrottle(() => {
   if (!scene) return;
   const locked = commsLocked();
-  scene.showPickup(scene.inQuarters && locked && objStatus('meetTheCrew_find_communicator') === 'completed');
+  const readLog = gameState.getProperty('tutorial.opened_log') === true;
+  scene.showPickup(scene.inQuarters && locked && readLog && objStatus('meetTheCrew_find_communicator') === 'completed');   // the logbook tells you where the pin is
+  scene.glow('LOGBOOK', locked && !readLog);   // a new game: the laptop glows until the welcome entry is read
   const unread = (gameState.getProperty('mission.inbox') || []).filter((m) => !m.read).length;
   scene.glow('COMMS', unread > 0);   // new mail: the comms station glows on the bridge
   const pin = $('#pin');
