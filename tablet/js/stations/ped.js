@@ -1,12 +1,13 @@
 // PED (personal electronic device): ship status, missions, findings, tasks, journal, settings.
 // The iPhone PED (ped/ at the site root) shows the same things, kept in step through GitHub.
-import { el, modal, pad, toast } from '../util.js';
-import { sim } from '../sim.js';
-import { gameState, saveManager, restartGame } from '../persist.js';
+import { el, pad, toast } from '../util.js';
+import { sim, clockText } from '../sim.js';
+import { gameState, saveManager } from '../persist.js';
 import { syncNow, requestSync, syncState, onSyncChange } from '../sync.js';
-import { getConfig, describeSync, connect as connectSync, clearConfig, makeJournalEntry, newTask, isJournal } from '../../../utils/ledgerSync.js';
-import { DEBUG } from '../../../utils/log.js';
-import { getSound, setSound, chirp, testSound, audioState } from '../audio.js';
+import { getConfig, connect as connectSync, clearConfig, makeJournalEntry, newTask, isJournal } from '../../../utils/ledgerSync.js';
+import { getSound, setSound, chirp, ping, mailZoom, testSound, audioState } from '../audio.js';
+import { knownCrew } from './crew.js';
+import missionManager from '../../../game/systems/missionManager.js';
 
 let appVersion = '…';
 try { if (window.caches) caches.keys().then((k) => { const v = k.find((n) => n.startsWith('aquanova-')); appVersion = v ? v.slice(9) : 'not saved offline'; }); } catch (e) { /* ignore */ }
@@ -31,6 +32,21 @@ async function updateNow() {
   location.replace(location.pathname + '?v=' + Date.now());
 }
 
+/** Ask the server which build is current (the service worker file carries the version). */
+async function latestBuild() {
+  try {
+    const text = await (await fetch(new URL('../../../sw.js', import.meta.url), { cache: 'no-store' })).text();
+    const m = /const VERSION = '([^']+)'/.exec(text); return m ? m[1] : null;
+  } catch (e) { return null; }
+}
+
+// Bug notes: short findings the owner writes while playing. Kept on this device; "Copy all" puts them on the clipboard to paste into a chat.
+const BUG_KEY = 'aquaNova_bugnotes';
+const loadBugs = () => { try { return JSON.parse(localStorage.getItem(BUG_KEY)) || []; } catch (e) { return []; } };
+const saveBugs = (list) => { try { localStorage.setItem(BUG_KEY, JSON.stringify(list)); } catch (e) { /* ignore */ } };
+const MISSION_OF = { 'oera-sea-trials': 'seaTrials' };   // older saves stored this offer without a mission id
+const mName = (id, fallback) => (missionManager.missions.get(id) || {}).name || fallback || id;
+
 export function mount(body, ctx) {
   body.classList.add('more-st');
   const tabs = el('div', { class: 'tabs' }), tb = el('div', { class: 'tab-body' });
@@ -52,8 +68,34 @@ export function mount(body, ctx) {
         stat('Location', 'loc'), stat('Position', 'pos'), stat('Depth', 'dep'), stat('Heading', 'hdg'), stat('Speed', 'spd'), stat('Battery', 'bat'), stat('Oxygen', 'o2'), stat('Hull', 'hull'))];
     },
     missions() {
-      const obj = ctx.objectives();
-      return obj.length ? obj.map((o) => el('div', { class: `card task ${o.done ? 'done' : ''}` }, el('span', { class: 'dot' }), el('span', { text: o.text }))) : [el('div', { class: 'empty', text: 'No active missions.' })];
+      const active = missionManager.getActiveMissions().filter(Boolean);
+      const objs = gameState.getProperty('mission.objectives') || [];
+      const offers = []; const seen = new Set();
+      for (const m of gameState.getProperty('mission.inbox') || []) {
+        const id = m.missionId || MISSION_OF[m.id];
+        if (id && !seen.has(id) && !missionManager.activeMissions.has(id) && !missionManager.completedMissions.has(id)) { seen.add(id); offers.push({ id, from: m.from }); }
+      }
+      const done = [...missionManager.completedMissions];
+      return [
+        el('div', { class: 'lbl', text: 'Active' }),
+        ...(active.length ? active.map((m) => { const o = objs.filter((x) => x.missionId === m.id); const n = o.filter((x) => x.status === 'completed').length;
+          return el('div', { class: 'card mission' }, el('h3', { text: m.name }), el('p', { text: m.description || '' }), el('div', { class: 'meta' }, el('span', { text: `${n} of ${o.length} tasks done` }))); }) : [el('div', { class: 'empty', text: 'No active missions.' })]),
+        el('div', { class: 'lbl', text: 'Available' }),
+        ...(offers.length ? offers.map((o) => el('div', { class: 'card mission' }, el('h3', { text: mName(o.id) }),
+          el('p', { text: `Offered by ${o.from || 'OERA'}. Read the orders in Comms, then accept.` }),
+          el('div', { class: 'row' }, el('button', { class: 'btn primary', text: 'Open Comms', onclick: () => { ctx.closePed && ctx.closePed(); ctx.openScene('comms'); } })))) : [el('div', { class: 'empty', text: 'No missions on offer.' })]),
+        ...(done.length ? [el('div', { class: 'lbl', text: 'Completed' }), ...done.map((id) => el('div', { class: 'card mission done' }, el('h3', { text: mName(id) })))] : []),
+      ];
+    },
+    contacts() {
+      const person = (c) => el('div', { class: 'card contact' }, el('h3', { text: c.name }),
+        el('div', { class: 'meta' }, el('span', { text: [c.role, c.company].filter(Boolean).join(' · ') })), el('p', { text: c.bio || 'No biography on file.' }));
+      const crew = knownCrew();
+      const outside = Object.values(gameState.getProperty('contacts.contacts') || {}).filter((c) => c && c.known && c.name);
+      return [
+        el('div', { class: 'lbl', text: 'Crew' }), ...(crew.length ? crew.map(person) : [el('div', { class: 'empty', text: 'You have not met the crew yet.' })]),
+        ...(outside.length ? [el('div', { class: 'lbl', text: 'Outside the ship' }), ...outside.map(person)] : []),
+      ];
     },
     findings() {
       const f = gameState.getProperty('mission.discoveries') || [];
@@ -66,8 +108,11 @@ export function mount(body, ctx) {
       input.addEventListener('keydown', (e) => { if (e.key === 'Enter') add(); });
       const change = (id, fn) => save(saveManager.getPedTasks().map((t) => t.id === id ? { ...t, ...fn(t), modified: Date.now() } : t));
       const live = saveManager.getPedTasks().filter((t) => !t.deleted);
-      const obj = ctx.objectives();
-      return [...(obj.length ? [el('div', { class: 'lbl', text: 'Mission objectives' }), ...obj.map((o) => el('div', { class: `card task mission-obj ${o.done ? 'done' : ''}` }, el('span', { class: 'dot' }), el('span', { text: o.text }))), el('div', { class: 'lbl', text: 'My tasks' })] : []),
+      const objs = gameState.getProperty('mission.objectives') || [];
+      const groups = missionManager.getActiveMissions().filter(Boolean).map((m) => [m, objs.filter((o) => o.missionId === m.id)]).filter(([, o]) => o.length);
+      return [...groups.flatMap(([m, o]) => [el('div', { class: 'lbl', text: m.name }), ...o.map((x) => el('div', { class: `card task mission-obj ${x.status === 'completed' ? 'done' : ''}` }, el('span', { class: 'dot' }), el('span', { text: x.description })))]),
+        ...(groups.length ? [] : [el('div', { class: 'lbl', text: 'Mission tasks' }), el('div', { class: 'empty', text: 'No mission tasks. Accept a mission to see its tasks here.' })]),
+        el('div', { class: 'lbl', text: 'My tasks' }),
         el('div', { class: 'row' }, input, el('button', { class: 'btn primary', text: 'Add', onclick: add })),
         ...(live.length ? live.map((t) => el('div', { class: `card task ${t.done ? 'done' : ''}` },
           el('button', { class: 'dot', 'aria-label': 'Toggle task', onclick: () => change(t.id, (x) => ({ done: !x.done })) }), el('span', { class: 'grow', text: t.text }),
@@ -85,46 +130,86 @@ export function mount(body, ctx) {
     },
     settings() {
       const zoomBtn = (t, d) => el('button', { class: 'btn', text: t, onclick: () => ctx.zoom(d) });
-      const cfg = getConfig() || {};
+      const connected = !!getConfig();
       const token = el('input', { class: 'field', type: 'password', placeholder: 'GitHub token (ghp_…)', autocapitalize: 'off', autocorrect: 'off' });
       const pass = el('input', { class: 'field', type: 'password', placeholder: 'Passphrase (8 or more characters)', autocapitalize: 'off', autocorrect: 'off' });
       syncLine = el('p', { text: syncText() });
-      return [
-        el('div', { class: 'card setting' }, el('div', { class: 'lbl', text: 'Phone sync (GitHub gist)' }),
-          el('p', { text: 'Links this iPad to your iPhone PED through one secret gist. Data is scrambled with your passphrase before it leaves the iPad. Make a classic token with only the "gist" permission. Use the same token and passphrase on the phone.' }),
-          ...(getConfig() ? [] : [token, pass]), syncLine,
-          el('div', { class: 'row' },
-            !getConfig() && el('button', { class: 'btn primary', text: 'Connect', onclick: async () => {
+      const sync = el('div', { class: 'card setting' }, el('div', { class: 'lbl', text: 'Sync with the iPhone PED' }),
+        ...(connected ? [syncLine,
+          el('div', { class: 'row' }, el('button', { class: 'btn primary', text: 'Sync now', onclick: () => syncNow({ manual: true }) }),
+            el('button', { class: 'btn danger', text: 'Disconnect', onclick: () => { clearConfig(); syncState.status = 'off'; render(); } }))]
+          : [el('p', { text: 'How to connect:' }),
+            el('ol', { class: 'steps' },
+              el('li', { text: 'On github.com, make a classic token with only the "gist" permission.' }),
+              el('li', { text: 'Type the token below. Choose a passphrase of 8 or more characters.' }),
+              el('li', { text: 'Tap Connect. On the phone, use the same token and passphrase.' })),
+            token, pass, syncLine,
+            el('div', { class: 'row' }, el('button', { class: 'btn primary', text: 'Connect', onclick: async () => {
               if (!token.value.trim() || !pass.value) { toast('Fill in both boxes', 'error'); return; }
               try { await connectSync(token.value, pass.value); } catch (e) { toast(e.message, 'error'); return; }   // keep what was typed
               await syncNow({ manual: true }); render();
-            } }),
-            getConfig() && el('button', { class: 'btn', text: 'Sync now', onclick: () => syncNow({ manual: true }) }),
-            getConfig() && el('button', { class: 'btn danger', text: 'Disconnect', onclick: () => { clearConfig(); syncState.status = 'off'; render(); } }))),
-        getConfig() && el('div', { class: 'card setting' }, el('div', { class: 'lbl', text: 'Sync details' }), ...describeSync().map((t) => el('p', { text: t }))),
-        el('div', { class: 'card setting' }, el('div', { class: 'lbl', text: 'Sound' }),
-          el('p', { text: (getSound().on ? 'Sound is on: ship hum and communicator.' : 'Sound is off.') + ` Sound engine: ${audioState().state}.` }),
-          el('p', { text: 'If you hear nothing: turn the ringer switch off mute, raise the volume, then tap Test sound.' }),
-          el('div', { class: 'row' },
-            el('button', { class: 'btn primary', text: 'Test sound', onclick: () => { const st = testSound(); toast(`Sound engine: ${st.state}`); setTimeout(render, 400); } }),
-            el('button', { class: 'btn', text: getSound().on ? 'Turn sound off' : 'Turn sound on', onclick: () => { setSound({ on: !getSound().on }); if (getSound().on) chirp(); render(); } }),
-            ...[['Quiet', 0.25], ['Medium', 0.6], ['Loud', 1]].map(([t, v]) => el('button', { class: `btn ${Math.abs(getSound().vol - v) < 0.01 ? 'primary' : ''}`, text: t, onclick: () => { setSound({ vol: v }); chirp(); render(); } })))),
-        el('div', { class: 'card setting' }, el('div', { class: 'lbl', text: 'Engine hum' }), el('div', { class: 'row' },
-          ...[['Off', 0], ['Faint', 0.25], ['Normal', 1]].map(([t, v]) => el('button', { class: `btn ${Math.abs((getSound().hum ?? 0.25) - v) < 0.01 ? 'primary' : ''}`, text: t, onclick: () => { setSound({ hum: v }); render(); } })))),
-        el('div', { class: 'card setting' }, el('div', { class: 'lbl', text: 'Game version' }), el('p', { text: `Build ${appVersion}. The game checks for updates each time it opens. If a change is missing, tap Update now. Your saves stay.` }),
-          el('button', { class: 'btn primary', text: 'Update now', onclick: (e) => { e.currentTarget.textContent = 'Updating…'; e.currentTarget.disabled = true; updateNow(); } })),
-        el('div', { class: 'card setting' }, el('div', { class: 'lbl', text: 'Text size' }), el('div', { class: 'row' }, zoomBtn('Smaller', -0.1), zoomBtn('Reset', 0), zoomBtn('Larger', 0.1))),
-        el('div', { class: 'card setting' }, el('div', { class: 'lbl', text: 'Debug' }), el('p', { text: DEBUG ? 'Debug logging is on. Triple-tap the top-left corner to see the log.' : 'Triple-tap the top-left corner to see the log panel. Add ?debug=1 to the address for routine logs.' })),
-        el('div', { class: 'card setting' }, el('div', { class: 'lbl', text: 'New game' }), el('p', { text: 'Starts again from the first logbook entry (M.LOG-0001). Removes later entries, notes, tasks and mission progress on every synced device.' }),
-          el('button', { class: 'btn danger', text: 'Erase and restart', onclick: () => modal({ title: 'Erase and restart?', body: el('p', { text: 'This cannot be undone. Export your logbook first if you want to keep it.' }),
-            actions: [{ label: 'Cancel' }, { label: 'Erase', kind: 'danger', primary: true, run: () => { try { restartGame(); } catch (e) { console.error(e); toast(e.message, 'error'); } } }] }) })),
-      ];
+            } }))]));
+
+      // sound mixer: Master scales everything. A slider plays its sound when you let go.
+      const snd = getSound();
+      const slider = (label, key, preview) => {
+        const val = el('span', { class: 'mix-val', text: Math.round((snd[key] ?? 1) * 100) + '%' });
+        const inp = el('input', { type: 'range', min: '0', max: '100', step: '5', value: String(Math.round((snd[key] ?? 1) * 100)), class: 'mix', 'aria-label': label });
+        inp.addEventListener('input', () => { setSound({ [key]: inp.value / 100 }); val.textContent = inp.value + '%'; });
+        inp.addEventListener('change', () => preview && preview());
+        return el('label', { class: 'mix-row' }, el('span', { text: label }), inp, val);
+      };
+      const sound = el('div', { class: 'card setting' }, el('div', { class: 'lbl', text: 'Sound' }),
+        el('div', { class: 'row' },
+          el('button', { class: 'btn', text: snd.on ? 'Turn sound off' : 'Turn sound on', onclick: () => { setSound({ on: !getSound().on }); if (getSound().on) chirp(); render(); } }),
+          el('button', { class: 'btn primary', text: 'Test sound', onclick: () => { const st = testSound(); toast(`Sound engine: ${st.state}`); setTimeout(render, 400); } })),
+        slider('Master', 'vol', chirp), slider('Ship', 'hum'), slider('Ambient', 'ambient'), slider('Communicator', 'comm', chirp), slider('Notices', 'notice', ping), slider('Interface', 'ui', () => mailZoom(true)),
+        el('p', { text: `Sound engine: ${audioState().state}. If you hear nothing, turn the ringer switch off mute and raise the volume.` }));
+
+      // version: build number, a check against the server, and the update button
+      const verLine = el('p', { text: `Build ${appVersion}.` });
+      const upBtn = el('button', { class: 'btn primary', text: 'Update now', onclick: (e) => { e.currentTarget.textContent = 'Updating…'; e.currentTarget.disabled = true; updateNow(); } });
+      const check = async () => {
+        verLine.textContent = `Build ${appVersion}. Checking…`;
+        const v = await latestBuild();
+        verLine.textContent = v == null ? `Build ${appVersion}. Could not reach the server.` : v === appVersion ? `Build ${appVersion}. Up to date.` : `Build ${appVersion}. Update available (build ${v}).`;
+        upBtn.classList.toggle('glow', v != null && v !== appVersion);
+      };
+      const version = el('div', { class: 'card setting' }, el('div', { class: 'lbl', text: 'Game version' }), verLine,
+        el('div', { class: 'row' }, el('button', { class: 'btn', text: 'Check for update', onclick: check }), upBtn));
+      setTimeout(check, 400);
+
+      // bug notes
+      const bugBox = el('textarea', { class: 'field', placeholder: 'What went wrong? A few words are enough.', rows: 2 });
+      const bugList = el('div', { class: 'bug-list' });
+      const drawBugs = () => {
+        const list = loadBugs();
+        bugList.replaceChildren(...(list.length ? [...list].reverse().map((b) => el('div', { class: 'bug-note' },
+          el('div', { class: 'meta' }, el('span', { text: `${b.clock} · ${b.where}` }), el('button', { class: 'btn chip', text: 'Delete', onclick: () => { saveBugs(loadBugs().filter((x) => x.id !== b.id)); drawBugs(); } })),
+          el('p', { text: b.text }))) : [el('div', { class: 'empty', text: 'No bug notes.' })]));
+      };
+      const addBug = () => {
+        const v = bugBox.value.trim(); if (!v) return;
+        saveBugs([...loadBugs(), { id: Date.now(), clock: clockText(), where: ctx.place ? ctx.place() : '', text: v, build: appVersion }]);
+        bugBox.value = ''; toast('Bug note saved'); drawBugs();
+      };
+      const copyBugs = async () => {
+        const text = loadBugs().map((b, i) => `${i + 1}. [${b.clock}, ${b.where}, build ${b.build}] ${b.text}`).join('\n');
+        if (!text) { toast('No bug notes to copy'); return; }
+        try { await navigator.clipboard.writeText(text); toast('Copied. Paste it into the chat.'); } catch (e) { bugBox.value = text; toast('Copy failed. The text is in the box: select and copy it.', 'warn'); }
+      };
+      drawBugs();
+      const bugs = el('div', { class: 'card setting' }, el('div', { class: 'lbl', text: 'Bug notes' }),
+        el('p', { text: 'Write what you find while you play. Each note keeps the game time, the place and the build. Copy them all and paste them into the chat later.' }),
+        bugBox, el('div', { class: 'row' }, el('button', { class: 'btn primary', text: 'Add note', onclick: addBug }), el('button', { class: 'btn', text: 'Copy all', onclick: copyBugs })), bugList);
+
+      return [sync, sound, version, el('div', { class: 'card setting' }, el('div', { class: 'lbl', text: 'Text size' }), el('div', { class: 'row' }, zoomBtn('Smaller', -0.1), zoomBtn('Reset', 0), zoomBtn('Larger', 0.1))), bugs];
     },
   };
-  const TITLES = { status: 'Status', missions: 'Missions', findings: 'Findings', tasks: 'Tasks', journal: 'Journal', settings: 'Settings' };
+  const TITLES = { status: 'Status', missions: 'Missions', tasks: 'Tasks', contacts: 'Contacts', findings: 'Findings', journal: 'Journal', settings: 'Settings' };
   function render() {
     syncLine = null;
-    tabs.replaceChildren(...Object.keys(views).map((k) => el('button', { class: `btn chip ${k === cur ? 'on' : ''}`, text: TITLES[k], onclick: () => { cur = k; render(); } })),
+    tabs.replaceChildren(...Object.keys(TITLES).map((k) => el('button', { class: `btn chip ${k === cur ? 'on' : ''}`, text: TITLES[k], onclick: () => { cur = k; render(); } })),
       ctx.commReady && ctx.commReady() && el('button', { class: `btn chip comm-btn${ctx.commUnread() ? ' unread' : ''}`, text: 'Communicator', 'aria-label': 'Open communicator', onclick: () => ctx.openComm() }));
     tb.replaceChildren(...views[cur]());
     update();

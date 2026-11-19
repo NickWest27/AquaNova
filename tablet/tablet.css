@@ -237,9 +237,9 @@ textarea, input { font: inherit; font-size: 16px; user-select: text; -webkit-use
 .ped-panel .pda-head { margin: 0; padding: 0.15rem 19cqw 0.25rem 21cqw; min-height: 0; }
 .ped-panel .pda-head b { font-size: 1.15rem; letter-spacing: 0.14em; }
 .ped-panel .st-body { flex: 1; min-height: 0; flex-direction: column; gap: 0.6rem; padding: 0.5rem 0.6rem 11cqh 0.6rem; overflow: hidden; }
-.ped-panel .tabs { flex-wrap: wrap; gap: 0.4rem; }
+.ped-panel .tabs { flex-wrap: wrap; gap: 0.3rem; }
 .ped-panel .pda-head .btn { min-height: 2.6rem; }
-.ped-panel .btn.chip { min-height: 2.5rem; padding: 0 0.8rem; font-size: 0.85rem; }
+.ped-panel .btn.chip { min-height: 2.5rem; padding: 0 0.6rem; font-size: 0.8rem; letter-spacing: 0.02em; }
 
 /* Navigation station */
 .nav-st .nd-wrap { flex: 1; min-width: 0; position: relative; background: #03121c; border: 2px solid var(--line); border-radius: 18px; overflow: hidden; }
@@ -567,3 +567,17 @@ textarea.field { min-height: 6rem; resize: none; }
 .cp-freq { font: 800 2.4rem var(--mono); color: #e6e66a; margin: 0.4rem 0; }
 .cp-msg { min-height: 1.4rem; color: var(--cyan); font-size: 0.95rem; margin-top: 0.5rem; }
 .cp-reply { margin-top: 0.6rem; font-size: 0.95rem; line-height: 1.35; } .cp-reply.sos { color: var(--red); }
+
+/* PED: Settings and the new tabs */
+.setting .steps { color: var(--dim); font-size: 0.9rem; padding-left: 1.3rem; display: flex; flex-direction: column; gap: 0.25rem; }
+.mix-row { display: grid; grid-template-columns: 9rem 1fr 3.4rem; gap: 0.8rem; align-items: center; }
+.mix-val { text-align: right; color: var(--dim); font-variant-numeric: tabular-nums; }
+input.mix { width: 100%; height: 2.4rem; accent-color: var(--cyan); }
+.card.mission h3, .card.contact h3 { margin: 0 0 0.3rem; }
+.card.mission p, .card.contact p { color: var(--dim); font-size: 0.95rem; margin: 0.2rem 0; }
+.card.mission.done { opacity: 0.6; }
+.card .meta { display: flex; justify-content: space-between; align-items: center; gap: 0.6rem; color: var(--dim); font-size: 0.85rem; }
+.bug-list { display: flex; flex-direction: column; gap: 0.5rem; }
+.bug-note { border-top: 1px solid rgba(100, 255, 218, 0.2); padding-top: 0.5rem; }
+.bug-note p { color: var(--text); }
+.btn.glow { border-color: var(--amber); box-shadow: 0 0 0.8rem rgba(255, 200, 60, 0.5); }

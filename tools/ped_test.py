@@ -1,0 +1,62 @@
+#!/usr/bin/env python3
+"""PED tabs: Missions (active/available), Tasks (objectives), Contacts (bios), Settings (sync, sound mixer, version, bug notes).  python3 tools/ped_test.py"""
+import os, sys, importlib.util
+from playwright.sync_api import sync_playwright
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+spec = importlib.util.spec_from_file_location("smoke", os.path.join(ROOT, "tools", "smoke.py"))
+smoke = importlib.util.module_from_spec(spec); spec.loader.exec_module(smoke)
+fails = []
+def check(name, ok, extra=""):
+    print(("ok   " if ok else "FAIL ") + name + (f"  {extra}" if extra and not ok else ""))
+    if not ok: fails.append(name)
+def main():
+    server, site = smoke.start_server()
+    base = f"http://127.0.0.1:{server.server_address[1]}/AquaNova/tablet/"
+    with sync_playwright() as p:
+        browser = smoke.launch(p)
+        page = browser.new_context(viewport={"width": 1180, "height": 820}, has_touch=True).new_page(); errors = []
+        page.on("pageerror", lambda e: errors.append(str(e)[:200]))
+        page.on("console", lambda m: errors.append(m.text[:200]) if m.type == "error" else None)
+        page.goto(base); page.wait_for_function("!document.getElementById('board-btn').disabled", timeout=20000)
+        page.tap("#board-btn"); page.wait_for_timeout(800)
+        if page.is_visible(".modal .btn"): page.tap(".modal .btn"); page.wait_for_timeout(300)
+        js = lambda code: page.evaluate("(async()=>{const g=(await import('./js/persist.js')).gameState;const M=(await import('../game/systems/missionManager.js')).default;M.delayScale=0;" + code + "})()")
+        tab = lambda t: (page.evaluate("(t)=>[...document.querySelectorAll('#ped-pop .tabs .btn')].find(b=>b.textContent===t).click()", t), page.wait_for_timeout(500))
+        text = lambda: page.inner_text("#ped-pop .tab-body")
+        page.evaluate("window.__aq.open('ped')"); page.wait_for_timeout(500)
+        tabs = page.evaluate("[...document.querySelectorAll('#ped-pop .tabs .btn')].map(b=>b.textContent)")
+        check("tabs", tabs[:7] == ["Status", "Missions", "Tasks", "Contacts", "Findings", "Journal", "Settings"], tabs)
+        tab("Missions"); check("missions: First Contact is active", "First Contact" in text() or "Meet" in text(), text()[:200])
+        page.evaluate("document.querySelector('#ped-pop').click()"); page.wait_for_timeout(300)
+        js("M.forceCompleteMission('meetTheCrew'); M.forceCompleteMission('shipTour'); return 1"); page.wait_for_timeout(500)
+        page.evaluate("window.__aq.open('ped')"); page.wait_for_timeout(500); tab("Missions")
+        t = text(); check("missions: Sea Trials is available", "AVAILABLE" in t.upper() and "Sea Trials" in t, t[:300])
+        check("missions: completed list shows Know Your Ship", "Know Your Ship" in t, t[:400])
+        js("M.startMission('seaTrials'); return 1"); page.wait_for_timeout(400); tab("Tasks")
+        t = text(); check("tasks: objectives of the accepted mission", "Undock" in t and "SEA TRIALS" in t, t[:300])
+        tab("Missions"); t = text(); check("missions: Sea Trials moves to active with progress", "0 of 5 tasks done" in t, t[:300])
+        tab("Contacts"); t = text(); check("contacts: known crew with a bio", "Commander ARIA" in t and "Advanced Research" in t and "Marcus Chen" in t, t[:200])
+        check("contacts: unmet crew hidden", "Jordan Kim" not in t)
+        tab("Settings"); t = text()
+        check("settings: no sync details card", "SYNC DETAILS" not in t.upper() and "SYNC WITH THE IPHONE PED" in t.upper() and "How to connect" in t)
+        check("settings: sound sliders", page.locator("#ped-pop input.mix").count() == 6, page.locator("#ped-pop input.mix").count())
+        for lbl in ["Master", "Ship", "Ambient", "Communicator", "Notices", "Interface"]: check("slider " + lbl, lbl in t)
+        page.evaluate("(()=>{const i=document.querySelectorAll('#ped-pop input.mix')[2]; i.value=30; i.dispatchEvent(new Event('input'));})()")
+        check("ambient slider is saved", abs(page.evaluate("JSON.parse(localStorage.getItem('aquaNova_sound')).ambient") - 0.3) < 0.01)
+        check("version line and buttons", "Build" in t and "CHECK FOR UPDATE" in t.upper() and "UPDATE NOW" in t.upper())
+        check("erase is not in settings", "ERASE" not in t.upper() and "NEW GAME" not in t.upper())
+        check("debug card gone, bug notes present", "DEBUG" not in t.upper() and "BUG NOTES" in t.upper())
+        page.fill("#ped-pop textarea", "Medbay window flickers"); page.evaluate("[...document.querySelectorAll('#ped-pop button')].find(b=>b.textContent==='Add note').click()"); page.wait_for_timeout(300)
+        notes = page.evaluate("JSON.parse(localStorage.getItem('aquaNova_bugnotes'))")
+        check("bug note saved with context", len(notes) == 1 and notes[0]["text"] == "Medbay window flickers" and notes[0]["where"] and notes[0]["clock"], notes)
+        check("bug note listed", "Medbay window flickers" in page.inner_text("#ped-pop .bug-list"))
+        page.evaluate("[...document.querySelectorAll('#ped-pop .bug-note .btn')].find(b=>b.textContent==='Delete').click()"); page.wait_for_timeout(200)
+        check("bug note deleted", page.evaluate("JSON.parse(localStorage.getItem('aquaNova_bugnotes')).length") == 0)
+        # the logbook still has the restart
+        page.evaluate("document.querySelector('#ped-pop').click()"); page.wait_for_timeout(300)
+        page.evaluate("window.__aq.open('log')"); page.wait_for_timeout(500)
+        check("logbook offers restart on the first entry", "RESTART FROM THE BEGINNING" in page.inner_text("#station").upper())
+        check("no page errors", not errors, errors[:3])
+        browser.close()
+    print("\n%d failure(s)" % len(fails)); sys.exit(1 if fails else 0)
+main()

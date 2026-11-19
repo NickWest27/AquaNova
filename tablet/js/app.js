@@ -51,7 +51,8 @@ viewProbe.fn = () => boarded && !!scene && scene.where === 'bridge' && !current 
 
 const flag = (k) => { if (gameState.getProperty('tutorial.' + k) !== true) gameState.updateProperty('tutorial.' + k, true); };   // lesson steps watch these
 const ctx = {
-  flag,
+  flag, closePed: () => closePed(),
+  place: () => (current ? STATIONS[current.name].title : WHERE[scene.where] || scene.where),   // for bug notes
   openScene: (name) => openScene(name),
   closeComm: () => closeComm(),
   openComm: () => { closePed(); if (!comm) toggleComm(); },   // the PED's communicator button: a backup to the pin
