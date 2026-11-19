@@ -8,6 +8,7 @@ import { research } from '../science.js';
 import { el, toast } from '../util.js';
 import { gameState } from '../persist.js';
 import { crewIcon } from '../icons.js';
+import { askDepth } from '../depthPad.js';
 import { toggleDock } from '../dock.js';
 import { say as crewSay, takeHeld, unreadFor, unreadCount, transcript, logLine } from '../notify.js';
 
@@ -92,7 +93,7 @@ const ORDERS = {
 };
 // Orders that need a number. Each option runs when picked.
 const PARAM = {
-  'Make your depth': () => ({ title: 'Make your depth …', opts: [['Surface', 0], ['30 m', 30], ['100 m', 100], ['300 m', 300], ['500 m', 500], ['1000 m', 1000], ['2000 m', 2000]].map(([l, v]) => [l, () => (docked() ? 'We are docked, Captain.' : v ? dive(v, 'Aye.') : (sim.setDepth(0), 'Coming to the surface, aye.'))]) }),
+  'Make your depth': () => ({ title: 'Make your depth …', opts: [['Surface', 0], ['30 m', 30], ['100 m', 100], ['300 m', 300], ['500 m', 500], ['1000 m', 1000], ['2000 m', 2000]].map(([l, v]) => [l, () => (docked() ? 'We are docked, Captain.' : v ? dive(v, 'Aye.') : (sim.setDepth(0), 'Coming to the surface, aye.'))]).concat([['Custom depth …', null, (give) => askDepth((v) => give(docked() ? 'We are docked, Captain.' : v ? dive(v, 'Aye.') : (sim.setDepth(0), 'Coming to the surface, aye.')), 'Make your depth')]]) }),
   'Come left': () => ({ title: 'Come left …', opts: [5, 10, 20, 45, 90].map((d) => [`${d}°`, () => { sim.setHeading(sim.s.targetHeading - d); sim.s.wpt = null; return `Coming left to ${hdgText(sim.s.targetHeading)}, aye.`; }]) }),
   'Come right': () => ({ title: 'Come right …', opts: [5, 10, 20, 45, 90].map((d) => [`${d}°`, () => { sim.setHeading(sim.s.targetHeading + d); sim.s.wpt = null; return `Coming right to ${hdgText(sim.s.targetHeading)}, aye.`; }]) }),
   'Make your heading': () => ({ title: 'Make your heading …', opts: HEADINGS.map(([l, v]) => [l, () => { sim.setHeading(v); sim.s.wpt = null; return `Steering ${hdgText(v)}, aye.`; }]) }),
@@ -175,7 +176,7 @@ export function mount(body, ctx) {
         line('Give me a moment …', () => { page = 'crew'; render(); }, 'back')];
     } else if (page === 'param') {
       kids = [el('div', { class: 'comm-head', text: param.title }),
-        el('div', { class: 'comm-chips' }, ...param.opts.map(([l, fn]) => line(l, () => say(`${param.said}: ${l}`, fn(ctx)), 'chip'))),
+        el('div', { class: 'comm-chips' }, ...param.opts.map(([l, fn, custom]) => line(l, () => custom ? custom((text) => say(`${param.said}: ${l.replace(/ …$/, '').replace(/^Custom /, '')}`, text)) : say(`${param.said}: ${l}`, fn(ctx)), 'chip'))),
         line('Belay that …', () => { page = 'lines'; render(); }, 'back')];
     } else {
       const T = transcript(cur.id), last = T[T.length - 1], live = !reply.stub && !reply.held && last && last.from === 'crew' ? last.text : null;

@@ -655,3 +655,10 @@ input.mix { width: 100%; height: 2.4rem; accent-color: var(--cyan); }
 .comm-log { width: 100%; max-width: 36rem; max-height: 11rem; overflow-y: auto; display: flex; flex-direction: column; gap: 0.35rem; margin: 0.2rem 0 0.4rem; text-align: left; -webkit-overflow-scrolling: touch; }
 .comm-log .cl { font-size: 1.05rem; line-height: 1.3; color: var(--dim); } .comm-log .cl small { letter-spacing: 0.08em; text-transform: uppercase; margin-right: 0.4rem; opacity: 0.8; }
 .comm-log .cl.you { font-style: italic; } .comm-log .cl.crew { color: #cfe9f2; }
+
+/* ---- depth keypad ---- */
+.dp { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; min-width: 18rem; }
+.dp-read { font: 800 3rem var(--font); color: var(--cyan); letter-spacing: 0.05em; } .dp-read small { font-size: 1.2rem; color: var(--dim); }
+.dp-note { color: var(--dim); font-size: 0.95rem; text-align: center; min-height: 1.3rem; }
+.dp-pad { display: grid; grid-template-columns: repeat(3, 4.6rem); gap: 0.5rem; }
+.dp-key { height: 3.6rem; font-size: 1.5rem; font-weight: 700; }
