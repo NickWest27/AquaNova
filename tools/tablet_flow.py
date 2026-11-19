@@ -60,7 +60,7 @@ def main():
         board()
         pos = js("const s=(await import('./js/sim.js')).sim.s;return [s.lat,s.lon,s.depth,s.heading]")
         check("position restored after reload", abs(pos[0]-41.51)<0.001 and abs(pos[1]+70.68)<0.001 and pos[2]==120 and pos[3]==77, pos)
-        done = js("const g=(await import('./js/persist.js')).gameState;return [g.getProperty('mission.completedIds'), g.getProperty('mission.objectives').length]")
+        done = js("const g=(await import('./js/persist.js')).gameState;return [g.getProperty('mission.completedIds'), g.getProperty('mission.objectives').filter(o=>o.missionId==='meetTheCrew').length]")
         check("mission not restarted after reload", done[0] and "meetTheCrew" in done[0] and done[1]==0, done)
         check("lands on bridge after tutorial", page.is_visible('.hs[aria-label="COMMS"]') and not page.is_visible(".pickup") and page.is_visible("#pin"))
         before = js("const g=(await import('./js/persist.js')).saveManager;return g.getActiveLogbook().entries.length")

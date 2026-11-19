@@ -1,7 +1,10 @@
 {
-    "missions": [
-        "meetTheCrew.json",
-        "seaTrials.json",
-        "firstSurvey.json"
-    ]
+  "missions": [
+    "meetTheCrew.json",
+    "shipTour.json",
+    "seaTrials.json",
+    "navLesson.json",
+    "sensorsLesson.json",
+    "firstSurvey.json"
+  ]
 }

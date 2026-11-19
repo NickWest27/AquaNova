@@ -318,6 +318,9 @@ class MissionManager {
                 case 'unlock_station':
                     gameStateInstance.unlockStation(action.station);
                     break;
+                case 'crew_say':
+                    document.dispatchEvent(new CustomEvent('crew-say', { detail: { role: action.role, text: action.text } }));
+                    break;
                 case 'unlock_crew':
                     gameStateInstance.unlockCrewMember(action.crewId);
                     break;

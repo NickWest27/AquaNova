@@ -11,7 +11,7 @@ export function mount(body, ctx) {
   body.style.flexDirection = 'column';
   const head = el('div', { class: 'card' }, el('div', { class: 'lbl', text: 'Sonar' }), el('div', { class: 'num' }), el('p', { style: 'color:var(--dim);margin-top:0.4rem' }));
   const sonarBtn = el('button', { class: 'btn chip', onclick: () => { sim.s.sonar = !sim.s.sonar; sig = ''; update(); } });
-  const sweepBtn = el('button', { class: 'btn chip', text: 'Full sweep', onclick: () => { sim.s.sonar = true; sim.s.sweepUntil = sim.s.clock + SWEEP_GAME_S; toast('Active sweep: the chart shows more detail for a minute'); sig = ''; update(); } });
+  const sweepBtn = el('button', { class: 'btn chip', text: 'Full sweep', onclick: () => { sim.s.sonar = true; sim.s.sweepUntil = sim.s.clock + SWEEP_GAME_S; ctx.flag('swept'); toast('Active sweep: the chart shows more detail for a minute'); sig = ''; update(); } });
   head.append(sonarBtn, sweepBtn);
   const wsk = el('div', { class: 'card' }, el('div', { class: 'lbl', text: 'WSKRs' }), el('div', { class: 'num' }), el('p', { style: 'color:var(--dim);margin:0.4rem 0' }));
   const wRow = el('div', { class: 'row' });
@@ -27,7 +27,7 @@ export function mount(body, ctx) {
 
   const scan = (p) => {
     if (!fileScan(p)) { toast('Already scanned'); return; }
-    toast(`Scan filed: ${p.name}`, 'mission'); sig = ''; update();
+    ctx.flag('scanned'); toast(`Scan filed: ${p.name}`, 'mission'); sig = ''; update();
   };
   const wText = (w, s) => w.mode === 'escort' ? 'holding formation' : w.mode === 'recall' ? 'returning' : `investigating ${(s.pois.find((p) => p.id === w.target) || {}).name || 'a contact'}`;
 

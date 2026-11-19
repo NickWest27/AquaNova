@@ -1,0 +1,71 @@
+{
+  "id": "navLesson",
+  "name": "Charting a Course",
+  "description": "Learn the Navigation station.",
+  "category": "main",
+  "priority": "high",
+  "autoStart": false,
+  "prerequisites": [],
+  "objectives": [
+    {
+      "id": "open",
+      "description": "Open the Navigation station on the bridge",
+      "required": true,
+      "triggers": [
+        {
+          "type": "property_change",
+          "property": "tutorial.opened_nav",
+          "value": true
+        }
+      ]
+    },
+    {
+      "id": "plot",
+      "description": "Plot a course to Mystic Reef (it is close to the dock)",
+      "required": true,
+      "triggers": [
+        {
+          "type": "property_change",
+          "property": "tutorial.plotted",
+          "value": true
+        }
+      ],
+      "after": "open"
+    },
+    {
+      "id": "arrive",
+      "description": "Take the ship to Mystic Reef",
+      "required": true,
+      "triggers": [
+        {
+          "type": "property_change",
+          "property": "tutorial.arrived",
+          "value": true
+        }
+      ],
+      "after": "plot"
+    }
+  ],
+  "onStart": [
+    {
+      "type": "crew_say",
+      "role": "aria",
+      "text": "Navigation is signed off, Captain. Open it and plot a course to Mystic Reef. It is only a short way from the dock."
+    }
+  ],
+  "onComplete": [
+    {
+      "type": "unlock_station",
+      "station": "sensors"
+    },
+    {
+      "type": "crew_say",
+      "role": "sensors",
+      "text": "Sensors are commissioned, Captain. We are at the reef. Open Sensors, run a full sweep and scan the site."
+    },
+    {
+      "type": "start_mission",
+      "missionId": "sensorsLesson"
+    }
+  ]
+}

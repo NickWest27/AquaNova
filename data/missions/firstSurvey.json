@@ -84,6 +84,15 @@
         "subject": "Survey results: well done",
         "text": "Captain,\n\nYour first survey data has reached the Directorate. The reef water readings and the ledge core are both useful, and Dr. Patel's analysis was thorough.\n\nWe have released a small research budget to the Aqua Nova science department. Dr. Patel will know how to spend it. Further survey requests for the shelf and the canyon will follow.\n\nO.E.R.A. Operations Directorate"
       }
+    },
+    {
+      "type": "unlock_station",
+      "station": "wskr"
+    },
+    {
+      "type": "crew_say",
+      "role": "sensors",
+      "text": "Captain, one more thing. The WSKRs are commissioned. They are small remote sensors that scout ahead of the ship. Deploy them from Sensors."
     }
   ]
 }

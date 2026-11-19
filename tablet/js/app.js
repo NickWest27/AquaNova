@@ -34,6 +34,7 @@ document.addEventListener('comms-message', () => {
   const list = gameState.getProperty('mission.inbox') || [], last = list[list.length - 1];
   if (last && last.gameClock == null) gameState.updateProperty('mission.inbox', list.map((m, i) => i === list.length - 1 ? { ...m, gameClock: Math.round(sim.s.clock) } : m));
 });
+document.addEventListener('crew-say', (e) => say(e.detail.role, e.detail.text, 'mission'));   // a mission has a crew member speak
 let scene, current = null, missions = null, boarded = false;
 const pendingModals = [];
 let zoom = 1;
@@ -48,7 +49,9 @@ const commsLocked = () => objStatus('meetTheCrew_pickup_communicator') === 'acti
 
 viewProbe.fn = () => boarded && !!scene && scene.where === 'bridge' && !current && !ped && !comm;
 
+const flag = (k) => { if (gameState.getProperty('tutorial.' + k) !== true) gameState.updateProperty('tutorial.' + k, true); };   // lesson steps watch these
 const ctx = {
+  flag,
   openScene: (name) => openScene(name),
   closeComm: () => closeComm(),
   openComm: () => { closePed(); if (!comm) toggleComm(); },   // the PED's communicator button: a backup to the pin
@@ -85,6 +88,7 @@ function fit() {
 let ped = null;
 async function togglePed() {
   if (ped) return closePed();
+  flag('opened_ped');
   const root = $('#ped-pop'), body = el('div', { class: 'st-body' });
   // The PED is a handheld: the PDA frame sits around it.
   root.replaceChildren(el('div', { class: 'ped-panel pda' },
@@ -134,6 +138,7 @@ async function openStation(name) {
   if (current) closeStation();
   const def = STATIONS[name]; if (!def) return;
   if (!isCommissioned(name)) { toast(excuse(name), 'warn'); return; }
+  flag('opened_' + name);
   const root = $('#station');
   const chips = el('div', { class: 'st-chips' });
   const body = el('div', { class: 'st-body' });
@@ -159,6 +164,7 @@ function updateChips() {
   if (current.chips.textContent !== txt) current.chips.textContent = txt;
 }
 function openScene(name) {
+  if (['bridge', 'walkway', 'walkway2', 'science', 'medbay', 'launchbay'].includes(name)) setTimeout(() => document.dispatchEvent(new CustomEvent('location-enter', { detail: { location: name } })), 0);
   if (name === 'quarters') {
     closeStation(); scene.show('quarters');
     document.dispatchEvent(new CustomEvent('location-enter', { detail: { location: 'quarters' } }));
@@ -265,7 +271,7 @@ async function boot() {
       if (type === 'tick') {
         const s = sim.s;
         scene.update(); updateChips(); current && current.api.update(); ped && ped.api.update(); updateHum(s.speed);
-        if (++tickN % 5 === 0) { liveNav(); if (awardSurveyBonus()) say('science', 'OERA has granted a research budget for the survey, Captain: 3 research points. Check the Research tab.', 'mission'); for (const q of tickLab()) say('science', `Analysis of sample #${q.id} (${SAMPLE_KINDS[q.kind].label.toLowerCase()}) is done: ${q.result} Finding filed.`, 'mission'); }            // about once a second
+        if (++tickN % 5 === 0) { liveNav(); if (sim.s.wpt) flag('plotted'); if (awardSurveyBonus()) say('science', 'OERA has granted a research budget for the survey, Captain: 3 research points. Check the Research tab.', 'mission'); for (const q of tickLab()) say('science', `Analysis of sample #${q.id} (${SAMPLE_KINDS[q.kind].label.toLowerCase()}) is done: ${q.result} Finding filed.`, 'mission'); }            // about once a second
         const t = `${s.lat.toFixed(3)}°N ${Math.abs(s.lon).toFixed(3)}°W`;
         if (st.pos.textContent !== t) st.pos.textContent = t;
         const ck = clockText() + (s.docked ? ' · DOCKED' : ''); if (st.clock.textContent !== ck) st.clock.textContent = ck;
@@ -273,7 +279,7 @@ async function boot() {
         if (st.obj.textContent !== ot) st.obj.textContent = ot;
         const b = `BAT ${Math.round(s.battery)}%`; if (st.bat.textContent !== b) st.bat.textContent = b;
       } else if (type === 'enter') { say('helm', `We are at ${data.name}, Captain.`); firstVisit(data); }
-      else if (type === 'arrived') say('helm', 'Destination reached, Captain.');
+      else if (type === 'arrived') { flag('arrived'); say('helm', 'Destination reached, Captain.'); }
       else if (type === 'wskr-found') { const fresh = fileScan(data.poi); say('sensors', fresh ? `${wskrName(data.wskr)} has finished investigating ${data.poi.name}. Scan filed, Captain.` : `${wskrName(data.wskr)} re-checked ${data.poi.name}. Nothing new.`, 'mission'); }
       else if (type === 'rov-sample') say('science', `The ROV has a ${SAMPLE_KINDS[data.kind].label.toLowerCase()} sample from ${data.site}. It is in the lab, Captain.`);
       else if (type === 'wskr-recovered') say('sensors', `${wskrName(data)} is back in the launch bay.`);

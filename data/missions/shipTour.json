@@ -1,0 +1,91 @@
+{
+  "id": "shipTour",
+  "name": "Know Your Ship",
+  "description": "ARIA shows you round the Aqua Nova.",
+  "category": "main",
+  "priority": "high",
+  "autoStart": false,
+  "prerequisites": [],
+  "objectives": [
+    {
+      "id": "log",
+      "description": "Open the logbook on your desk (your quarters)",
+      "required": true,
+      "triggers": [
+        {
+          "type": "property_change",
+          "property": "tutorial.opened_log",
+          "value": true
+        }
+      ]
+    },
+    {
+      "id": "ped",
+      "description": "Open your PED (top-right corner) and read your tasks",
+      "required": true,
+      "triggers": [
+        {
+          "type": "property_change",
+          "property": "tutorial.opened_ped",
+          "value": true
+        }
+      ]
+    },
+    {
+      "id": "walkway",
+      "description": "Leave your quarters for the walkway",
+      "required": true,
+      "triggers": [
+        {
+          "type": "location_enter",
+          "location": "walkway"
+        }
+      ]
+    },
+    {
+      "id": "bridge",
+      "description": "Walk to the bridge, the door at the end of the walkway",
+      "required": true,
+      "triggers": [
+        {
+          "type": "location_enter",
+          "location": "bridge"
+        }
+      ],
+      "after": "walkway"
+    }
+  ],
+  "onStart": [
+    {
+      "type": "crew_say",
+      "role": "aria",
+      "text": "Captain, before we take her out, a short tour. Open the logbook on your desk, then your PED. After that, the walkway and the bridge."
+    }
+  ],
+  "onComplete": [
+    {
+      "type": "unlock_station",
+      "station": "helm"
+    },
+    {
+      "type": "unlock_station",
+      "station": "sys"
+    },
+    {
+      "type": "crew_say",
+      "role": "aria",
+      "text": "That is the ship, Captain. The helm and systems are signed off. You can also ask Commander Chen to move the ship on the communicator. OERA will send your orders soon."
+    },
+    {
+      "type": "send_message",
+      "delaySeconds": 90,
+      "message": {
+        "id": "oera-sea-trials",
+        "from": "OERA Operations",
+        "subject": "Sea trials orders",
+        "missionId": "seaTrials",
+        "text": "Captain,\n\nWelcome aboard the Aqua Nova, and thank you for answering the call at such short notice. The Alliance is aware of the circumstances of Captain Voss's departure, and we are grateful for your steadiness.\n\nBefore the ship takes on survey work, OERA requires a full set of sea trials. Get the Aqua Nova out of dry dock at Woods Hole and underway. Take her below 30 meters, run her up to speed, then bring her back to the surface and send us a report from the Comms station. The antenna must be at 15 meters or shallower to reach us.\n\nTake your time and trust your crew. ARIA has the full trials checklist and Commander Chen knows these waters.\n\nAccept the mission when you are ready.\n\nO.E.R.A. Operations Directorate"
+      }
+    }
+  ]
+}
