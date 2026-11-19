@@ -85,7 +85,7 @@ sim.stop = () => { sim.s.throttle = 0; sim.s.wpt = null; sim.touch(); };
  *  can be sent to investigate a site, and can be recalled. Launched only from the Sensors station. Up to 4.
  *  Each: { n, lat, lon, mode: 'escort' | 'task' | 'recall', target: poi id | null, busy: game seconds spent investigating } */
 const WSKR_KT = 10, WSKR_RING_NM = 1.5, WSKR_INVESTIGATE_S = 90;
-export const WSKR_NAMES = ['Mother', 'Junior', 'Loner', 'Scout'];   // placeholders from the show's WSKR screen (Scout is ours)
+export const WSKR_NAMES = ['Scout', 'Lantern', 'Drifter', 'Sprat'];   // placeholders, our own names
 export const wskrName = (w) => w.name || WSKR_NAMES[w.n - 1] || `WSKR ${w.n}`;
 sim.deployWskr = () => {
   const s = sim.s;
