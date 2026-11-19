@@ -4,7 +4,7 @@
             "id": "captain",
             "name": "Captain {name}",
             "role": "Captain",
-            "bio": "Called out of retirement by O.E.R.A. to take command of the Aqua Nova after the last-minute relief of Captain Elena Voss. The crew call you {first} when nobody senior is listening.",
+            "bio": "Retired naval captain, once a systems specialist, who left the service believing the sea was worth understanding before it was worth using. You came to Woods Hole as an outsider to help bring the Aqua Nova online, and were handed command when Captain Elena Voss was relieved a few days before sea trials. The crew call you {first} when nobody senior is listening.",
             "image": "images/crew/nicholas_westmoreland.png",
             "dialogueOptions": {
                 "commands": [],
@@ -16,24 +16,24 @@
             "id": "executiveOfficer",
             "name": "Commander ARIA",
             "role": "Executive Officer",
-            "bio": "ARIA (Advanced Research and Interface Assistant) is a state of the art AI, designed to assist in ship operations and crew management. She is efficient, logical, and always ready to help.",
+            "bio": "Built by O.E.R.A. on decades of deep-sea mission records, and designed to be a member of the crew, not a tool. She is calm and candid, and allowed to disagree with the Captain, on the record. She does not claim to feel anything, and the engineers who built her stopped arguing the point. She has been aboard longer than anyone, and she was in the room when Captain Voss was relieved. She has not said what she saw.",
             "image": "images/crew/AREA.png",
             "dialogueOptions": {
                 "commands": ["Report to my quarters", "Status Report", "Let's take her to sea", "Let's go home"],
                 "emergency": ["Sound General Alarm"],
-                "pleasantries": ["How may I assist you Commander?", "What's on your mind?", "All systems are nominal Captain.", "Yes Commander?"]
+                "pleasantries": ["How may I assist you, Captain?", "What's on your mind?", "All systems are nominal Captain.", "Yes, Captain?"]
             }
         },
         "helm": {
             "id": "helm",
             "name": "Marcus Chen",
             "role": "Helmsman",
-            "bio": "Skilled helmsman with precise ship handling abilities. Former Navy coxswain with experience in challenging maritime conditions. Responsible for all ship movement and maneuvering.",
+            "bio": "Trained as a Navy coxswain and spent nine years bringing small boats through bad water, the last three ferrying scientists out to a research sub off Woods Hole. He asked for the Aqua Nova's helm because it was the first boat he had read about that he wanted to be good at. Precise and dry, and he does not like to be rushed in a harbour.",
             "image": "images/crew/Marcus_Chen.png",
             "dialogueOptions": {
                 "commands": ["Make your depth", "Come left", "Come right", "Make your heading", "Make your speed"],
                 "emergency": ["All ahead flank", "All stop", "Emergency surfaace", "Emergency dive"],
-                "pleasantries": ["Say the word Captain", "Smooth sailing Sir", "All systems are green Captain.", "Yes Commander?"]
+                "pleasantries": ["Say the word Captain", "Smooth sailing, Captain", "All systems are green Captain.", "Yes, Captain?"]
             }
         },
         
@@ -41,7 +41,7 @@
             "id": "science",
             "name": "Dr. Sam Patel",
             "role": "Chief Science and Medical Officer",
-            "bio": "Dr. Patel is a skilled physician with a background in marine biology. She ensures the health and well-being of the crew during long missions.",
+            "bio": "Left a hospital emergency department for a doctorate in marine biology, then kept doing both: ship's doctor on three long expeditions. Captain Voss chose her personally. Dr. Patel treats the sample freezer and the sick bay with equal seriousness, and reads a crew's health the way other people read the weather.",
             "image": "images/crew/sam_patel.png",
             "dialogueOptions": {
                 "commands": ["Report to Medical Bay", "Run crew diagnostics", "Prepare for dive operations"],
@@ -53,7 +53,7 @@
             "id": "sensors",
             "name": "Specialist Alex Torres",
             "role": "Sensor Operations Officer",
-            "bio": "Alex is a former sonar technician with exceptional analytical skills. His ability to interpret sensor data and detect anomalies makes him invaluable for deep-sea exploration.",
+            "bio": "Spent six years in a Navy submarine's sonar shack, listening to things that were almost always nothing, and learning to recognise the one in a hundred that was not. Quiet, thorough, and fond of the word \"probably\". He prefers to be certain before he reports a contact, which is a habit the Captain may want to discuss.",
             "image": "images/crew/alex_torres.png",
             "dialogueOptions": {
                 "commands": ["Full sensor sweep", "Passive listening mode", "Deploy sensor buoys"],
@@ -65,7 +65,7 @@
             "id": "engineering",
             "name": "Engineer Riley Chen",
             "role": "Chief Engineer",
-            "bio": "Riley is a mechanical genius responsible for maintaining the Aqua Nova's complex systems. His innovative solutions have saved the ship on more than one occasion.",
+            "bio": "Came up through merchant ship engine rooms, then joined the team that commissioned the compact fusion plant at Woods Hole, and knows the Aqua Nova's plant better than its designers do. He fixes things with parts nobody planned to use. He shares a surname with the helmsman and no family, and both are tired of the question.",
             "image": "images/crew/riley_chen.png",
             "dialogueOptions": {
                 "commands": ["Engineering status report", "Prepare for dive", "Emergency surface"],
@@ -77,7 +77,7 @@
             "id": "security",
             "name": "Lieutenant Jordan Kim",
             "role": "Head of Security",
-            "bio": "Jordan is a former special forces operative who ensures the safety of the crew and ship. His tactical expertise is invaluable during unexpected encounters.",
+            "bio": "Served in a Navy special warfare unit, then maritime boarding teams. Captain Voss insisted on him over the objections of O.E.R.A.'s science side, who did not want a weapons man on a research ship. Jordan's view is that a ship that goes deeper than anyone will eventually meet something it cannot talk to. Brief, courteous, and always watching the door.",
             "image": "images/crew/jordan_kim.png",
             "dialogueOptions": {
                 "commands": ["Security sweep", "Arm defensive systems", "Prepare boarding party"],
@@ -89,7 +89,7 @@
             "id": "communications",
             "name": "Specialist Nicole Brooks",
             "role": "Communications Officer",
-            "bio": "Nicole manages all communications, both internal and external. Her quick thinking and technical skills keep the crew connected to the outside world.",
+            "bio": "Trained as a signals officer, then spent four years running communications for a polar research station where the only link home was a satellite window twice a day. She knows exactly how much a delayed message can matter, and she is the first aboard to hear anything that comes in on the old frequencies.",
             "image": "images/crew/nicole_brooks.png",
             "dialogueOptions": {
                 "commands": ["Open channel", "Send message", "Monitor frequencies"],
@@ -102,10 +102,10 @@
         "operationsDirector": {
             "id": "operationsDirector",
             "name": "Admiral Elena Vasquez",
-            "company": "O.E.R.A - Oceanic Exploration and Research Alliance",
+            "company": "O.E.R.A. - Oceanic Exploration and Research Alliance",
             "department": "Operations Command",
             "role": "Director of Operations",
-            "bio": "Admiral Vasquez oversees all O.E.R.A operations. With decades of experience in maritime exploration, she is a respected leader known for her strategic vision and commitment to scientific discovery.",
+            "bio": "Retired from the Navy as a rear admiral and now directs O.E.R.A. operations. She spent years arguing that exploration needs a ship that can go where no one else can and come back, and she chose you for the Aqua Nova personally. She answers to a board and to the governments that fund it, and they do not always want the same thing from the deep.",
             "image": "images/contacts/elena_vasquez.png",
             "dialogueOptions": {
                 "commands": ["Request new orders", "Mission briefing", "Report status"],
@@ -119,7 +119,7 @@
             "company": "Woods Hole Oceanographic Institution",
             "department": "Port Operations",
             "role": "Harbor Master",
-            "bio": "Commander Mitchell oversees all vessel operations at Woods Hole. Her attention to detail and operational expertise ensure safe harbor operations for research vessels.",
+            "bio": "Retired Coast Guard officer who has run Woods Hole's harbour for eleven years. She knows every vessel that comes in by its sound, and asks the questions the paperwork leaves out. She has watched the Aqua Nova take shape in her harbour and has opinions about it that she keeps to herself, mostly.",
             "image": "images/contacts/sarah_mitchell.png",
             "dialogueOptions": {
                 "commands": ["Request departure clearance", "Docking procedures", "Port services"],
@@ -130,10 +130,10 @@
         "researchCoordinator": {
             "id": "researchCoordinator",
             "name": "Dr. Marcus Webb",
-            "company": "O.E.R.A - Oceanic Exploration and Research Alliance",
+            "company": "O.E.R.A. - Oceanic Exploration and Research Alliance",
             "department": "Scientific Research Division",
             "role": "Research Coordinator",
-            "bio": "Dr. Webb coordinates research activities and manages data collection protocols. His expertise in marine ecosystems guides many of OERA's exploration priorities.",
+            "bio": "Marine ecologist who runs O.E.R.A.'s research division. He wants data rather than discoveries, and a clean record of how each result was reached. He and Captain Voss disagreed, politely and at length, over whether the Aqua Nova should carry anything that was not for science.",
             "image": "images/contacts/marcus_webb.png",
             "dialogueOptions": {
                 "commands": ["Research objectives", "Data transmission", "Sample analysis"],

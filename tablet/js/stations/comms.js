@@ -56,7 +56,7 @@ export function mount(body) {
   body.append(tabs, mailPane, linkPane, ctlPane, conPane);
 
   // ---- reading a message: a 90s style zoom (4 outline frames) into a large window, and back out ----
-  const FROM_FULL = { 'OERA Operations': 'O.E.R.A. - Ocean Exploration and Research Alliance (Operations)' };
+  const FROM_FULL = { 'OERA Operations': 'O.E.R.A. - Oceanic Exploration and Research Alliance (Operations)' };
   const stamp = (m) => (m.gameClock != null ? gameDateText(m.gameClock).replace('  ', ', ').slice(0, -3) : when(m.receivedAt));
   let reading = null;   // { m, win, back, rowEl }
   const container = () => body.closest('#station') || body;

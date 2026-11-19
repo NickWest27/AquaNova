@@ -76,6 +76,7 @@ const syncUI = frameThrottle(() => {
   const readLog = gameState.getProperty('progress.read_welcome') === true;
   const inside = scene.inQuarters;
   scene.showItems({ pin: inside && locked && objStatus('meetTheCrew_find_communicator') === 'completed', ped: inside && !hasPed() });   // pin on the desk, PED on the bed: before or after the logbook
+  scene.glow('Pick up communicator', inside && readLog); scene.glow('Pick up PED', inside && readLog);   // only after the logbook says what to do
   scene.glow('LOGBOOK', inside && locked && !readLog);   // a new game: the laptop glows until the welcome entry is read
   const toQuarters = locked && !!getPlayer() && objStatus('meetTheCrew_find_communicator') !== 'completed';   // told to report to quarters: light the way
   scene.glow('A1 DECK ▼', toQuarters); scene.glow('QUARTERS', toQuarters);

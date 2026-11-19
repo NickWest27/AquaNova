@@ -124,6 +124,14 @@ export function createScene(stage, { onOpen }) {
     hs('◂ WALKWAY', 0, 890, 330, 190, () => onOpen('walkway2'), 'mid'),
     el('div', { class: 'art-note', text: 'Placeholder art' }));
   stage.append(bridge, quarters, walkway, walkway2, science, medbay, bay);
+  // Labels are hidden for immersion. Press and hold anywhere on the scene to show them (they stay a moment after release).
+  { let t = null, off = null, shown = 0;
+    const hide = () => { document.body.classList.remove('show-labels'); };
+    stage.addEventListener('pointerdown', (e) => { if (e.button) return; clearTimeout(t); t = setTimeout(() => { shown = Date.now(); clearTimeout(off); document.body.classList.add('show-labels'); }, 500); });
+    const up = () => { clearTimeout(t); if (document.body.classList.contains('show-labels')) { clearTimeout(off); off = setTimeout(hide, 2500); } };
+    stage.addEventListener('pointerup', up); stage.addEventListener('pointercancel', up);
+    stage.addEventListener('click', (e) => { if (Date.now() - shown < 600) { e.stopPropagation(); e.preventDefault(); } }, true);   // the press that revealed the labels is not a tap
+  }
 
   const api = {
     inQuarters: false, where: 'bridge',
@@ -145,7 +153,7 @@ export function createScene(stage, { onOpen }) {
     console: consoleApi,
     showItems({ pin, ped }) { pinVis.hidden = pinGrab.hidden = !pin; pedVis.hidden = pedGrab.hidden = !ped; },
     lock(label, on) { stage.querySelectorAll('.hs').forEach((b) => { if (b.textContent === label) b.classList.toggle('locked', on); }); },
-    glow(label, on) { stage.querySelectorAll('.hs, .door').forEach((b) => { if (b.textContent === label || b.getAttribute('aria-label') === label) b.classList.toggle('glow', on); }); },
+    glow(label, on) { stage.querySelectorAll('.hs, .door, .pickup').forEach((b) => { if (b.textContent === label || b.getAttribute('aria-label') === label) b.classList.toggle('glow', on); }); },
   };
   return api;
 }

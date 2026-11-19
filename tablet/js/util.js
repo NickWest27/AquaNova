@@ -47,7 +47,7 @@ export function consoleLine(text, kind = '') {
   if (!box) return;
   box.textContent = text; box.className = `on ${kind}`;
   clearTimeout(lineTimer);
-  lineTimer = setTimeout(() => { box.classList.add('old'); if (!document.body.classList.contains('has-line')) box.classList.remove('on'); }, 7000);
+  lineTimer = setTimeout(() => { box.classList.add('old'); box.classList.remove('on'); }, 7000);
 }
 export function toast(text, kind = '') {
   document.dispatchEvent(new CustomEvent('notice', { detail: { text, kind } }));   // the bridge's upper display shows it

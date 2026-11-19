@@ -155,6 +155,9 @@ textarea, input { font: inherit; font-size: 16px; user-select: text; -webkit-use
 /* Tap targets on the scene */
 .hs { position: absolute; border: 3px solid transparent; border-radius: 26px; background: transparent; padding: 0; }
 .hs .tag { position: absolute; left: 50%; transform: translateX(-50%); white-space: nowrap; padding: 6px 22px; border-radius: 999px; border: 3px solid var(--cyan); background: rgba(4,16,31,0.82); color: var(--cyan); font: 800 30px/1.2 var(--font); letter-spacing: 0.12em; }
+.hs .tag, .pickup .tag, .door.tagged span { opacity: 0; transition: opacity 0.2s; pointer-events: none; }
+body.show-labels .hs .tag, body.show-labels .pickup .tag, body.show-labels .door.tagged span { opacity: 1; }
+body.show-labels .hs, body.show-labels .door { border-color: rgba(100,255,218,0.55); }
 .hs .tag.top { top: -22px; } .hs .tag.bottom { bottom: -22px; } .hs .tag.mid { top: 50%; transform: translate(-50%, -50%); }
 .hs:active { background: rgba(100,255,218,0.2); border-color: var(--cyan); }
 .hs.hint { animation: pulse 1.4s ease-in-out 4; }
@@ -320,11 +323,9 @@ textarea, input { font: inherit; font-size: 16px; user-select: text; -webkit-use
 .setting p { color: var(--dim); font-size: 0.9rem; }
 
 /* Toasts and modals */
-#console-line { position: absolute; left: 0; right: 0; bottom: 0; height: 2.4rem; z-index: 95; display: none; align-items: center; padding: 0 1.2rem; background: #04121f; border-top: 2px solid var(--line); color: var(--cyan); font: 700 0.95rem var(--mono); letter-spacing: 0.04em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; }
-#console-line.on, body.has-line #console-line { display: block; line-height: 2.2rem; }
+#console-line { position: absolute; left: 50%; transform: translateX(-50%); max-width: 92%; bottom: 0.8rem; height: 2.4rem; z-index: 95; display: none; align-items: center; padding: 0 1.4rem; border-radius: 999px; background: rgba(4,18,31,0.88); border: 2px solid var(--line); color: var(--cyan); font: 700 0.95rem var(--mono); letter-spacing: 0.04em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; }
+#console-line.on { display: block; line-height: 2.2rem; }
 #console-line.mission, #console-line.warn { color: var(--amber); } #console-line.error { color: #ff9a9a; } #console-line.old { color: var(--dim); }
-body.has-line #station { bottom: 2.4rem; }
-body.has-line #ped-pop, body.has-line #comm-pop { padding-bottom: 3rem; }
 .modal-back { position: absolute; inset: 0; z-index: 80; background: rgba(2,8,16,0.78); display: flex; align-items: center; justify-content: center; padding: 1rem; }
 .modal { width: min(34rem, 100%); max-height: 100%; overflow-y: auto; background: #0a2036; border: 2px solid var(--line); border-radius: 20px; padding: 1.2rem; display: flex; flex-direction: column; gap: 1rem; }
 .modal h3 { font-size: 1.2rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--cyan); }
@@ -355,7 +356,8 @@ body.has-line #ped-pop, body.has-line #comm-pop { padding-bottom: 3rem; }
 .crew-st .say-opts { grid-template-columns: 1fr; max-height: none; overflow: visible; }
 
 /* ---------- Quarters pickup and locks ---------- */
-.pickup { position: absolute; border: 0; background: none; padding: 0; animation: pulse2 1.4s ease-in-out infinite; }
+.pickup { position: absolute; border: 0; background: none; padding: 0; }
+.pickup.glow { animation: pulse2 1.4s ease-in-out infinite; }
 .pickup img { width: 100%; height: 100%; object-fit: contain; mix-blend-mode: screen; -webkit-mask-image: radial-gradient(ellipse at center, #000 55%, transparent 78%); mask-image: radial-gradient(ellipse at center, #000 55%, transparent 78%); pointer-events: none; }
 .pickup .tag { position: absolute; left: 50%; bottom: -34px; transform: translateX(-50%); white-space: nowrap; padding: 6px 22px; border-radius: 999px; border: 3px solid var(--amber); background: rgba(4,16,31,0.86); color: var(--amber); font: 800 30px/1.2 var(--font); letter-spacing: 0.12em; }
 @keyframes pulse2 { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.07); } }
