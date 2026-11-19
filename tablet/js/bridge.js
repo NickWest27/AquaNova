@@ -17,6 +17,7 @@ import { createSynth } from './synth.js';
 import { seafloor } from './seafloor.js';
 import { research } from './science.js';
 import { GATES_ON } from './unlocks.js';
+import { tell } from './notify.js';
 
 const KEY = 'aquaNova_bridgeDisplay';
 const set = (node, v) => { if (node._v !== v) { node._v = v; node.textContent = v; } };
@@ -98,14 +99,15 @@ export function createBridgeConsole({ top, main, display, center, left, right, o
     const thr = (d) => { sim.setThrottle(Math.round(Math.min(1, Math.max(0, sim.s.throttle + d)) * 20) / 20); sim.s.wpt = null; };
     const dep = (d) => sim.setDepth(Math.min(6000, Math.max(0, Math.round((sim.s.targetDepth + d) / 10) * 10)));
     const dockB = bbtn('Dock', () => toggleDock());
+    const cruiseB = bbtn('Cruise', () => { const r = sim.setCruise(!sim.s.cruise); tell('helm', r.ok ? (sim.s.cruise ? 'Super cruise engaged, Captain.' : 'Super cruise disengaged.') : r.why === 'docked' ? 'We are docked, Captain.' : 'Not enough deep water ahead, Captain. Super cruise needs 120 m under us for the next 9 miles.', r.ok ? '' : 'error'); });
     const c = el('div', { class: 'bc' },
       el('div', { class: 'rowN' }, bbtn('◂ Port', () => { sim.setHeading(sim.s.targetHeading - 10); sim.s.wpt = null; }), bbtn('Stbd ▸', () => { sim.setHeading(sim.s.targetHeading + 10); sim.s.wpt = null; }), bbtn('Slower', () => thr(-0.1)), bbtn('Faster', () => thr(0.1)), dockB),
-      el('div', { class: 'rowN' }, bbtn('Up 50 m', () => dep(-50)), bbtn('Down 50 m', () => dep(50)), bbtn('Surface', () => sim.setDepth(0))));
+      el('div', { class: 'rowN' }, bbtn('Up 50 m', () => dep(-50)), bbtn('Down 50 m', () => dep(50)), bbtn('Surface', () => sim.setDepth(0)), cruiseB));
     const r = el('div', { class: 'br' }); const v1 = el('b'), v2 = el('b');
     r.append(el('small', { text: 'THROTTLE' }), v1, el('small', { text: 'ORDERED DEPTH' }), v2);
     return { make, c, r, expand: 'helm', side() {
       const s = sim.s; set(v1, Math.round(s.throttle * 100) + '%'); set(v2, Math.round(s.targetDepth) + ' m');
-      dockB.classList.toggle('on', !!s.docked);
+      dockB.classList.toggle('on', !!s.docked); cruiseB.classList.toggle('on', !!s.cruise);
     } };
   })();
 

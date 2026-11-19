@@ -3,7 +3,7 @@
 // Decisions: a mission action "aria_decision" puts a choice to the Captain in the communicator. The answer runs that option's actions
 // and is recorded, so later missions can react to it (trigger "decision_made", or the property progress.decisions.made.<id>).
 import { gameState } from './persist.js';
-import { say } from './notify.js';
+import { say, hush } from './notify.js';
 import { fill } from './player.js';
 import missionManager from '../../game/systems/missionManager.js';
 
@@ -39,6 +39,7 @@ export function decide(id, optionId) {
 const shown = () => gameState.getProperty('progress.hintsShown') || [];
 const since = new Map();
 export function checkHints() {
+  if (hush.fn()) return;                 // no guidance until the communicator pin has been picked up
   const objs = gameState.getProperty('mission.objectives') || [], scale = missionManager.delayScale ?? 1, now = Date.now();
   for (const mid of missionManager.activeMissions) {
     const m = missionManager.missions.get(mid); if (!m || !m.hints) continue;

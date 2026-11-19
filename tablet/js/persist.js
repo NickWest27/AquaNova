@@ -4,7 +4,7 @@
 //   entry      = a logbook entry with a snapshot; the player can revert to it.
 import gameState from '../../game/state.js';
 import saveManager from '../../game/saveManager.js';
-import { sim } from './sim.js';
+import { sim, setTimeScale } from './sim.js';
 import { seafloor } from './seafloor.js';
 import { dlog } from '../../utils/log.js';
 
@@ -52,6 +52,7 @@ export function liveNav() {
 
 /** Copy GameState into the sim. The ship holds still after a load (safer than resuming at speed). */
 export function restoreSim() {
+  { const ts = gameState.getProperty('settings.timeScale'); setTimeScale(typeof ts === 'number' ? ts : 30); }
   const nav = gameState.getProperty('navigation');
   if (!nav || !nav.location || !nav.location.geometry) return;
   const s = sim.s;

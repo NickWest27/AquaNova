@@ -5,8 +5,14 @@ import { planRoute } from './route.js';
 import { seafloor } from './seafloor.js';
 
 const TICK_MS = 200;
-export const TIMESCALE = 30;        // 1 real second = 30 game seconds of travel
+export let TIMESCALE = 30;        // 1 real second = 30 game seconds (default). Settings can change it; everything below reads this live.
+export const TIME_SCALES = [1, 5, 15, 30, 60, 120];   // 1 = real time
+export const setTimeScale = (n) => { if (TIME_SCALES.includes(n)) TIMESCALE = n; return TIMESCALE; };
+/** Turns, speed changes and depth changes happen in game time, so the turning circle stays the same at any time compression (30 = the old pace). */
+const pace = () => TIMESCALE / 30;
 const MAX_KT = 14;
+/** Super cruise: Aqua Nova can run at 100 kt in deep water. It drops out on its own when the water ahead is shallow. WSKRs have one too (120 kt). */
+export const SUPER_KT = 100, SUPER_MIN_FLOOR = 120, SUPER_LOOK_NM = [3, 6, 9], WSKR_SUPER_KT = 120, WSKR_FAR_NM = 6;
 const NM_PER_DEG_LAT = 60;
 const POI_RADIUS_NM = 0.3;
 const KEEL = 8;             // metres the ship needs under it (hull height plus a margin)
@@ -18,7 +24,7 @@ export const sim = {
     throttle: 0, speed: 0, depth: 0, targetDepth: 0,
     battery: 100, oxygen: 100, hull: 100, co2: 0.04, temp: 4.1, power: 0,
     ballast: 100, comms: true, sonar: true, lights: true, pois: [], wpt: null, route: [], routeSnapped: false, _routeFor: null, at: null,
-    clock: 6 * 3600, docked: false, damage: 0, floor: null, wskrs: [], wskrForm: 'loose', wskrDepth: 'auto', sweepUntil: 0,     // clock = game seconds since Day 1 00:00
+    clock: 6 * 3600, docked: false, damage: 0, floor: null, wskrs: [], cruise: false, wskrForm: 'loose', wskrDepth: 'auto', sweepUntil: 0,     // clock = game seconds since Day 1 00:00
   },
   listeners: new Set(),
   dirty: true,
@@ -55,6 +61,27 @@ export function toward(a, b) {
   return { nm: Math.hypot(dx, dy), brg: norm360((Math.atan2(dx, dy) * 180) / Math.PI), dx, dy };
 }
 
+sim.maxKt = () => (sim.s.cruise ? SUPER_KT : MAX_KT);
+/** Engage or drop super cruise. Needs deep water under and ahead of the ship, and not docked. */
+sim.setCruise = (on) => {
+  const s = sim.s;
+  if (!on) { if (s.cruise) { s.cruise = false; sim.touch(); } return { ok: true }; }
+  if (s.docked) return { ok: false, why: 'docked' };
+  if (s.battery <= 0) return { ok: false, why: 'power' };
+  if (!superWaterAhead()) return { ok: false, why: 'shallow' };
+  s.cruise = true; sim.touch(); return { ok: true };
+};
+/** Is there deep water under the ship and along the heading (3, 6 and 9 nm ahead)? */
+function superWaterAhead() {
+  const s = sim.s; if (!seafloor.ready) return false;
+  const pts = [[0, 0], ...SUPER_LOOK_NM.map((d) => [d, 0])];
+  for (const [d] of pts) {
+    const r = (s.heading * Math.PI) / 180, lat = s.lat + (Math.cos(r) * d) / NM_PER_DEG_LAT, lon = s.lon + (Math.sin(r) * d) / (NM_PER_DEG_LAT * Math.cos((s.lat * Math.PI) / 180));
+    if (!seafloor.inside(lat, lon)) return d === 0;
+    const fl = seafloor.depthAt(lat, lon); if (fl == null || fl < SUPER_MIN_FLOOR) return false;
+  }
+  return true;
+}
 sim.setThrottle = (v) => { if (sim.s.docked) return; sim.s.throttle = clamp(v, 0, 1); sim.touch(); };
 sim.setHeading = (h) => { sim.s.targetHeading = norm360(h); sim.touch(); };
 sim.setDepth = (d) => { if (sim.s.docked) return; sim.s.targetDepth = clamp(d, 0, 6000); sim.touch(); };
@@ -85,7 +112,7 @@ sim.stop = () => { sim.s.throttle = 0; sim.s.wpt = null; sim.touch(); };
  *  can be sent to investigate a site, and can be recalled. Launched only from the Sensors station. Up to 4.
  *  Each: { n, lat, lon, mode: 'escort' | 'task' | 'recall', target: poi id | null, busy: game seconds spent investigating } */
 const WSKR_KT = 10, WSKR_RING_NM = 1.5, WSKR_INVESTIGATE_S = 90;
-export const WSKR_LINK_NM = 3, SEARCH_LEG_NM = 0.45, SEARCH_LEGS = 14, WSKR_TURN_DPS = 30;
+export const WSKR_LINK_NM = 10, SEARCH_LEG_NM = 0.45, SEARCH_LEGS = 14, WSKR_TURN_DPS = 30;
 /** Orders: escort (hold formation), manual (touch control, link range 3 nm from the ship or a relay), search (expanding square),
  *  relay (follows the ship just below the surface and carries comms and a GPS fix when Aqua Nova is deep), task, recall.
  *  Depth is one fleet setting, staggered so no two WSKRs share a layer: auto (the whole water column in equal layers),
@@ -135,7 +162,7 @@ sim.recallWskr = (n) => { const w = sim.s.wskrs.find((q) => q.n === n); if (!w) 
 /** Give an order to one WSKR. order: 'escort' | 'manual' | 'search' | 'relay'. Returns false if there is no such WSKR. */
 sim.orderWskr = (n, order) => {
   const w = sim.s.wskrs.find((q) => q.n === n); if (!w || !['escort', 'manual', 'search', 'relay'].includes(order)) return false;
-  w.mode = order; w.target = null; w.route = null; w.thr = 0; w.turn = 0; w.limited = false;
+  w.mode = order; w.target = null; w.route = null; w.thr = 0; w.turn = 0; w.limited = false; w.cruise = false;
   if (w.heading == null) w.heading = sim.s.heading;
   if (order === 'search') w.pat = { lat: w.lat, lon: w.lon, k: 1, t: 0 };
   sim.touch(); return true;
@@ -195,17 +222,17 @@ function stepWskrs(dt) {
     if (w.bat == null) w.bat = 100;
     if (w.dead) { if (toward(s, w).nm < 0.15) { sim.emit('wskr-recovered', w); return false; } return true; }   // adrift: the ship must come to it
     if (seafloor.ready && !wskrPassable(w.lat, w.lon)) { const sp = nearestWater(w.lat, w.lon); if (sp) { w.lat = sp.lat; w.lon = sp.lon; w.route = null; } }   // never sit on land (after a load, a ship move, or a thin spit)
-    let goal = null; const perk = wskrPerk(w), step = (((perk.kt || WSKR_KT) * dt) * TIMESCALE) / 3600;
+    let goal = null; const perk = wskrPerk(w), kf = (perk.kt || WSKR_KT) / WSKR_KT; let step = (((perk.kt || WSKR_KT) * dt) * TIMESCALE) / 3600;
     const ring = formationRadius(s.wskrForm, w) * (perk.drift && s.wskrForm !== 'tight' ? 1 + 0.35 * (0.5 + 0.5 * Math.sin((s.clock / 3600) * 2 * Math.PI)) : 1);
     { // battery: 6 h at normal draw; holding station and relaying draw less, hard running draws more
-      const draw = w.mode === 'relay' ? 0.6 : w.mode === 'manual' ? 0.7 + 0.6 * (w.thr || 0) : w.moving ? 1 : 0.8;
+      const draw = (w.mode === 'relay' ? 0.6 : w.mode === 'manual' ? 0.7 + 0.6 * (w.thr || 0) : w.moving ? 1 : 0.8) * (w.moving && w.super ? 2.2 : 1);
       w.bat = Math.max(0, w.bat - (100 / (wskrBatteryHours() * 3600)) * draw * dt * TIMESCALE);
       if (w.bat <= 0) { w.dead = true; w.mode = 'recall'; w.route = null; sim.emit('wskr-dead', w); return true; }
       if (w.bat <= WSKR_LOW_PCT && w.mode !== 'recall') { w.mode = 'recall'; w.target = null; w.route = null; w.thr = 0; sim.emit('wskr-low', w); }
     }
     if (w.mode === 'manual') {
-      const kt = (perk.kt || WSKR_KT) * (w.thr || 0), nm = (kt * dt * TIMESCALE) / 3600;
-      w.heading = (((w.heading == null ? s.heading : w.heading) + (w.turn || 0) * WSKR_TURN_DPS * dt) % 360 + 360) % 360;
+      w.super = !!w.cruise; const kt = (w.cruise ? WSKR_SUPER_KT * kf : (perk.kt || WSKR_KT)) * (w.thr || 0), nm = (kt * dt * TIMESCALE) / 3600;
+      w.heading = (((w.heading == null ? s.heading : w.heading) + (w.turn || 0) * WSKR_TURN_DPS * dt * pace()) % 360 + 360) % 360;
       if (nm > 0 && seafloor.ready) {
         w.limited = false;
         const a = (w.heading * Math.PI) / 180, lat = w.lat + (Math.cos(a) * nm) / NM_PER_DEG_LAT, lon = w.lon + (Math.sin(a) * nm) / (NM_PER_DEG_LAT * Math.cos((w.lat * Math.PI) / 180));
@@ -222,6 +249,8 @@ function stepWskrs(dt) {
     else if (w.mode === 'relay') goal = s;                          // follows the ship, just under the surface
     else if (w.mode === 'task') { goal = s.pois.find((p) => p.id === w.target); if (!goal) { w.mode = 'escort'; return true; } }
     else goal = s;
+    w.super = !!s.cruise || toward(w, goal).nm > WSKR_FAR_NM;      // far to go, or the ship is in super cruise: super cruise too
+    if (w.super) step = (WSKR_SUPER_KT * kf * dt * TIMESCALE) / 3600;
     // Route round land. Replanned when the goal has moved on (escorts and recalls follow the ship) or after a failed attempt.
     if (!w.route || (w.routeGoal && toward(w.routeGoal, goal).nm > 0.6) || (w.routeRetry != null && s.clock >= w.routeRetry)) {
       const r = seafloor.ready ? planRoute(w, goal, wskrPassable) : [];
@@ -280,7 +309,7 @@ sim.dockPoi = () => sim.s.pois.find((p) => p.type === 'dock');
  *  and keep the circle small enough to fit inside the distance left. A target behind the ship is then
  *  reached in one turn and never orbited. */
 export function autopilotCap(headingErrDeg, distNm) {
-  const byHeading = headingErrDeg > 60 ? 1 : headingErrDeg > 25 ? 1.5 : headingErrDeg > 10 ? 3 : MAX_KT;
+  const byHeading = headingErrDeg > 60 ? 1 : headingErrDeg > 25 ? 1.5 : headingErrDeg > 10 ? 3 : sim.maxKt();
   const byDistance = Math.max(1, distNm * 6.3);
   return Math.min(byHeading, byDistance);
 }
@@ -294,10 +323,10 @@ sim.etaHours = (maxHours = 96) => {
     const end = toward({ lat, lon }, route.length ? route[route.length - 1] : s.wpt);
     if (end.nm < POI_RADIUS_NM * 0.6) return (t * TIMESCALE) / 3600;
     const tw = toward({ lat, lon }, route[0] || s.wpt);
-    const turn = angDiff(tw.brg, heading), rate = 6 * dt;
+    const turn = angDiff(tw.brg, heading), rate = 6 * dt * pace();
     heading = norm360(heading + clamp(turn, -rate, rate));
-    const want = Math.min(s.throttle * MAX_KT, autopilotCap(Math.abs(turn), route.length > 1 ? Infinity : end.nm));
-    speed += clamp(want - speed, -2 * dt, 1.2 * dt);
+    const want = Math.min(s.throttle * sim.maxKt(), autopilotCap(Math.abs(turn), route.length > 1 ? Infinity : end.nm));
+    speed += clamp(want - speed, -(s.cruise ? 6 : 2) * dt * pace(), (s.cruise ? 3 : 1.2) * dt * pace());
     const nm = (speed * dt * TIMESCALE) / 3600, r = (heading * Math.PI) / 180;
     lat += (nm * Math.cos(r)) / NM_PER_DEG_LAT; lon += (nm * Math.sin(r)) / (NM_PER_DEG_LAT * Math.cos((lat * Math.PI) / 180));
   }
@@ -305,9 +334,13 @@ sim.etaHours = (maxHours = 96) => {
 };
 
 sim.hooks = [];   // extra per-step work added by other modules (the Science ROV)
-sim.step = (dt) => {
+const stepOnce = (dt) => {
   const s = sim.s;
   s.clock += dt * TIMESCALE;
+  if (s.cruise) {                                // super cruise drops out when it is no longer safe
+    const why = s.docked ? 'docked' : s.battery <= 0 ? 'power' : !superWaterAhead() ? 'shallow' : null;
+    if (why) { s.cruise = false; sim.emit('cruise-off', { why }); }
+  }
   if (s.docked) { s.throttle = 0; s.speed = 0; s.targetDepth = 0; s.wpt = null; }   // clamps hold the ship
   // heading
   let capDist = Infinity;
@@ -320,15 +353,15 @@ sim.step = (dt) => {
     else { const steer = toward(s, s.route[0] || s.wpt); s.targetHeading = steer.brg; capDist = s.route.length > 1 ? Infinity : t.nm; }
   }
   const turn = angDiff(s.targetHeading, s.heading);
-  const rate = 6 * dt; // deg per second
+  const rate = 6 * dt * pace(); // deg per second
   s.heading = norm360(s.heading + clamp(turn, -rate, rate));
   // speed (smooth)
-  let wantKt = s.throttle * MAX_KT * (s.battery > 0 ? 1 : 0);
+  let wantKt = s.throttle * sim.maxKt() * (s.battery > 0 ? 1 : 0);
   if (s.wpt) wantKt = Math.min(wantKt, autopilotCap(Math.abs(turn), capDist));
-  s.speed += clamp(wantKt - s.speed, -2 * dt, 1.2 * dt);
+  s.speed += clamp(wantKt - s.speed, -(s.speed > MAX_KT ? 6 : 2) * dt * pace(), (s.cruise ? 3 : 1.2) * dt * pace());
   // depth
   const dd = s.targetDepth - s.depth;
-  s.depth = clamp(s.depth + clamp(dd, -12 * dt, 12 * dt), 0, 6000);
+  s.depth = clamp(s.depth + clamp(dd, -12 * dt * pace(), 12 * dt * pace()), 0, 6000);
   // move, then check the sea floor
   const prevLat = s.lat, prevLon = s.lon;
   const nm = (s.speed * dt * TIMESCALE) / 3600;
@@ -357,12 +390,12 @@ sim.step = (dt) => {
   for (const h of sim.hooks) h(dt);
   chartSurroundings();
   // systems
-  s.power = 8 + (s.speed / MAX_KT) * 70 + (s.lights ? 5 : 0) + (s.sonar ? 4 : 0);
+  s.power = Math.min(100, 8 + (Math.min(s.speed, MAX_KT) / MAX_KT) * 70 + (s.lights ? 5 : 0) + (s.sonar ? 4 : 0) + Math.max(0, s.speed - MAX_KT) / (SUPER_KT - MAX_KT) * 18);
   if (s.docked) { // shore power and air: about 20% battery and 30% oxygen per game hour
     const gh = (dt * TIMESCALE) / 3600;
     s.battery = clamp(s.battery + 20 * gh, 0, 100); s.oxygen = clamp(s.oxygen + 30 * gh, 0, 100);
   } else {
-    s.battery = clamp(s.battery - (s.power / 100) * 0.012 * dt * TIMESCALE / 30, 0, 100);
+    s.battery = clamp(s.battery - (s.power / 100) * (1 + Math.max(0, s.speed - MAX_KT) / (SUPER_KT - MAX_KT) * 2) * 0.012 * dt * TIMESCALE / 30, 0, 100);
     s.oxygen = clamp(s.oxygen - 0.0025 * dt * TIMESCALE / 30, 0, 100);
   }
   s.co2 = clamp(0.04 + (100 - s.oxygen) * 0.012, 0, 5);
@@ -400,11 +433,14 @@ export const gameDateText = (secs = sim.s.clock) => {
 };
 export const clockText = (secs = sim.s.clock) => `Day ${Math.floor(secs / 86400) + 1} ${String(Math.floor(secs / 3600) % 24).padStart(2, '0')}:${String(Math.floor(secs / 60) % 60).padStart(2, '0')}`;
 
+/** One update. A long step is cut into pieces of about 8 game seconds or less, so fast ships and high time compression stay safe. */
+sim.step = (dt) => { const n = Math.max(1, Math.ceil((dt * TIMESCALE) / 8)); for (let i = 0; i < n; i++) stepOnce(dt / n); };
+
 /** Sleep: jump the game forward. The ship keeps its course, speed and destination, so a long
  *  transit takes less of the player's time. The crew wake the player early for an emergency, or on arrival.
  *  Returns { hours, reason, arrived }: reason is an emergency text, arrived is the destination name. */
 sim.warp = (hours) => {
-  const s = sim.s, total = hours * 3600, stepGame = 15;   // 15 game seconds per step
+  const s = sim.s, total = hours * 3600, stepGame = s.cruise ? 6 : 15;   // 15 game seconds per step
   const startWpt = s.wpt;
   let done = 0, reason = null, arrived = null, sinceCheck = 0;
   while (done < total) {

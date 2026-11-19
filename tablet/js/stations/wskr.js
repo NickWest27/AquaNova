@@ -56,10 +56,11 @@ export function mountWskrPanel(body) {
             act('Search pattern', w.mode === 'search', () => { sim.orderWskr(w.n, 'search'); say(`${wskrName(w)} starting a search pattern`); }, !ok || w.dead),
             act('Relay', w.mode === 'relay', () => { sim.orderWskr(w.n, 'relay'); say(`${wskrName(w)} going up as a relay`); }, !ok || w.dead),
             act('Recall', w.mode === 'recall', () => { sim.recallWskr(w.n); say(`${wskrName(w)} recalled`); }, w.dead)));
-        helm.replaceChildren(...(w.mode === 'manual' ? [el('div', { style: 'color:var(--dim);margin-bottom:0.4rem', text: `Hold a button to turn. The link reaches ${WSKR_LINK_NM} nm from the ship or from a relay WSKR.` }),
+        helm.replaceChildren(...(w.mode === 'manual' ? [el('div', { style: 'color:var(--dim);margin-bottom:0.4rem', text: `Hold a button to turn. Super cruise is 12 times faster. The link reaches ${WSKR_LINK_NM} nm from the ship or from a relay WSKR.` }),
           el('div', { class: 'row' }, hold('Turn left', (d) => sim.wskrHelm(w.n, { turn: d ? -1 : 0 })), hold('Turn right', (d) => sim.wskrHelm(w.n, { turn: d ? 1 : 0 })),
             el('button', { class: 'btn chip', text: 'Slower', onclick: () => sim.wskrHelm(w.n, { thr: (cur().thr || 0) - 0.25 }) }), el('button', { class: 'btn chip', text: 'Faster', onclick: () => sim.wskrHelm(w.n, { thr: (cur().thr || 0) + 0.25 }) }),
-            el('button', { class: 'btn chip', text: 'Stop', onclick: () => sim.wskrHelm(w.n, { thr: 0 }) }))] : []));
+            el('button', { class: 'btn chip', text: 'Stop', onclick: () => sim.wskrHelm(w.n, { thr: 0 }) }),
+            act('Super cruise', !!w.cruise, () => { w.cruise = !w.cruise; say(`${wskrName(w)} super cruise ${w.cruise ? 'on' : 'off'}`); }))] : []));
       } else { orders.replaceChildren(); helm.replaceChildren(); }
       orders.hidden = !w; helm.hidden = !w || w.mode !== 'manual';
     }

@@ -28,7 +28,7 @@ const hdgText = (h) => String(Math.round(((h % 360) + 360) % 360)).padStart(3, '
 
 // Orders that do something. Anything not listed here (or in PARAM) is shown in the "not yet" colour.
 // Orders added here show up even in old saves (a save keeps its own copy of the crew's lines).
-const EXTRA = { helm: ['Undock', 'Dock'], sensors: ['Set up a relay', 'Stand down the relay'] };
+const EXTRA = { helm: ['Undock', 'Dock', 'Engage super cruise', 'Disengage super cruise'], sensors: ['Set up a relay', 'Stand down the relay'] };
 const ORDERS = {
   'Undock': () => { if (!docked()) return 'We are already undocked, Captain.'; setTimeout(() => toggleDock(), 600); return 'Undocking. Disconnecting shore power and releasing the clamps.'; },
   'Dock': () => {
@@ -64,6 +64,8 @@ const ORDERS = {
   'Emergency dive': () => { if (docked()) return 'We are docked, Captain.'; return dive(500, 'Diving!'); },
   'Full sensor sweep': () => { sim.s.sonar = true; sim.s.sweepUntil = sim.s.clock + 1800; sim.touch(); const n = sim.s.pois.filter((p) => toward(sim.s, p).nm <= 4).length; return `Active sweep. ${n} contact${n === 1 ? '' : 's'} within four miles, and the chart shows more detail for a minute.`; },
   'Deploy sensor buoys': () => `WSKRs launch from the Sensors station, Captain. ${sim.s.wskrs.length} of 4 are out. Once they are out they spread round us on their own, and you can send one to investigate a contact.`,
+  'Engage super cruise': () => { const r = sim.setCruise(true); return r.ok ? 'Super cruise engaged. Hold on to something, Captain.' : r.why === 'docked' ? 'We are docked, Captain.' : r.why === 'power' ? 'We have no power for it, Captain.' : 'Not enough deep water ahead, Captain. We need 120 metres under us for the next nine miles.'; },
+  'Disengage super cruise': () => { sim.setCruise(false); return 'Super cruise disengaged. Back to normal cruise.'; },
   'Set up a relay': () => {
     if (GATES_ON && !research.has('wskr-orders')) return 'We have not got the relay procedures yet, Captain. Science needs to finish the WSKR orders research.';
     const r = sim.setupRelay();

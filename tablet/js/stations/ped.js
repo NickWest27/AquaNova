@@ -2,7 +2,7 @@
 // The iPhone PED (ped/ at the site root) shows the same things, kept in step through GitHub.
 import { fill } from '../player.js';
 import { el, pad, toast } from '../util.js';
-import { sim, clockText } from '../sim.js';
+import { sim, clockText, TIMESCALE, TIME_SCALES, setTimeScale } from '../sim.js';
 import { gameState, saveManager } from '../persist.js';
 import { syncNow, requestSync, syncState, onSyncChange } from '../sync.js';
 import { getConfig, connect as connectSync, clearConfig, makeJournalEntry, newTask, isJournal } from '../../../utils/ledgerSync.js';
@@ -153,6 +153,13 @@ export function mount(body, ctx) {
               await syncNow({ manual: true }); render();
             } }))]));
 
+      // time compression: how many game seconds pass in one real second (default 30). 1 = real time.
+      const ts = TIMESCALE, tsLabel = (n) => (n === 1 ? 'Real time' : `${n}×${n === 30 ? ' (default)' : ''}`);
+      const time = el('div', { class: 'card setting' }, el('div', { class: 'lbl', text: 'Time compression' }),
+        el('p', { text: ts === 1 ? 'Real time: one game second per real second.' : `1 real second = ${ts} game seconds, so 1 real minute = ${ts} game minutes${ts >= 60 ? ` (${ts / 60} hours)` : ''}.` }),
+        el('div', { class: 'row' }, ...TIME_SCALES.map((n) => el('button', { class: 'btn' + (n === ts ? ' primary' : ''), text: tsLabel(n), onclick: () => { setTimeScale(n); gameState.updateProperty('settings.timeScale', n); render(); } }))),
+        el('p', { text: 'Ship turns, speed changes and travel times all follow it. Sleep still jumps ahead.' }));
+
       // sound mixer: Master scales everything. A slider plays its sound when you let go.
       const snd = getSound();
       const slider = (label, key, preview) => {
@@ -206,14 +213,14 @@ export function mount(body, ctx) {
         el('p', { text: 'Write what you find while you play. Each note keeps the game time, the place and the build. Copy them all and paste them into the chat later.' }),
         bugBox, el('div', { class: 'row' }, el('button', { class: 'btn primary', text: 'Add note', onclick: addBug }), el('button', { class: 'btn', text: 'Copy all', onclick: copyBugs })), bugList);
 
-      return [sync, sound, version, el('div', { class: 'card setting' }, el('div', { class: 'lbl', text: 'Text size' }), el('div', { class: 'row' }, zoomBtn('Smaller', -0.1), zoomBtn('Reset', 0), zoomBtn('Larger', 0.1))), bugs];
+      return [sync, time, sound, version, el('div', { class: 'card setting' }, el('div', { class: 'lbl', text: 'Text size' }), el('div', { class: 'row' }, zoomBtn('Smaller', -0.1), zoomBtn('Reset', 0), zoomBtn('Larger', 0.1))), bugs];
     },
   };
   const TITLES = { status: 'Status', missions: 'Missions', tasks: 'Tasks', contacts: 'Contacts', findings: 'Findings', journal: 'Journal', settings: 'Settings' };
   function render() {
     syncLine = null;
     tabs.replaceChildren(...Object.keys(TITLES).map((k) => el('button', { class: `btn chip ${k === cur ? 'on' : ''}`, text: TITLES[k], onclick: () => { cur = k; render(); } })),
-      ctx.commReady && ctx.commReady() && el('button', { class: `btn chip comm-btn${ctx.commUnread() ? ' unread' : ''}`, text: 'Communicator', 'aria-label': 'Open communicator', onclick: () => ctx.openComm() }));
+      ...(ctx.commReady && ctx.commReady() ? [el('button', { class: `btn chip comm-btn${ctx.commUnread() ? ' unread' : ''}`, text: 'Communicator', 'aria-label': 'Open communicator', onclick: () => ctx.openComm() })] : []));
     tb.replaceChildren(...views[cur]());
     update();
   }

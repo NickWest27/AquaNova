@@ -27,7 +27,10 @@ const who = (role) => {
 };
 
 /** role: 'helm' | 'aria' | 'sensors' | 'engineering' | 'comms' | 'science'. kind: '' | 'mission' | 'error'. */
+/** While hush.fn() is true nobody calls in: no chirps, no console lines, no ARIA guidance. (Before the communicator pin is picked up.) */
+export const hush = { fn: () => false };
 export function say(role, text, kind = '', opts = {}) {
+  if (hush.fn()) return;
   text = fill(text); if (opts.keep) opts = { ...opts, keep: fill(opts.keep) };
   const now = Date.now(), w = who(role);
   if ((kind === 'mission' || kind === 'error') && opts.hold !== false) {   // worth keeping until read

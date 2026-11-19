@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""New game: arrival form in Walkway AN-1, ID record, PED on the bed, pin on the desk, the name in the game.  python3 tools/intake_test.py"""
+"""New game: arrival form in Walkway A1, ID record, PED on the bed, pin on the desk, the name in the game.  python3 tools/intake_test.py"""
 import os, sys, importlib.util
 from playwright.sync_api import sync_playwright
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -21,7 +21,7 @@ def main():
         page.goto(base); page.wait_for_function("!document.getElementById('board-btn').disabled", timeout=20000)
         page.tap("#board-btn"); page.wait_for_timeout(900)
         js = lambda code: page.evaluate("(async()=>{const g=(await import('./js/persist.js')).gameState;" + code + "})()")
-        check("starts in walkway AN-1 with the form", page.is_visible(".signin") and page.is_visible(".scene.walkway2:not([hidden])") or page.is_visible(".signin"))
+        check("starts in walkway A1 with the form", page.is_visible(".signin") and page.is_visible(".scene.walkway:not([hidden])") or page.is_visible(".signin"))
         check("PED button hidden before the PED is collected", not page.is_visible("#ped-btn"))
         page.screenshot(path=f"{SHOTS}/i-1form.png")
         check("scanner starts disabled", page.locator(".scanner").is_disabled())
@@ -52,6 +52,8 @@ def main():
         page.screenshot(path=f"{SHOTS}/i-5quarters.png")
         # PED first, then the logbook, then the pin
         page.locator('.pickup[aria-label="Pick up PED"]').tap(force=True); page.wait_for_timeout(500)
+        r = js("const n=await import('./js/notify.js'), a=await import('./js/aria.js'); const c0=n.stats.chirps; n.say('aria','Test line','mission'); a.checkHints(); return {chirps:n.stats.chirps-c0, hints:(g.getProperty('progress.hintsShown')||[]).length}")
+        check("no chirps and no ARIA guidance before the pin is picked up", r["chirps"] == 0 and r["hints"] == 0, r)
         check("PED collected, button appears, item gone", page.is_visible("#ped-btn") and not page.is_visible('.pickup[aria-label="Pick up PED"]'))
         page.tap('.hs[aria-label="LOGBOOK"]', force=True); page.wait_for_timeout(600)
         t = page.inner_text("#station")

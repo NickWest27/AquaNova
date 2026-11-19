@@ -1,8 +1,8 @@
 import '../../utils/debugPanel.js';
 import { dlog } from '../../utils/log.js';
-import { sim, clockText, toward, MAX_SPEED, wskrName } from './sim.js';
+import { sim, clockText, toward, wskrName } from './sim.js';
 import { createScene } from './scene.js';
-import { say, unreadCount, stats as notifyStats } from './notify.js';
+import { say, hush, unreadCount, stats as notifyStats } from './notify.js';
 import { seafloor } from './seafloor.js';
 import { fileScan } from './findings.js';
 import './rov.js';
@@ -50,6 +50,8 @@ const objectives = () => gameState.getProperty('mission.objectives') || [];
 const objStatus = (id) => (objectives().find((o) => o.id === id) || {}).status;
 const hasPed = () => gameState.getProperty('progress.got_ped') === true;   // the PED lies on the bed until you take it
 const commsLocked = () => objStatus('meetTheCrew_pickup_communicator') === 'active';
+// Real play is silent (no chirps, no ARIA) until the communicator pin is picked up. Automated tests skip the sign-in and are not hushed unless ?intake=1.
+hush.fn = () => commsLocked() && !(navigator.webdriver && !/[?&]intake=1/.test(location.search));
 
 viewProbe.fn = () => boarded && !!scene && scene.where === 'bridge' && !current && !ped && !comm;
 
@@ -191,7 +193,7 @@ function openScene(name) {
   else if (name === 'lab-analysis' || name === 'lab-research') { ctx.labTab = name.slice(4); openStation('lab'); }
   else if (name === 'lab') { ctx.labTab = 'samples'; openStation('lab'); }
   else if (name === 'engineering') say('aria', 'Engineering is not built yet, Captain. The engineering crew are on the communicator if you need them.');
-  else if (name === 'pickup-ped') { gameState.updateProperty('progress.got_ped', true); say('aria', 'That is your PED, Captain. Its button is at the top of the screen. Your tasks and contacts are in there.'); }
+  else if (name === 'pickup-ped') { gameState.updateProperty('progress.got_ped', true); }
   else if (name === 'pickup') document.dispatchEvent(new CustomEvent('item-pickup', { detail: { itemId: 'communicator' } }));
   else openStation(name);
   syncUI();
@@ -201,7 +203,7 @@ function openScene(name) {
 function sleepDialog() {
   const s = sim.s;
   // time to the destination at the speed you are set for (so a long transit takes less of your time)
-  const kt = Math.max(s.speed, s.throttle * MAX_SPEED);
+  const kt = Math.max(s.speed, s.throttle * sim.maxKt());
   const eh = s.wpt && kt > 0.5 && !s.docked ? sim.etaHours() : null;
   const eta = eh == null ? null : Math.min(96, Math.ceil(eh * 10) / 10 + 0.1);
   let hours = eta && eta <= 12 ? eta : 8, untilArrival = !!(eta && eta <= 12);
@@ -295,6 +297,7 @@ async function boot() {
       else if (type === 'arrived') { flag('arrived'); say('helm', 'Destination reached, Captain.'); }
       else if (type === 'wskr-found') { const fresh = fileScan(data.poi); say('sensors', fresh ? `${wskrName(data.wskr)} has finished investigating ${data.poi.name}. Scan filed, Captain.` : `${wskrName(data.wskr)} re-checked ${data.poi.name}. Nothing new.`, 'mission'); }
       else if (type === 'rov-sample') say('science', `The ROV has a ${SAMPLE_KINDS[data.kind].label.toLowerCase()} sample from ${data.site}. It is in the lab, Captain.`);
+      else if (type === 'cruise-off') say('helm', data.why === 'shallow' ? 'Shallow water ahead, Captain. Dropping out of super cruise.' : data.why === 'docked' ? 'Super cruise disengaged.' : 'Power is gone. Super cruise is off.', 'mission');
       else if (type === 'wskr-low') say('sensors', `${wskrName(data)} is down to its last charge, Captain. Recalling it.`, 'mission');
       else if (type === 'wskr-dead') say('sensors', `${wskrName(data)} has lost power and is adrift, Captain. Bring the ship alongside to recover it.`, 'mission');
       else if (type === 'wskr-search-done') say('sensors', `${wskrName(data)} has finished its search pattern and is rejoining the formation.`);
@@ -305,13 +308,13 @@ async function boot() {
         else say('engineering', `${k === 'shoal' ? 'We have run aground' : 'We touched bottom'}! Hull damage ${Math.round(data.damage)}%.`, 'error');
       }
     });
-    // A new game starts in Walkway AN-1 with the arrival form. Saves from before the form keep their PED and get no name.
+    // A new game starts in Walkway A1 with the arrival form. Saves from before the form keep their PED and get no name.
     const fresh = !getPlayer() && commsLocked();
     if (!fresh && !hasPed() && !getPlayer()) gameState.updateProperty('progress.got_ped', true);
     const skip = navigator.webdriver && !/[?&]intake=1/.test(location.search);   // automated tests skip the form
     if (fresh && !skip) {
-      openScene('walkway2');
-      runIntake({ dateText: clockText(), onDone: () => { checkpoint(); syncUI(); say('aria', 'Welcome aboard, Captain. OERA Operations has left you a message. Your quarters are off the main walkway. Follow the glowing markers.'); } });
+      openScene('walkway');
+      runIntake({ dateText: clockText(), onDone: () => { checkpoint(); syncUI(); } });
     } else {
       if (fresh) { setPlayer('Alex', 'Mercer'); gameState.updateProperty('progress.got_ped', true); }
       if (commsLocked()) openScene('quarters'); else scene.show('bridge');

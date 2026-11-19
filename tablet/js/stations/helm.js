@@ -1,4 +1,5 @@
-import { sim, MAX_SPEED } from '../sim.js';
+import { sim, SUPER_KT } from '../sim.js';
+import { tell } from '../notify.js';
 import { createLever, createDial } from '../ui.js';
 import { el } from '../util.js';
 import { toggleDock } from '../dock.js';
@@ -15,7 +16,10 @@ export function mount(body) {
      ['Port 10°', () => sim.setHeading(sim.s.targetHeading - 10)], ['Stbd 10°', () => sim.setHeading(sim.s.targetHeading + 10)]]
       .map(([t, fn]) => el('button', { class: 'btn chip', text: t, onclick: fn })));
   const dockBtn = el('button', { class: 'btn chip', text: 'Dock', onclick: () => toggleDock(() => thr.set(0)) });
-  presets.append(dockBtn);
+  const cruiseBtn = el('button', { class: 'btn chip', text: 'Super cruise', onclick: () => {
+    const r = sim.setCruise(!sim.s.cruise);
+    tell('helm', r.ok ? (sim.s.cruise ? `Super cruise engaged, Captain. Up to ${SUPER_KT} knots.` : 'Super cruise disengaged.') : r.why === 'docked' ? 'We are docked, Captain.' : r.why === 'power' ? 'No power for super cruise.' : 'Not enough deep water ahead, Captain. Super cruise needs 120 m under us for the next 9 miles.', r.ok ? '' : 'error'); } });
+  presets.append(dockBtn, cruiseBtn);
   body.append(card('Throttle', spd, thr), el('div', { class: 'helm-col dial-col' }, dial.root, presets), card('Depth', dp, dep));
   requestAnimationFrame(() => { thr.set(sim.s.throttle); dep.set(1 - sim.s.targetDepth / 6000); update(); });
   function update() {
@@ -23,8 +27,8 @@ export function mount(body) {
     spd.innerHTML = `${s.speed.toFixed(1)}<small>kt</small>`; dp.innerHTML = `${Math.round(s.depth)}<small>m</small>`;
     dial.update(s.heading, s.targetHeading);
     body.classList.toggle('docked-st', !!s.docked);
-    dockBtn.classList.toggle('on', !!s.docked);
-    thr.setActual(s.speed / MAX_SPEED); dep.setActual(1 - s.depth / 6000);
+    dockBtn.classList.toggle('on', !!s.docked); cruiseBtn.classList.toggle('on', !!s.cruise);
+    thr.setActual(Math.min(1, s.speed / sim.maxKt())); dep.setActual(1 - s.depth / 6000);
   }
   return { update, destroy() {} };
 }

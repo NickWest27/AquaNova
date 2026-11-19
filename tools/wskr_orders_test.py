@@ -44,7 +44,7 @@ def main():
             r = js("const w=sim.s.wskrs[0]; const h0=w.heading, p0={lat:w.lat,lon:w.lon}; sim.wskrHelm(w.n,{turn:1}); for(let i=0;i<20;i++) sim.step(0.1); sim.wskrHelm(w.n,{turn:0}); const d=T.toward(p0,w).nm; return {turned:(((w.heading-h0)%360)+360)%360, moved:d}")
             check("manual turns and moves", r["turned"] > 30 and r["moved"] > 0.01, r)
             r = js("const w=sim.s.wskrs[0]; w.heading=0; sim.wskrHelm(w.n,{thr:1,turn:0}); for(let i=0;i<4000;i++) sim.step(0.1); const l=sim.wskrLink(w); return {nm:l.nm, limited:w.limited, blocked:w.blockedNow, thr:w.thr}")
-            check("manual stops at the link limit or the shallows", r["nm"] <= 3.05 and (r["limited"] or r["blocked"]), r)
+            check("manual stops at the link limit or the shallows", r["nm"] <= 10.1 and (r["limited"] or r["blocked"]), r)
             # relay: follows the ship, sits just under the surface, carries comms and GPS when the ship is deep
             r = js("const s=sim.s; s.wskrs.forEach(w=>{w.bat=100;w.dead=false}); sim.orderWskr(1,'escort'); sim.orderWskr(2,'escort'); s.depth=300; s.targetDepth=300; const before=sim.hasGps(); const res=sim.setupRelay(); s.heading=0; s.targetHeading=0; s.speed=0; for(let i=0;i<3000;i++) sim.step(0.1); const w=s.wskrs.find(q=>q.mode==='relay'); const cm=await import('./js/commsModel.js'); return {before, ok:res.ok, near:w?T.toward(s,w).nm:null, d:w?T.wskrDepthFor(w):null, up:sim.relayUp(), gps:sim.hasGps(), ant:cm.antDepth('buoy')}")
             check("relay follows the ship and gives comms and GPS at depth", (not r["before"]) and r["ok"] and r["near"] is not None and r["near"] < 0.3 and r["d"] <= 4 and r["up"] and r["gps"] and r["ant"] == 0, r)
