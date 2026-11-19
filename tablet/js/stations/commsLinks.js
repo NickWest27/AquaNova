@@ -4,54 +4,14 @@
 // near the surface for most links; only the low bands reach deeper.
 import { sim } from '../sim.js';
 import { el } from '../util.js';
+import { LINKS, BANDS, linkState, antDepth, cm, SOURCES } from '../commsModel.js';
 
-const RE = 6371;                                   // km
 const rad = Math.PI / 180;
-const HOME = { name: 'NAVSTA WOODS HOLE', lat: 41.5223, lon: -70.6709 };
-const CUTLER = { name: 'NAA CUTLER ME', lat: 44.645, lon: -67.281 };
-
-// max = deepest antenna depth (m) where the link works at full strength; strength falls off to 1.5 x max.
-export const LINKS = [
-  { n: 1, label: 'SAT-COM', band: 'UHF', fr: '243-318 MHz', max: 15, base: 46, tx: true, mcell: 2318, code: '46-9976', rate: '128 kbps', relay: { name: 'NORPAC-3', lat: 0, lon: -100, alt: 35786 } },
-  { n: 2, label: 'LASER', band: 'BLUE-GREEN', fr: '470-540 nm', max: 15, base: 50, tx: true, mcell: 7713, code: 'LC-4537', rate: '2.4 Mbps', relay: { name: 'NORPAC-L2', lat: 0, lon: -85, alt: 35786 } },
-  { n: 3, label: 'HF', band: 'HF', fr: '4.0-12.0 MHz', max: 5, base: 42, tx: true, mcell: 4537, code: 'HF-1102', rate: '2.4 kbps', station: HOME },
-  { n: 4, label: 'VLF', band: 'VLF', fr: '17.8-24.0 kHz', max: 40, base: 38, tx: false, mcell: 9102, code: 'VL-0021', rate: '50 bps', station: CUTLER },
-];
-
-// the full band table; mode RX is receive only
-export const BANDS = [
-  { id: 'ELF', fr: '3-30 Hz', max: 300, mode: 'RX' },
-  { id: 'VLF', fr: '3-30 kHz', max: 40, mode: 'RX' },
-  { id: 'AM', fr: '530-1700 kHz', max: 5, mode: 'RX' },
-  { id: 'HF', fr: '3-30 MHz', max: 5, mode: 'TX/RX' },
-  { id: 'VHF', fr: '156-162 MHz', max: 5, mode: 'TX/RX' },
-  { id: 'UHF', fr: '243-318 MHz', max: 15, mode: 'TX/RX' },
-  { id: 'LASER', fr: '470-540 nm', max: 15, mode: 'TX/RX' },
-];
-
-// ---- geometry ----
-const central = (a, b) => { const p1 = a.lat * rad, p2 = b.lat * rad, dl = (b.lon - a.lon) * rad; return Math.acos(Math.min(1, Math.max(-1, Math.sin(p1) * Math.sin(p2) + Math.cos(p1) * Math.cos(p2) * Math.cos(dl)))); };
-const bearing = (a, b) => { const p1 = a.lat * rad, p2 = b.lat * rad, dl = (b.lon - a.lon) * rad; return ((Math.atan2(Math.sin(dl) * Math.cos(p2), Math.cos(p1) * Math.sin(p2) - Math.sin(p1) * Math.cos(p2) * Math.cos(dl)) / rad) + 360) % 360; };
 const pad = (n, w) => String(Math.round(n)).padStart(w, '0');
 const deg = (b) => `${pad(Math.floor(b), 3)}.${pad((b % 1) * 60, 2)}`;
 const ll = (p) => `${Math.abs(p.lat).toFixed(2)}${p.lat >= 0 ? 'N' : 'S'} ${Math.abs(p.lon).toFixed(2)}${p.lon >= 0 ? 'E' : 'W'}`;
 const km = (n) => `${Math.round(n).toLocaleString('en-US')} KM`;
-
-// what one link looks like right now
-export function linkState(L, s = sim.s) {
-  const far = s.depth / L.max;
-  const wob = Math.sin(s.clock / 37 + L.n * 2.1) * 1.6;
-  const dB = far > 1.5 ? null : Math.round(L.base - 24 * far + wob);
-  const status = far <= 1 ? (L.tx ? 'OPERATIVE' : 'RX ONLY') : far <= 1.5 ? 'FADING' : 'NO CARRIER';
-  const tgt = L.relay || L.station, g = central(s, tgt), brg = bearing(s, tgt);
-  let dist, elev = null;
-  if (L.relay) {
-    const r = RE + L.relay.alt;
-    dist = Math.sqrt(RE * RE + r * r - 2 * RE * r * Math.cos(g));
-    elev = Math.atan2(Math.cos(g) - RE / r, Math.sin(g)) / rad;
-  } else dist = g * RE;
-  return { up: far <= 1, fading: far > 1 && far <= 1.5, dB, status, tgt, brg, dist, elev, g };
-}
+export { LINKS, BANDS, linkState };
 
 // ---- map: a small blocky world, drawn once ----
 const LAND = [
@@ -79,7 +39,7 @@ export function mount(host) {
   const cards = LINKS.map((L) => {
     const f = {};
     const c = el('button', { class: 'cl-card', onclick: () => { sel = L.n; update(); } },
-      el('div', { class: 'cl-tag', text: `LINK ${L.n}` }),
+      el('div', { class: 'cl-tag', text: `LINK ${L.n}` }), f.tx = el('div', { class: 'cl-k cl-tx' }),
       f.mc = el('div', { class: 'cl-v' }), f.st = el('div', { class: 'cl-st' }), f.net = el('div', { class: 'cl-v', text: 'NORPAC' }), f.code = el('div', { class: 'cl-v' }),
       el('div', { class: 'cl-k', text: L.label === L.band ? L.label : `${L.label} · ${L.band.replace('BLUE-GREEN', 'B-G')}` }));
     f.mc.textContent = `MCell ${L.mcell}`; f.code.textContent = L.code;
@@ -129,6 +89,7 @@ export function mount(host) {
     cards.forEach(({ L: l, c, f }, i) => {
       const x = sts[i]; f.st.textContent = x.status; f.st.className = 'cl-st ' + (x.up ? 'ok' : x.fading ? 'warn' : 'bad');
       c.classList.toggle('on', l.n === sel);
+      f.tx.textContent = SOURCES.find((q) => q.id === cm.source).link === l.n ? '● TX SOURCE' : '';
     });
     sig.dB.textContent = st.dB == null ? '--' : `${st.dB >= 0 ? '+' : ''}${st.dB} dB`;
     sig.dist.textContent = L.relay ? km(st.dist) : `${(st.dist / 1.852).toFixed(0)} NM`;
@@ -136,7 +97,7 @@ export function mount(host) {
     sig.loc.textContent = st.tgt.name;
     sig.brg.textContent = `${pad(st.brg, 3)}° ${L.relay ? `EL ${Math.round(st.elev)}°` : ''}`;
     sig.id.textContent = L.relay ? 'OERA RELAY' : 'SHORE STATION';
-    sig.banner.textContent = st.up ? 'COMMUNICATIONS LINK ESTABLISHED' : st.fading ? 'LINK FADING. RISE TO IMPROVE' : `NO CARRIER. ANTENNA AT ${Math.round(s.depth)} M, NEED ${L.max} M`;
+    sig.banner.textContent = st.up ? 'COMMUNICATIONS LINK ESTABLISHED' : st.fading ? 'LINK FADING. RISE TO IMPROVE' : `${st.status === 'NO LOCK' ? 'NO LOCK. AIM THE ANTENNA' : `NO CARRIER. ANTENNA AT ${Math.round(st.eff)} M, NEED ${L.max} M`}`;
     sig.banner.className = 'cl-banner ' + (st.up ? 'ok' : st.fading ? 'warn' : 'bad');
     satLabel.textContent = L.relay ? 'Intel sat com' : 'Shore station com';
     const rows = L.relay ? [
@@ -149,7 +110,7 @@ export function mount(host) {
       ['LOCK', st.up ? 'LOCKED' : st.fading ? 'WEAK' : 'LOST'], ['TRACKING', st.up ? 'ARMED' : 'STANDBY'], ['SIG SOURCE', st.tgt.name], ['ALPHA CHAN', st.up ? (L.tx ? 'SEND' : 'RCV') : 'IDLE'],
     ];
     rows.forEach(([k, v], i) => { sat[i][0].textContent = k; sat[i][1].textContent = v; });
-    bandRows.forEach(({ b, lamp, v }) => { const ok = s.depth <= b.max; lamp.className = 'lamp ' + (ok ? 'ok' : 'bad'); v.textContent = ok ? 'OPEN' : `≤ ${b.max} M`; });
+    bandRows.forEach(({ b, lamp, v }) => { const ok = antDepth(b.ant) <= b.max; lamp.className = 'lamp ' + (ok ? 'ok' : 'bad'); v.textContent = ok ? 'OPEN' : `≤ ${b.max} M`; });
     drawSpec(sts); drawMap(s, sts);
   }
   update();

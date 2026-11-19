@@ -7,9 +7,10 @@ import { mailZoom } from '../audio.js';
 import { el, toast } from '../util.js';
 import { gameState } from '../persist.js';
 import * as links from './commsLinks.js';
+import { mountControls, mountContacts } from './commsPanels.js';
+import { canTransmit } from '../commsModel.js';
 import missions from '../../../game/systems/missionManager.js';
 
-const LINK_MAX_DEPTH = 15; // metres
 const MISSION_OF = { 'oera-sea-trials': 'seaTrials' }; // older saves stored this message without a mission id
 const stateOf = (id) => missions.completedMissions.has(id) ? 'done' : missions.activeMissions.has(id) ? 'active' : 'new';
 const when = (iso) => iso ? new Date(iso).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
@@ -20,31 +21,36 @@ export function mount(body) {
   const setInbox = (list) => gameState.updateProperty('mission.inbox', list);
   body.style.flexDirection = 'column';
   const linkNum = el('div', { class: 'num' }), linkNote = el('p', { style: 'color:var(--dim);margin-top:0.4rem' });
-  const send = el('button', { class: 'btn primary', text: 'Transmit report', onclick: () => {
+  const transmit = () => {
+    const t = canTransmit(); if (!t.ok) { toast(`Cannot transmit: ${t.L.label} is ${t.st.status.toLowerCase()}`, 'warn'); return; }
     const found = (gameState.getProperty('mission.discoveries') || []).length;
     const s = sim.s;
-    gameState.updateProperty('mission.outbox', [...outbox(), { at: new Date().toISOString(), text: `Status report: ${s.at ? s.at.name : 'open water'}, depth ${Math.round(s.depth)} m, battery ${Math.round(s.battery)}%, ${found} finding${found === 1 ? '' : 's'}.` }]);
+    gameState.updateProperty('mission.outbox', [...outbox(), { at: new Date().toISOString(), text: `Status report via ${t.L.label}: ${s.at ? s.at.name : 'open water'}, depth ${Math.round(s.depth)} m, battery ${Math.round(s.battery)}%, ${found} finding${found === 1 ? '' : 's'}.` }]);
     toast('Report transmitted to OERA');
     document.dispatchEvent(new CustomEvent('report-sent'));
     render();
-  } });
+  };
+  const send = el('button', { class: 'btn primary', text: 'Transmit report', onclick: transmit });
   const list = el('div', { class: 'tab-body', style: 'flex:1' });
   const sentList = el('div');
   const side = el('div', { class: 'nav-side' },
     el('div', { class: 'card' }, el('div', { class: 'lbl', text: 'Satellite / laser link' }), linkNum, linkNote),
     el('div', { class: 'card' }, el('div', { class: 'lbl', text: 'Outbox' }), el('p', { style: 'margin:0.4rem 0 0.8rem;color:var(--dim)', text: 'Send a status report and your findings to OERA.' }), send, sentList));
   const mailPane = el('div', { style: 'flex:1;min-height:0;display:flex;gap:0.9rem' }, side, list);
-  const linkPane = el('div', { style: 'flex:1;min-height:0;overflow-y:auto' });
-  const lv = links.mount(linkPane);
+  const pane = () => el('div', { style: 'flex:1;min-height:0;overflow-y:auto' });
+  const linkPane = pane(), ctlPane = pane(), conPane = pane();
+  const lv = links.mount(linkPane), cv = mountControls(ctlPane, { transmit }), nv = mountContacts(conPane);
+  const views = { links: [linkPane, lv], controls: [ctlPane, cv], contacts: [conPane, nv] };
   let tab = inbox().some((m) => !m.read) ? 'mail' : 'links';   // new mail: open on the inbox
   const tabs = el('div', { class: 'tabs' });
   const paintTabs = () => {
     const unread = inbox().filter((m) => !m.read).length;
-    tabs.replaceChildren(...[['links', 'Links'], ['mail', unread ? `Mail (${unread})` : 'Mail']].map(([id, label]) =>
-      el('button', { class: 'btn chip' + (tab === id ? ' on' : ''), text: label, onclick: () => { tab = id; paintTabs(); lv.update(); } })));
-    mailPane.style.display = tab === 'mail' ? 'flex' : 'none'; linkPane.style.display = tab === 'links' ? 'block' : 'none';
+    tabs.replaceChildren(...[['links', 'Links'], ['controls', 'Controls'], ['contacts', 'Contacts'], ['mail', unread ? `Mail (${unread})` : 'Mail']].map(([id, label]) =>
+      el('button', { class: 'btn chip' + (tab === id ? ' on' : ''), text: label, onclick: () => { tab = id; paintTabs(); update(); } })));
+    mailPane.style.display = tab === 'mail' ? 'flex' : 'none';
+    for (const [id, [node]] of Object.entries(views)) node.style.display = tab === id ? '' : 'none';
   };
-  body.append(tabs, mailPane, linkPane);
+  body.append(tabs, mailPane, linkPane, ctlPane, conPane);
 
   // ---- reading a message: a 90s style zoom (4 outline frames) into a large window, and back out ----
   const FROM_FULL = { 'OERA Operations': 'O.E.R.A. - Ocean Exploration and Research Alliance (Operations)' };
@@ -99,16 +105,16 @@ export function mount(body) {
     sentList.replaceChildren(...sent.map((o) => el('p', { style: 'margin-top:0.6rem;font-size:0.9rem;color:var(--dim)', text: `${when(o.at)} — ${o.text}` })));
   }
   function update() {
-    const up = sim.s.depth <= LINK_MAX_DEPTH;
+    const t = canTransmit(), up = t.ok;
     linkNum.className = 'num ' + (up ? 'ok' : 'bad');
     linkNum.textContent = up ? 'LINK UP' : 'NO LINK';
-    linkNote.textContent = up ? 'Antenna is above the waterline.' : `Rise to ${LINK_MAX_DEPTH} m or shallower to connect.`;
+    linkNote.textContent = up ? `${t.L.label} link, ${t.st.dB} dB.` : `${t.L.label}: ${t.st.status.toLowerCase()}. See the Controls page.`;
     send.disabled = !up;
-    if (tab === 'links') lv.update();
+    if (views[tab]) views[tab][1].update();
   }
   // a message can arrive while the station is open
   const onMsg = () => render();
   document.addEventListener('comms-message', onMsg);
   render(); update();
-  return { update, destroy() { lv.destroy(); document.removeEventListener('comms-message', onMsg); if (reading) { reading.back.remove(); reading = null; } } };
+  return { update, destroy() { lv.destroy(); cv.destroy(); nv.destroy(); document.removeEventListener('comms-message', onMsg); if (reading) { reading.back.remove(); reading = null; } } };
 }

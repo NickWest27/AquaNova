@@ -1,0 +1,18 @@
+[
+  { "id": "oera-woodshole", "kind": "base", "name": "OERA Woods Hole Station", "band": "HF", "mhz": 8.145, "lat": 41.5223, "lon": -70.6709, "range": 800,
+    "reply": "Woods Hole Station here. Aqua Nova, we read you five by five. Weather is fair and all is quiet ashore." },
+  { "id": "nantucket", "kind": "base", "name": "Nantucket Harbor Office", "band": "VHF", "mhz": 156.45, "lat": 41.28, "lon": -70.1, "range": 40,
+    "reply": "Nantucket Harbor. Copy, Aqua Nova. Sea state two, no traffic concerns on your side." },
+  { "id": "cg-sector", "kind": "org", "name": "Coast Guard Sector", "band": "VHF", "mhz": 156.8, "lat": 41.67, "lon": -70.5, "range": 60,
+    "reply": "Coast Guard Sector. Aqua Nova, we have you on the plot. Keep this channel clear for calls and distress." },
+  { "id": "rv-gannet", "kind": "ship", "name": "RV Gannet", "band": "VHF", "mhz": 156.375, "lat": 41.1, "lon": -70.9, "range": 30,
+    "reply": "Gannet here. We are recovering a CTD cast. Nice to hear from the deep boat, Aqua Nova." },
+  { "id": "fv-marguerite", "kind": "ship", "name": "FV Marguerite", "band": "VHF", "mhz": 156.425, "lat": 40.95, "lon": -70.2, "range": 30,
+    "reply": "Marguerite. Nets are out, Captain. Please keep clear below us." },
+  { "id": "dsv-meridian", "kind": "sub", "name": "DSV Meridian", "band": "HF", "mhz": 6.215, "lat": 40.6, "lon": -69.8, "range": 150,
+    "reply": "Meridian. We are on a survey line at depth. Good to hear a friendly voice, Aqua Nova." },
+  { "id": "oera-ops", "kind": "org", "name": "OERA Operations", "band": "UHF", "mhz": 262.4, "lat": 41.5223, "lon": -70.6709, "range": 99999,
+    "reply": "OERA Operations. Captain, your traffic is logged. Check the inbox for orders." },
+  { "id": "halcyon", "kind": "base", "name": "Halcyon Research Station", "band": "HF", "mhz": 4.125, "lat": 40.3, "lon": -69.5, "range": 300, "hidden": true, "distress": true,
+    "reply": "...any station... this is Halcyon... power failing... we need help... please..." }
+]

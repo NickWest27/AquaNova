@@ -6,6 +6,7 @@ import { say, unreadCount, stats as notifyStats } from './notify.js';
 import { seafloor } from './seafloor.js';
 import { fileScan } from './findings.js';
 import './rov.js';
+import './commsModel.js';
 import { tickLab, SAMPLE_KINDS, awardSurveyBonus } from './science.js';
 import { el, $, toast, pad, modal, frameThrottle, viewProbe } from './util.js';
 import { ICONS } from './ui.js';

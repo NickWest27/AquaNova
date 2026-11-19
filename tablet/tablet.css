@@ -519,7 +519,7 @@ textarea.field { min-height: 6rem; resize: none; }
 .btn.chip.comm-btn.unread { background: #d9b93a; color: #04101f; animation: pinglow 1.2s ease-in-out infinite; }
 
 /* ---- comms console: Links page ---- */
-.cl-grid { display: grid !important; grid-template-columns: repeat(4, minmax(0, 1fr)) 21rem; grid-template-rows: auto auto minmax(9rem, 1fr); gap: 0.7rem; }
+.cl-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)) 21rem; grid-template-rows: auto auto minmax(9rem, 1fr); gap: 0.7rem; }
 .cl-card { text-align: left; font: inherit; color: inherit; background: var(--panel); border: 2px solid #2f5fa8; border-radius: 0.9rem 0.9rem 0.4rem 0.4rem; padding: 0.7rem 0.9rem; display: flex; flex-direction: column; gap: 0.15rem; min-height: 8rem; cursor: pointer; }
 .cl-card.on { border-color: #e6e66a; box-shadow: 0 0 0 1px #e6e66a inset; }
 .cl-tag { font: 800 1.3rem var(--mono); color: #6fa8ff; text-align: right; }
@@ -539,3 +539,22 @@ textarea.field { min-height: 6rem; resize: none; }
 .lamp.ok { background: var(--green); box-shadow: 0 0 6px var(--green); } .lamp.bad { background: var(--red); opacity: 0.7; }
 .cl-canvas { width: 100%; height: 100%; min-height: 0; object-fit: fill; }
 .cl-map { image-rendering: pixelated; }
+
+/* ---- comms console: Controls and Contacts pages ---- */
+.cp-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.7rem; align-content: start; }
+.cp-col { display: flex; flex-direction: column; gap: 0.7rem; min-width: 0; }
+.cp-ant { margin-top: 0.7rem; } .cp-ant-h { display: flex; gap: 0.6rem; align-items: baseline; } .cp-ant-h b { font: 800 1rem var(--mono); color: #e6e66a; } .cp-ant-h .cl-v { margin-left: auto; white-space: nowrap; } .cp-ant-h .cl-k { font-size: 0.75rem; }
+.cp-bar { height: 0.8rem; border: 1px solid #2f5fa8; border-radius: 0.2rem; margin: 0.3rem 0; overflow: hidden; } .cp-bar i { display: block; height: 100%; width: 0; background: #e6e66a; transition: width .25s; }
+.cp-btns { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+.btn.cp-step { min-height: 2.8rem; padding: 0 0.55rem; font-size: 0.8rem; }
+.cp-srcs { display: flex; flex-direction: column; gap: 0.4rem; margin-top: 0.4rem; }
+.btn.cp-src { display: flex; justify-content: space-between; align-items: center; min-height: 3.2rem; padding: 0 1rem; text-align: left; } .btn.cp-src.on { border-color: #e6e66a; box-shadow: 0 0 0 1px #e6e66a inset; }
+.cp-tx { width: 100%; min-height: 3.6rem; margin-top: 0.4rem; }
+.cp-emf { display: flex; justify-content: space-between; align-items: center; }
+.cp-dial { position: relative; width: 4.6rem; height: 4.6rem; border: 2px solid #2f5fa8; border-radius: 50%; }
+.cp-needle { position: absolute; left: 50%; top: 4%; width: 2px; height: 46%; background: #e6e66a; transform-origin: 50% 100%; margin-left: -1px; transition: transform .3s; }
+.cc .cp-list { display: flex; flex-direction: column; gap: 0.4rem; margin-top: 0.5rem; }
+.cp-contact { text-align: left; font: inherit; color: inherit; background: var(--panel); border: 1px solid var(--line-soft); border-radius: 0.5rem; padding: 0.5rem 0.7rem; display: flex; flex-direction: column; min-height: 3rem; cursor: pointer; } .cp-contact b { font: 700 0.95rem var(--mono); color: #e6e66a; } .cp-contact.sos { border-color: var(--red); } .cp-contact.sos b { color: var(--red); }
+.cp-freq { font: 800 2.4rem var(--mono); color: #e6e66a; margin: 0.4rem 0; }
+.cp-msg { min-height: 1.4rem; color: var(--cyan); font-size: 0.95rem; margin-top: 0.5rem; }
+.cp-reply { margin-top: 0.6rem; font-size: 0.95rem; line-height: 1.35; } .cp-reply.sos { color: var(--red); }
