@@ -3,7 +3,7 @@ import { sim, toward } from './sim.js';
 import { frameThrottle } from './util.js';
 import { seafloor } from './seafloor.js';
 
-const RANGES = [0.5, 1, 2, 4, 8, 16];
+const RANGES = [0.5, 1, 2, 4, 8, 16, 32, 64, 128, 256];   // the chart is about 216 nm across, so 128 and 256 show all of it
 
 // stage: the canvas sits inside the scaled 1920x1080 bridge stage. Sizes then come from layout (not the scaled
 // rectangle), and `units` makes text and markers bigger so they read at the stage's smaller on-screen size.
@@ -125,6 +125,7 @@ export function createND(wrap, { onPick, stage = false, units = 1, contours = fa
       if (poi.type === 'dock') { ctx.rect(p.x - 8, p.y - 8, 16, 16); } else { ctx.moveTo(p.x, p.y - 10); ctx.lineTo(p.x + 9, p.y + 7); ctx.lineTo(p.x - 9, p.y + 7); ctx.closePath(); }
       ctx.fill();
       if (isSel) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(p.x, p.y, 18, 0, 6.2832); ctx.stroke(); }
+      if (nd.range > 32 && !isSel && !isW) continue;   // zoomed far out the sites sit on top of each other: names only for the selected one and the destination
       ctx.fillStyle = '#e6f1ff'; ctx.fillText(poi.name.length > 22 ? poi.name.slice(0, 21) + '…' : poi.name, p.x, p.y + 28);
     }
     // ship (centre), or in craft mode the craft at the centre and the ship where it is
