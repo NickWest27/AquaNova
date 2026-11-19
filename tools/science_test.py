@@ -62,6 +62,9 @@ def main():
         page.wait_for_timeout(800)
         check("Remora page shows the synthetic view", page.is_visible("#station .synth-canvas") and page.is_visible("#station .cv-map canvas"))
         page.evaluate("document.querySelector('#station .st-head .btn').click()"); page.wait_for_timeout(200); js("sim.s.rov=null; return 1")
+        # a WSKR on land is put back in water, and a WSKR never ends a step on land
+        r = js("""const s=sim.s; const sf=(await import('./js/seafloor.js')).seafloor; Object.assign(s,{lat:41.52,lon:-70.67,docked:false,wskrs:[],rov:null}); sim.deployWskr(); const w=s.wskrs[0]; let found=null; for(let dy=-0.03;dy<=0.03&&!found;dy+=0.004) for(let dx=-0.03;dx<=0.03&&!found;dx+=0.004){ const d=sf.depthAt(41.52+dy,-70.67+dx); if(d!=null&&d===0) found={lat:41.52+dy,lon:-70.67+dx}; } w.lat=found.lat; w.lon=found.lon; const before=sf.depthAt(w.lat,w.lon); sim.step(0.1); return {before, after:sf.depthAt(w.lat,w.lon)}""")
+        check("a WSKR left on land is moved back into water", r["before"] is not None and r["before"] < 3 and r["after"] >= 3, r)
         # rooms and stations through touch
         tap = lambda label: page.evaluate("(l)=>{const b=[...document.querySelectorAll('button')].find(x=>x.getAttribute('aria-label')===l && x.offsetParent); if(!b) return false; b.click(); return true}", label)
         check("to walkway", tap("TO WALKWAY") or tap("◂ WALKWAY")); page.wait_for_timeout(300)

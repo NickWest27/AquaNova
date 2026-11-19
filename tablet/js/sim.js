@@ -112,11 +112,20 @@ sim.taskWskr = (poi) => {
 };
 sim.recallWskrs = () => { sim.s.wskrs.forEach((w) => { w.mode = 'recall'; w.target = null; w.route = null; }); sim.touch(); return sim.s.wskrs.length; };
 const wskrPassable = (lat, lon) => (seafloor.depthAt(lat, lon) ?? 0) >= 3;
+/** Nearest point of water (at least 3 m deep) within about 1.5 nm, searching outward in rings. */
+function nearestWater(lat, lon) {
+  for (let r = 0.02; r <= 1.5; r += 0.02) for (let a = 0; a < 360; a += 20) {
+    const y = lat + (r * Math.cos((a * Math.PI) / 180)) / NM_PER_DEG_LAT, x = lon + (r * Math.sin((a * Math.PI) / 180)) / (NM_PER_DEG_LAT * Math.cos((lat * Math.PI) / 180));
+    if (wskrPassable(y, x)) return { lat: y, lon: x };
+  }
+  return null;
+}
 function stepWskrs(dt) {
   const s = sim.s; if (!s.wskrs.length) return;
   const esc = s.wskrs.filter((w) => w.mode === 'escort').sort((a, b) => (wskrPerk(b).lead ? 1 : 0) - (wskrPerk(a).lead ? 1 : 0));
   s.wskrs = s.wskrs.filter((w) => {
     w.moving = false;
+    if (seafloor.ready && !wskrPassable(w.lat, w.lon)) { const sp = nearestWater(w.lat, w.lon); if (sp) { w.lat = sp.lat; w.lon = sp.lon; w.route = null; } }   // never sit on land (after a load, a ship move, or a thin spit)
     let goal = null; const perk = wskrPerk(w), step = (((perk.kt || WSKR_KT) * dt) * TIMESCALE) / 3600;
     const ring = perk.drift ? WSKR_RING_NM + 0.9 * (0.5 + 0.5 * Math.sin((s.clock / 3600) * 2 * Math.PI)) : WSKR_RING_NM;
     if (w.mode === 'escort') { const i = esc.indexOf(w), a = ((s.heading + (360 / esc.length) * i + (wskrPerk(esc[0]).lead ? 0 : 45)) * Math.PI) / 180; goal = { lat: s.lat + (Math.cos(a) * ring) / NM_PER_DEG_LAT, lon: s.lon + (Math.sin(a) * ring) / (NM_PER_DEG_LAT * Math.cos((s.lat * Math.PI) / 180)) }; }
@@ -139,7 +148,11 @@ function stepWskrs(dt) {
     const aim = w.route[0] || goal, ta = toward(w, aim);
     if (ta.nm > 0.02 && !(w.mode === 'escort' && t.nm < 0.05)) {
       const f = Math.min(1, step / ta.nm), lat = w.lat + (aim.lat - w.lat) * f, lon = w.lon + (aim.lon - w.lon) * f;
-      if (!seafloor.ready || wskrPassable(lat, lon)) { w.heading = toward(w, { lat, lon }).brg; w.moving = true; w.lat = lat; w.lon = lon; }   // small probes stay out of the very shallows
+      // walk the step in small pieces so a thin strip of land cannot be jumped; no data yet means hold still
+      let clear = seafloor.ready; const pieces = Math.max(1, Math.ceil(Math.min(step, ta.nm) / 0.02));
+      for (let k = 1; clear && k <= pieces; k++) clear = wskrPassable(w.lat + ((lat - w.lat) * k) / pieces, w.lon + ((lon - w.lon) * k) / pieces);
+      if (clear) { w.heading = toward(w, { lat, lon }).brg; w.moving = true; w.lat = lat; w.lon = lon; w.blocked = 0; }
+      else if ((w.blocked = (w.blocked || 0) + 1) > 8) { w.route = null; w.blocked = 0; }   // boxed in: plan again   // small probes stay out of the very shallows
     }
     return true;
   });

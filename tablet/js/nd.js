@@ -7,11 +7,13 @@ const RANGES = [0.5, 1, 2, 4, 8, 16];
 
 // stage: the canvas sits inside the scaled 1920x1080 bridge stage. Sizes then come from layout (not the scaled
 // rectangle), and `units` makes text and markers bigger so they read at the stage's smaller on-screen size.
-export function createND(wrap, { onPick, stage = false, units = 1, contours = false, rings = true, craft = null } = {}) {   // craft: () => { lat, lon, heading } centres the map on a craft (Remora, a WSKR) instead of the ship
+export function createND(wrap, { onPick, stage = false, units = 1, contours = false, rings = true, craft = null, trackUp = false } = {}) {   // trackUp: the ship's heading is up (the map turns); contours stay north-up, so use it without them   // craft: () => { lat, lon, heading } centres the map on a craft (Remora, a WSKR) instead of the ship
   const canvas = document.createElement('canvas');
   wrap.prepend(canvas);
   const ctx = canvas.getContext('2d');
   const ctr = () => (craft && craft()) || sim.s;
+  // rotate an east/north offset so the ship's heading points up (track up), or leave it north up
+  const turn = (t) => { if (!trackUp) return t; const h = (ctr().heading * Math.PI) / 180, c = Math.cos(h), s = Math.sin(h); return { ...t, dx: t.dx * c - t.dy * s, dy: t.dx * s + t.dy * c }; };
   const nd = { range: 2, sel: null, w: 0, h: 0, canvas };
 
   function resize() {
@@ -27,7 +29,7 @@ export function createND(wrap, { onPick, stage = false, units = 1, contours = fa
   }
 
   const px = (p) => {
-    const t = toward(ctr(), p);
+    const t = turn(toward(ctr(), p));
     const scale = (Math.min(nd.w, nd.h) / 2 - 24) / nd.range;
     return { x: nd.w / 2 + t.dx * scale, y: nd.h / 2 - t.dy * scale, nm: t.nm, brg: t.brg };
   };
@@ -95,8 +97,9 @@ export function createND(wrap, { onPick, stage = false, units = 1, contours = fa
     ctx.fillStyle = '#8fa6bd'; ctx.font = '600 14px ui-monospace, Menlo, monospace'; ctx.textAlign = 'left';
     for (let i = 1; i <= 4; i++) ctx.fillText(((nd.range * i) / 4).toFixed(nd.range < 2 ? 2 : 1) + ' nm', cx + 6, cy - (R * i) / 4 + 16);
     ctx.textAlign = 'center'; ctx.fillStyle = '#64ffda'; ctx.font = '800 18px system-ui';
-    ctx.fillText('N', cx, cy - R - 6);
+    if (trackUp) { const hh = (c.heading * Math.PI) / 180; ctx.fillText('N', cx - (R + 12) * Math.sin(hh), cy - (R + 12) * Math.cos(hh) + 6); } else ctx.fillText('N', cx, cy - R - 6);
     }
+    if (trackUp) { ctx.fillStyle = '#8fa6bd'; ctx.font = '700 14px ui-monospace, Menlo, monospace'; ctx.textAlign = 'left'; ctx.fillText('TRACK UP', 10, 20); }
     // waypoint line
     if (s.wpt && !craft) {
       const p = px(s.wpt), legs = [...(s.route || [])];
@@ -106,7 +109,7 @@ export function createND(wrap, { onPick, stage = false, units = 1, contours = fa
     }
     // WSKRs (deployed sensor probes): diamonds
     for (const q of s.wskrs || []) {
-      const t = toward(c, q), scale = R / nd.range, x = w / 2 + t.dx * scale, y = h / 2 - t.dy * scale;
+      const t = turn(toward(c, q)), scale = R / nd.range, x = w / 2 + t.dx * scale, y = h / 2 - t.dy * scale;
       if (x < -20 || x > w + 20 || y < -20 || y > h + 20) continue;
       ctx.fillStyle = q.mode === 'task' ? '#ff9f43' : '#ffd666'; ctx.beginPath(); ctx.moveTo(x, y - 7); ctx.lineTo(x + 6, y); ctx.lineTo(x, y + 7); ctx.lineTo(x - 6, y); ctx.fill();
       ctx.font = '700 14px system-ui'; ctx.textAlign = 'left'; ctx.fillText('W' + q.n, x + 9, y + 5);
@@ -135,7 +138,14 @@ export function createND(wrap, { onPick, stage = false, units = 1, contours = fa
     if (craft) {
       const t = toward(c, s), scale = R / nd.range; mark(w / 2 + t.dx * scale, h / 2 - t.dy * scale, s.heading, '#3ddc84', false);
       mark(cx, cy, c.heading, '#ffb020', true);
-    } else mark(cx, cy, s.heading, '#3ddc84', true);
+    } else mark(cx, cy, trackUp ? 0 : s.heading, '#3ddc84', true);
+    // where we will be in an hour at the present speed: a light dashed vector from the ship
+    if (!craft && s.speed > 0.2) {
+      const nm = s.speed, a = ((trackUp ? 0 : s.heading) * Math.PI) / 180, scale = R / nd.range, ex = cx + Math.sin(a) * nm * scale, ey = cy - Math.cos(a) * nm * scale;
+      ctx.save(); ctx.strokeStyle = 'rgba(190,235,255,0.65)'; ctx.lineWidth = 1.5; ctx.setLineDash([7, 7]); ctx.beginPath(); ctx.moveTo(cx + Math.sin(a) * 18, cy - Math.cos(a) * 18); ctx.lineTo(ex, ey); ctx.stroke(); ctx.setLineDash([]);
+      if (ex > 0 && ex < w && ey > 0 && ey < h) { ctx.beginPath(); ctx.arc(ex, ey, 4, 0, 6.2832); ctx.stroke(); ctx.fillStyle = 'rgba(190,235,255,0.85)'; ctx.font = '600 13px ui-monospace, Menlo, monospace'; ctx.textAlign = 'left'; ctx.fillText(`1 h · ${nm.toFixed(1)} nm`, ex + 8, ey - 6); }
+      ctx.restore();
+    }
   };
 
   nd.setRange = (r) => { nd.range = r; nd.draw(); };
