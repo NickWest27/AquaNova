@@ -8,7 +8,7 @@ import { fileScan } from './findings.js';
 import './rov.js';
 import './commsModel.js';
 import { tickLab, SAMPLE_KINDS, awardSurveyBonus } from './science.js';
-import { el, $, toast, pad, modal, frameThrottle, viewProbe } from './util.js';
+import { el, $, toast, pad, modal, frameThrottle, viewProbe, voiceCmd } from './util.js';
 import { ICONS } from './ui.js';
 import { startSync, syncAtBoot } from './sync.js';
 import { isCommissioned, excuse } from './unlocks.js';
@@ -260,7 +260,7 @@ async function boot() {
     // single tap = quiet (typing); press and hold = voice. A hold also fires a click when released, which is ignored.
     let holdT = null, held = false;
     const pinEl = $('#pin');
-    pinEl.addEventListener('pointerdown', () => { held = false; clearTimeout(holdT); holdT = setTimeout(() => { held = true; try { navigator.vibrate && navigator.vibrate(25); } catch (e) { /* no haptics */ } toggleComm('voice'); }, 450); });
+    pinEl.addEventListener('pointerdown', () => { held = false; clearTimeout(holdT); holdT = setTimeout(() => { held = true; try { navigator.vibrate && navigator.vibrate(25); } catch (e) { /* no haptics */ } if (voiceCmd.on) toggleComm('voice'); else { toast('Voice commands are off. Turn them on in PED, Settings.'); if (!comm) toggleComm('type'); } }, 450); });
     for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) pinEl.addEventListener(ev, () => clearTimeout(holdT));
     pinEl.addEventListener('contextmenu', (e) => e.preventDefault());
     pinEl.addEventListener('click', () => { if (held) { held = false; return; } toggleComm('type'); });
