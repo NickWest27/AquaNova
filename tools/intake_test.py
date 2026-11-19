@@ -57,7 +57,7 @@ def main():
         check("PED collected, button appears, item gone", page.is_visible("#ped-btn") and not page.is_visible('.pickup[aria-label="Pick up PED"]'))
         page.tap('.hs[aria-label="LOGBOOK"]', force=True); page.wait_for_timeout(600)
         t = page.inner_text("#station")
-        check("logbook greets the captain by name", "Captain O'Neil-Ray," in t and "Admiral Elena Vasquez" in t and "{captain}" not in t, t[:200])
+        check("logbook greets the captain by name", "Captain O'Neil-Ray," in t and "Admiral Catherine Okafor" in t and "{captain}" not in t, t[:200])
         done = page.evaluate("[...document.querySelectorAll('#station .entry li.done')].map(x=>x.textContent)")
         check("PED task is ticked, pin task is not", "Collect your PED from the bed" in done and "Collect your communicator pin from the desk" not in done, done)
         page.screenshot(path=f"{SHOTS}/i-6log.png")

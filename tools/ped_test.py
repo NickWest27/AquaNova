@@ -36,7 +36,7 @@ def main():
         t = text(); check("tasks: objectives of the accepted mission", "Undock" in t and "SEA TRIALS" in t, t[:300])
         tab("Missions"); t = text(); check("missions: Sea Trials moves to active with progress", "0 of 5 tasks done" in t, t[:300])
         tab("Contacts"); t = text(); check("contacts: known crew with a bio", "Commander ARIA" in t and "Advanced Research" in t and "Marcus Chen" in t, t[:200])
-        check("contacts: unmet crew hidden", "Jordan Kim" not in t)
+        check("contacts: unmet crew hidden", "Daniel Kim" not in t)
         tab("Settings"); t = text()
         check("settings: no sync details card", "SYNC DETAILS" not in t.upper() and "SYNC WITH THE IPHONE PED" in t.upper() and "How to connect" in t)
         check("settings: sound sliders", page.locator("#ped-pop input.mix").count() == 6, page.locator("#ped-pop input.mix").count())

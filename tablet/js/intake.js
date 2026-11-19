@@ -71,7 +71,7 @@ function idRecord(f, l, onDone) {
     el('div', { class: 'sg-cols' },
       el('div', { class: 'sg-left f-id' }, row('Name', `${f} ${l}`), row('Rank', 'Captain'), row('Security clearance', 'Level 5 · Omega (highest)'), row('Quarters', "Captain's Quarters, Deck A1"), row('Vessel', 'Aqua Nova')),
       el('div', { class: 'sg-right sg-note' },
-        el('p', { class: 'f-notes' }, el('b', { text: 'Notes: ' }), 'Transferred from retirement at the request of O.E.R.A. Admiral Elena Vasquez, to assist with the commissioning of the Aqua Nova after the last-minute relief of Captain Elena Voss.'),
+        el('p', { class: 'f-notes' }, el('b', { text: 'Notes: ' }), 'Transferred from retirement at the request of O.E.R.A. Admiral Catherine Okafor, to assist with the commissioning of the Aqua Nova after the last-minute relief of Captain Elena Voss.'),
         el('p', { class: 'f-order', text: 'Please report to your Quarters immediately. You have a message from O.E.R.A. Operations.' }),
         el('button', { class: 'btn primary', text: 'Acknowledged', onclick: () => { back.remove(); onDone && onDone(); } })))));
 }

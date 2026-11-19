@@ -22,10 +22,10 @@
         "author": {
           "company": "O.E.R.A - Oceanic Exploration and Research Alliance.",
           "department": "Operations Command",
-          "name": "Admiral Elena Vasquez",
+          "name": "Admiral Catherine Okafor",
           "role": "Director of Operations"
         },
-        "content": "{captain},\n\nWelcome aboard the Aqua Nova. I apologise for the haste, but it is important that we get her out of dry dock and underway for sea trials. You and the crew need to become familiar with her systems under a range of conditions.\n\nThis is your digital logbook. Mission orders, results and discoveries are recorded here, and each mission entry is also a save point you can return to. Please keep it up to date.\n\nYour PED is on your bed and your communicator pin is on your desk. Collect both. Put the pin on and call ARIA, your Executive Officer. She will take it from there.\n\nWith confidence,\nAdmiral Elena Vasquez\nDirector of Operations, O.E.R.A.",
+        "content": "{captain},\n\nWelcome aboard the Aqua Nova. I apologise for the haste, but it is important that we get her out of dry dock and underway for sea trials. You and the crew need to become familiar with her systems under a range of conditions.\n\nThis is your digital logbook. Mission orders, results and discoveries are recorded here, and each mission entry is also a save point you can return to. Please keep it up to date.\n\nYour PED is on your bed and your communicator pin is on your desk. Collect both. Put the pin on and call ARIA, your Executive Officer. She will take it from there.\n\nWith confidence,\nAdmiral Catherine Okafor\nDirector of Operations, O.E.R.A.",
         "tasks": [
           "Collect your PED from the bed",
           "Collect your communicator pin from the desk",

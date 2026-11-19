@@ -16,12 +16,12 @@
             "id": "executiveOfficer",
             "name": "Commander ARIA",
             "role": "Executive Officer",
-            "bio": "Built by O.E.R.A. on decades of deep-sea mission records, and designed to be a member of the crew, not a tool. She is calm and candid, and allowed to disagree with the Captain, on the record. She does not claim to feel anything, and the engineers who built her stopped arguing the point. She has been aboard longer than anyone, and she was in the room when Captain Voss was relieved. She has not said what she saw.",
+            "bio": "ARIA (Advanced Research and Interface Assistant) was built by O.E.R.A. on decades of deep-sea mission records, and designed to be a member of the crew, not a tool. She is calm and candid, and allowed to disagree with the Captain, on the record. She does not claim to feel anything, and the engineers who built her stopped arguing the point. She has been aboard longer than anyone, and she was in the room when Captain Voss was relieved. She has not said what she saw.",
             "image": "images/crew/AREA.png",
             "dialogueOptions": {
                 "commands": ["Report to my quarters", "Status Report", "Let's take her to sea", "Let's go home"],
                 "emergency": ["Sound General Alarm"],
-                "pleasantries": ["How may I assist you, Captain?", "What's on your mind?", "All systems are nominal Captain.", "Yes, Captain?"]
+                "pleasantries": ["How may I assist you, Captain?", "How may I assist you, Commander?", "What's on your mind?", "All systems are nominal Captain.", "Yes, Captain?", "Yes, Commander?"]
             }
         },
         "helm": {
@@ -33,13 +33,13 @@
             "dialogueOptions": {
                 "commands": ["Make your depth", "Come left", "Come right", "Make your heading", "Make your speed"],
                 "emergency": ["All ahead flank", "All stop", "Emergency surfaace", "Emergency dive"],
-                "pleasantries": ["Say the word Captain", "Smooth sailing, Captain", "All systems are green Captain.", "Yes, Captain?"]
+                "pleasantries": ["Say the word Captain", "Smooth sailing, Captain", "Smooth sailing, Sir", "All systems are green Captain.", "Yes, Captain?", "Yes, Commander?"]
             }
         },
         
         "science": {
             "id": "science",
-            "name": "Dr. Sam Patel",
+            "name": "Dr. Samira Patel",
             "role": "Chief Science and Medical Officer",
             "bio": "Left a hospital emergency department for a doctorate in marine biology, then kept doing both: ship's doctor on three long expeditions. Captain Voss chose her personally. Dr. Patel treats the sample freezer and the sick bay with equal seriousness, and reads a crew's health the way other people read the weather.",
             "image": "images/crew/sam_patel.png",
@@ -63,7 +63,7 @@
         },
         "engineering": {
             "id": "engineering",
-            "name": "Engineer Riley Chen",
+            "name": "Engineer Ryan Chen",
             "role": "Chief Engineer",
             "bio": "Came up through merchant ship engine rooms, then joined the team that commissioned the compact fusion plant at Woods Hole, and knows the Aqua Nova's plant better than its designers do. He fixes things with parts nobody planned to use. He shares a surname with the helmsman and no family, and both are tired of the question.",
             "image": "images/crew/riley_chen.png",
@@ -75,9 +75,9 @@
         },
         "security": {
             "id": "security",
-            "name": "Lieutenant Jordan Kim",
+            "name": "Lieutenant Daniel Kim",
             "role": "Head of Security",
-            "bio": "Served in a Navy special warfare unit, then maritime boarding teams. Captain Voss insisted on him over the objections of O.E.R.A.'s science side, who did not want a weapons man on a research ship. Jordan's view is that a ship that goes deeper than anyone will eventually meet something it cannot talk to. Brief, courteous, and always watching the door.",
+            "bio": "Served in a Navy special warfare unit, then maritime boarding teams. Captain Voss insisted on him over the objections of O.E.R.A.'s science side, who did not want a weapons man on a research ship. Daniel's view is that a ship that goes deeper than anyone will eventually meet something it cannot talk to. Brief, courteous, and always watching the door.",
             "image": "images/crew/jordan_kim.png",
             "dialogueOptions": {
                 "commands": ["Security sweep", "Arm defensive systems", "Prepare boarding party"],
@@ -101,7 +101,7 @@
     "contacts": {
         "operationsDirector": {
             "id": "operationsDirector",
-            "name": "Admiral Elena Vasquez",
+            "name": "Admiral Catherine Okafor",
             "company": "O.E.R.A. - Oceanic Exploration and Research Alliance",
             "department": "Operations Command",
             "role": "Director of Operations",
@@ -129,7 +129,7 @@
         },
         "researchCoordinator": {
             "id": "researchCoordinator",
-            "name": "Dr. Marcus Webb",
+            "name": "Dr. Thomas Webb",
             "company": "O.E.R.A. - Oceanic Exploration and Research Alliance",
             "department": "Scientific Research Division",
             "role": "Research Coordinator",

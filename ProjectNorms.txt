@@ -73,6 +73,6 @@
 
 7. Narrative / Worldbuilding Norms
 	•	Time offset: All in-game dates are +50 years from real-world.
-	•	Hardcoded starter log: From Admiral Vasquez (M.LOG-0001).
+	•	Hardcoded starter log: From Admiral Okafor (M.LOG-0001).
 	•	Organization: O.E.R.A (Oceanic Exploration and Research Alliance).
 	•	Revert-to-start: M.LOG-0001 reverts to mission start state.
