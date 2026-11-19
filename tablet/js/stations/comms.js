@@ -34,7 +34,7 @@ export function mount(body) {
     el('div', { class: 'card' }, el('div', { class: 'lbl', text: 'Outbox' }), el('p', { style: 'margin:0.4rem 0 0.8rem;color:var(--dim)', text: 'Send a status report and your findings to OERA.' }), send, sentList));
   body.append(side, list);
 
-  // ---- reading a message: a 90s style zoom (8 outline frames) into a large window, and back out ----
+  // ---- reading a message: a 90s style zoom (4 outline frames) into a large window, and back out ----
   const FROM_FULL = { 'OERA Operations': 'O.E.R.A. - Ocean Exploration and Research Alliance (Operations)' };
   const stamp = (m) => (m.gameClock != null ? gameDateText(m.gameClock).replace('  ', ', ').slice(0, -3) : when(m.receivedAt));
   let reading = null;   // { m, win, back, rowEl }
@@ -42,9 +42,9 @@ export function mount(body) {
   const rectIn = (box, host) => { const r = box.getBoundingClientRect(), h = host.getBoundingClientRect(); return { x: r.left - h.left, y: r.top - h.top, w: r.width, h: r.height }; };
   function zoom(host, from, to, done) {
     const frame = el('div', { class: 'mail-zoom' }); host.append(frame);
-    let k = 0; const place = (t) => { frame.style.cssText = `left:${from.x + (to.x - from.x) * t}px;top:${from.y + (to.y - from.y) * t}px;width:${from.w + (to.w - from.w) * t}px;height:${from.h + (to.h - from.h) * t}px`; };
-    const tick = () => { k++; place(k / 8); if (k < 8) setTimeout(tick, 36); else { frame.remove(); done(); } };
-    place(0); setTimeout(tick, 36);
+    let k = 0; const N = 4; const place = (t) => { frame.style.cssText = `left:${from.x + (to.x - from.x) * t}px;top:${from.y + (to.y - from.y) * t}px;width:${from.w + (to.w - from.w) * t}px;height:${from.h + (to.h - from.h) * t}px`; };
+    const tick = () => { k++; place(k / N); if (k < N) setTimeout(tick, 60); else { frame.remove(); done(); } };
+    place(0); setTimeout(tick, 60);
   }
   function openMessage(m, rowEl) {
     if (reading) return;
@@ -57,26 +57,26 @@ export function mount(body) {
       ? [el('button', { class: 'btn primary', text: 'Accept mission', onclick: () => { missions.startMission(mid); fillTail(); render(); } })]
       : [el('p', { class: st === 'done' ? 'ok' : 'warn', text: st === 'done' ? 'Mission complete' : 'Mission accepted. See PED → Missions.' })])); };
     fillTail();
-    const win = el('div', { class: 'mail-win', hidden: true },
+    const win = el('div', { class: 'mail-win', style: 'visibility:hidden' },
       field('From:', FROM_FULL[m.from] || m.from), field('To:', 'Captain of the Aqua Nova'), field('Date:', stamp(m)), field('Subject:', m.subject),
       el('div', { class: 'mail-text', text: m.text }), tail);
     back.append(win); host.append(back);
-    const to = rectIn(win, host); win.hidden = true;
+    const to = rectIn(win, host);
     reading = { m, win, back, rowEl };
     mailZoom(true);
-    zoom(host, rectIn(rowEl, host), to, () => { win.hidden = false; render(); });
+    zoom(host, rectIn(rowEl, host), to, () => { win.style.visibility = ''; render(); });
   }
   function closeMessage() {
     if (!reading) return;
     const { win, back, rowEl } = reading, host = container(), from = rectIn(win, host);
-    win.hidden = true; back.classList.add('clear');
+    win.style.visibility = 'hidden'; back.classList.add('clear');
     const target = rowEl.isConnected ? rectIn(rowEl, host) : { x: from.x + from.w / 2, y: from.y + from.h / 2, w: 10, h: 10 };
     mailZoom(false);
     zoom(host, from, target, () => { back.remove(); reading = null; render(); });
   }
   function messageCard(m) {
     const row = el('button', { class: 'card msg mail-row' + (m.read ? '' : ' unread'), onclick: () => openMessage(m, row) },
-      el('span', { class: 'dot', text: m.read ? '' : '●' }), el('b', { class: 'from', text: m.from }), el('span', { class: 'subj', text: m.subject }), el('span', { class: 'when', text: stamp(m) }));
+      el('span', { class: 'dot', text: m.read ? '' : '●' }), el('b', { class: 'from', text: m.from }), el('span', { class: 'subj', text: m.subject }), el('span', { class: 'when', text: stamp(m).replace(', ', '\n') }));
     return row;
   }
   function render() {

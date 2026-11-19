@@ -24,15 +24,20 @@ def main():
         page.wait_for_timeout(700)
         row = page.query_selector(".mail-row")
         check("inbox row shows sender and subject", row is not None and "OERA Operations" in row.inner_text() and "Sea Trials Order" in row.inner_text(), row and row.inner_text())
-        page.evaluate("document.querySelector('.mail-row').click()")
+        page.evaluate("window.__fr=[]; new MutationObserver(()=>{const f=document.querySelector('.mail-zoom'); if(f) window.__fr.push(f.style.cssText)}).observe(document.getElementById('station'),{subtree:true,attributes:true,childList:true}); document.querySelector('.mail-row').click()")
         page.wait_for_timeout(120)
         check("zoom frame appears first", page.query_selector(".mail-zoom") is not None)
-        page.wait_for_timeout(600)
-        check("zoom frame is gone after 8 frames", page.query_selector(".mail-zoom") is None)
+        page.wait_for_timeout(500)
+        check("zoom frame is gone after 4 frames", page.query_selector(".mail-zoom") is None)
         txt = page.inner_text(".mail-win")
         for want in ["From:", "O.E.R.A. - Ocean Exploration and Research Alliance", "To:", "Captain of the Aqua Nova", "Date:", "Subject:", "Sea Trials Order", "Line two."]:
             check("message shows " + want, want in txt, txt[:200])
         check("window is visible", page.is_visible(".mail-win"))
+        wr = page.evaluate("(()=>{const r=document.querySelector('.mail-win').getBoundingClientRect(); return [r.width,r.height]})()")
+        check("window is large", wr[0] > 700 and wr[1] > 450, wr)
+        fr = page.evaluate("window.__fr"); import re
+        last = [float(x) for x in re.findall(r"[\d.]+", fr[-1])] if fr else [0]
+        check("open zoom grows toward the large window (last frame is large)", last[2] > 600, fr[-1] if fr else fr)
         page.screenshot(path=os.path.join(ROOT, "tools", "shots", "mail_open.png"))
         page.mouse.click(8, 400); page.wait_for_timeout(100)
         check("zoom frame runs back out", page.query_selector(".mail-zoom") is not None)
