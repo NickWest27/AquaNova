@@ -1,7 +1,7 @@
 // Comms console, Controls and Contacts pages.
 // Controls: raise and lower antennas, pick the transmit source, aim the dish, transmit a report, EMF detector.
 // Contacts: directory of bases, ships, subs and organisations; tune a frequency, scan for carriers, hail.
-import { sim, clockText } from '../sim.js';
+import { sim, clockText, timeBase } from '../sim.js';
 import { el, toast } from '../util.js';
 import { ANTS, ant, setAnt, antDepth, SOURCES, cm, LINKS, linkState, activeLink, canTransmit, bestSource, DIAL, loadContacts, isActive, hailed, tune, scan, hail, emf, authCode } from '../commsModel.js';
 
@@ -103,7 +103,7 @@ export function mountContacts(host) {
     found.replaceChildren(...(cm.found.length ? cm.found.map((f) => el('button', { class: 'cp-contact' + (f.distress ? ' sos' : ''), onclick: () => { tune(cm.band, f.mhz); msg = `Tuned to ${f.mhz.toFixed(3)} MHz.`; } },
       el('b', { text: `${f.mhz.toFixed(3)} MHz${f.name ? `  ${f.name}` : ''}` }), el('span', { class: 'cl-k', text: `${f.dB} dB · bearing ${String(f.brg).padStart(3, '0')}°${f.distress ? ' · DISTRESS SIGNAL' : ''}` }))) : [el('div', { class: 'cl-k', text: 'Run a scan to look for carriers.' })]));
     const e = cm.log[0];
-    callBox.replaceChildren(...(e ? [row('CALL ORIGIN:', 'AQN-101-2074'), row('TO STATION:', authCode(e.id) + '-' + e.band), row('AUTH CODE:', authCode('aqn' + e.id)), row('LINK:', e.secure ? 'SECURED' : 'UNSECURED'), row('CALL ROUTE:', e.route), row('RANGE:', `${e.dist} NM`),
+    callBox.replaceChildren(...(e ? [row('CALL ORIGIN:', 'AQN-101-' + new Date(timeBase.epoch).getUTCFullYear()), row('TO STATION:', authCode(e.id) + '-' + e.band), row('AUTH CODE:', authCode('aqn' + e.id)), row('LINK:', e.secure ? 'SECURED' : 'UNSECURED'), row('CALL ROUTE:', e.route), row('RANGE:', `${e.dist} NM`),
       el('p', { class: 'cp-reply' + (e.distress ? ' sos' : ''), text: `${e.name}: ${e.text}` })] : [el('div', { class: 'cl-k', text: 'No call yet.' })]));
     logBox.replaceChildren(...cm.log.slice(1).map((x) => el('p', { class: 'cl-k', text: `${clockText(x.at)}  ${x.name}` })));
   }

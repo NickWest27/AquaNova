@@ -4,7 +4,7 @@
 //   entry      = a logbook entry with a snapshot; the player can revert to it.
 import gameState from '../../game/state.js';
 import saveManager from '../../game/saveManager.js';
-import { sim, setTimeScale } from './sim.js';
+import { sim, setTimeScale, timeBase, gameNowISO } from './sim.js';
 import { seafloor } from './seafloor.js';
 import { dlog } from '../../utils/log.js';
 
@@ -12,6 +12,7 @@ export { gameState, saveManager };
 
 export async function loadGame() {
   await saveManager.init(gameState);
+  const lb = saveManager.getActiveLogbook(); if (lb && lb.epoch) timeBase.epoch = Date.parse(lb.epoch);
   restoreSim();
 }
 
@@ -89,7 +90,7 @@ export function checkpoint() {
 /** Add a logbook entry with a revertable snapshot. */
 export function addLogEntry(content, extra = {}) {
   snapshotSim();
-  return saveManager.addEntry({ type: 'personal_log', content, ...extra });
+  return saveManager.addEntry({ type: 'personal_log', content, timestamp: gameNowISO(), ...extra });
 }
 
 /** Saves only happen two ways: a logbook entry (the player's save point), and

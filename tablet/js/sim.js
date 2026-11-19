@@ -429,9 +429,13 @@ sim.canDock = () => { const s = sim.s; return !s.docked && !!s.at && s.at.type =
 
 /** "Game clock" text, e.g. "Day 2 06:30". */
 const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
-/** The game's calendar date and time, for example "16 AUG 2074  06:00:12". The story starts on 16 August 2074. */
+/** The game's calendar date and time, for example "16 AUG 2076  06:00:12". */
+/** Day 1 of the game is 50 years after the day the game was first started. The date is kept with the logbook (`epoch`);
+ *  this default only holds until the logbook is loaded. */
+export const timeBase = { epoch: Date.UTC(2074, 7, 16) };
+export const gameNowISO = (secs = sim.s.clock) => new Date(timeBase.epoch + secs * 1000).toISOString();
 export const gameDateText = (secs = sim.s.clock) => {
-  const d = new Date(Date.UTC(2074, 7, 16) + secs * 1000), p2 = (n) => String(n).padStart(2, '0');
+  const d = new Date(timeBase.epoch + secs * 1000), p2 = (n) => String(n).padStart(2, '0');
   return `${p2(d.getUTCDate())} ${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}  ${p2(d.getUTCHours())}:${p2(d.getUTCMinutes())}:${p2(d.getUTCSeconds())}`;
 };
 export const clockText = (secs = sim.s.clock) => `Day ${Math.floor(secs / 86400) + 1} ${String(Math.floor(secs / 3600) % 24).padStart(2, '0')}:${String(Math.floor(secs / 60) % 60).padStart(2, '0')}`;

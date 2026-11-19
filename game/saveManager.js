@@ -28,6 +28,8 @@ class SaveManager {
             await this.bootstrap();
         }
         
+        this.ensureEpoch(this.getActiveLogbook());
+
         // Mount the active logbook (or first available)
         await this.mountActiveLogbook();
 
@@ -35,6 +37,27 @@ class SaveManager {
         await this.gameState.initializeContacts();
         
         return true;
+    }
+
+    /** The game's calendar starts 50 years after the day the game was first started, so logbook dates never run backwards
+     *  against the real clock. The date is stored on the logbook (`epoch`, midnight UTC of Day 1; the game clock starts at 06:00).
+     *  A logbook from before this was kept gets one now: M.LOG-0001 and any later entries are moved onto the new calendar in order. */
+    ensureEpoch(logbook) {
+        if (!logbook || logbook.epoch) return;
+        const now = new Date(), start = Date.UTC(now.getUTCFullYear() + 50, now.getUTCMonth(), now.getUTCDate());
+        logbook.epoch = new Date(start).toISOString();
+        const day1 = start + 6 * 3600 * 1000, iso = (ms) => new Date(ms).toISOString();
+        const es = logbook.entries || [];
+        if (es.length) {
+            const real = es.slice(1).map((e) => Date.parse(e.logbook.timestamp)), base = real.length ? real[0] : 0;
+            es[0].logbook.timestamp = iso(day1);
+            es.slice(1).forEach((e, i) => { const t = Date.parse(e.logbook.timestamp); if (t < Date.UTC(2060, 0, 1)) e.logbook.timestamp = iso(day1 + 60000 + (t - base)); });
+        }
+        logbook.created = logbook.lastModified = iso(day1);
+        if (logbook.checkpoint && es.length) logbook.checkpoint.timestamp = es[es.length - 1].logbook.timestamp;
+        this.updateLogbookStats(logbook);
+        this.saveBookshelf();
+        dlog(`Game calendar starts ${logbook.epoch.slice(0, 10)}`);
     }
 
     // Bookshelf management
