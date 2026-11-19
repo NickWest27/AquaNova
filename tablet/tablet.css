@@ -491,3 +491,10 @@ textarea.field { min-height: 6rem; resize: none; }
 .comm-waiting { color: var(--amber); font-size: 1.05rem; letter-spacing: .06em; margin: -0.3rem 0 0.4rem; }
 .comm-badge { margin-left: auto; min-width: 1.6rem; height: 1.6rem; border-radius: 1rem; background: var(--amber); color: #04121f; font: 800 1rem var(--font); display: inline-flex; align-items: center; justify-content: center; padding: 0 .4rem; }
 .pin.unread { animation: pinring 1.2s ease-in-out infinite; border-color: var(--amber); }
+
+/* craft page (Remora, WSKRs): profile | synthetic view | contour map */
+.cv-row { display: flex; gap: 0.6rem; align-items: stretch; }
+.cv-prof { flex: 0 0 28%; min-width: 0; } .cv-prof .prof-canvas { width: 100% !important; height: auto !important; border-radius: 10px; display: block; }
+.cv-synth { flex: 1; min-width: 0; } .cv-synth .synth-canvas { width: 100%; height: auto; aspect-ratio: 16 / 9; border-radius: 10px; display: block; border: 2px solid #3a3ab8; }
+.cv-map { flex: 0 0 26%; position: relative; aspect-ratio: 1; border-radius: 10px; overflow: hidden; border: 2px solid var(--line-soft); }
+.cv-range { color: var(--dim); font-size: 0.9rem; }

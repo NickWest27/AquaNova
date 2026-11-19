@@ -4,11 +4,12 @@ import { sim, toward } from '../sim.js';
 import { ROV_NAME, rovRange, rovSite, rovFloor } from '../rov.js';
 import { TOOLS, samples } from '../science.js';
 import { el, toast } from '../util.js';
+import { mountCraftView } from '../craftview.js';
 
 const WHY = { floor: 'Get within 6 m of the sea floor first.', nothing: 'Nothing to take here. Move to a site.', busy: 'The ROV is busy.', none: 'No ROV out.' };
 
 export function mount(body) {
-  body.style.flexDirection = 'column';
+  body.style.flexDirection = 'column'; body.style.overflowY = 'auto';
   const head = el('div', { class: 'card' }, el('div', { class: 'lbl', text: ROV_NAME + ' (Science ROV)' }), el('div', { class: 'num' }), el('p', { style: 'color:var(--dim);margin:0.4rem 0' }));
   const row = el('div', { class: 'row' });
   const launchBtn = el('button', { class: 'btn chip', text: 'Launch', onclick: () => { const r = sim.launchRov(); toast(r.ok ? `${ROV_NAME} launched` : r.why === 'docked' ? 'Undock first' : 'Already out', r.ok ? '' : 'error'); update(); } });
@@ -28,14 +29,17 @@ export function mount(body) {
     const r = sim.rovUse(id); toast(r.ok ? `${t.name} working` : WHY[r.why], r.ok ? '' : 'error'); update(); } }));
   toolRow.append(...toolBtns); pilot.append(toolRow);
   const readout = el('p', { style: 'color:var(--dim);margin-top:0.6rem' }); pilot.append(readout);
-  body.append(head, pilot);
+  const viewBox = el('div', { class: 'card cv' });
+  const cv = mountCraftView(viewBox, { title: ROV_NAME, range: 0.5, getCraft: () => { const r = sim.s.rov; return r ? { lat: r.lat, lon: r.lon, heading: r.heading, depth: r.depth, kt: Math.abs(r.cmd.thr) * 2 } : null; } });
+  body.append(head, viewBox, pilot);
 
   function update() {
     const s = sim.s, r = s.rov;
     head.children[1].textContent = r ? 'OUT' : 'ABOARD'; head.children[1].className = 'num ' + (r ? 'ok' : '');
     head.children[2].textContent = r ? 'Hand piloted. Slow (2 kt) and on a tether.' : 'Short range, slow, and it carries the instruments the WSKRs lack. Launch it at sea.';
-    launchBtn.disabled = !!r || s.docked; recBtn.disabled = !r; pilot.hidden = !r;
+    launchBtn.disabled = !!r || s.docked; recBtn.disabled = !r; pilot.hidden = !r; viewBox.hidden = !r;
     if (!r) return;
+    cv.update();
     const t = toward(s, r), site = rovSite(), fl = rovFloor();
     toolBtns.forEach((b) => { b.disabled = !!r.job; });
     readout.textContent = `Range ${t.nm.toFixed(2)} of ${rovRange()} nm · bearing ${String(Math.round(t.brg)).padStart(3, '0')}° · heading ${String(Math.round(r.heading)).padStart(3, '0')}° · depth ${Math.round(r.depth)} m` +
@@ -43,5 +47,5 @@ export function mount(body) {
       (r.job ? ` · ${TOOLS[r.job.tool].name}: ${Math.max(0, Math.ceil((r.job.end - s.clock) / 60))} min left` : '') + ` · ${samples().length} sample${samples().length === 1 ? '' : 's'} in the lab`;
   }
   update();
-  return { update, destroy() { if (sim.s.rov) sim.s.rov.cmd = { thr: 0, turn: 0, dive: 0 }; } };
+  return { update, destroy() { cv.destroy(); if (sim.s.rov) sim.s.rov.cmd = { thr: 0, turn: 0, dive: 0 }; } };
 }

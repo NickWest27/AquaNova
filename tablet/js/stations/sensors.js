@@ -7,7 +7,7 @@ import { findings, scanned, fileScan } from '../findings.js';
 
 const SONAR_RANGE_NM = 4, SWEEP_GAME_S = 1800;
 
-export function mount(body) {
+export function mount(body, ctx) {
   body.style.flexDirection = 'column';
   const head = el('div', { class: 'card' }, el('div', { class: 'lbl', text: 'Sonar' }), el('div', { class: 'num' }), el('p', { style: 'color:var(--dim);margin-top:0.4rem' }));
   const sonarBtn = el('button', { class: 'btn chip', onclick: () => { sim.s.sonar = !sim.s.sonar; sig = ''; update(); } });
@@ -19,7 +19,8 @@ export function mount(body) {
     const r = sim.deployWskr();
     toast(r.ok ? `${wskrName({ n: r.n })} launched from the bay` : r.why === 'docked' ? 'Undock first' : 'All four WSKRs are out', r.ok ? '' : 'error'); sig = ''; update(); } });
   const recBtn = el('button', { class: 'btn chip', text: 'Recall all', onclick: () => { sim.recallWskrs(); toast('WSKRs recalled'); sig = ''; update(); } });
-  wRow.append(depBtn, recBtn); wsk.append(wRow);
+  const viewBtn = el('button', { class: 'btn chip', text: 'WSKR view', onclick: () => ctx.openScene('wskr') });
+  wRow.append(depBtn, recBtn, viewBtn); wsk.append(wRow);
   const list = el('div', { class: 'tab-body', style: 'flex:1;min-height:0' });
   body.append(head, wsk, list);
   let sig = '';
@@ -38,7 +39,7 @@ export function mount(body) {
     sonarBtn.textContent = 'Sonar'; sonarBtn.classList.toggle('on', !!s.sonar);
     wsk.children[1].textContent = `${s.wskrs.length} of 4 out`;
     wsk.children[2].textContent = s.wskrs.length ? s.wskrs.map((w) => `${wskrName(w)}: ${wText(w, s)}`).join(' · ') : 'Autonomous remote sensors. Out, they spread round the ship for better readings, and each charts the sea floor in detail around itself. Send one to a contact to investigate it.';
-    depBtn.disabled = s.docked || s.wskrs.length >= 4; recBtn.disabled = !s.wskrs.length;
+    depBtn.disabled = s.docked || s.wskrs.length >= 4; recBtn.disabled = !s.wskrs.length; viewBtn.disabled = !s.wskrs.length;
     const rows = s.sonar ? s.pois.map((p) => ({ p, ...toward(s, p) })).filter((r) => r.nm <= SONAR_RANGE_NM).sort((a, b) => a.nm - b.nm) : [];
     const idle = s.wskrs.some((w) => w.mode === 'escort');
     const next = JSON.stringify([s.sonar, sweeping, s.wskrs.map((w) => [w.n, w.mode, w.target]), s.docked, rows.map((r) => [r.p.id, r.nm.toFixed(1), Math.round(r.brg), s.at && s.at.id === r.p.id, scanned(r.p)])]);

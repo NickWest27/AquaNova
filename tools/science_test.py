@@ -52,6 +52,16 @@ def main():
         check("Lantern leads (ahead of the ship)", abs(((r["brg"] - 90 + 180) % 360) - 180) < 25, r)
         check("Drifter swings wide", r["maxD"] - r["minD"] > 0.3, r)
         check("Scout charts further, Sprat is quicker", r["scout"] > 0 and r["sprat"] > 10, r)
+        # WSKR page and craft views draw without errors
+        r = js("""const s=sim.s; const c=s.pois.find(p=>p.name==='Canyon Head'); Object.assign(s,{lat:c.lat,lon:c.lon,wskrs:[],rov:null,docked:false}); sim.deployWskr(); sim.deployWskr(); for(let i=0;i<200;i++) sim.step(0.1); window.__aq.open('wskr'); return s.wskrs.length""")
+        page.wait_for_timeout(800)
+        txt = page.inner_text("#station").lower()
+        check("WSKR page shows WSKR names and the view", "scout" in txt and "lantern" in txt and page.is_visible("#station .synth-canvas"), txt[:100])
+        page.evaluate("document.querySelector('#station .st-head .btn').click()"); page.wait_for_timeout(200)
+        r = js("""const s=sim.s; s.wskrs=[]; sim.launchRov(); s.rov.depth=20; window.__aq.open('remora'); return 1""")
+        page.wait_for_timeout(800)
+        check("Remora page shows the synthetic view", page.is_visible("#station .synth-canvas") and page.is_visible("#station .cv-map canvas"))
+        page.evaluate("document.querySelector('#station .st-head .btn').click()"); page.wait_for_timeout(200); js("sim.s.rov=null; return 1")
         # rooms and stations through touch
         tap = lambda label: page.evaluate("(l)=>{const b=[...document.querySelectorAll('button')].find(x=>x.getAttribute('aria-label')===l && x.offsetParent); if(!b) return false; b.click(); return true}", label)
         check("to walkway", tap("TO WALKWAY") or tap("◂ WALKWAY")); page.wait_for_timeout(300)

@@ -93,6 +93,9 @@ export const WSKR_PERKS = {
   3: { text: 'Drifter swings wide, sometimes out to 2.4 nm from the ship.', drift: true },
   4: { text: 'Sprat is quicker (12 kt) and finishes a site in 70 s.', kt: 12, investigate: 70 },
 };
+/** A WSKR as a craft for the craft page: position, heading, depth (about 12 m above the floor, at most 40 m) and speed. */
+export const wskrCraft = (w) => { const fl = seafloor.ready ? seafloor.depthAt(w.lat, w.lon) : null; return { lat: w.lat, lon: w.lon, heading: w.heading == null ? sim.s.heading : w.heading, depth: fl == null ? 10 : Math.max(2, Math.min(40, fl - 12)), kt: w.moving ? (wskrPerk(w).kt || WSKR_KT) : 0 }; };
+sim.recallWskr = (n) => { const w = sim.s.wskrs.find((q) => q.n === n); if (!w) return false; w.mode = 'recall'; w.target = null; w.route = null; sim.touch(); return true; };
 export const wskrPerk = (w) => WSKR_PERKS[w.n] || {};
 export const wskrName = (w) => w.name || WSKR_NAMES[w.n - 1] || `WSKR ${w.n}`;
 sim.deployWskr = () => {
@@ -113,6 +116,7 @@ function stepWskrs(dt) {
   const s = sim.s; if (!s.wskrs.length) return;
   const esc = s.wskrs.filter((w) => w.mode === 'escort').sort((a, b) => (wskrPerk(b).lead ? 1 : 0) - (wskrPerk(a).lead ? 1 : 0));
   s.wskrs = s.wskrs.filter((w) => {
+    w.moving = false;
     let goal = null; const perk = wskrPerk(w), step = (((perk.kt || WSKR_KT) * dt) * TIMESCALE) / 3600;
     const ring = perk.drift ? WSKR_RING_NM + 0.9 * (0.5 + 0.5 * Math.sin((s.clock / 3600) * 2 * Math.PI)) : WSKR_RING_NM;
     if (w.mode === 'escort') { const i = esc.indexOf(w), a = ((s.heading + (360 / esc.length) * i + (wskrPerk(esc[0]).lead ? 0 : 45)) * Math.PI) / 180; goal = { lat: s.lat + (Math.cos(a) * ring) / NM_PER_DEG_LAT, lon: s.lon + (Math.sin(a) * ring) / (NM_PER_DEG_LAT * Math.cos((s.lat * Math.PI) / 180)) }; }
@@ -135,7 +139,7 @@ function stepWskrs(dt) {
     const aim = w.route[0] || goal, ta = toward(w, aim);
     if (ta.nm > 0.02 && !(w.mode === 'escort' && t.nm < 0.05)) {
       const f = Math.min(1, step / ta.nm), lat = w.lat + (aim.lat - w.lat) * f, lon = w.lon + (aim.lon - w.lon) * f;
-      if (!seafloor.ready || wskrPassable(lat, lon)) { w.lat = lat; w.lon = lon; }   // small probes stay out of the very shallows
+      if (!seafloor.ready || wskrPassable(lat, lon)) { w.heading = toward(w, { lat, lon }).brg; w.moving = true; w.lat = lat; w.lon = lon; }   // small probes stay out of the very shallows
     }
     return true;
   });

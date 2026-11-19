@@ -16,7 +16,7 @@ import { gameState, loadGame, liveNav, startExitSave, saveBeforeSleep, checkpoin
 const STATIONS = {
   nav: { title: 'Navigation', icon: 'nav' }, helm: { title: 'Helm', icon: 'helm' }, sys: { title: 'Systems', icon: 'sys' },
   sensors: { title: 'Sensors', icon: 'sensors' }, comms: { title: 'Comms', icon: 'comms' }, log: { title: 'Logbook', icon: 'log' }, ped: { title: 'PED', icon: 'more' },
-  lab: { title: 'Science Lab', icon: 'sensors' }, remora: { title: 'Remora (Science ROV)', icon: 'helm' }, bay: { title: 'Launch Bay control', icon: 'helm' },
+  lab: { title: 'Science Lab', icon: 'sensors' }, wskr: { title: 'WSKRs', icon: 'sensors' }, remora: { title: 'Remora (Science ROV)', icon: 'helm' }, bay: { title: 'Launch Bay control', icon: 'helm' },
   crew: { title: 'Communicator', icon: 'comms', hidden: true }, // opened from the pin, not the dock
 };
 const FILES = { sys: 'systems' };
