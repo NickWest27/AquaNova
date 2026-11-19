@@ -91,3 +91,16 @@ export function testSound() {
   chirp();
   return audioState();
 }
+
+/** Data transfer: a burst of short digital chirps. up = uplink (higher), otherwise downlink (lower). */
+export function dataTick(up = true) {
+  if (!ac || !pref.on) return;
+  const base = up ? 1500 : 800;
+  for (let k = 0; k < 3; k++) { const f = base + Math.floor(Math.random() * 6) * 220; blip(f, f * (Math.random() < 0.5 ? 1.25 : 0.8), k * 0.07, 0.05, 0.12, 'square', 'ui'); }
+}
+/** A transfer finished: three rising notes. ok=false: two falling notes. */
+export function dataDone(ok = true) {
+  if (!ac || !pref.on) return;
+  if (ok) { blip(900, 1000, 0, 0.1, 0.25, 'triangle', 'ui'); blip(1200, 1300, 0.12, 0.1, 0.25, 'triangle', 'ui'); blip(1600, 1700, 0.24, 0.16, 0.25, 'triangle', 'ui'); }
+  else { blip(600, 500, 0, 0.14, 0.25, 'triangle', 'ui'); blip(420, 330, 0.17, 0.2, 0.25, 'triangle', 'ui'); }
+}

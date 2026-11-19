@@ -11,6 +11,7 @@ import { gameState } from '../persist.js';
 import * as links from './commsLinks.js';
 import { mountControls, mountContacts } from './commsPanels.js';
 import { canTransmit } from '../commsModel.js';
+import { startReport, transferring } from '../transfer.js';
 import missions from '../../../game/systems/missionManager.js';
 import { logAccepted } from '../missionLog.js';
 
@@ -25,13 +26,9 @@ export function mount(body) {
   body.style.flexDirection = 'column';
   const linkNum = el('div', { class: 'num' }), linkNote = el('p', { style: 'color:var(--dim);margin-top:0.4rem' });
   const transmit = () => {
-    const t = canTransmit(); if (!t.ok) { tell('comms', `Cannot transmit: ${t.L.label} is ${t.st.status.toLowerCase()}`, 'warn'); return; }
-    const found = (gameState.getProperty('mission.discoveries') || []).length;
-    const s = sim.s;
-    gameState.updateProperty('mission.outbox', [...outbox(), { at: new Date().toISOString(), text: `Status report via ${t.L.label}: ${s.at ? s.at.name : 'open water'}, depth ${Math.round(s.depth)} m, battery ${Math.round(s.battery)}%, ${found} finding${found === 1 ? '' : 's'}.` }]);
-    tell('comms', 'Report transmitted to OERA');
-    document.dispatchEvent(new CustomEvent('report-sent'));
-    render();
+    const r = startReport();
+    if (!r.ok) tell('comms', r.why === 'busy' ? 'A transmission is already under way' : `Cannot transmit: ${r.L.label} is ${r.st.status.toLowerCase()}`, 'warn');
+    render(); update();
   };
   const send = el('button', { class: 'btn primary', text: 'Transmit report', onclick: transmit });
   const list = el('div', { class: 'tab-body', style: 'flex:1' });
@@ -112,12 +109,14 @@ export function mount(body) {
     linkNum.className = 'num ' + (up ? 'ok' : 'bad');
     linkNum.textContent = up ? 'LINK UP' : 'NO LINK';
     linkNote.textContent = up ? `${t.L.label} link, ${t.st.dB} dB.` : `${t.L.label}: ${t.st.status.toLowerCase()}. See the Controls page.`;
-    send.disabled = !up;
+    send.disabled = !up || transferring();
+    send.textContent = transferring() ? 'Transmitting…' : 'Transmit report';
     if (views[tab]) views[tab][1].update();
   }
   // a message can arrive while the station is open
   const onMsg = () => render();
-  document.addEventListener('comms-message', onMsg);
+  const onX = () => { render(); update(); };
+  document.addEventListener('comms-message', onMsg); document.addEventListener('xfer-change', onX);
   render(); update();
-  return { update, destroy() { lv.destroy(); cv.destroy(); nv.destroy(); document.removeEventListener('comms-message', onMsg); if (reading) { reading.back.remove(); reading = null; } } };
+  return { update, destroy() { lv.destroy(); cv.destroy(); nv.destroy(); document.removeEventListener('comms-message', onMsg); document.removeEventListener('xfer-change', onX); if (reading) { reading.back.remove(); reading = null; } } };
 }

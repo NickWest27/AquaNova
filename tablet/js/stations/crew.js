@@ -8,6 +8,7 @@ import { research } from '../science.js';
 import { el, toast } from '../util.js';
 import { gameState } from '../persist.js';
 import { crewIcon } from '../icons.js';
+import { startReport } from '../transfer.js';
 import { askDepth } from '../depthPad.js';
 import { toggleDock } from '../dock.js';
 import { say as crewSay, takeHeld, unreadFor, unreadCount, transcript, logLine } from '../notify.js';
@@ -42,7 +43,7 @@ const hdgText = (h) => String(Math.round(((h % 360) + 360) % 360)).padStart(3, '
 
 // Orders that do something. Anything not listed here (or in PARAM) is shown in the "not yet" colour.
 // Orders added here show up even in old saves (a save keeps its own copy of the crew's lines).
-const EXTRA = { helm: ['Undock', 'Dock', 'Hug the floor', 'Stop hugging the floor', 'Engage super cruise', 'Disengage super cruise'], sensors: ['Set up a relay', 'Stand down the relay'] };
+const EXTRA = { helm: ['Undock', 'Dock', 'Hug the floor', 'Stop hugging the floor', 'Engage super cruise', 'Disengage super cruise'], sensors: ['Set up a relay', 'Stand down the relay'], communications: ['Transmit a report'] };
 const ORDERS = {
   'Undock': () => { if (!docked()) return 'We are already undocked, Captain.'; setTimeout(() => toggleDock(), 600); return 'Undocking. Disconnecting shore power and releasing the clamps.'; },
   'Dock': () => {
@@ -89,6 +90,12 @@ const ORDERS = {
     return r.why === 'already' ? 'We already have a relay up, Captain.' : r.why === 'none' ? 'No WSKRs are out. Launch one from the Sensors station first.' : 'Every WSKR is busy, Captain. Recall one or let it finish.';
   },
   'Stand down the relay': () => { const r = sim.standDownRelay(); return r.ok ? `${wskrName(r.wskr)} is rejoining the formation.` : 'There is no relay up, Captain.'; },
+  'Transmit a report': () => {
+    const r = startReport();
+    if (r.ok) return `Sending it on ${r.L.label}, Captain. About ${Math.ceil(r.eta)} seconds to upload, then we wait for O.E.R.A. to answer. The progress bar is on your screen.`;
+    if (r.why === 'busy') return 'A transmission is already under way, Captain.';
+    return `No ${r.L.label} link, Captain: ${r.st.status.toLowerCase()}. The antenna must be near the surface. Raise it, or pick another source on the Comms controls.`;
+  },
   'Passive listening mode': () => { sim.s.sonar = false; sim.touch(); return 'Sonar secured. Listening passively.'; },
   'Run crew diagnostics': () => 'Crew diagnostics complete. Everyone aboard is healthy, Captain.',
   'Request departure clearance': () => (docked() ? 'Woods Hole Harbor Control: you are cleared to depart at your discretion. Safe travels.' : 'Harbor Control: you are already underway, Captain.'),

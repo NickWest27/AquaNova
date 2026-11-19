@@ -662,3 +662,15 @@ input.mix { width: 100%; height: 2.4rem; accent-color: var(--cyan); }
 .dp-note { color: var(--dim); font-size: 0.95rem; text-align: center; min-height: 1.3rem; }
 .dp-pad { display: grid; grid-template-columns: repeat(3, 4.6rem); gap: 0.5rem; }
 .dp-key { height: 3.6rem; font-size: 1.5rem; font-weight: 700; }
+
+/* report transfer bar (transfer.js) */
+.stage .xfer { position: absolute; right: 28px; top: 96px; width: 520px; padding: 14px 18px; background: rgba(3, 18, 28, 0.92); border: 1px solid #1fa7c9; border-radius: 6px; font-family: var(--mono); color: var(--text); z-index: 60; box-shadow: 0 0 18px rgba(31, 167, 201, 0.35); }
+.xfer .xf-title { font-size: 20px; letter-spacing: 0.12em; color: #7fe3ff; }
+.xfer .xf-track { height: 16px; margin: 10px 0 8px; background: #06293a; border: 1px solid #1a5f78; border-radius: 3px; overflow: hidden; }
+.xfer .xf-fill { height: 100%; width: 0; background: linear-gradient(90deg, #1fa7c9, #7fe3ff); transition: width 0.25s linear; }
+.xfer.wait .xf-fill { background: repeating-linear-gradient(90deg, #0f6f8a 0 24px, #1fa7c9 24px 48px); background-size: 96px 100%; animation: xf-slide 1s linear infinite; }
+.xfer.down .xf-fill { background: linear-gradient(90deg, #3fbf7f, #a6f2c9); }
+.xfer.done .xf-title { color: #a6f2c9; } .xfer.fail { border-color: #d9534f; } .xfer.fail .xf-title { color: #ff8a84; }
+.xfer.stalled .xf-fill { background: #b8860b; } .xfer.stalled .xf-title { color: #ffd166; }
+.xfer .xf-note { font-size: 17px; color: var(--dim); }
+@keyframes xf-slide { to { background-position: 96px 0; } }
