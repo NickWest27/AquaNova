@@ -37,7 +37,7 @@ def main():
         check("PED button visible on the bridge", page.is_visible("#ped-btn"))
         page.tap("#ped-btn"); page.wait_for_timeout(500)
         check("PED button opens the PED", page.is_visible("#ped-pop .ped-panel"))
-        page.tap(".ped-close"); page.wait_for_timeout(300)
+        page.evaluate("document.querySelector(\'#ped-pop\').click()"); page.wait_for_timeout(300)
         page.locator('.bd-expand:visible').tap(force=True); page.wait_for_timeout(700)
         check("back button says Bridge", page.inner_text("#station .st-head .btn").strip().lower() == "‹ bridge", page.inner_text("#station .st-head .btn"))
         txt = lambda: page.locator(".readouts .num").last.inner_text().strip()

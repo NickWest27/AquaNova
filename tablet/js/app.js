@@ -80,7 +80,6 @@ async function togglePed() {
   // The PED is a handheld: the PDA frame sits around it.
   root.replaceChildren(el('div', { class: 'ped-panel pda' },
     el('div', { class: 'pda-screen' },
-      el('div', { class: 'pda-head' }, el('b', { text: 'PED' }), el('button', { class: 'btn ped-close', style: 'margin-left:auto', text: 'Close ✕', onclick: closePed })),
       body),
     el('img', { class: 'pda-frame', src: 'assets/pda-frame.webp', alt: '', draggable: 'false' })));
   root.onclick = (e) => { if (e.target === root) closePed(); };   // tap outside the PDA
@@ -104,7 +103,7 @@ async function toggleComm() {
   gameState.updateProperty('tutorial.communicator_opened', true); // "First Contact" step 3
   const root = $('#comm-pop'), body = el('div', { class: 'st-body' });
   root.replaceChildren(el('div', { class: 'comm-panel' },
-    el('div', { class: 'comm-top' }, el('small', { class: 'comm-live', text: '● voice channel open' }), el('button', { class: 'btn comm-close', text: 'Close ✕', onclick: closeComm })),
+    el('div', { class: 'comm-top' }, el('small', { class: 'comm-live', text: '● voice channel open' })),
     body));
   root.onclick = (e) => { if (!e.target.closest('button, .comm-reply, .comm-head, .comm-you, .comm-who-label')) closeComm(); };   // a tap anywhere but a button or text closes it
   root.hidden = false;

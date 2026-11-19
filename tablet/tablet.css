@@ -370,8 +370,9 @@ textarea.field { min-height: 6rem; resize: none; }
 .card.task .dot { width: 2rem; height: 2rem; }
 
 /* ---------- PED button (top right, beside the communicator pin) ---------- */
-.ped-btn { position: absolute; z-index: 30; top: calc(env(safe-area-inset-top) + 0.9rem); right: calc(env(safe-area-inset-right) + 5.4rem); display: flex; align-items: center; gap: 0.4rem; min-height: 3rem; padding: 0 0.9rem; border-radius: 14px; border: 2px solid var(--line); background: rgba(6,21,35,0.72); color: var(--cyan); font-weight: 800; letter-spacing: 0.08em; font-size: 0.85rem; -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
-.ped-btn svg { width: 1.3rem; height: 1.3rem; stroke: currentColor; fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.ped-btn { position: absolute; z-index: 30; top: calc(env(safe-area-inset-top) + 0.5rem); right: calc(env(safe-area-inset-right) + 5.1rem); width: 7.1rem; height: 4rem; padding: 0; border: 0; background: none; container-type: size; color: var(--cyan); font-weight: 800; letter-spacing: 0.1em; font-size: 1rem; display: flex; align-items: center; justify-content: center; }
+.ped-btn img { position: absolute; width: 100cqh; height: 100cqw; left: 50%; top: 50%; transform: translate(-50%, -50%) rotate(90deg); pointer-events: none; -webkit-user-drag: none; }
+.ped-btn span { position: relative; padding-left: 0.2rem; text-shadow: 0 0 6px rgba(100,255,218,0.5); }
 .ped-btn:active { transform: scale(0.95); }
 
 /* ---- bridge console ---- */

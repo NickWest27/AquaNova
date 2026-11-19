@@ -159,7 +159,7 @@ def main():
         # --- revert on iPad does not bring entries back, keeps journal ---
         js(ipad, "const p=await import('./js/persist.js'); p.addLogEntry('Save point A'); p.addLogEntry('Save point B');")
         ipad.wait_for_timeout(200)
-        ipad.tap(".ped-close"); ipad.evaluate("window.__aq.open('log')"); ipad.wait_for_timeout(500)
+        ipad.evaluate("document.querySelector(\'#ped-pop\').click()"); ipad.evaluate("window.__aq.open('log')"); ipad.wait_for_timeout(500)
         ipad.locator(".entry", has_text="Save point A").locator("text=Revert here").tap(); ipad.wait_for_timeout(300)
         ipad.tap(".modal .btn.primary"); ipad.wait_for_timeout(6500)
         texts = [e["logbook"]["content"] for e in dec(ipad, book_name())["entries"]]

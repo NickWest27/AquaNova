@@ -65,7 +65,7 @@ export const WSKR_CHART_NM = 3;
 function chartSurroundings() {
   const s = sim.s; if (!seafloor.ready) return;
   seafloor.mark('ship', s.lat, s.lon, sim.fineNm(s));
-  for (const w of s.wskrs) seafloor.mark('w' + w.n, w.lat, w.lon, WSKR_CHART_NM);
+  for (const w of s.wskrs) seafloor.mark('w' + w.n, w.lat, w.lon, WSKR_CHART_NM + (wskrPerk(w).chart || 0));
 }
 
 /** Is this point safe water for the ship? (Inside the dredged harbour only land stops us.) */
@@ -86,6 +86,14 @@ sim.stop = () => { sim.s.throttle = 0; sim.s.wpt = null; sim.touch(); };
  *  Each: { n, lat, lon, mode: 'escort' | 'task' | 'recall', target: poi id | null, busy: game seconds spent investigating } */
 const WSKR_KT = 10, WSKR_RING_NM = 1.5, WSKR_INVESTIGATE_S = 90;
 export const WSKR_NAMES = ['Scout', 'Lantern', 'Drifter', 'Sprat'];   // placeholders, our own names
+/** Each WSKR has a small edge that fits its name. Sizes are small on purpose. */
+export const WSKR_PERKS = {
+  1: { text: 'Scout charts the sea floor further out (+0.6 nm).', chart: 0.6 },
+  2: { text: 'Lantern holds the lead, ahead of the ship.', lead: true },
+  3: { text: 'Drifter swings wide, sometimes out to 2.4 nm from the ship.', drift: true },
+  4: { text: 'Sprat is quicker (12 kt) and finishes a site in 70 s.', kt: 12, investigate: 70 },
+};
+export const wskrPerk = (w) => WSKR_PERKS[w.n] || {};
 export const wskrName = (w) => w.name || WSKR_NAMES[w.n - 1] || `WSKR ${w.n}`;
 sim.deployWskr = () => {
   const s = sim.s;
@@ -103,10 +111,11 @@ sim.recallWskrs = () => { sim.s.wskrs.forEach((w) => { w.mode = 'recall'; w.targ
 const wskrPassable = (lat, lon) => (seafloor.depthAt(lat, lon) ?? 0) >= 3;
 function stepWskrs(dt) {
   const s = sim.s; if (!s.wskrs.length) return;
-  const esc = s.wskrs.filter((w) => w.mode === 'escort'), step = (WSKR_KT * dt * TIMESCALE) / 3600;
+  const esc = s.wskrs.filter((w) => w.mode === 'escort').sort((a, b) => (wskrPerk(b).lead ? 1 : 0) - (wskrPerk(a).lead ? 1 : 0));
   s.wskrs = s.wskrs.filter((w) => {
-    let goal = null;
-    if (w.mode === 'escort') { const i = esc.indexOf(w), a = ((s.heading + (360 / esc.length) * i + 45) * Math.PI) / 180; goal = { lat: s.lat + (Math.cos(a) * WSKR_RING_NM) / NM_PER_DEG_LAT, lon: s.lon + (Math.sin(a) * WSKR_RING_NM) / (NM_PER_DEG_LAT * Math.cos((s.lat * Math.PI) / 180)) }; }
+    let goal = null; const perk = wskrPerk(w), step = (((perk.kt || WSKR_KT) * dt) * TIMESCALE) / 3600;
+    const ring = perk.drift ? WSKR_RING_NM + 0.9 * (0.5 + 0.5 * Math.sin((s.clock / 3600) * 2 * Math.PI)) : WSKR_RING_NM;
+    if (w.mode === 'escort') { const i = esc.indexOf(w), a = ((s.heading + (360 / esc.length) * i + (wskrPerk(esc[0]).lead ? 0 : 45)) * Math.PI) / 180; goal = { lat: s.lat + (Math.cos(a) * ring) / NM_PER_DEG_LAT, lon: s.lon + (Math.sin(a) * ring) / (NM_PER_DEG_LAT * Math.cos((s.lat * Math.PI) / 180)) }; }
     else if (w.mode === 'task') { goal = s.pois.find((p) => p.id === w.target); if (!goal) { w.mode = 'escort'; return true; } }
     else goal = s;
     // Route round land. Replanned when the goal has moved on (escorts and recalls follow the ship) or after a failed attempt.
@@ -120,7 +129,7 @@ function stepWskrs(dt) {
     if (w.mode === 'recall' && (t.nm < 0.15 || (w.routeSnapped && te.nm < 0.15))) { sim.emit('wskr-recovered', w); return false; }
     if (w.mode === 'task' && onSite) {          // on site: investigate, then file the scan and rejoin
       w.busy += dt * TIMESCALE;
-      if (w.busy >= WSKR_INVESTIGATE_S) { const p = s.pois.find((q) => q.id === w.target); w.mode = 'escort'; w.target = null; w.route = null; sim.emit('wskr-found', { wskr: w, poi: p }); }
+      if (w.busy >= (perk.investigate || WSKR_INVESTIGATE_S)) { const p = s.pois.find((q) => q.id === w.target); w.mode = 'escort'; w.target = null; w.route = null; sim.emit('wskr-found', { wskr: w, poi: p }); }
       return true;
     }
     const aim = w.route[0] || goal, ta = toward(w, aim);

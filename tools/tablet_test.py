@@ -42,7 +42,7 @@ def main():
                 if page.evaluate("document.documentElement.scrollWidth > innerWidth + 1"): note(f"{st}: horizontal overflow")
                 if st == "ped":
                     if not page.is_hidden("#station"): note("ped: opened as a station, not a pop-up")
-                    page.tap(".ped-close")
+                    page.evaluate("document.querySelector(\'#ped-pop\').click()")
                 else:
                     page.tap("#station .st-head .btn")
                 page.wait_for_timeout(200)
@@ -55,7 +55,7 @@ def main():
             page.tap('button:text-is("Turn sound on")'); page.wait_for_timeout(400)
             a = page.evaluate("import('./js/audio.js').then(m => m.audioState())")
             if a["master"] <= 0: note("sound on but master gain is 0")
-            page.tap(".ped-close"); page.wait_for_timeout(200)
+            page.evaluate("document.querySelector(\'#ped-pop\').click()"); page.wait_for_timeout(200)
             # PED sits on top of a station without replacing it
             page.evaluate("window.__aq.open('nav')"); page.wait_for_timeout(500)
             page.tap('#station .st-head .btn:text-is("PED")'); page.wait_for_timeout(500)

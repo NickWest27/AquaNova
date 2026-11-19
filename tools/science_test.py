@@ -41,6 +41,17 @@ def main():
         check("points collect", r["pts"] >= 3, r)
         r = js("""const ok=sc.startTopic('rov-range'); return {ok, has:sc.research.has('rov-range')}""")
         check("research unlocks a topic", r["ok"] and r["has"], r)
+        # WSKR perks: Lantern leads, Drifter swings wide, Sprat is quicker, Scout charts further
+        r = js("""const s=sim.s; const reef=s.pois.find(p=>p.name==='Canyon Head'); Object.assign(s,{lat:reef.lat,lon:reef.lon,docked:false,rov:null,wskrs:[],wpt:null,speed:0,throttle:0,heading:90,targetHeading:90});
+          for(let i=0;i<4;i++) sim.deployWskr();
+          const T=await import('./js/sim.js'); let maxD=0, minD=9, lead=null; 
+          for(let i=0;i<4000;i++){ sim.step(0.1); s.clock+=0; const d=s.wskrs.find(w=>w.n===3); const dd=T.toward(s,d).nm; if(i>1500){maxD=Math.max(maxD,dd);minD=Math.min(minD,dd);} }
+          const l=s.wskrs.find(w=>w.n===2); const b=T.toward(s,l).brg;
+          return {brg:b, maxD, minD, names:s.wskrs.map(w=>T.wskrName(w)), scout:T.wskrPerk({n:1}).chart, sprat:T.wskrPerk({n:4}).kt}""")
+        check("WSKR names are Scout, Lantern, Drifter, Sprat", r["names"] == ["Scout", "Lantern", "Drifter", "Sprat"], r)
+        check("Lantern leads (ahead of the ship)", abs(((r["brg"] - 90 + 180) % 360) - 180) < 25, r)
+        check("Drifter swings wide", r["maxD"] - r["minD"] > 0.3, r)
+        check("Scout charts further, Sprat is quicker", r["scout"] > 0 and r["sprat"] > 10, r)
         # rooms and stations through touch
         tap = lambda label: page.evaluate("(l)=>{const b=[...document.querySelectorAll('button')].find(x=>x.getAttribute('aria-label')===l && x.offsetParent); if(!b) return false; b.click(); return true}", label)
         check("to walkway", tap("TO WALKWAY") or tap("◂ WALKWAY")); page.wait_for_timeout(300)
@@ -56,6 +67,8 @@ def main():
         check("open BAY CONTROL", tap("BAY CONTROL")); page.wait_for_timeout(600)
         txt = page.inner_text("#station").lower()
         check("bay shows Remora, WSKR names and Sea Crab", "remora" in txt and "scout" in txt and "sea crab" in txt, txt[:120])
+        js("sim.s.wskrs=[]; sim.s.rov=null; return 1")
+        page.wait_for_timeout(400)
         n0 = js("return sim.s.wskrs.length")
         page.evaluate("[...document.querySelectorAll('#station button')].filter(b=>b.textContent==='Launch'&&!b.disabled)[1].click()"); page.wait_for_timeout(300)
         check("bay launches a WSKR", js("return sim.s.wskrs.length") == n0 + 1)

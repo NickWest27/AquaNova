@@ -27,7 +27,7 @@ def main():
         page.evaluate("window.__aq.toggleQuarters()"); page.wait_for_timeout(500)
         for st in ("nav", "helm", "sys", "comms", "log"):
             page.evaluate(f"window.__aq.open('{st}')"); page.wait_for_timeout(500); page.tap("#station .st-head .btn")
-        page.evaluate("window.__aq.open('ped')"); page.wait_for_timeout(500); page.tap(".ped-close")
+        page.evaluate("window.__aq.open('ped')"); page.wait_for_timeout(500); page.evaluate("document.querySelector(\'#ped-pop\').click()")
         page.goto(base + "ped/"); page.wait_for_timeout(800)
         browser.close()
     server.shutdown()

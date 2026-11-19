@@ -1,6 +1,6 @@
 // Launch Bay control: where Remora, the WSKRs and the away boats physically leave and return.
 // WSKRs are controlled from the Sensors station and Remora from the Science Lab; the bay shows what is out.
-import { sim, toward, wskrName } from '../sim.js';
+import { sim, toward, wskrName, wskrPerk, WSKR_PERKS } from '../sim.js';
 import { ROV_NAME } from '../rov.js';
 import { el, toast } from '../util.js';
 
@@ -22,7 +22,7 @@ export function mount(body) {
       el('div', { class: 'card' }, el('div', { class: 'lbl', text: 'Bay doors' }), el('div', { class: 'num', text: s.docked ? 'ALONGSIDE' : 'READY' }),
         el('p', { style: 'color:var(--dim);margin-top:0.4rem', text: 'Launches happen here. Fly the WSKRs from Sensors and Remora from the Science Lab.' })),
       card(`${ROV_NAME} (Science ROV)`, !r, 'Slow, short range, hand piloted. Controlled from the Science Lab.', r ? act('Recover', recoverRov) : act('Launch', launchRov, s.docked)),
-      ...[1, 2, 3, 4].map((n) => { const q = w.find((x) => x.n === n); return card(`${wskrName(q || { n })} (WSKR ${n})`, !q, q ? `Out: ${q.mode}` : 'Racked and ready. Controlled from Sensors.', q ? act('Recall', () => { sim.recallWskrs(); toast('WSKRs recalled'); }) : act('Launch', launchW, s.docked || w.length >= 4)); }),
+      ...[1, 2, 3, 4].map((n) => { const q = w.find((x) => x.n === n); return card(`${wskrName(q || { n })} (WSKR ${n})`, !q, q ? `Out: ${q.mode}. ${WSKR_PERKS[n].text}` : `Racked and ready. ${WSKR_PERKS[n].text}`, q ? act('Recall', () => { sim.recallWskrs(); toast('WSKRs recalled'); }) : act('Launch', launchW, s.docked || w.length >= 4)); }),
       card('Sea Crab (away boat)', true, 'Crew ferry. Not yet usable.'));
   }
   update();
