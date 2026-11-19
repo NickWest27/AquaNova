@@ -55,7 +55,7 @@ hush.fn = () => commsLocked() && !(navigator.webdriver && !/[?&]intake=1/.test(l
 
 viewProbe.fn = () => boarded && !!scene && scene.where === 'bridge' && !current && !ped && !comm;
 
-const flag = (k) => { if (gameState.getProperty('tutorial.' + k) !== true) gameState.updateProperty('tutorial.' + k, true); };   // lesson steps watch these
+const flag = (k) => { if (gameState.getProperty('tutorial.' + k) !== true) { gameState.updateProperty('tutorial.' + k, true); gameState.updateProperty('progress.flags', { ...(gameState.getProperty('progress.flags') || {}), [k]: true }); } };   // saved, so a reload does not forget what the Captain has done   // lesson steps watch these
 const ctx = {
   flag, closePed: () => closePed(),
   place: () => (current ? STATIONS[current.name].title : WHERE[scene.where] || scene.where),   // for bug notes
@@ -262,6 +262,7 @@ async function boot() {
     await sim.loadPois();
     seafloor.load().then((ok) => ok && sim.touch());      // sea floor data loads in the background
     await loadGame();                       // saveManager + GameState + sim restore
+    Object.keys(gameState.getProperty('progress.flags') || {}).forEach((k) => gameState.updateProperty('tutorial.' + k, true));   // lesson flags come back with the save
     await syncAtBoot();                     // pick up journal notes and tasks from the phone
     try {
       missions = (await import('../../game/systems/missionManager.js')).default;

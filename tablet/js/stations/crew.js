@@ -13,7 +13,7 @@ import { say as crewSay, takeHeld, unreadFor, unreadCount } from '../notify.js';
 // First meeting with each crew member. Spoken once, saved in progress.met.<id>. {captain} = "Captain Surname".
 const INTRO = {
   executiveOfficer: 'Welcome aboard, {captain}. I am ARIA, the Aqua Nova\'s executive officer. I run the ship\'s systems, watch the sea around us and keep the log. I answer to you, and I will tell you plainly when I think something is unwise. Admiral Okafor speaks highly of you. I hope to earn the same opinion. Ask me for anything, any time.',
-  helm: 'Marcus Chen, helm, {captain}. I have flown her through every sea trial and she handles like a dream. Tell me where you want to go and I will get us there. I will also tell you if the floor comes up to meet us.',
+  helm: 'Marcus Chen, helm, {captain}. I have spent the fitting-out in the simulator with her, and I am glad to finally have water under the keel. Tell me where you want to go and I will get us there. I will also tell you if the floor comes up to meet us.',
   science: 'Dr. Samira Patel, {captain}. I look after the laboratory and the sick bay, so I suppose I am responsible for both the samples and the people. Bring me something strange from the deep and I will be happy. Bring me yourself with a headache and I will be almost as happy.',
   sensors: 'Alex Torres, sensors, {captain}. I look after the sonar and the WSKRs. If something is out there, big or small, I will find it before it finds us. Mostly.',
   engineering: 'Ryan Chen, chief engineer, {captain}. No relation to Marcus. Everyone asks. The reactor, the pumps and the hull are mine, so please bring her back in one piece. If you hear a noise you do not like, call me before you worry.',

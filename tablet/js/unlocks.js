@@ -23,4 +23,15 @@ export const EXCUSES = {
   bay: 'The launch bay controls have not been commissioned yet.',
 };
 export const isCommissioned = (name) => !GATES_ON || ALWAYS.includes(name) || (gameState.getProperty('progress.stationsUnlocked') || []).map(norm).includes(name);
-export const excuse = (name) => EXCUSES[name] || 'That system has not been commissioned yet.';
+const TOUR_STEPS = { log: 'open your logbook', ped: 'open your PED', walkway: 'walk the main walkway', bridge: 'visit the bridge' };
+/** ARIA's reason a station is not ready. For the ship tour stations she names only the steps still left. */
+export function excuse(name) {
+  if ((name === 'helm' || name === 'sys') && !(gameState.getProperty('progress.stationsUnlocked') || []).map(norm).includes(name)) {
+    const objs = (gameState.getProperty('mission.objectives') || []).filter((o) => o.missionId === 'shipTour');
+    const left = objs.filter((o) => o.status !== 'completed').map((o) => TOUR_STEPS[String(o.id).replace(/^shipTour_/, '')]).filter(Boolean);
+    const what = name === 'helm' ? 'The helm' : 'Systems monitoring';
+    if (!objs.length) return `${what} has not been commissioned yet. Call me on the communicator first, ${'{captain}'}, and I will start the ship tour.`;
+    if (left.length) return `${what} has not been commissioned yet. Still to do on the ship tour: ${left.join(', ')}.`;
+  }
+  return EXCUSES[name] || 'That system has not been commissioned yet.';
+}

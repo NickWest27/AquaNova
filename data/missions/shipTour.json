@@ -16,6 +16,11 @@
           "type": "property_change",
           "property": "tutorial.opened_log",
           "value": true
+        },
+        {
+          "type": "property_change",
+          "property": "progress.read_welcome",
+          "value": true
         }
       ]
     },
@@ -27,6 +32,11 @@
         {
           "type": "property_change",
           "property": "tutorial.opened_ped",
+          "value": true
+        },
+        {
+          "type": "property_change",
+          "property": "progress.got_ped",
           "value": true
         }
       ]
@@ -59,7 +69,7 @@
     {
       "type": "crew_say",
       "role": "aria",
-      "text": "{captain}, before we take her out, a short tour. Open the logbook on your desk, then your PED. After that, the walkway and the bridge."
+      "text": "{captain}, before we take her out, a short tour of the ship. Anything you have already done, I have already noted. The walkway and the bridge are the rest."
     }
   ],
   "onComplete": [
