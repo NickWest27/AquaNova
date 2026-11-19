@@ -10,7 +10,9 @@ import { getSound, setSound, chirp, testSound, audioState } from '../audio.js';
 
 let appVersion = '…';
 try { if (window.caches) caches.keys().then((k) => { const v = k.find((n) => n.startsWith('aquanova-')); appVersion = v ? v.slice(9) : 'not saved offline'; }); } catch (e) { /* ignore */ }
-/** Forget the saved offline copy and load every file again from the server. Saves are not touched. */
+/** Forget the saved offline copy and load every file again from the server. Saves are not touched.
+ *  The browser's own HTTP cache can keep old files for minutes (GitHub Pages allows 10), so each file is
+ *  re-fetched with cache "reload" before the page restarts. */
 async function updateNow() {
   try {
     const regs = navigator.serviceWorker ? await navigator.serviceWorker.getRegistrations() : [];
@@ -18,6 +20,14 @@ async function updateNow() {
     const keys = window.caches ? await caches.keys() : [];
     await Promise.all(keys.map((k) => caches.delete(k)));
   } catch (e) { console.warn('Update clear failed', e); }
+  try {
+    const sw = new URL('../../../sw.js', import.meta.url);
+    const text = await (await fetch(sw, { cache: 'reload' })).text();
+    const list = JSON.parse(text.slice(text.indexOf('const ASSETS = [') + 15, text.indexOf('];', text.indexOf('const ASSETS = [')) + 1));
+    const q = [...list]; let fails = 0;
+    await Promise.all(Array.from({ length: 6 }, async () => { while (q.length) { const a = q.shift(); try { await fetch(new URL(a, sw), { cache: 'reload' }); } catch (e) { fails++; } } }));
+    if (fails) console.warn('Update: could not refresh', fails, 'files');
+  } catch (e) { console.warn('Update refresh failed', e); }
   location.replace(location.pathname + '?v=' + Date.now());
 }
 
@@ -102,7 +112,7 @@ export function mount(body, ctx) {
         el('div', { class: 'card setting' }, el('div', { class: 'lbl', text: 'Engine hum' }), el('div', { class: 'row' },
           ...[['Off', 0], ['Faint', 0.25], ['Normal', 1]].map(([t, v]) => el('button', { class: `btn ${Math.abs((getSound().hum ?? 0.25) - v) < 0.01 ? 'primary' : ''}`, text: t, onclick: () => { setSound({ hum: v }); render(); } })))),
         el('div', { class: 'card setting' }, el('div', { class: 'lbl', text: 'Game version' }), el('p', { text: `Build ${appVersion}. The game checks for updates each time it opens. If a change is missing, tap Update now. Your saves stay.` }),
-          el('button', { class: 'btn primary', text: 'Update now', onclick: updateNow })),
+          el('button', { class: 'btn primary', text: 'Update now', onclick: (e) => { e.currentTarget.textContent = 'Updating…'; e.currentTarget.disabled = true; updateNow(); } })),
         el('div', { class: 'card setting' }, el('div', { class: 'lbl', text: 'Text size' }), el('div', { class: 'row' }, zoomBtn('Smaller', -0.1), zoomBtn('Reset', 0), zoomBtn('Larger', 0.1))),
         el('div', { class: 'card setting' }, el('div', { class: 'lbl', text: 'Debug' }), el('p', { text: DEBUG ? 'Debug logging is on. Triple-tap the top-left corner to see the log.' : 'Triple-tap the top-left corner to see the log panel. Add ?debug=1 to the address for routine logs.' })),
         el('div', { class: 'card setting' }, el('div', { class: 'lbl', text: 'New game' }), el('p', { text: 'Starts again from the first logbook entry (M.LOG-0001). Removes later entries, notes, tasks and mission progress on every synced device.' }),
