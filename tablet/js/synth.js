@@ -9,7 +9,7 @@ import { sim, toward } from './sim.js';
 import { seafloor } from './seafloor.js';
 import { SITE_NM } from './rov.js';
 
-const NM_PER_DEG = 60, M_PER_NM = 1852, W = 640, H = 360, SCALE = 2, COLS = 72, ROWS = 44;
+const NM_PER_DEG = 60, M_PER_NM = 1852, W = 640, H = 360, SCALE = 2, ROWS = 44;
 export const FOV = 70, VIEW_NM = 1, EXAG = 5;   // a window: 70 degrees across, 1 nm of sight. EXAG stretches height only, so gentle slopes read (1 = true scale, which looks flat).
 // Is the fine (10 m) contour tile for this spot in memory? Then every 10 m line there is real data.
 const fineLoaded = (lat, lon) => { const { bounds: [Wd, , , Nd], tile } = seafloor.idx; return !!seafloor.tiles.get(`${Math.floor((lon - Wd) / tile)}_${Math.floor((Nd - lat) / tile)}`); };
@@ -32,17 +32,22 @@ export function createSynth(parent) {
     g.fillStyle = grad; g.fillRect(0, 0, W, H);
     const kx = NM_PER_DEG * Math.cos((craft.lat * Math.PI) / 180);
     if (seafloor.ready) seafloor.fineFor([{ lat: craft.lat, lon: craft.lon, nm: range + 0.3 }]);   // start loading the real 10 m lines around us
-    // grid of sea floor points in craft-relative space (polar: bearing across the view, distance ahead)
+    // grid of sea floor points on a flat plan in the craft's own frame: rows at distances ahead, columns at fixed sideways offsets.
+    // (A fan of bearings would put every grid line through the eye, and those always draw as straight up-and-down lines.
+    // Lines running ahead on a plan grid meet at the vanishing point on the horizon, as they should.)
+    const fmax = range * M_PER_NM, DL = 16, hc = Math.ceil((fmax * Math.tan((FOV / 2) * Math.PI / 180) * 1.05) / DL), NC = hc * 2;
+    const hr = (craft.heading * Math.PI) / 180, sH = Math.sin(hr), cH = Math.cos(hr);
     const pts = [], rowD = [];
     for (let j = 0; j < ROWS; j++) {
-      const d = range * ((j + 1) / ROWS) ** 1.35, row = []; rowD.push(d);
-      for (let i = 0; i <= COLS; i++) {
-        const a = (-FOV / 2 + (FOV * i) / COLS) * Math.PI / 180, b = (craft.heading * Math.PI) / 180 + a;
-        const lat = craft.lat + (d * Math.cos(b)) / NM_PER_DEG, lon = craft.lon + (d * Math.sin(b)) / kx;
+      const f = fmax * ((j + 1) / ROWS) ** 1.35, row = []; rowD.push(f / M_PER_NM);
+      for (let i = 0; i <= NC; i++) {
+        const u = (i - hc) * DL;
+        if (f < 15 || Math.abs(u) > f * Math.tan((FOV / 2) * Math.PI / 180) * 1.6) { row.push(null); continue; }   // behind the glass or far outside the view
+        const north = f * cH - u * sH, east = f * sH + u * cH;
+        const lat = craft.lat + north / (M_PER_NM * NM_PER_DEG), lon = craft.lon + east / (M_PER_NM * kx);
         const fl = seafloor.ready && seafloor.isCharted(lat, lon) ? seafloor.depthAt(lat, lon) : null;
-        const fwd = d * Math.cos(a) * M_PER_NM;
-        if (fl == null || fl <= 0 || fwd < 15) { row.push(null); continue; }
-        row.push({ x: cx + F * Math.tan(a), y: cy + (F * EXAG * (fl - craft.depth)) / fwd, d, fl, lat, lon });
+        if (fl == null || fl <= 0) { row.push(null); continue; }
+        row.push({ x: cx + (F * u) / f, y: cy + (F * EXAG * (fl - craft.depth)) / f, d: f / M_PER_NM, fl, lat, lon });
       }
       pts.push(row);
     }
@@ -50,12 +55,12 @@ export function createSynth(parent) {
     const hz = new Float32Array(W + 2).fill(Infinity), snap = [];
     // a line from (x1,y1) to (x2,y2), drawn only where it is above the horizon; dashed when asked (dash pattern runs along the visible line)
     const seg = (x1, y1, x2, y2, dash) => {
-      const n = Math.max(1, Math.ceil(Math.max(Math.abs(x2 - x1) / 2, Math.abs(y2 - y1) / 4))), len = Math.hypot(x2 - x1, y2 - y1) / n;
+      const n = Math.max(1, Math.ceil(Math.max(Math.abs(x2 - x1) / 2, Math.abs(y2 - y1) / 4)));   // dashes follow the screen position, so they stay even across short pieces
       let open = false;
       for (let k = 0; k < n; k++) {
         const t0 = k / n, t1 = (k + 1) / n, ax = x1 + (x2 - x1) * t0, ay = y1 + (y2 - y1) * t0, bx = x1 + (x2 - x1) * t1, by = y1 + (y2 - y1) * t1;
         const mx = (ax + bx) / 2, my = (ay + by) / 2, col = Math.round(mx);
-        const vis = col >= 0 && col <= W && my < hz[col] + 0.6 && !(dash && ((k * len) % 13) >= 7);
+        const vis = col >= 0 && col <= W && my < hz[col] + 0.6 && !(dash && ((((mx + my) % 13) + 13) % 13) >= 7);
         if (vis) { if (!open) { g.moveTo(ax, ay); open = true; } g.lineTo(bx, by); } else open = false;
       }
     };
@@ -65,9 +70,9 @@ export function createSynth(parent) {
       snap[j] = hz.slice();                                       // what the nearer ground hides, for markers at this distance
       const fade = 1 - (rowD[j] / range) * 0.65;
       const cells = [];
-      for (let i = 0; i < COLS; i++) {
+      for (let i = 0; i < pts[j].length - 1; i++) {
         const q = [pts[j - 1][i], pts[j - 1][i + 1], pts[j][i + 1], pts[j][i]];   // near-left, near-right, far-right, far-left
-        if (q.some((v) => !v)) continue;
+        if (q.some((v) => !v) || q.every((v) => v.x < -30) || q.every((v) => v.x > W + 30)) continue;   // missing ground, or wholly off screen
         cells.push(q);
         // the faint mesh: the far edge and the left side of each cell
         g.beginPath(); g.strokeStyle = `rgba(150,170,255,${(0.07 + 0.13 * fade).toFixed(2)})`; g.lineWidth = 1;
@@ -94,9 +99,9 @@ export function createSynth(parent) {
       }
     }
     // things in view: points of interest, with a ring showing sampling reach. No names. Hidden ones are not drawn.
-    const ch = (craft.heading * Math.PI) / 180, sinH = Math.sin(ch), cosH = Math.cos(ch);
-    const P = (lat, lon, depth) => { const t = toward(craft, { lat, lon }), fwd = t.dy * cosH + t.dx * sinH, side = t.dx * cosH - t.dy * sinH; const f = fwd * M_PER_NM; if (f < 15) return null; return { x: cx + (F * side * M_PER_NM) / f, y: cy + (F * EXAG * (depth - craft.depth)) / f, nm: t.nm }; };
-    const shown = (q) => { if (!q || q.x < -40 || q.x > W + 40 || q.nm > range * 1.05) return false; let j = rowD.findIndex((d) => d >= q.nm); if (j < 1) j = 1; if (j >= ROWS) j = ROWS - 1; const col = Math.round(q.x); return col < 0 || col > W || q.y < snap[j][col] + 0.6; };
+    const sinH = sH, cosH = cH;
+    const P = (lat, lon, depth) => { const t = toward(craft, { lat, lon }), fwd = t.dy * cosH + t.dx * sinH, side = t.dx * cosH - t.dy * sinH; const f = fwd * M_PER_NM; if (f < 15) return null; return { x: cx + (F * side * M_PER_NM) / f, y: cy + (F * EXAG * (depth - craft.depth)) / f, nm: t.nm, fwd: fwd }; };
+    const shown = (q) => { if (!q || q.x < -40 || q.x > W + 40 || q.nm > range * 1.05) return false; let j = rowD.findIndex((d) => d >= q.fwd); if (j < 1) j = 1; if (j >= ROWS) j = ROWS - 1; const col = Math.round(q.x); return col < 0 || col > W || q.y < snap[j][col] + 0.6; };
     for (const p of sim.s.pois) {
       if (p.type === 'dock') continue; const fl = seafloor.depthAt(p.lat, p.lon); if (fl == null || toward(craft, p).nm > range * 1.1) continue;
       g.strokeStyle = 'rgba(255,225,74,0.9)'; g.lineWidth = 2; g.setLineDash([5, 4]); g.beginPath(); let st = false;
