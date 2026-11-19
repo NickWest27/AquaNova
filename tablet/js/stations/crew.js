@@ -136,10 +136,11 @@ export function mount(body, ctx) {
         unreadCount() > 0 && el('div', { class: 'comm-waiting', text: 'You have messages waiting.' }),
         ...crew.map((c) => el('button', { class: 'comm-line comm-who', onclick: () => {
           cur = c; cat = null;
-          if (c.id === 'executiveOfficer' && pendingDecisions().length) { greeted = true; page = 'decision'; render(); return; }   // ARIA is waiting for an answer
+          const met = !!gameState.getProperty('progress.met.' + c.id);
+          if (c.id === 'executiveOfficer' && pendingDecisions().length) { gameState.updateProperty('progress.met.' + c.id, true); greeted = true; page = 'decision'; render(); return; }   // ARIA is waiting for an answer
+          if (INTRO[c.id] && !met) { gameState.updateProperty('progress.met.' + c.id, true); greeted = true; reply = { said: null, text: fill(INTRO[c.id]) }; page = 'reply'; render(); return; }   // first meeting comes before anything they were holding back
           const held = takeHeld(c.id);   // what they tried to tell the Captain while he was elsewhere
-          if (held.length) { greeted = greeted || c.id === 'executiveOfficer'; reply = { said: null, text: held.map((h) => (/^Captain\b/.test(h) ? h : `Captain, ${h.charAt(0).toLowerCase()}${h.slice(1)}`)).join(' '), held: true }; page = 'reply'; }
-          else if (INTRO[c.id] && !gameState.getProperty('progress.met.' + c.id)) { gameState.updateProperty('progress.met.' + c.id, true); greeted = true; reply = { said: null, text: fill(INTRO[c.id]) }; page = 'reply'; } else page = 'cat';
+          if (held.length) { greeted = true; reply = { said: null, text: held.map((h) => (/^Captain\b/.test(h) ? h : `Captain, ${h.charAt(0).toLowerCase()}${h.slice(1)}`)).join(' '), held: true }; page = 'reply'; } else page = 'cat';
           render();
         } }, el('span', { class: `avatar ${c.id === 'executiveOfficer' ? 'aria' : ''}`, text: initial(c) }), el('span', {}, el('b', { text: c.name }), el('small', { text: c.role })), unreadFor(c.id) > 0 && el('span', { class: 'comm-badge', text: String(unreadFor(c.id)) })))];
     } else if (page === 'cat') {

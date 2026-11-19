@@ -92,7 +92,7 @@ export function mount(body, ctx) {
       const person = (c) => el('div', { class: 'card contact' }, el('h3', { text: fill(c.name) }),
         el('div', { class: 'meta' }, el('span', { text: [c.role, c.company].filter(Boolean).join(' · ') })), el('p', { text: fill(c.bio) || 'No biography on file.' }));
       const me = gameState.getProperty('contacts.crew.captain');
-      const crew = knownCrew();
+      const crew = knownCrew().filter((c) => gameState.getProperty('progress.met.' + c.id));   // only people the Captain has actually met
       const outside = Object.values(gameState.getProperty('contacts.contacts') || {}).filter((c) => c && c.known && c.name);
       return [
         ...(me && me.name ? [el('div', { class: 'lbl', text: 'You' }), person(me)] : []),

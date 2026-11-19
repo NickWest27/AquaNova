@@ -80,6 +80,7 @@ def main():
         check("upper display says Incoming message", "INCOMING MESSAGE" in page.inner_text(".bt-note").upper(), page.inner_text(".bt-note"))
         page.wait_for_timeout(6500)
         check("pin glows while a message is unread", "unread" in page.get_attribute("#pin", "class"))
+        js("g.updateProperty('progress.met.communications', true)")   # already introduced: the held message comes first
         page.evaluate("document.querySelector('#pin').click()"); page.wait_for_timeout(600)
         check("communicator says messages are waiting", "waiting" in page.inner_text("#comm-pop"), page.inner_text("#comm-pop"))
         check("badge on the Comms officer", page.locator(".comm-badge").count() == 1, (page.locator(".comm-badge").count(), js("return Object.values(g.getProperty('contacts.crew')).map(c=>c.id+':'+c.known).join()")))
