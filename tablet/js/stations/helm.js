@@ -20,7 +20,12 @@ export function mount(body) {
   const cruiseBtn = el('button', { class: 'btn chip', text: 'Super cruise', onclick: () => {
     const r = sim.setCruise(!sim.s.cruise);
     tell('helm', r.ok ? (sim.s.cruise ? `Super cruise engaged, Captain. Up to ${SUPER_KT} knots.` : 'Super cruise disengaged.') : r.why === 'docked' ? 'We are docked, Captain.' : r.why === 'power' ? 'No power for super cruise.' : 'Not enough deep water ahead, Captain. Super cruise needs 120 m under us for the next 9 miles.', r.ok ? '' : 'error'); } });
-  presets.append(dockBtn, cruiseBtn);
+  const hugBtn = el('button', { class: 'btn chip', text: 'Hug floor', onclick: () => {
+    if (sim.s.hug) { sim.setHug(false); tell('helm', `Leaving the floor, Captain. Holding ${Math.round(sim.s.depth)} metres.`); return; }
+    const r = sim.setHug(true);
+    tell('helm', r.ok ? 'Hugging the floor, Captain. Ten metres off the bottom.' : r.why === 'docked' ? 'We are docked, Captain.' : 'Not enough water here to follow the floor, Captain.');
+  } });
+  presets.append(dockBtn, cruiseBtn, hugBtn);
   body.append(card('Throttle', spd, thr), el('div', { class: 'helm-col dial-col' }, dial.root, presets), card('Depth', dp, dep));
   requestAnimationFrame(() => { thr.set(sim.s.throttle); dep.set(1 - sim.s.targetDepth / 6000); update(); });
   function update() {
@@ -28,7 +33,7 @@ export function mount(body) {
     spd.innerHTML = `${s.speed.toFixed(1)}<small>kt</small>`; dp.innerHTML = `${Math.round(s.depth)}<small>m</small>`;
     dial.update(s.heading, s.targetHeading);
     body.classList.toggle('docked-st', !!s.docked);
-    dockBtn.classList.toggle('on', !!s.docked); cruiseBtn.classList.toggle('on', !!s.cruise);
+    dockBtn.classList.toggle('on', !!s.docked); cruiseBtn.classList.toggle('on', !!s.cruise); hugBtn.classList.toggle('on', !!s.hug);
     thr.setActual(Math.min(1, s.speed / sim.maxKt())); dep.setActual(1 - s.depth / 6000);
   }
   return { update, destroy() {} };

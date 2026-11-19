@@ -2,7 +2,7 @@
 import { pendingDecisions, decide } from '../aria.js';
 import { fill } from '../player.js';
 import { reply as chatReply } from '../chat.js';
-import { sim, toward, wskrName } from '../sim.js';
+import { sim, toward, wskrName, HUG_ALT, HUG_MIN_FLOOR } from '../sim.js';
 import { GATES_ON } from '../unlocks.js';
 import { research } from '../science.js';
 import { el, toast } from '../util.js';
@@ -42,7 +42,7 @@ const hdgText = (h) => String(Math.round(((h % 360) + 360) % 360)).padStart(3, '
 
 // Orders that do something. Anything not listed here (or in PARAM) is shown in the "not yet" colour.
 // Orders added here show up even in old saves (a save keeps its own copy of the crew's lines).
-const EXTRA = { helm: ['Undock', 'Dock', 'Engage super cruise', 'Disengage super cruise'], sensors: ['Set up a relay', 'Stand down the relay'] };
+const EXTRA = { helm: ['Undock', 'Dock', 'Hug the floor', 'Stop hugging the floor', 'Engage super cruise', 'Disengage super cruise'], sensors: ['Set up a relay', 'Stand down the relay'] };
 const ORDERS = {
   'Undock': () => { if (!docked()) return 'We are already undocked, Captain.'; setTimeout(() => toggleDock(), 600); return 'Undocking. Disconnecting shore power and releasing the clamps.'; },
   'Dock': () => {
@@ -78,6 +78,8 @@ const ORDERS = {
   'Emergency dive': () => { if (docked()) return 'We are docked, Captain.'; return dive(500, 'Diving!'); },
   'Full sensor sweep': () => { sim.s.sonar = true; sim.s.sweepUntil = sim.s.clock + 1800; sim.touch(); const n = sim.s.pois.filter((p) => toward(sim.s, p).nm <= 4).length; return `Active sweep. ${n} contact${n === 1 ? '' : 's'} within four miles, and the chart shows more detail for a minute.`; },
   'Deploy sensor buoys': () => `WSKRs launch from the Sensors station, Captain. ${sim.s.wskrs.length} of 4 are out. Once they are out they spread round us on their own, and you can send one to investigate a contact.`,
+  'Hug the floor': () => { const r = sim.setHug(true); return r.ok ? `Hugging the floor, aye. I will hold ${HUG_ALT} metres off the bottom and follow it.` : r.why === 'docked' ? 'We are docked, Captain.' : 'Not enough water here to hug the floor, Captain. I need at least ' + HUG_MIN_FLOOR + ' metres under us.'; },
+  'Stop hugging the floor': () => { if (!sim.s.hug) return 'We are not following the floor, Captain.'; sim.setHug(false); return `Leaving the floor, aye. Holding ${Math.round(sim.s.depth)} metres.`; },
   'Engage super cruise': () => { const r = sim.setCruise(true); return r.ok ? 'Super cruise engaged. Hold on to something, Captain.' : r.why === 'docked' ? 'We are docked, Captain.' : r.why === 'power' ? 'We have no power for it, Captain.' : 'Not enough deep water ahead, Captain. We need 120 metres under us for the next nine miles.'; },
   'Disengage super cruise': () => { sim.setCruise(false); return 'Super cruise disengaged. Back to normal cruise.'; },
   'Set up a relay': () => {

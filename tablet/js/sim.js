@@ -27,7 +27,7 @@ export const sim = {
     throttle: 0, speed: 0, depth: 0, targetDepth: 0,
     battery: 100, oxygen: 100, hull: 100, co2: 0.04, temp: 4.1, power: 0,
     ballast: 100, comms: true, sonar: true, lights: true, pois: [], wpt: null, route: [], routeSnapped: false, _routeFor: null, at: null,
-    clock: 6 * 3600, docked: false, damage: 0, floor: null, wskrs: [], cruise: false, wskrForm: 'loose', wskrDepth: 'auto', sweepUntil: 0,     // clock = game seconds since Day 1 00:00
+    clock: 6 * 3600, docked: false, damage: 0, floor: null, wskrs: [], cruise: false, hug: false, wskrForm: 'loose', wskrDepth: 'auto', sweepUntil: 0,     // clock = game seconds since Day 1 00:00
   },
   listeners: new Set(),
   dirty: true,
@@ -87,7 +87,25 @@ function superWaterAhead() {
 }
 sim.setThrottle = (v) => { if (sim.s.docked) return; sim.s.throttle = clamp(v, 0, 1); sim.touch(); };
 sim.setHeading = (h) => { sim.s.targetHeading = norm360(h); sim.touch(); };
-sim.setDepth = (d) => { if (sim.s.docked) return; sim.s.targetDepth = clamp(d, 0, 6000); sim.touch(); };
+sim.setDepth = (d) => { if (sim.s.docked) return; sim.s.hug = false; sim.s.targetDepth = clamp(d, 0, 6000); sim.touch(); };   // a depth order ends "hug the floor"
+/** "Hug the floor": the helm keeps the ship HUG_ALT metres above the sea floor, looking ahead along the course so it climbs before a rise. */
+export const HUG_ALT = 10, HUG_MIN_FLOOR = KEEL + HUG_ALT + 2;
+sim.setHug = (on) => {
+  const s = sim.s;
+  if (!on) { if (s.hug) { s.hug = false; s.targetDepth = Math.round(s.depth); sim.touch(); } return { ok: true }; }
+  if (s.docked) return { ok: false, why: 'docked' };
+  if (!seafloor.ready || s.floor == null || s.floor < HUG_MIN_FLOOR) return { ok: false, why: 'shallow' };
+  s.hug = true; sim.touch(); return { ok: true };
+};
+const hugTarget = () => {
+  const s = sim.s, ahead = clamp((s.speed / 3600) * 30, 0.08, 3), r = (s.heading * Math.PI) / 180;
+  let low = seafloor.depthAt(s.lat, s.lon);
+  for (let d = 0.05; d <= ahead + 1e-6; d += 0.05) {
+    const f = seafloor.depthAt(s.lat + (d * Math.cos(r)) / NM_PER_DEG_LAT, s.lon + (d * Math.sin(r)) / (NM_PER_DEG_LAT * Math.cos((s.lat * Math.PI) / 180)));
+    if (f != null && (low == null || f < low)) low = f;
+  }
+  return low == null ? null : Math.max(0, low - HUG_ALT);
+};
 /** Radius (nm) the ship charts in fine detail: sonar on 4, off 0.8 (echo sounder only), active sweep 8. */
 sim.fineNm = (s = sim.s) => (s.clock < (s.sweepUntil || 0) ? 8 : s.sonar ? 4 : 0.8);
 export const WSKR_CHART_NM = 3;
@@ -363,6 +381,11 @@ const stepOnce = (dt) => {
   if (s.wpt) wantKt = Math.min(wantKt, autopilotCap(Math.abs(turn), capDist));
   s.speed += clamp(wantKt - s.speed, -(s.speed > MAX_KT ? 6 : 2) * dt * pace(), (s.cruise ? 3 : 1.2) * dt * pace());
   // depth
+  if (s.hug) {
+    const t = s.docked || !seafloor.ready ? null : hugTarget();
+    if (t == null || (s.floor != null && s.floor < HUG_MIN_FLOOR)) { s.hug = false; sim.emit('hug-off', { why: s.docked ? 'docked' : 'shallow' }); }
+    else s.targetDepth = Math.round(t);
+  }
   const dd = s.targetDepth - s.depth;
   s.depth = clamp(s.depth + clamp(dd, -DIVE_MPS * dt * pace(), DIVE_MPS * dt * pace()), 0, 6000);
   // move, then check the sea floor
