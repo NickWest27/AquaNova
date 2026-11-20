@@ -36,6 +36,7 @@ export function snapshotSim() {
     gameState.updateProperty('navigation.docked', !!s.docked);
     gameState.updateProperty('navigation.wskrs', s.wskrs.map((w) => ({ lat: +w.lat.toFixed(5), lon: +w.lon.toFixed(5), n: w.n, name: w.name, mode: w.mode, target: w.target, bat: +(w.bat == null ? 100 : w.bat).toFixed(1), dead: w.dead || undefined, heading: w.heading == null ? undefined : Math.round(w.heading), pat: w.pat ? { lat: +w.pat.lat.toFixed(5), lon: +w.pat.lon.toFixed(5), k: w.pat.k, t: 0 } : undefined })));
     gameState.updateProperty('navigation.wskrForm', s.wskrForm);
+    gameState.updateProperty('navigation.selContact', s.selContact || null);
     gameState.updateProperty('navigation.wskrDepth', s.wskrDepth);
     gameState.updateProperty('navigation.rov', s.rov ? { lat: +s.rov.lat.toFixed(5), lon: +s.rov.lon.toFixed(5), heading: Math.round(s.rov.heading), depth: Math.round(s.rov.depth) } : null);
     gameState.updateProperty('progress.gameClock', Math.round(s.clock));
@@ -73,6 +74,7 @@ export function restoreSim() {
   seafloor.setChart(nav.charted || '');
   s.wskrs = Array.isArray(nav.wskrs) ? nav.wskrs.map((w) => ({ busy: 0, mode: 'escort', target: null, bat: 100, ...w })) : [];
   s.wskrForm = nav.wskrForm === 'tight' ? 'tight' : 'loose';
+  s.selContact = typeof nav.selContact === 'string' ? nav.selContact : null;
   s.wskrDepth = ['shallow', 'deep'].includes(nav.wskrDepth) ? nav.wskrDepth : 'auto';
   s.rov = nav.rov ? { cmd: { thr: 0, turn: 0, dive: 0 }, job: null, ...nav.rov } : null;
   const clk = gameState.getProperty('progress.gameClock'); if (typeof clk === 'number') s.clock = clk;

@@ -1,6 +1,7 @@
 // Sensors station: sonar, contacts around the ship, scans, and the WSKRs (autonomous remote sensors).
 // A scan files a finding (PED → Findings). Scanning needs the ship at the site, or a WSKR sent to investigate it.
 // WSKRs are launched only here. They hold a ring round the ship, can be sent to a contact, and can be recalled.
+import { contactList, selectContact } from '../contacts.js';
 import { tell } from '../notify.js';
 import { sim, toward, wskrName } from '../sim.js';
 import { el, toast } from '../util.js';
@@ -55,13 +56,16 @@ export function mount(body, ctx) {
     depBtn.disabled = s.docked || s.wskrs.length >= 4; recBtn.disabled = !s.wskrs.length; viewBtn.disabled = false;
     const rows = s.sonar ? s.pois.map((p) => ({ p, ...toward(s, p) })).filter((r) => r.nm <= SONAR_RANGE_NM).sort((a, b) => a.nm - b.nm) : [];
     const idle = s.wskrs.some((w) => w.mode === 'escort');
-    const next = JSON.stringify([s.sonar, sweeping, s.wskrs.map((w) => [w.n, w.mode, w.target]), s.docked, rows.map((r) => [r.p.id, r.nm.toFixed(1), Math.round(r.brg), s.at && s.at.id === r.p.id, scanned(r.p)])]);
+    const tagOf = Object.fromEntries(contactList().map((c) => [c.poi.id, c]));
+    const next = JSON.stringify([s.selContact, s.sonar, sweeping, s.wskrs.map((w) => [w.n, w.mode, w.target]), s.docked, rows.map((r) => [r.p.id, r.nm.toFixed(1), Math.round(r.brg), s.at && s.at.id === r.p.id, scanned(r.p)])]);
     if (next === sig) return;   // redraw only when something visible changed
     sig = next;
     list.replaceChildren(...(rows.length ? rows.map((r) => {
       const here = s.at && s.at.id === r.p.id, done = scanned(r.p), busy = s.wskrs.some((w) => w.target === r.p.id);
-      return el('div', { class: 'card task' },
-        el('div', { class: 'grow' }, el('h3', { text: r.p.name }), el('p', { style: 'color:var(--dim)', text: `${r.nm.toFixed(1)} nm · bearing ${String(Math.round(r.brg)).padStart(3, '0')}° · ${r.p.type.replace(/_/g, ' ')}` })),
+      const ct = tagOf[r.p.id], picked = ct && s.selContact === ct.id;
+      return el('div', { class: 'card task' + (picked ? ' sel' : '') },
+        el('div', { class: 'grow' }, el('h3', { text: ct ? `${ct.tag} ${r.p.name}` : r.p.name }), el('p', { style: 'color:var(--dim)', text: `${r.nm.toFixed(1)} nm · bearing ${String(Math.round(r.brg)).padStart(3, '0')}° · ${r.p.type.replace(/_/g, ' ')}` })),
+        ct && el('button', { class: 'btn chip' + (picked ? ' on' : ''), text: picked ? 'Selected' : 'Select', onclick: () => { selectContact(ct.id); sig = ''; update(); } }),
         done ? el('span', { class: 'ok', text: 'Scanned' }) : busy ? el('span', { style: 'color:var(--amber)', text: 'WSKR investigating' })
           : [here && el('button', { class: 'btn primary', text: 'Scan', onclick: () => scan(r.p) }),
              r.p.type !== 'dock' && (idle ? el('button', { class: 'btn chip', text: 'Send WSKR', onclick: () => { const w = sim.taskWskr(r.p); tell('sensors', `${wskrName(w)} sent to ${r.p.name}`); sig = ''; update(); } }) : !here && el('span', { style: 'color:var(--dim)', text: s.wskrs.length ? 'No free WSKR' : 'Deploy a WSKR or move closer' }))]);

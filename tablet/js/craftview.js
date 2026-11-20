@@ -14,13 +14,14 @@ export function mountCraftView(parent, { getCraft, title, range = 0.5, readouts 
   const prof = el('div', { class: 'cv-prof' }), synth = el('div', { class: 'cv-synth' }), map = el('div', { class: 'cv-map' });
   const row = el('div', { class: 'cv-row' }, prof, synth, map);
   // corner readouts over the synthetic view: bottom left, Aqua Nova; bottom right, the selected target (bearing, range, pointer)
-  const mkBox = (cls) => { const arrow = el('span', { class: 'cv-arrow', text: '▲' }), name = el('b'), line = el('span'); return { box: el('div', { class: 'cv-ro ' + cls }, arrow, el('div', {}, name, line)), arrow, name, line }; };
+  const mkBox = (cls) => { const arrow = el('span', { class: 'cv-arrow', text: '▲' }), name = el('b'), brg = el('span'), rng = el('span'); return { box: el('div', { class: 'cv-ro ' + cls }, arrow, name, brg, rng), arrow, name, brg, rng }; };
   const roL = mkBox('l'), roR = mkBox('r');
   if (readouts) synth.append(roL.box, roR.box);
-  const fillRo = (r, c, label, p) => {
-    if (!p) { r.name.textContent = label; r.line.textContent = 'NO TARGET'; r.arrow.style.visibility = 'hidden'; return; }
+  const fillRo = (r, c, label, p) => {   // stacked: arrow, name, bearing, range
+    r.name.textContent = label;
+    if (!p) { r.brg.textContent = 'NO CONTACT'; r.rng.textContent = ''; r.arrow.style.visibility = 'hidden'; return; }
     const t = toward(c, p), rel = ((t.brg - c.heading) % 360 + 360) % 360;
-    r.name.textContent = label; r.line.textContent = `BRG ${String(Math.round(t.brg) % 360).padStart(3, '0')}°  RNG ${t.nm < 10 ? t.nm.toFixed(2) : t.nm.toFixed(1)} nm`;
+    r.brg.textContent = `BRG ${String(Math.round(t.brg) % 360).padStart(3, '0')}°`; r.rng.textContent = `RNG ${t.nm < 10 ? t.nm.toFixed(2) : t.nm.toFixed(1)} nm`;
     r.arrow.style.visibility = 'visible'; r.arrow.style.transform = `rotate(${rel}deg)`;
   };
   const rangeLbl = el('span', { class: 'cv-range' });

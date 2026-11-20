@@ -136,7 +136,7 @@ sim.cancelCourse = () => { sim.s.wpt = null; sim.touch(); };   // course only: s
 /** WSKRs: autonomous remote sensors. They hold a ring formation round the ship (better readings, stereoscopic data),
  *  can be sent to investigate a site, and can be recalled. Launched only from the Sensors station. Up to 4.
  *  Each: { n, lat, lon, mode: 'escort' | 'task' | 'recall', target: poi id | null, busy: game seconds spent investigating } */
-const WSKR_KT = 10, WSKR_RING_NM = 1.5, WSKR_INVESTIGATE_S = 90;
+const WSKR_KT = 16, WSKR_BOOST = 1.25, WSKR_RING_NM = 1.5, WSKR_INVESTIGATE_S = 90;
 export const WSKR_LINK_NM = 10, SEARCH_LEG_NM = 0.45, SEARCH_LEGS = 14, WSKR_TURN_DPS = 30;
 /** Orders: escort (hold formation), manual (touch control, link range 3 nm from the ship or a relay), search (expanding square),
  *  relay (follows the ship just below the surface and carries comms and a GPS fix when Aqua Nova is deep), task, recall.
@@ -145,7 +145,10 @@ export const WSKR_LINK_NM = 10, SEARCH_LEG_NM = 0.45, SEARCH_LEGS = 14, WSKR_TUR
  *  Formation is one fleet setting, set by how much each WSKR's scan ring overlaps Aqua Nova's: loose 5%, tight 50%; the WSKRs space themselves evenly round the ship.
  *  Battery: 6 hours at normal draw (`WSKR_BATTERY_H`; research can change it later). */
 /** Battery draw factor for a WSKR right now (1 = normal). */
-export const wskrDraw = (w) => (w.mode === 'relay' ? 0.6 : w.mode === 'manual' ? 0.7 + 0.6 * (w.thr || 0) : w.moving ? 1 : 0.8) * (w.moving && w.super ? 2.2 : 1);
+export const wskrDraw = (w) => {
+  const base = (WSKR_PERKS[w.n] && WSKR_PERKS[w.n].kt) || WSKR_KT, fast = w.moving && !w.super && w.mode !== 'manual' && w.kt ? (w.kt / base) ** 2 : 1;   // draw rises with the square of speed: 20 kt on a 16 kt craft draws 1.56
+  return (w.mode === 'relay' ? 0.6 : w.mode === 'manual' ? 0.7 + 0.6 * (w.thr || 0) : w.moving ? 1 : 0.8) * (w.moving && w.super ? 2.2 : 1) * fast;
+};
 /** Game minutes of battery left at the current draw (to 0%), and to the 15% auto-recall. */
 export const wskrMinutes = (w) => { const per = (100 / (WSKR_BATTERY_H * 3600)) * wskrDraw(w); const b = w.bat == null ? 100 : w.bat; return { empty: Math.max(0, b / per / 60), recall: Math.max(0, (b - WSKR_LOW_PCT) / per / 60) }; };
 export const WSKR_BATTERY_H = 6, WSKR_LOW_PCT = 15, WSKR_STAGGER_M = 10, WSKR_RELAY_DEPTH = 4;
@@ -173,11 +176,12 @@ export const WSKR_PERKS = {
   1: { text: 'Scout charts the sea floor further out (+0.6 nm).', chart: 0.6 },
   2: { text: 'Lantern holds the lead, ahead of the ship.', lead: true },
   3: { text: 'Drifter swings wide, drifting in and out of the loose formation.', drift: true },
-  4: { text: 'Sprat is quicker (12 kt) and finishes a site in 70 s.', kt: 12, investigate: 70 },
+  4: { text: 'Sprat is quicker (19 kt) and finishes a site in 70 s.', kt: 19, investigate: 70 },
 };
 /** A WSKR as a craft for the craft page: position, heading, depth (about 12 m above the floor, at most 40 m) and speed. */
 /** Depth of a WSKR: relays sit just under the surface; the rest are staggered through their band. */
 export function wskrDepthFor(w) {
+  if (w.surfaced) return 1;   // up at the surface, trying to get comms back
   const st = sim.s, fl = seafloor.ready ? seafloor.depthAt(w.lat, w.lon) : null; if (fl == null) return 10;
   const bot = Math.max(2, fl - 3);
   if (w.mode === 'relay') return Math.min(WSKR_RELAY_DEPTH, bot);
@@ -187,7 +191,7 @@ export function wskrDepthFor(w) {
   else if (st.wskrDepth === 'deep') lo = Math.min(bot, Math.max(2, st.depth - WSKR_STAGGER_M));
   return Math.max(2, Math.min(bot, Math.round(lo + ((hi - lo) * (i + 0.5)) / N)));
 }
-export const wskrCraft = (w) => ({ lat: w.lat, lon: w.lon, heading: w.heading == null ? sim.s.heading : w.heading, depth: wskrDepthFor(w), kt: w.moving ? (w.super ? WSKR_SUPER_KT * ((wskrPerk(w).kt || WSKR_KT) / WSKR_KT) : w.chase || wskrPerk(w).kt || WSKR_KT) : 0 });
+export const wskrCraft = (w) => ({ lat: w.lat, lon: w.lon, heading: w.heading == null ? sim.s.heading : w.heading, depth: wskrDepthFor(w), kt: w.moving ? (w.super ? WSKR_SUPER_KT * ((wskrPerk(w).kt || WSKR_KT) / WSKR_KT) : w.kt || wskrPerk(w).kt || WSKR_KT) : 0 });
 sim.recallWskr = (n) => { const w = sim.s.wskrs.find((q) => q.n === n); if (!w) return false; w.mode = 'recall'; w.target = null; w.route = null; sim.touch(); return true; };
 /** Give an order to one WSKR. order: 'escort' | 'manual' | 'search' | 'relay'. Returns false if there is no such WSKR. */
 sim.orderWskr = (n, order) => {
@@ -202,7 +206,9 @@ sim.setWskrForm = (f) => { if (f !== 'loose' && f !== 'tight') return false; sim
 /** Manual helm: turn -1/0/1 (held), thr 0..1 (share of top speed). */
 sim.wskrHelm = (n, { turn, thr } = {}) => { const w = sim.s.wskrs.find((q) => q.n === n); if (!w || w.mode !== 'manual') return false; if (turn != null) w.turn = turn; if (thr != null) w.thr = Math.max(0, Math.min(1, thr)); return true; };
 /** Control link: distance to the nearest of the ship and any relay WSKR (not itself). */
-sim.wskrLink = (w, at = w) => { const s = sim.s; let nm = toward(s, at).nm; for (const r of s.wskrs) if (r !== w && r.mode === 'relay' && !r.dead) nm = Math.min(nm, toward(r, at).nm); return { nm, max: WSKR_LINK_NM, ok: nm <= WSKR_LINK_NM }; };
+/** Control link to a WSKR. `raw` = within range of the ship or a relay. A WSKR that has surfaced after losing the link for WSKR_LOST_MIN game minutes talks over the surface link, so `ok` holds until it is back in range. */
+export const WSKR_LOST_MIN = 10;
+sim.wskrLink = (w, at = w) => { const s = sim.s; let nm = toward(s, at).nm; for (const r of s.wskrs) if (r !== w && r.mode === 'relay' && !r.dead) nm = Math.min(nm, toward(r, at).nm); const raw = nm <= WSKR_LINK_NM; return { nm, max: WSKR_LINK_NM, raw, ok: raw || !!w.surfaced, surfaced: !!w.surfaced }; };
 /** A relay WSKR following within link range lets the ship use its antennas as if it were at the surface (comms) and gives a GPS fix. */
 sim.relayUp = () => { const s = sim.s; return s.depth <= 2000 && s.wskrs.some((w) => w.mode === 'relay' && !w.dead && toward(s, w).nm <= WSKR_LINK_NM); };
 sim.hasGps = () => sim.s.depth <= 15 || sim.relayUp();
@@ -260,6 +266,12 @@ function stepWskrs(dt) {
       if (w.bat <= 0) { w.dead = true; w.mode = 'recall'; w.route = null; sim.emit('wskr-dead', w); return true; }
       if (w.bat <= WSKR_LOW_PCT && w.mode !== 'recall') { w.mode = 'recall'; w.target = null; w.route = null; w.thr = 0; sim.emit('wskr-low', w); }
     }
+    { // control link: 10 game minutes out of range and the WSKR surfaces to get comms back; back in range, it dives again
+      const lk = sim.wskrLink(w);
+      if (lk.raw) { w.lostAt = null; if (w.surfaced) { w.surfaced = false; sim.emit('wskr-link-back', w); } }
+      else if (w.lostAt == null) { w.lostAt = s.clock; sim.emit('wskr-link-lost', w); }
+      else if (!w.surfaced && s.clock - w.lostAt >= WSKR_LOST_MIN * 60) { w.surfaced = true; sim.emit('wskr-surfaced', w); }
+    }
     if (w.mode === 'manual') {
       w.super = !!w.cruise; const kt = (w.cruise ? WSKR_SUPER_KT * kf : (perk.kt || WSKR_KT)) * (w.thr || 0), nm = (kt * dt * TIMESCALE) / 3600;
       w.heading = (((w.heading == null ? s.heading : w.heading) + (w.turn || 0) * WSKR_TURN_DPS * dt * pace()) % 360 + 360) % 360;
@@ -280,11 +292,16 @@ function stepWskrs(dt) {
     else if (w.mode === 'task') { goal = s.pois.find((p) => p.id === w.target); if (!goal) { w.mode = 'escort'; return true; } }
     else goal = s;
     w.super = !!s.cruise || toward(w, goal).nm > WSKR_FAR_NM;      // far to go, or the ship is in super cruise: super cruise too
+    w.kt = perk.kt || WSKR_KT;
     if (w.super) step = (WSKR_SUPER_KT * kf * dt * TIMESCALE) / 3600;
-    else if ((w.mode === 'escort' || w.mode === 'relay' || w.mode === 'recall') && s.speed > (perk.kt || WSKR_KT) - 4 && toward(w, goal).nm > 0.3) {
-      // chasing a ship that is as fast as the WSKR: run faster than the ship until back in station
-      const kt = Math.min(WSKR_SUPER_KT * kf, s.speed + 6); step = (kt * dt * TIMESCALE) / 3600; w.chase = kt;
-    } else w.chase = 0;
+    else {
+      // Base speed 16 kt (Sprat 19). A recall boosts it to 1.25 times (20 kt). Escorts and relays that fall behind a fast ship boost too, up to ship speed + 4.
+      const boost = w.kt * WSKR_BOOST, far = toward(w, goal).nm > 0.3;
+      if (w.mode === 'recall') w.kt = boost;
+      else if ((w.mode === 'escort' || w.mode === 'relay') && far && s.speed > w.kt - 3) w.kt = Math.min(boost, Math.max(w.kt, s.speed + 4));
+      step = (w.kt * dt * TIMESCALE) / 3600;
+    }
+    w.chase = w.kt > (perk.kt || WSKR_KT) ? w.kt : 0;
     // Route round land. Replanned when the goal has moved on (escorts and recalls follow the ship) or after a failed attempt.
     if (!w.route || (w.routeGoal && toward(w.routeGoal, goal).nm > 0.6) || (w.routeRetry != null && s.clock >= w.routeRetry)) {
       const r = seafloor.ready ? planRoute(w, goal, wskrPassable) : [];

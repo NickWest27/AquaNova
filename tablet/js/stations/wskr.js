@@ -2,7 +2,8 @@
 // (depth stagger, formation), and, once one is selected, its controls (orders, manual helm) and its craft view.
 // Orders: hold formation, manual control (touch), search pattern, relay (follows the ship under the surface, carries comms and GPS), recall.
 import { tell } from '../notify.js';
-import { sim, wskrMinutes, wskrName, wskrPerk, wskrCraft, wskrDepthFor, WSKR_PERKS, WSKR_DEPTHS, WSKR_LINK_NM, WSKR_LOW_PCT, toward } from '../sim.js';
+import { sim, wskrMinutes, wskrName, wskrPerk, wskrCraft, wskrDepthFor, WSKR_PERKS, WSKR_DEPTHS, WSKR_LINK_NM, WSKR_LOST_MIN, WSKR_LOW_PCT, toward } from '../sim.js';
+import { selectedContact } from '../contacts.js';
 import { mountCraftView } from '../craftview.js';
 import { GATES_ON } from '../unlocks.js';
 import { research } from '../science.js';
@@ -18,7 +19,7 @@ export function mountWskrPanel(body) {
   let sel = null, sig = '', rowSig = '';
   const cur = () => sim.s.wskrs.find((q) => q.n === sel);
   const head = el('div', { class: 'card' }), fleet = el('div', { class: 'card' }), list = el('div', { class: 'wst' }), orders = el('div', { class: 'card wo' }), helm = el('div', { class: 'card wo-helm' }), stat = el('div', { class: 'wo-stat', style: 'color:var(--dim);margin:0.3rem 0' }), viewBox = el('div', { class: 'card cv' });
-  const cv = mountCraftView(viewBox, { title: () => { const w = cur(); return w ? wskrName(w) : 'WSKR'; }, range: 2, readouts: () => { const w = cur(); const poi = w && w.target != null ? sim.s.pois.find((p) => p.id === w.target) : null; return { ship: sim.s, target: poi }; }, getCraft: () => { const w = cur(); return w ? wskrCraft(w) : null; } });
+  const cv = mountCraftView(viewBox, { title: () => { const w = cur(); return w ? wskrName(w) : 'WSKR'; }, range: 2, readouts: () => { const c = selectedContact(); return { ship: sim.s, target: c && { name: c.label, lat: c.lat, lon: c.lon } }; }, getCraft: () => { const w = cur(); return w ? wskrCraft(w) : null; } });
   body.append(head, fleet, list, orders, helm, viewBox);
   const say = (t) => tell('sensors', t);
   const act = (text, on, fn, disabled) => el('button', { class: 'btn chip' + (on ? ' on' : ''), text, disabled: !!disabled, onclick: () => { fn(); sig = ''; update(); } });
@@ -30,7 +31,7 @@ export function mountWskrPanel(body) {
   };
   const rowText = (w) => {
     const s = sim.s, l = sim.wskrLink(w), bat = Math.round(w.bat == null ? 100 : w.bat), poi = w.target != null ? s.pois.find((p) => p.id === w.target) : null;
-    return { order: w.dead ? 'ADRIFT: no power' : w.mode === 'task' ? `Investigating ${poi ? poi.name : 'a contact'}` : SAY[w.mode] || w.mode, depth: `${wskrDepthFor(w)} m`, bat: `${bat}%`, low: bat <= WSKR_LOW_PCT, range: (() => { const t = toward(s, w); return `BRG ${String(Math.round(t.brg) % 360).padStart(3, '0')}° · ${t.nm.toFixed(1)} nm`; })(), link: l.ok ? 'Link up' : `Out of link range (${l.nm.toFixed(1)} of ${l.max} nm)`, mins: wskrMinutes(w) };
+    return { order: w.dead ? 'ADRIFT: no power' : w.mode === 'task' ? `Investigating ${poi ? poi.name : 'a contact'}` : SAY[w.mode] || w.mode, depth: `${wskrDepthFor(w)} m`, bat: `${bat}%`, low: bat <= WSKR_LOW_PCT, range: (() => { const t = toward(s, w); return `BRG ${String(Math.round(t.brg) % 360).padStart(3, '0')}° · ${t.nm.toFixed(1)} nm`; })(), link: l.raw ? 'Link up' : l.surfaced ? `Surfaced: surface link (${l.nm.toFixed(1)} nm out)` : w.lostAt != null ? `Out of link range (${l.nm.toFixed(1)} of ${l.max} nm). Surfaces in ${Math.max(1, Math.ceil((WSKR_LOST_MIN * 60 - (s.clock - w.lostAt)) / 60))} min` : `Out of link range (${l.nm.toFixed(1)} of ${l.max} nm)`, mins: wskrMinutes(w) };
   };
   function update() {
     const s = sim.s; if (!s.wskrs.some((w) => w.n === sel)) sel = s.wskrs.length ? s.wskrs[0].n : null;
@@ -58,7 +59,7 @@ export function mountWskrPanel(body) {
             act('Search pattern', w.mode === 'search', () => { sim.orderWskr(w.n, 'search'); say(`${wskrName(w)} starting a search pattern`); }, !ok || w.dead),
             act('Relay', w.mode === 'relay', () => { sim.orderWskr(w.n, 'relay'); say(`${wskrName(w)} going up as a relay`); }, !ok || w.dead),
             act('Recall', w.mode === 'recall', () => { sim.recallWskr(w.n); say(`${wskrName(w)} recalled`); }, w.dead)));
-        helm.replaceChildren(...(w.mode === 'manual' ? [el('div', { style: 'color:var(--dim);margin-bottom:0.4rem', text: `Hold a button to turn. Super cruise is 12 times faster. The link reaches ${WSKR_LINK_NM} nm from the ship or from a relay WSKR.` }),
+        helm.replaceChildren(...(w.mode === 'manual' ? [el('div', { style: 'color:var(--dim);margin-bottom:0.4rem', text: `Hold a button to turn. Super cruise is 120 kt. The link reaches ${WSKR_LINK_NM} nm from the ship or from a relay WSKR.` }),
           el('div', { class: 'row' }, hold('Turn left', (d) => sim.wskrHelm(w.n, { turn: d ? -1 : 0 })), hold('Turn right', (d) => sim.wskrHelm(w.n, { turn: d ? 1 : 0 })),
             el('button', { class: 'btn chip', text: 'Slower', onclick: () => sim.wskrHelm(w.n, { thr: (cur().thr || 0) - 0.25 }) }), el('button', { class: 'btn chip', text: 'Faster', onclick: () => sim.wskrHelm(w.n, { thr: (cur().thr || 0) + 0.25 }) }),
             el('button', { class: 'btn chip', text: 'Stop', onclick: () => sim.wskrHelm(w.n, { thr: 0 }) }),
@@ -75,7 +76,7 @@ export function mountWskrPanel(body) {
     if (w) {
       const l = sim.wskrLink(w);
       stat.textContent = w.mode === 'manual' ? `Heading ${String(Math.round(w.heading ?? 0)).padStart(3, '0')}°, speed ${Math.round((w.thr || 0) * 100)}%. Link ${l.nm.toFixed(1)} of ${l.max} nm.${w.limited ? ' At the link limit: bring a relay out or turn back.' : ''}${w.blockedNow ? ' Shallows ahead.' : ''}` : w.mode === 'relay' ? (sim.relayUp() ? 'Relay up: comms and GPS work at any depth.' : 'Moving up to the surface to follow the ship.') : '';
-      if (w && !l.ok && w.mode !== 'manual') stat.textContent = `Beyond the ${l.max} nm control link (${l.nm.toFixed(1)} nm out). It keeps to its order, but you cannot steer it by hand until it is back in range or a relay WSKR is out.`;
+      if (w && !l.raw && w.mode !== 'manual') stat.textContent = `Beyond the ${l.max} nm control link (${l.nm.toFixed(1)} nm out). It keeps to its order. ` + (l.surfaced ? 'It has surfaced and is talking over the surface link.' : `After ${WSKR_LOST_MIN} minutes without a link it surfaces to get comms back.`);
       if (w) { const m = wskrMinutes(w); stat.textContent += ` Battery: ${hm(m.empty)} left; it comes home on its own in about ${hm(m.recall)}.`; }
     }
     viewBox.hidden = !w;

@@ -319,6 +319,9 @@ async function boot() {
       else if (type === 'avoid-on') say('helm', `Captain, the sea floor is rising ahead. We would hit it within a minute at ${data.ordered} metres. I am holding ${data.hold} metres, ten off the bottom, and will go back to ${data.ordered} when it falls away.`, 'error', { notice: 'COLLISION AVOIDANCE', hold: false });
       else if (type === 'avoid-off') say('helm', `The floor has dropped away, Captain. Continuing to ${data.ordered} metres.`, '', { hold: false });
       else if (type === 'cruise-off') say('helm', data.why === 'shallow' ? 'Shallow water ahead, Captain. Dropping out of super cruise.' : data.why === 'docked' ? 'Super cruise disengaged.' : 'Power is gone. Super cruise is off.', 'mission');
+      else if (type === 'wskr-link-lost') say('sensors', `${wskrName(data)} has gone out of link range, Captain. If we do not regain contact in ten minutes it will surface to call us.`);
+      else if (type === 'wskr-surfaced') say('sensors', `${wskrName(data)} has surfaced and is calling in over the surface link, Captain. It will dive again when it is back in range.`, 'mission');
+      else if (type === 'wskr-link-back') say('sensors', `${wskrName(data)} is back in link range, Captain.`);
       else if (type === 'wskr-low') say('sensors', `${wskrName(data)} is down to its last charge, Captain. Recalling it.`, 'mission');
       else if (type === 'wskr-dead') say('sensors', `${wskrName(data)} has lost power and is adrift, Captain. Bring the ship alongside to recover it.`, 'mission');
       else if (type === 'wskr-search-done') say('sensors', `${wskrName(data)} has finished its search pattern and is rejoining the formation.`);
