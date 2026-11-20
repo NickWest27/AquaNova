@@ -13,9 +13,10 @@ const ICON = {
   findings: '<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/></svg>',
   tasks: '<svg viewBox="0 0 24 24"><path d="M5 12l4 4 10-10"/></svg>',
   journal: '<svg viewBox="0 0 24 24"><path d="M5 3h12a2 2 0 012 2v16H7a2 2 0 01-2-2z"/><path d="M9 8h6M9 12h6"/></svg>',
+  nav: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 6l3 8-3-2-3 2z"/></svg>',
   settings: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg>',
 };
-const TABS = ['status', 'missions', 'findings', 'tasks', 'journal', 'settings'];
+const TABS = ['status', 'nav', 'missions', 'findings', 'tasks', 'journal', 'settings'];
 
 function load() { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { return {}; } }
 let store = Object.assign({ id: null, name: '', journals: [], tasks: [], status: null, syncedAt: null }, load());
@@ -90,8 +91,82 @@ function projection(away, nowMs) {
 }
 const hm = (h) => (h < 1 ? `${Math.round(h * 60)} min` : `${Math.floor(h)} h ${String(Math.round((h % 1) * 60)).padStart(2, '0')} min`);
 
+
+// ---------- Nav: a plan view of the last position the iPad reported ----------
+const LAYERS = [   // the whole chart (coarse), then the detailed waters round Woods Hole drawn over it. Equirectangular.
+  { file: 'navmap.png', W: -74.63, N: 42.4, cell: 0.02, nx: 3732, ny: 621, img: null },
+  { file: 'navmap_fine.png', W: -74.63, N: 42.4, cell: 0.005, nx: 1127, ny: 1081, img: null },
+];
+const ZOOMS = [4, 10, 25, 60, 150, 400];                          // nm from the top of the screen to the bottom
+const nav = { z: 2, c: null };                                    // zoom index; centre [lat, lon] or null = on the ship
+function layerImage(L) { if (!L.img) { L.img = new Image(); L.img.src = new URL(L.file, location.href).href; L.img.onload = () => { if (tab === 'nav') paint(); }; } return L.img; }
+function drawNav(cv, s) {
+  const dpr = Math.min(2, window.devicePixelRatio || 1), w = cv.clientWidth || 360, h = cv.clientHeight || 420;
+  if (cv.width !== w * dpr) { cv.width = w * dpr; cv.height = h * dpr; }
+  const g = cv.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, w, h);
+  const away = s.away ? projection(s.away, Date.now()) : null, ship = away ? away.pos : [s.lat, s.lon];
+  const [clat, clon] = nav.c || ship, pxNm = h / ZOOMS[nav.z], kx = Math.cos(clat * Math.PI / 180);
+  const X = (lon) => w / 2 + (lon - clon) * 60 * kx * pxNm, Y = (lat) => h / 2 - (lat - clat) * 60 * pxNm;
+  g.fillStyle = '#04101c'; g.fillRect(0, 0, w, h);
+  const lonL = clon - w / 2 / (60 * kx * pxNm), lonR = clon + w / 2 / (60 * kx * pxNm), latT = clat + h / 2 / (60 * pxNm), latB = clat - h / 2 / (60 * pxNm);
+  LAYERS.forEach((L, li) => {
+    if (li && ZOOMS[nav.z] > 60) return;   // zoomed far out the coarse chart is enough
+    const img = layerImage(L); if (!(img.complete && img.naturalWidth)) return;
+    const sx = (lonL - L.W) / L.cell, sw = (lonR - lonL) / L.cell, sy = (L.N - latT) / L.cell, sh = (latT - latB) / L.cell;
+    const x0 = Math.max(0, sx), y0 = Math.max(0, sy), x1 = Math.min(L.nx, sx + sw), y1 = Math.min(L.ny, sy + sh);   // only the part that overlaps the chart
+    if (x1 > x0 && y1 > y0) g.drawImage(img, x0, y0, x1 - x0, y1 - y0, ((x0 - sx) / sw) * w, ((y0 - sy) / sh) * h, ((x1 - x0) / sw) * w, ((y1 - y0) / sh) * h);
+  });
+  g.font = '11px system-ui'; g.textBaseline = 'middle';
+  // range rings round the ship
+  g.strokeStyle = 'rgba(100,255,218,.25)'; g.fillStyle = 'rgba(160,255,230,.7)'; g.lineWidth = 1;
+  const rings = [ZOOMS[nav.z] / 8, ZOOMS[nav.z] / 4].map((v) => (v < 1 ? v : Math.round(v)));
+  for (const r of rings) { g.beginPath(); g.arc(X(ship[1]), Y(ship[0]), r * pxNm, 0, 6.2832); g.stroke(); g.fillText(`${r} nm`, X(ship[1]) + 4, Y(ship[0]) - r * pxNm - 6); }
+  // places
+  for (const p of s.pois || []) {
+    const x = X(p.lon), y = Y(p.lat); if (x < -20 || x > w + 20 || y < -20 || y > h + 20) continue;
+    g.fillStyle = p.t === 'dock' ? '#64b5ff' : '#ffe14a'; g.beginPath(); g.moveTo(x, y - 6); g.lineTo(x + 5, y + 4); g.lineTo(x - 5, y + 4); g.closePath(); g.fill();
+    if (nav.z <= 3) { g.fillStyle = 'rgba(255,255,255,.85)'; g.fillText(p.n, x + 8, y); }
+  }
+  // the crew's path while the iPad is asleep, then the destination
+  if (s.away && s.away.plan && s.away.plan.pts) { g.strokeStyle = 'rgba(255,225,74,.8)'; g.setLineDash([5, 4]); g.beginPath(); s.away.plan.pts.forEach((q, i) => (i ? g.lineTo(X(q[1]), Y(q[0])) : g.moveTo(X(q[1]), Y(q[0])))); g.stroke(); g.setLineDash([]); }
+  if (s.wpt) {
+    g.strokeStyle = 'rgba(100,255,218,.6)'; g.setLineDash([4, 4]); g.beginPath(); g.moveTo(X(ship[1]), Y(ship[0])); g.lineTo(X(s.wpt.lon), Y(s.wpt.lat)); g.stroke(); g.setLineDash([]);
+    g.strokeStyle = '#64ffda'; g.lineWidth = 2; g.beginPath(); g.arc(X(s.wpt.lon), Y(s.wpt.lat), 6, 0, 6.2832); g.stroke(); g.lineWidth = 1;
+    g.fillStyle = '#64ffda'; g.fillText(s.wpt.name, X(s.wpt.lon) + 9, Y(s.wpt.lat));
+  }
+  for (const c of s.craft || []) { const x = X(c.lon), y = Y(c.lat); g.fillStyle = '#ff9bd0'; g.beginPath(); g.arc(x, y, 4, 0, 6.2832); g.fill(); g.fillStyle = '#ffd0e8'; g.fillText(c.k, x + 7, y); }
+  // the ship: a heading arrow, and a one-hour vector at the current speed
+  const hd = (s.heading || 0) * Math.PI / 180, sx = X(ship[1]), sy = Y(ship[0]);
+  if (!away && s.speed > 0) { g.strokeStyle = 'rgba(255,255,255,.55)'; g.setLineDash([3, 4]); g.beginPath(); g.moveTo(sx, sy); g.lineTo(sx + Math.sin(hd) * s.speed * pxNm, sy - Math.cos(hd) * s.speed * pxNm); g.stroke(); g.setLineDash([]); }
+  g.save(); g.translate(sx, sy); g.rotate(away && away.state ? 0 : hd); g.fillStyle = '#3ddc84'; g.strokeStyle = '#04101c'; g.lineWidth = 1.5;
+  g.beginPath(); g.moveTo(0, -11); g.lineTo(7, 8); g.lineTo(0, 4); g.lineTo(-7, 8); g.closePath(); g.fill(); g.stroke(); g.restore();
+  // north and scale
+  g.fillStyle = 'rgba(160,255,230,.8)'; g.textAlign = 'right'; g.fillText('N ↑', w - 8, 12); g.textAlign = 'left';
+  const bar = ZOOMS[nav.z] / 6, nice = bar >= 10 ? Math.round(bar / 5) * 5 : bar >= 2 ? Math.round(bar) : +bar.toFixed(1);
+  g.fillText(`${nice} nm`, 14, h - 14); g.strokeStyle = 'rgba(160,255,230,.8)'; g.beginPath(); g.moveTo(8, h - 24); g.lineTo(8 + nice * pxNm, h - 24); g.stroke();
+  g.fillStyle = 'rgba(255,255,255,.6)'; g.fillText(away ? 'estimated position' : 'last reported', 8, 12);
+}
+
 // ---------- views ----------
 const views = {
+  nav() {
+    const s = store.status;
+    if (!s) return [el('div', { class: 'empty', text: getConfig() ? 'No ship data yet. Open the game on the iPad.' : 'Connect in Settings to see your ship.' })];
+    const cv = el('canvas', { class: 'navmap', style: 'width:100%;height:58vh;border-radius:.6rem;touch-action:none;background:#04101c' });
+    requestAnimationFrame(() => drawNav(cv, s));
+    let drag = null;
+    cv.addEventListener('pointerdown', (e) => { drag = { x: e.clientX, y: e.clientY, c: nav.c || (s.away ? (projection(s.away, Date.now()) || { pos: [s.lat, s.lon] }).pos : [s.lat, s.lon]) }; cv.setPointerCapture(e.pointerId); });
+    cv.addEventListener('pointermove', (e) => {
+      if (!drag) return; const h = cv.clientHeight, pxNm = h / ZOOMS[nav.z], kx = Math.cos(drag.c[0] * Math.PI / 180);
+      nav.c = [drag.c[0] + (e.clientY - drag.y) / (60 * pxNm), drag.c[1] - (e.clientX - drag.x) / (60 * kx * pxNm)]; drawNav(cv, s);
+    });
+    ['pointerup', 'pointercancel'].forEach((n) => cv.addEventListener(n, () => { drag = null; }));
+    const zoom = (d) => { nav.z = Math.max(0, Math.min(ZOOMS.length - 1, nav.z + d)); drawNav(cv, s); };
+    const stale = (Date.now() - new Date(s.t)) > 5 * 60000;
+    return [cv,
+      el('div', { class: 'row', style: 'display:flex;gap:.5rem' }, el('button', { class: 'btn', text: 'Zoom in', onclick: () => zoom(-1) }), el('button', { class: 'btn', text: 'Zoom out', onclick: () => zoom(1) }), el('button', { class: 'btn', text: 'Centre on ship', onclick: () => { nav.c = null; drawNav(cv, s); } })),
+      el('p', { class: `note ${stale ? 'warn' : ''}`, text: `${s.location} · heading ${String(s.heading).padStart(3, '0')}° · ${s.speed} kt · ${s.depth} m${s.destination ? ' · to ' + s.destination : ''}. ${s.away ? 'iPad asleep: the ship is placed by the crew plan.' : stale ? `iPad last reported ${ago(s.t)}.` : `Live from the iPad, ${ago(s.t)}.`}` })];
+  },
   status() {
     const s = store.status;
     if (!s) return [el('div', { class: 'empty', text: getConfig() ? 'No ship data yet. Open the game on the iPad.' : 'Connect in Settings to see your ship.' })];

@@ -19,6 +19,13 @@ export function buildStatus() {
     depth: Math.round(s.depth), heading: Math.round(s.heading), speed: +s.speed.toFixed(1),
     battery: Math.round(s.battery), oxygen: Math.round(s.oxygen), hull: Math.round(s.hull),
     destination: s.wpt ? s.wpt.name : null,
+    wpt: s.wpt ? { name: s.wpt.name || 'Destination', lat: +s.wpt.lat.toFixed(4), lon: +s.wpt.lon.toFixed(4) } : null,   // for the phone's Nav map
+    pois: (s.pois || []).map((p) => ({ n: p.name, t: p.type, lat: +p.lat.toFixed(4), lon: +p.lon.toFixed(4) })),
+    craft: [
+      ...(s.rov ? [{ k: 'Remora', lat: +s.rov.lat.toFixed(4), lon: +s.rov.lon.toFixed(4) }] : []),
+      ...(s.shuttle && s.shuttle.state === 'out' ? [{ k: 'Tern', lat: +s.shuttle.lat.toFixed(4), lon: +s.shuttle.lon.toFixed(4) }] : []),
+      ...(s.wskrs || []).filter((w) => !w.dead).map((w) => ({ k: 'W' + w.n, lat: +w.lat.toFixed(4), lon: +w.lon.toFixed(4) })),
+    ],
     objectives: (gameState.getProperty('mission.objectives') || []).map((o) => ({ text: o.description, done: o.status === 'completed' })),
     discoveries: gameState.getProperty('mission.discoveries') || [],
     away: sim.away ? { t: new Date(sim.away.real || Date.now()).toISOString(), maxH: sim.away.maxH, armClock: sim.away.armClock, clock: sim.away.clock, from: sim.away.from, plan: sim.away.plan, stop: sim.away.stop ? sim.away.stop.kind : null, nm: +sim.away.nm.toFixed(1) } : null,   // "crew has the con": the phone works out where the ship should be from this
