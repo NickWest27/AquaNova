@@ -22,6 +22,7 @@ export const SUPER_KT = 100, SUPER_MIN_FLOOR = 120, SUPER_LOOK_NM = [3, 6, 9], W
 const NM_PER_DEG_LAT = 60;
 const POI_RADIUS_NM = 0.3;
 const KEEL = 8;             // metres the ship needs under it (hull height plus a margin)
+const AO_WARN_NM = 6;       // Area of Operations: how far ahead Helm looks for the limit
 const HARBOR_NM = 2;        // the dredged channel round a dock: no grounding checks inside it
 
 export const sim = {
@@ -443,6 +444,12 @@ const stepOnce = (dt) => {
   if (seafloor.ready && !s.docked) {
     const dock = sim.dockPoi(), harbor = dock && toward(s, dock).nm < HARBOR_NM;
     let hit = null;
+    if (nm > 0) {   // Area of Operations: warn once when the limit is about to be reached (six nautical miles ahead, or two minutes at this speed)
+      const look = Math.max(AO_WARN_NM, (s.speed * 2) / 60);
+      const out = !seafloor.inside(s.lat + (Math.cos(r) * look) / NM_PER_DEG_LAT, s.lon + (Math.sin(r) * look) / (NM_PER_DEG_LAT * Math.cos((s.lat * Math.PI) / 180)));
+      if (out && !sim.aoNear) sim.emit('bump', { kind: 'ao-near', nm: look });
+      sim.aoNear = out;
+    }
     if (!seafloor.inside(s.lat, s.lon)) hit = nm > 0 ? 'edge' : null;
     else if (!harbor) {
       const fl = seafloor.depthAt(s.lat, s.lon);

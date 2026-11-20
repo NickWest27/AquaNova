@@ -66,7 +66,7 @@ export function resolveTarget(input, env) {
     if (hasD) { nm = parseFloat(String(input.distance).replace(',', '.')); if (!(nm > 0) || nm > MAX_LEG_NM || !/^\s*\d+([.,]\d+)?\s*$/.test(String(input.distance))) return { ok: false, error: `Distance must be more than 0 and at most ${MAX_LEG_NM} nm.` }; }
     point = project(ref, brg, nm);
   }
-  if (!env.inside(point.lat, point.lon)) return { ok: false, error: 'That point is outside the charted area.' };
+  if (!env.inside(point.lat, point.lon)) return { ok: false, error: 'That point is outside our Area of Operations.' };
   const fl = env.floorAt(point.lat, point.lon);
   if (fl == null || fl < MIN_FLOOR_M) return { ok: false, error: 'That point is land or water too shallow for the ship.' };
   return { ok: true, point };

@@ -346,7 +346,8 @@ async function boot() {
       else if (type === 'wskr-recovered') say('sensors', `${wskrName(data)} is back in the launch bay.`);
       else if (type === 'bump') {
         const k = data.kind;
-        if (k === 'edge') say('helm', 'We are at the edge of the charted area, Captain. All stop.', 'error');
+        if (k === 'edge') say('helm', 'That is the limit of our Area of Operations, Captain. We are not cleared to go further. All stop.', 'error');
+        else if (k === 'ao-near') say('helm', `Captain, the limit of our Area of Operations is about ${Math.max(1, Math.round(data.nm))} miles ahead. We are not cleared to cross it.`, 'error');
         else say('engineering', `${k === 'shoal' ? 'We have run aground' : 'We touched bottom'}! Hull damage ${Math.round(data.damage)}%.`, 'error');
       }
     });

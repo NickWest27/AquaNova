@@ -53,12 +53,40 @@ export function createND(wrap, { onPick, stage = false, units = 1, contours = fa
       ctx.stroke();
     }
   }
+  // Area of Operations: everything outside the charted area is a no-transgression zone, hatched red with a dashed limit line.
+  function drawLimit(w, h, p, s, kx, ky, ox, oy) {
+    const st = 12, x0 = -ox, y0 = -oy, nx = Math.ceil((w + 2 * ox) / st) + 1, ny = Math.ceil((h + 2 * oy) / st) + 1;
+    const out = new Uint8Array(nx * ny); let any = false;
+    for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
+      const lon = s.lon + (x0 + i * st - w / 2) / kx, lat = s.lat - (y0 + j * st - h / 2) / ky;
+      if (!seafloor.inside(lat, lon)) { out[j * nx + i] = 1; any = true; }
+    }
+    if (!any) return;
+    const zone = new Path2D(), edge = new Path2D(), o = (i, j) => (i < 0 || j < 0 || i >= nx || j >= ny ? 0 : out[j * nx + i]);
+    for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
+      if (!out[j * nx + i]) continue;
+      const x = x0 + i * st - st / 2, y = y0 + j * st - st / 2;
+      zone.rect(x, y, st, st);
+      if (!o(i - 1, j) && i > 0) { edge.moveTo(x, y); edge.lineTo(x, y + st); }
+      if (!o(i + 1, j) && i < nx - 1) { edge.moveTo(x + st, y); edge.lineTo(x + st, y + st); }
+      if (!o(i, j - 1) && j > 0) { edge.moveTo(x, y); edge.lineTo(x + st, y); }
+      if (!o(i, j + 1) && j < ny - 1) { edge.moveTo(x, y + st); edge.lineTo(x + st, y + st); }
+    }
+    ctx.save(); ctx.clip(zone);
+    ctx.fillStyle = 'rgba(120,10,20,0.35)'; ctx.fillRect(x0, y0, w + 2 * ox, h + 2 * oy);
+    ctx.strokeStyle = 'rgba(255,70,80,0.38)'; ctx.lineWidth = 2; ctx.beginPath();
+    const span = (w + 2 * ox) + (h + 2 * oy);
+    for (let d = 0; d < span; d += 18) { ctx.moveTo(x0 + d, y0); ctx.lineTo(x0 + d - (h + 2 * oy), y0 + h + 2 * oy); }
+    ctx.stroke(); ctx.restore();
+    ctx.save(); ctx.strokeStyle = 'rgba(255,90,100,0.95)'; ctx.lineWidth = 2.5; ctx.setLineDash([10, 6]); ctx.stroke(edge); ctx.restore();
+  }
   function drawSeafloor(w, h, R) {
     if (!seafloor.ready) return;
     const s = ctr(), sh = sim.s, scale = R / nd.range, kx = 60 * Math.cos((s.lat * Math.PI) / 180) * scale, ky = 60 * scale;
     const p = { x: (lon) => w / 2 + (lon - s.lon) * kx, y: (lat) => h / 2 - (lat - s.lat) * ky };
     const D = trackUp ? Math.hypot(w, h) : 0, ox = trackUp ? (D - w) / 2 : 0, oy = trackUp ? (D - h) / 2 : 0;   // track up turns the chart, so its corners reach further
     strokeLevels(seafloor.rough, p, w, h, false, ox, oy);
+    drawLimit(w, h, p, s, kx, ky, ox, oy);
     const src = [{ lat: sh.lat, lon: sh.lon, nm: fineNm(sh) }, ...(sh.wskrs || []).map((q) => ({ lat: q.lat, lon: q.lon, nm: WSKR_NM }))];
     // Fine contours show wherever we have charted (fog of war) plus what the sonar and WSKRs see right now. At very wide ranges they would only clutter.
     const dLonV = (D || w) / 2 / kx, dLatV = (D || h) / 2 / ky;
