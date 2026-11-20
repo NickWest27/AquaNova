@@ -32,7 +32,7 @@ def main():
         check("notice shows on the upper display", "TEST TOAST TWO" in page.inner_text(".bt-stack").upper() or "TEST NOTICE ONE" in page.inner_text(".bt-stack").upper(), page.inner_text(".bt-stack"))
         check("no pop-up toast on the bridge", page.locator("#console-line .toast").count() == 0)
         # stack: newest is the big title, older ones drop to body lines, all clear after ~5 s
-        page.wait_for_timeout(5600)
+        page.wait_for_timeout(8200)   # ARIA's "New task" notice (2.5 s after the lesson starts) has its own 5 s
         check("notices clear after a few seconds", page.locator(".bt-stack .bt-title").count() == 0 and page.locator(".bt.noting").count() == 0)
         js("N.say('helm', 'Disconnecting shore power'); await new Promise(r=>setTimeout(r,300)); N.say('helm', 'Releasing the clamps')"); page.wait_for_timeout(500)
         check("newest notice is the title", "RELEASING THE CLAMPS" in page.inner_text(".bt-title").upper(), page.inner_text(".bt-stack"))

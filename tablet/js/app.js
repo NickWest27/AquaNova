@@ -244,6 +244,10 @@ function showSystemDialogue(id) {
 }
 document.addEventListener('show-dialogue', (e) => { if (e.detail.characterId === 'system') showSystemDialogue(e.detail.dialogueId); });
 document.addEventListener('comms-message', (e) => { if (boarded) say('comms', 'Captain, sorry to interrupt, but we have an incoming message.', 'mission', { notice: 'INCOMING MESSAGE', keep: `We have an incoming message from ${e.detail.from}. It is waiting at the Comms station.` }); syncUI(); });
+document.addEventListener('task-started', (e) => {   // ARIA says plainly that a new task has begun and where to find it (a little later, so other chatter does not bury it)
+  if (!boarded || !e.detail.name) return;
+  setTimeout(() => say('aria', `New task, {captain}: ${e.detail.name}. The steps are in your PED, under Tasks.`, 'mission', { notice: `NEW TASK: ${e.detail.name.toUpperCase()}` }), 2500);
+});
 document.addEventListener('mission-notify', (e) => {
   if (!boarded) return;
   if (e.detail.subtitle === 'Objective Complete') {   // ARIA keeps it short: done, and what is next

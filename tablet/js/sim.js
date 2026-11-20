@@ -144,6 +144,10 @@ export const WSKR_LINK_NM = 10, SEARCH_LEG_NM = 0.45, SEARCH_LEGS = 14, WSKR_TUR
  *  shallow (the surface down to just below Aqua Nova), deep (from just above Aqua Nova to the floor).
  *  Formation is one fleet setting, set by how much each WSKR's scan ring overlaps Aqua Nova's: loose 5%, tight 50%; the WSKRs space themselves evenly round the ship.
  *  Battery: 6 hours at normal draw (`WSKR_BATTERY_H`; research can change it later). */
+/** Battery draw factor for a WSKR right now (1 = normal). */
+export const wskrDraw = (w) => (w.mode === 'relay' ? 0.6 : w.mode === 'manual' ? 0.7 + 0.6 * (w.thr || 0) : w.moving ? 1 : 0.8) * (w.moving && w.super ? 2.2 : 1);
+/** Game minutes of battery left at the current draw (to 0%), and to the 15% auto-recall. */
+export const wskrMinutes = (w) => { const per = (100 / (WSKR_BATTERY_H * 3600)) * wskrDraw(w); const b = w.bat == null ? 100 : w.bat; return { empty: Math.max(0, b / per / 60), recall: Math.max(0, (b - WSKR_LOW_PCT) / per / 60) }; };
 export const WSKR_BATTERY_H = 6, WSKR_LOW_PCT = 15, WSKR_STAGGER_M = 10, WSKR_RELAY_DEPTH = 4;
 export const wskrBatteryHours = () => WSKR_BATTERY_H;
 export const WSKR_OVERLAP = { loose: 0.05, tight: 0.5 };
@@ -251,7 +255,7 @@ function stepWskrs(dt) {
     let goal = null; const perk = wskrPerk(w), kf = (perk.kt || WSKR_KT) / WSKR_KT; let step = (((perk.kt || WSKR_KT) * dt) * TIMESCALE) / 3600;
     const ring = formationRadius(s.wskrForm, w) * (perk.drift && s.wskrForm !== 'tight' ? 1 + 0.35 * (0.5 + 0.5 * Math.sin((s.clock / 3600) * 2 * Math.PI)) : 1);
     { // battery: 6 h at normal draw; holding station and relaying draw less, hard running draws more
-      const draw = (w.mode === 'relay' ? 0.6 : w.mode === 'manual' ? 0.7 + 0.6 * (w.thr || 0) : w.moving ? 1 : 0.8) * (w.moving && w.super ? 2.2 : 1);
+      const draw = wskrDraw(w);
       w.bat = Math.max(0, w.bat - (100 / (wskrBatteryHours() * 3600)) * draw * dt * TIMESCALE);
       if (w.bat <= 0) { w.dead = true; w.mode = 'recall'; w.route = null; sim.emit('wskr-dead', w); return true; }
       if (w.bat <= WSKR_LOW_PCT && w.mode !== 'recall') { w.mode = 'recall'; w.target = null; w.route = null; w.thr = 0; sim.emit('wskr-low', w); }

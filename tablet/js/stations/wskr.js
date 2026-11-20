@@ -2,13 +2,15 @@
 // (depth stagger, formation), and, once one is selected, its controls (orders, manual helm) and its craft view.
 // Orders: hold formation, manual control (touch), search pattern, relay (follows the ship under the surface, carries comms and GPS), recall.
 import { tell } from '../notify.js';
-import { sim, wskrName, wskrPerk, wskrCraft, wskrDepthFor, WSKR_PERKS, WSKR_DEPTHS, WSKR_LINK_NM, WSKR_LOW_PCT, toward } from '../sim.js';
+import { sim, wskrMinutes, wskrName, wskrPerk, wskrCraft, wskrDepthFor, WSKR_PERKS, WSKR_DEPTHS, WSKR_LINK_NM, WSKR_LOW_PCT, toward } from '../sim.js';
 import { mountCraftView } from '../craftview.js';
 import { GATES_ON } from '../unlocks.js';
 import { research } from '../science.js';
 import { el } from '../util.js';
 
 export const ordersOk = () => !GATES_ON || research.has('wskr-orders');
+const hm = (m) => (m >= 60 ? `${Math.floor(m / 60)} h ${Math.round(m % 60)} min` : `${Math.max(0, Math.round(m))} min`);
+const w0 = (m) => `${hm(m.empty)} left`;
 const SAY = { escort: 'Holding formation', manual: 'Manual control', search: 'Search pattern', relay: 'Relay', recall: 'Returning to the bay', task: 'Investigating a contact' };
 
 export function mountWskrPanel(body) {
@@ -28,7 +30,7 @@ export function mountWskrPanel(body) {
   };
   const rowText = (w) => {
     const s = sim.s, l = sim.wskrLink(w), bat = Math.round(w.bat == null ? 100 : w.bat), poi = w.target != null ? s.pois.find((p) => p.id === w.target) : null;
-    return { order: w.dead ? 'ADRIFT: no power' : w.mode === 'task' ? `Investigating ${poi ? poi.name : 'a contact'}` : SAY[w.mode] || w.mode, depth: `${wskrDepthFor(w)} m`, bat: `${bat}%`, low: bat <= WSKR_LOW_PCT, range: (() => { const t = toward(s, w); return `BRG ${String(Math.round(t.brg) % 360).padStart(3, '0')}° · ${t.nm.toFixed(1)} nm`; })(), link: l.ok ? 'Link up' : 'Out of link range' };
+    return { order: w.dead ? 'ADRIFT: no power' : w.mode === 'task' ? `Investigating ${poi ? poi.name : 'a contact'}` : SAY[w.mode] || w.mode, depth: `${wskrDepthFor(w)} m`, bat: `${bat}%`, low: bat <= WSKR_LOW_PCT, range: (() => { const t = toward(s, w); return `BRG ${String(Math.round(t.brg) % 360).padStart(3, '0')}° · ${t.nm.toFixed(1)} nm`; })(), link: l.ok ? 'Link up' : `Out of link range (${l.nm.toFixed(1)} of ${l.max} nm)`, mins: wskrMinutes(w) };
   };
   function update() {
     const s = sim.s; if (!s.wskrs.some((w) => w.n === sel)) sel = s.wskrs.length ? s.wskrs[0].n : null;
@@ -67,12 +69,14 @@ export function mountWskrPanel(body) {
     for (const q of s.wskrs) {                     // live numbers, without rebuilding the rows
       const row = list.querySelector(`[data-n="${q.n}"]`); if (!row) continue; const t = rowText(q);
       row.querySelector('.wr-order').textContent = t.order; row.querySelector('.wr-depth').textContent = `Depth ${t.depth}`;
-      const b = row.querySelector('.wr-bat'); b.textContent = `Battery ${t.bat}`; b.className = 'wr-bat ' + (t.low ? 'bad' : '');
+      const b = row.querySelector('.wr-bat'); b.textContent = `Battery ${t.bat} · ${w0(t.mins)}`; b.className = 'wr-bat ' + (t.low ? 'bad' : '');
       row.querySelector('.wr-range').textContent = t.range; row.querySelector('.wr-link').textContent = t.link;
     }
     if (w) {
       const l = sim.wskrLink(w);
       stat.textContent = w.mode === 'manual' ? `Heading ${String(Math.round(w.heading ?? 0)).padStart(3, '0')}°, speed ${Math.round((w.thr || 0) * 100)}%. Link ${l.nm.toFixed(1)} of ${l.max} nm.${w.limited ? ' At the link limit: bring a relay out or turn back.' : ''}${w.blockedNow ? ' Shallows ahead.' : ''}` : w.mode === 'relay' ? (sim.relayUp() ? 'Relay up: comms and GPS work at any depth.' : 'Moving up to the surface to follow the ship.') : '';
+      if (w && !l.ok && w.mode !== 'manual') stat.textContent = `Beyond the ${l.max} nm control link (${l.nm.toFixed(1)} nm out). It keeps to its order, but you cannot steer it by hand until it is back in range or a relay WSKR is out.`;
+      if (w) { const m = wskrMinutes(w); stat.textContent += ` Battery: ${hm(m.empty)} left; it comes home on its own in about ${hm(m.recall)}.`; }
     }
     viewBox.hidden = !w;
     if (w) cv.update();

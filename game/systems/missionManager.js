@@ -346,7 +346,10 @@ class MissionManager {
                     this.sendMessage(action.delaySeconds ? { ...action.message, delaySeconds: action.delaySeconds } : action.message);
                     break;
                 case 'start_mission':
-                    this.startMission(action.missionId);
+                    if (this.startMission(action.missionId)) {   // a lesson or follow-on that starts by itself: tell the player
+                        const m = this.missions.get(action.missionId);
+                        document.dispatchEvent(new CustomEvent('task-started', { detail: { missionId: action.missionId, name: m && m.name } }));
+                    }
                     break;
                 default:
                     console.warn(`Unknown action type: ${action.type}`);
