@@ -65,13 +65,13 @@ def main():
             r = js("const s=sim.s; s.wskrs.forEach(w=>{w.bat=100;w.dead=false}); s.speed=0; s.throttle=0; sim.setWskrForm('tight'); s.wskrs.forEach(w=>sim.orderWskr(w.n,'escort')); for(let i=0;i<5000;i++) sim.step(0.1); const d=s.wskrs.map(w=>T.toward(s,w)); const want=s.wskrs.map(w=>T.formationRadius('tight',w)); const brgs=d.map(x=>x.brg).sort((a,b)=>a-b); const gaps=brgs.map((b,i)=>((brgs[(i+1)%brgs.length]-b+360)%360)); sim.setWskrForm('loose'); return {dist:d.map(x=>+x.nm.toFixed(2)), want, gaps}")
             ok = all(abs(a - b) < 0.35 * b + 0.2 for a, b in zip(r["dist"], r["want"])) and (max(r["gaps"]) - min(r["gaps"]) < 60 or len(r["gaps"]) < 3)
             check("WSKRs hold the ring distance and spread evenly round the ship", ok, r)
-            # battery: 6 hours, low charge recalls, flat battery leaves it adrift
+            # battery: 24 hours, low charge recalls, flat battery leaves it adrift
             r = js("const s=sim.s; const w=s.wskrs[0]; w.bat=100; sim.orderWskr(w.n,'escort'); const c0=s.clock; for(let i=0;i<200;i++) sim.step(0.1); const used=100-w.bat; const hours=(100/ (used/((s.clock-c0)/3600)));  return {used, hours, clock:s.clock-c0}")
-            check("battery lasts about 6 hours", 4.5 < r["hours"] < 8, r)
+            check("battery lasts about 24 hours", 18 < r["hours"] < 32, r)
             r = js("const s=sim.s; const w=s.wskrs[0]; w.bat=15.1; sim.orderWskr(w.n,'escort'); for(let i=0;i<300;i++) sim.step(0.1); return {mode:w.mode, bat:w.bat}")
             check("low battery recalls the WSKR", r["mode"] == "recall", r)
             r = js("const s=sim.s; const w=s.wskrs[1]; w.bat=0.01; sim.orderWskr(w.n,'escort'); for(let i=0;i<60;i++) sim.step(0.1); const dead=w.dead; const n=s.wskrs.length; w.lat=s.lat; w.lon=s.lon; for(let i=0;i<5;i++) sim.step(0.1); return {dead, n, after:s.wskrs.length}")
-            check("flat battery leaves it adrift until the ship comes alongside", r["dead"] and r["after"] == r["n"] - 1, r)
+            check("flat battery leaves it adrift until the ship comes alongside", r["dead"] and r["after"] == r["n"] and js("return !!sim.s.wskrs[1].arrived"), r)
             # the communicator order
             js("const s=sim.s; s.wskrs=[]; sim.deployWskr(); sim.deployWskr(); s.depth=20; return 1")
             # save/load keeps orders

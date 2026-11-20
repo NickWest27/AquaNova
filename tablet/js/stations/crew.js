@@ -9,6 +9,7 @@ import { el, toast } from '../util.js';
 import { gameState } from '../persist.js';
 import { crewIcon } from '../icons.js';
 import { startReport } from '../transfer.js';
+import { topicsFor, askTopic } from '../topics.js';
 import { askDepth } from '../depthPad.js';
 import { toggleDock } from '../dock.js';
 import { say as crewSay, takeHeld, unreadFor, unreadCount, transcript, logLine } from '../notify.js';
@@ -122,7 +123,8 @@ export function mount(body, ctx) {
   const cats = () => {
     const o = (cur && cur.dialogueOptions) || {};
     const cmds = [...(o.commands || []), ...((EXTRA[cur && cur.id]) || []).filter((c) => !(o.commands || []).includes(c))];
-    return [['Pleasantries', mineP(), 'Make small talk'], ['Commands', cmds, 'Give an order'], ['Emergency', o.emergency || [], 'Report an emergency']].filter(([, l]) => l.length);
+    const asks = topicsFor(cur && cur.id);
+    return [['Pleasantries', mineP(), 'Make small talk'], ['Ask', asks, 'Ask about …'], ['Commands', cmds, 'Give an order'], ['Emergency', o.emergency || [], 'Report an emergency']].filter(([, l]) => l.length);
   };
   const line = (text, onclick, cls = '') => el('button', { class: `comm-line ${cls}`, text, onclick });
   const first = (c) => (c.id === 'executiveOfficer' ? 'ARIA' : c.name.replace(/^(Captain|Commander|Dr\.|Specialist|Engineer|Lieutenant) /, '').split(' ')[0]);
@@ -177,8 +179,8 @@ export function mount(body, ctx) {
         ...cats().map(([n, l, label]) => line(label, () => { cat = [n, l, label]; page = 'lines'; render(); }, n === 'Emergency' ? 'danger' : '')),
         line('Actually, let me call someone else …', () => { page = 'crew'; render(); }, 'back')];
     } else if (page === 'lines') {
-      kids = [el('div', { class: 'comm-head', text: cat[0] === 'Pleasantries' ? `Say to ${first(cur)}…` : cat[0] === 'Commands' ? `Order to ${first(cur)}…` : `Tell ${first(cur)}…` }),
-        ...cat[1].map((t) => { const ok = works(t, cat[0] === 'Pleasantries'); return line(t, () => speak(t), ok ? (cat[0] === 'Emergency' ? 'danger' : '') : 'stub'); }),
+      kids = [el('div', { class: 'comm-head', text: cat[0] === 'Pleasantries' ? `Say to ${first(cur)}…` : cat[0] === 'Ask' ? `Ask ${first(cur)} about…` : cat[0] === 'Commands' ? `Order to ${first(cur)}…` : `Tell ${first(cur)}…` }),
+        ...(cat[0] === 'Ask' ? topicsFor(cur.id).map((q) => line(`${q.told ? '✓ ' : ''}${q.label}`, () => say(`Ask about ${q.label}`, askTopic(cur.id, q.id)), q.told ? 'stub' : '')) : cat[1].map((t) => { const ok = works(t, cat[0] === 'Pleasantries'); return line(t, () => speak(t), ok ? (cat[0] === 'Emergency' ? 'danger' : '') : 'stub'); })),
         line('Belay that …', () => { page = 'cat'; render(); }, 'back')];
     } else if (page === 'decision') {
       const d = pendingDecisions()[0];

@@ -4,6 +4,7 @@
 import { tell } from '../notify.js';
 import { sim, wskrMinutes, wskrName, wskrPerk, wskrCraft, wskrDepthFor, WSKR_PERKS, WSKR_DEPTHS, WSKR_LINK_NM, WSKR_LOST_MIN, WSKR_LOW_PCT, toward } from '../sim.js';
 import { selectedContact } from '../contacts.js';
+import { launchWskr, launchText } from '../bayops.js';
 import { mountCraftView } from '../craftview.js';
 import { GATES_ON } from '../unlocks.js';
 import { research } from '../science.js';
@@ -41,7 +42,7 @@ export function mountWskrPanel(body) {
       sig = next;
       head.replaceChildren(el('div', { class: 'row' }, el('strong', { text: `${s.wskrs.length} of 4 WSKRs out` }),
         el('span', { class: sim.hasGps() ? 'ok' : 'bad', text: sim.hasGps() ? 'GPS fix' : 'No GPS fix (dead reckoning)' }),
-        act('Deploy WSKR', false, () => { const r = sim.deployWskr(); say(r.ok ? `${wskrName({ n: r.n })} launched from the bay` : r.why === 'docked' ? 'Undock first' : 'All four WSKRs are out'); }, s.docked || s.wskrs.length >= 4),
+        act('Deploy WSKR', false, () => { say(launchText(launchWskr())); }, s.docked || s.wskrs.length >= 4),
         act('Recall all', false, () => { sim.recallWskrs(); say('WSKRs recalled'); }, !s.wskrs.length)));
       fleet.replaceChildren(el('div', { style: 'color:var(--dim);margin-bottom:0.4rem', text: ok ? 'Fleet settings' : 'Fleet settings: research "WSKR formations and orders" in the Science Lab to unlock.' }),
         el('div', { class: 'row' }, el('span', { style: 'color:var(--dim)', text: 'Depth' }),

@@ -26,7 +26,7 @@ def main():
         check("changing speed keeps the plotted course", r["b"] == 0.8 and r["w"] and r["c"], str(r))
         check("cancelling the course keeps the speed", r["after"] == 0.4 and not r["wpt"], str(r))
         r = js("const m=await import('./js/sim.js'); const s=sim.s; Object.assign(s,{docked:false,at:null,depth:50}); sim.deployWskr(); const w=s.wskrs[0]; w.bat=100; w.moving=false; w.mode='escort'; return m.wskrMinutes(w)")
-        check("WSKR battery minutes: 6 h at 0.8 draw is 450 min", 440 < r["empty"] < 460 and 380 < r["recall"] < 400, str(r))
+        check("WSKR battery minutes: 24 h at 0.8 draw is 1800 min", 1780 < r["empty"] < 1820 and 1510 < r["recall"] < 1550, str(r))
         page.evaluate("window.__aq.scene('bridge')"); page.wait_for_timeout(300)
         page.evaluate("document.querySelector('#pin').click()"); page.wait_for_timeout(700)
         tap = lambda: page.wait_for_timeout(350)

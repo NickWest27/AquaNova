@@ -6,6 +6,7 @@ import { say, hush, unreadCount, stats as notifyStats } from './notify.js';
 import { seafloor } from './seafloor.js';
 import { fileScan } from './findings.js';
 import './rov.js';
+import { SHUTTLE_NAME, BAY_SAFE_KT } from './bayops.js';
 import './commsModel.js';
 import { tickLab, SAMPLE_KINDS, awardSurveyBonus } from './science.js';
 import { el, $, toast, pad, modal, frameThrottle, viewProbe } from './util.js';
@@ -325,6 +326,18 @@ async function boot() {
       else if (type === 'wskr-low') say('sensors', `${wskrName(data)} is down to its last charge, Captain. Recalling it.`, 'mission');
       else if (type === 'wskr-dead') say('sensors', `${wskrName(data)} has lost power and is adrift, Captain. Bring the ship alongside to recover it.`, 'mission');
       else if (type === 'wskr-search-done') say('sensors', `${wskrName(data)} has finished its search pattern and is rejoining the formation.`);
+      else if (type === 'bay-launched') say(data.craft === 'shuttle' ? 'helm' : 'sensors', data.craft === 'shuttle' ? `${SHUTTLE_NAME} is away, Captain.` : `${wskrName(data)} is away.`);
+      else if (type === 'bay-warn') say('helm', `Captain, the launch bay doors are open and we are making ${Math.round(data.kt)} knots. Come below ${BAY_SAFE_KT} or we are damaging the ship.`, 'mission');
+      else if (type === 'bay-door-damage') say('engineering', `The bay doors are taking damage at ${Math.round(data.kt)} knots, Captain. Over ten with them open is permanent: they will need a dry dock. They are ${Math.round(data.pct)} percent damaged now.`, 'mission');
+      else if (type === 'bay-wait') say('sensors', `${wskrName(data)} is alongside, Captain. Slow below ${BAY_SAFE_KT} knots and we will take it aboard.`);
+      else if (type === 'shuttle-arrived') say('helm', `${SHUTTLE_NAME} is alongside ${(data.dest || {}).name || 'the pier'}. Cycling the airlock, ten seconds.`);
+      else if (type === 'shuttle-landed') say('helm', `The away team is ashore at ${(data.dest || {}).name || 'the pier'}, ${SHUTTLE_NAME} is moored and charging. Recall her when they are ready.`);
+      else if (type === 'shuttle-nolink') say('helm', `${SHUTTLE_NAME} has lost her radio link with one pilot aboard, Captain. She is turning back.`, 'mission');
+      else if (type === 'shuttle-exchanged') say('helm', `Crew and supplies are across. ${SHUTTLE_NAME} is coming home.`);
+      else if (type === 'shuttle-alongside') say('helm', `${SHUTTLE_NAME} is alongside, Captain. Slow below ${BAY_SAFE_KT} knots and I will bring her in.`);
+      else if (type === 'shuttle-aboard') say('helm', `${SHUTTLE_NAME} is aboard and on charge.`);
+      else if (type === 'shuttle-low') say('helm', `${SHUTTLE_NAME} is down to her reserve, Captain. Bringing her home.`, 'mission');
+      else if (type === 'shuttle-dead') say('helm', `${SHUTTLE_NAME} has lost power and is adrift, Captain. Take the ship to her.`, 'mission');
       else if (type === 'wskr-recovered') say('sensors', `${wskrName(data)} is back in the launch bay.`);
       else if (type === 'bump') {
         const k = data.kind;

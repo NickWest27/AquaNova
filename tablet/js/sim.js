@@ -143,7 +143,7 @@ export const WSKR_LINK_NM = 10, SEARCH_LEG_NM = 0.45, SEARCH_LEGS = 14, WSKR_TUR
  *  Depth is one fleet setting, staggered so no two WSKRs share a layer: auto (the whole water column in equal layers),
  *  shallow (the surface down to just below Aqua Nova), deep (from just above Aqua Nova to the floor).
  *  Formation is one fleet setting, set by how much each WSKR's scan ring overlaps Aqua Nova's: loose 5%, tight 50%; the WSKRs space themselves evenly round the ship.
- *  Battery: 6 hours at normal draw (`WSKR_BATTERY_H`; research can change it later). */
+ *  Battery: 24 hours at normal draw (base speed); a full recharge in the bay takes 2 hours, in proportion to what was used (`WSKR_BATTERY_H`; research can change it later). */
 /** Battery draw factor for a WSKR right now (1 = normal). */
 export const wskrDraw = (w) => {
   const base = (WSKR_PERKS[w.n] && WSKR_PERKS[w.n].kt) || WSKR_KT, fast = w.moving && !w.super && w.mode !== 'manual' && w.kt ? (w.kt / base) ** 2 : 1;   // draw rises with the square of speed: 20 kt on a 16 kt craft draws 1.56
@@ -151,7 +151,7 @@ export const wskrDraw = (w) => {
 };
 /** Game minutes of battery left at the current draw (to 0%), and to the 15% auto-recall. */
 export const wskrMinutes = (w) => { const per = (100 / (WSKR_BATTERY_H * 3600)) * wskrDraw(w); const b = w.bat == null ? 100 : w.bat; return { empty: Math.max(0, b / per / 60), recall: Math.max(0, (b - WSKR_LOW_PCT) / per / 60) }; };
-export const WSKR_BATTERY_H = 6, WSKR_LOW_PCT = 15, WSKR_STAGGER_M = 10, WSKR_RELAY_DEPTH = 4;
+export const WSKR_BATTERY_H = 24, WSKR_CHARGE_H = 2, WSKR_LOW_PCT = 15, WSKR_STAGGER_M = 10, WSKR_RELAY_DEPTH = 4;
 export const wskrBatteryHours = () => WSKR_BATTERY_H;
 export const WSKR_OVERLAP = { loose: 0.05, tight: 0.5 };
 /** Distance between two scan-ring centres (nm) at which the rings overlap by `frac` of the SMALLER ring's area. */
@@ -228,12 +228,14 @@ function searchPoint(p, k) {
 }
 export const wskrPerk = (w) => WSKR_PERKS[w.n] || {};
 export const wskrName = (w) => w.name || WSKR_NAMES[w.n - 1] || `WSKR ${w.n}`;
-sim.deployWskr = () => {
+/** Put a WSKR in the water at once (the bay's one-minute launch ends here). It takes the charge its rack slot has reached. */
+sim.deployWskr = (want) => {
   const s = sim.s;
   if (s.docked) return { ok: false, why: 'docked' };
   if (s.wskrs.length >= 4) return { ok: false, why: 'full' };
-  const used = new Set(s.wskrs.map((w) => w.n)); let n = 1; while (used.has(n)) n++;
-  s.wskrs.push({ n, lat: s.lat, lon: s.lon, mode: 'escort', target: null, busy: 0, bat: 100 }); sim.touch(); return { ok: true, n };
+  const used = new Set(s.wskrs.map((w) => w.n)); let n = want && !used.has(want) ? want : 1; while (used.has(n)) n++;
+  const rack = s.rack || (s.rack = {}), bat = rack[n] == null ? 100 : rack[n]; delete rack[n];
+  s.wskrs.push({ n, lat: s.lat, lon: s.lon, mode: 'escort', target: null, busy: 0, bat }); sim.touch(); return { ok: true, n };
 };
 sim.taskWskr = (poi) => {
   const w = sim.s.wskrs.find((q) => q.mode === 'escort');
@@ -256,7 +258,8 @@ function stepWskrs(dt) {
   s.wskrs = s.wskrs.filter((w) => {
     w.moving = false;
     if (w.bat == null) w.bat = 100;
-    if (w.dead) { if (toward(s, w).nm < 0.15) { sim.emit('wskr-recovered', w); return false; } return true; }   // adrift: the ship must come to it
+    if (w.arrived) { w.lat = s.lat; w.lon = s.lon; return true; }   // alongside the bay, waiting to be taken aboard (bayops.js)
+    if (w.dead) { if (toward(s, w).nm < 0.15) w.arrived = true; return true; }   // adrift: the ship must come to it
     if (seafloor.ready && !wskrPassable(w.lat, w.lon)) { const sp = nearestWater(w.lat, w.lon); if (sp) { w.lat = sp.lat; w.lon = sp.lon; w.route = null; } }   // never sit on land (after a load, a ship move, or a thin spit)
     let goal = null; const perk = wskrPerk(w), kf = (perk.kt || WSKR_KT) / WSKR_KT; let step = (((perk.kt || WSKR_KT) * dt) * TIMESCALE) / 3600;
     const ring = formationRadius(s.wskrForm, w) * (perk.drift && s.wskrForm !== 'tight' ? 1 + 0.35 * (0.5 + 0.5 * Math.sin((s.clock / 3600) * 2 * Math.PI)) : 1);
@@ -310,7 +313,7 @@ function stepWskrs(dt) {
     while (w.route.length > 1 && toward(w, w.route[0]).nm < 0.12) w.route.shift();
     const end = w.route.length ? w.route[w.route.length - 1] : goal, t = toward(w, goal), te = toward(w, end);
     const onSite = w.routeSnapped ? te.nm < 0.12 : t.nm < 0.12;
-    if (w.mode === 'recall' && (t.nm < 0.15 || (w.routeSnapped && te.nm < 0.15))) { sim.emit('wskr-recovered', w); return false; }
+    if (w.mode === 'recall' && (t.nm < 0.15 || (w.routeSnapped && te.nm < 0.15))) { w.arrived = true; w.moving = false; return true; }
     if (w.mode === 'task' && onSite) {          // on site: investigate, then file the scan and rejoin
       w.busy += dt * TIMESCALE;
       if (w.busy >= (perk.investigate || WSKR_INVESTIGATE_S)) { const p = s.pois.find((q) => q.id === w.target); w.mode = 'escort'; w.target = null; w.route = null; sim.emit('wskr-found', { wskr: w, poi: p }); }

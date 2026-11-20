@@ -2,6 +2,7 @@
 // A scan files a finding (PED → Findings). Scanning needs the ship at the site, or a WSKR sent to investigate it.
 // WSKRs are launched only here. They hold a ring round the ship, can be sent to a contact, and can be recalled.
 import { contactList, selectContact } from '../contacts.js';
+import { launchWskr, launchText } from '../bayops.js';
 import { tell } from '../notify.js';
 import { sim, toward, wskrName } from '../sim.js';
 import { el, toast } from '../util.js';
@@ -20,8 +21,8 @@ export function mount(body, ctx) {
   const wsk = el('div', { class: 'card' }, el('div', { class: 'lbl', text: 'WSKRs' }), el('div', { class: 'num' }), el('p', { style: 'color:var(--dim);margin:0.4rem 0' }));
   const wRow = el('div', { class: 'row' });
   const depBtn = el('button', { class: 'btn chip', text: 'Deploy WSKR', onclick: () => {
-    const r = sim.deployWskr();
-    tell('sensors', r.ok ? `${wskrName({ n: r.n })} launched from the bay` : r.why === 'docked' ? 'Undock first' : 'All four WSKRs are out', r.ok ? '' : 'error'); sig = ''; update(); } });
+    const r = launchWskr();
+    tell('sensors', launchText(r), r.ok ? '' : 'error'); sig = ''; update(); } });
   const recBtn = el('button', { class: 'btn chip', text: 'Recall all', onclick: () => { sim.recallWskrs(); tell('sensors', 'WSKRs recalled'); sig = ''; update(); } });
   const viewBtn = el('button', { class: 'btn chip', text: 'WSKR page', onclick: () => go('wskrs') });
   wRow.append(depBtn, recBtn, viewBtn); wsk.append(wRow);

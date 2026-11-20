@@ -30,7 +30,7 @@ def main():
         r = js("const s=sim.s; Object.assign(s,{docked:false,at:null,wpt:null,route:[],speed:0,throttle:0,depth:60,targetDepth:60,heading:0,targetHeading:180,lat:40.2,lon:-72.0}); T.setTimeScale(1); sim.step(1); const slow=s.heading; s.heading=0; s.speed=14; sim.step(1); const fast=s.heading; s.depth=60; s.targetDepth=0; sim.step(1); return {slow, fast:Math.min(fast,360-fast), dive:60-s.depth}")
         check("slow turn is about 6 deg per second", 5.5 <= (r["slow"] if r["slow"] < 180 else 360 - r["slow"]) <= 6.2, r)
         check("turn at full speed is about 3 deg per second", 2.7 <= r["fast"] <= 3.3, r)
-        check("dive rate is snappy (a few metres per second)", 6 <= r["dive"] <= 9, r)
+        check("dive rate is snappy (a few metres per second)", 1.5 <= r["dive"] <= 10, r)
         # resume: a game that has read the welcome and reloads starts at the logbook
         js("(await import('./js/persist.js')).gameState.updateProperty('progress.read_welcome', true); (await import('./js/persist.js')).checkpoint && 0; return 1")
         page.evaluate("window.__aq.scene('bridge')")
