@@ -51,7 +51,7 @@ export function mount(body) {
     toolBtns.forEach((b, i) => {
       const id = ids[i], useful = !!pickKind(id, site);   // a tool that can take nothing at this spot is not shown
       b.hidden = !useful;
-      b.disabled = !!r.job || r.auto || rovCargo().length >= REMORA_STORE || (TOOLS[id].needsFloor && pickKind(id, site) !== 'water' && !near);
+      b.disabled = !!r.job || r.auto || (rovCargo().length >= REMORA_STORE && pickKind(id, site) !== 'magnetic') || (TOOLS[id].needsFloor && pickKind(id, site) !== 'water' && !near);
       b.title = TOOLS[id].needsFloor && pickKind(id, site) !== 'water' && !near ? 'Get within 6 m of the sea floor first.' : '';
     });
     readout.textContent = `Range ${t.nm.toFixed(2)} of ${rovRange()} nm · bearing ${String(Math.round(t.brg)).padStart(3, '0')}° · heading ${String(Math.round(r.heading)).padStart(3, '0')}° · depth ${Math.round(r.depth)} m` +

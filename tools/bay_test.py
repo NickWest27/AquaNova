@@ -122,13 +122,15 @@ def main():
             ev = page.evaluate("window.__ev"); check("Engineering is told (bay-warn, bay-door-damage)", "bay-warn" in ev and "bay-door-damage" in ev, str(ev))
             js("const s=sim.s; s.throttle=0; s.speed=0; s.bay.doorDmg=0; return 1"); page.wait_for_timeout(400)
             js("const m=await import('./js/science.js'); m.addSample('water',null,'bottle'); return 1") if False else None
-            js("const s=sim.s; s.rov.lat=s.lat; s.rov.lon=s.lon; return 1")
+            js("const s=sim.s; s.rov.lat=s.lat; s.rov.lon=s.lon; s.rov.cargo=[{kind:'water',site:null,tool:'collector'}]; window.__lab0=(await import('./js/science.js')).samples().length; return 1")
             r = js(B + "return B.recoverRemora()"); check("Remora recovery is a timed operation too", r["ok"] and r["secs"] >= 59, str(r))
             page.wait_for_timeout(1500)
             r = js("const s=sim.s; return {rov:!!s.rov, rearm:s.bay.rearm}"); check("aboard: the team unload and re-equip (5 min at least)", r["rov"] is False and r["rearm"] and r["rearm"]["dur"] >= 300, str(r))
+            r = js("const m=await import('./js/science.js'); return {held: s=sim.s.bay.rearm ? sim.s.bay.rearm.cargo.length : 0, lab: m.samples().length-window.__lab0}"); check("the sample is still in the ROV, not the lab, until unloaded", r["held"] == 1 and r["lab"] == 0, str(r))
             r = js(B + "return B.launchRemora()"); check("she cannot launch until she is re-equipped", not r["ok"] and r["why"] == "rearm", str(r))
             page.wait_for_timeout(4000)
             check("then she is ready again", js("return sim.s.bay.rearm") is None and js(B + "return B.launchRemora().ok") is True)
+            check("the unloaded sample reached the lab", js("return (await import('./js/science.js')).samples().length-window.__lab0") == 1)
             page.wait_for_timeout(1500); js("sim.s.rov=null; sim.s.bay.op=null; return 1")
             # UI
             js("window.__aq.open('bay'); return 1"); page.wait_for_timeout(700)

@@ -28,7 +28,7 @@ export const TOOLS = {
   // The ship's own instruments (the science team use them when the Captain is asleep and Remora is busy). Not on Remora.
   laser: { name: 'Laser sampler', secs: 240, needsFloor: false, pick: ['rock', 'sediment'], remora: false },
   spectrometer: { name: 'Spectrometer', secs: 180, needsFloor: false, pick: ['water'], remora: false },
-  magnetometer: { name: 'Magnetometer', secs: 180, needsFloor: false, pick: ['magnetic'], remora: false },
+  magnetometer: { name: 'Magnetometer', secs: 180, needsFloor: false, pick: ['magnetic'], remora: true },
 };
 export const TOPICS = [
   { id: 'rov-range', name: 'Longer tether', cost: 2, text: 'A better tether lets the Science ROV work 1.5 nm from the ship.' },

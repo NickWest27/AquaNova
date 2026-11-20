@@ -21,12 +21,15 @@ sim.launchRov = () => {
   s.rov = { lat: s.lat, lon: s.lon, heading: s.heading, depth: s.depth, cmd: { thr: 0, turn: 0, dive: 0 }, job: null, cargo: [], auto: false, home: false };
   bumpStat('launched'); sim.touch(); return { ok: true };
 };
-sim.recoverRov = () => {
+/** Hand one carried sample to the lab. */
+sim.deliverSample = (c) => addSample(c.kind, c.site ? sim.s.pois.find((p) => p.id === c.site) || null : null, c.tool);
+/** Bring her aboard. With deliver=false the bay keeps the cargo and unloads it sample by sample. */
+sim.recoverRov = (deliver = true) => {
   const s = sim.s; if (!s.rov) return { ok: false, why: 'aboard' };
   if (toward(s, s.rov).nm > 0.2) return { ok: false, why: 'far' };
-  const cargo = s.rov.cargo || [];   // the samples she carried go to the lab now she is aboard
-  for (const c of cargo) addSample(c.kind, c.site ? s.pois.find((p) => p.id === c.site) || null : null, c.tool);
-  s.rov = null; sim.touch(); sim.emit('rov-recovered', { delivered: cargo.length }); return { ok: true, delivered: cargo.length };
+  const cargo = s.rov.cargo || [];
+  if (deliver) for (const c of cargo) sim.deliverSample(c);
+  s.rov = null; sim.touch(); sim.emit('rov-recovered', { delivered: deliver ? cargo.length : 0 }); return { ok: true, delivered: deliver ? cargo.length : 0, cargo: deliver ? [] : cargo };
 };
 /** The site the ROV is working at, or null. */
 export const rovSite = () => { const r = sim.s.rov; if (!r) return null; return sim.s.pois.find((p) => p.type !== 'dock' && toward(r, p).nm < SITE_NM) || null; };
@@ -37,9 +40,9 @@ sim.rovUse = (toolId) => {
   const r = sim.s.rov, t = TOOLS[toolId];
   if (!r || !t || t.remora === false) return { ok: false, why: 'none' };
   if (r.job) return { ok: false, why: 'busy' };
-  if ((r.cargo || []).length >= REMORA_STORE) return { ok: false, why: 'full' };
   const fl = rovFloor(), site = rovSite(), kind = pickKind(toolId, site);
   if (!kind) return { ok: false, why: 'nothing' };
+  if (kind !== 'magnetic' && (r.cargo || []).length >= REMORA_STORE) return { ok: false, why: 'full' };   // readings go up the tether, so they need no storage
   if (t.needsFloor && kind !== 'water' && !(fl != null && fl - r.depth <= 6)) return { ok: false, why: 'floor' };   // a water sample can be taken anywhere in the water
   r.cmd = { thr: 0, turn: 0, dive: 0 }; r.auto = false; r.home = false;
   r.job = { tool: toolId, end: sim.s.clock + t.secs, site: site ? site.id : null };
@@ -52,6 +55,10 @@ sim.hooks.push((dt) => {
   if (r.job) {
     if (s.clock >= r.job.end) {
       const site = s.pois.find((p) => p.id === r.job.site) || null, kind = pickKind(r.job.tool, site);
+      if (kind === 'magnetic') {   // a live reading: straight up the tether to the lab
+        sim.deliverSample({ kind, site: site ? site.id : null, tool: r.job.tool }); r.job = null;
+        sim.emit('rov-reading', { kind, site: site ? site.name : 'open water' }); return;
+      }
       (r.cargo ||= []).push({ kind, site: site ? site.id : null, tool: r.job.tool }); r.job = null;
       sim.emit('rov-sample', { kind, site: site ? site.name : 'open water', stored: r.cargo.length, store: REMORA_STORE, full: r.cargo.length >= REMORA_STORE });
     }

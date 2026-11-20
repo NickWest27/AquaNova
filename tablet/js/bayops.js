@@ -98,7 +98,7 @@ function finishOp(op) {
   const s = sim.s, b = bay(); b.op = null; sim.touch();
   if (op.craft === 'rov') {
     if (op.kind === 'launch') { const r = sim.launchRov(); b.base = samples().length; if (r.ok) sim.emit('bay-launched', { craft: 'rov' }); }
-    else { const load = ((sim.s.rov && sim.s.rov.cargo) || []).length; sim.recoverRov(); b.rearm = { t: 0, dur: REMORA_REARM_S + load * REMORA_UNLOAD_S, load }; sim.emit('remora-aboard', b.rearm); }
+    else { const r = sim.recoverRov(false), cargo = (r.ok && r.cargo) || [], load = cargo.length; if (!r.ok) return; b.rearm = { t: 0, dur: REMORA_REARM_S + load * REMORA_UNLOAD_S, load, cargo }; sim.emit('remora-aboard', b.rearm); }
     return;
   }
   if (op.craft === 'wskr' && op.kind === 'launch') { const r = sim.deployWskr(op.n); if (r.ok) sim.emit('bay-launched', { craft: 'wskr', n: r.n }); }
@@ -110,7 +110,12 @@ function finishOp(op) {
 /** The doors are open for a launch or recovery, and the whole time Remora is out on its tether. */
 function stepOp(g) {
   const b = bay(), op = b.op, s = sim.s, kt = s.speed;
-  if (b.rearm) { b.rearm.t += g; if (b.rearm.t >= b.rearm.dur) { b.rearm = null; sim.emit('remora-ready'); } }
+  if (b.rearm) {
+    b.rearm.t += g;
+    while (b.rearm.cargo && b.rearm.cargo.length && b.rearm.t >= (b.rearm.load - b.rearm.cargo.length + 1) * REMORA_UNLOAD_S) {   // one sample reaches the lab per unload step
+      const c = b.rearm.cargo.shift(); sim.deliverSample(c); sim.emit('remora-unloaded', { kind: c.kind, left: b.rearm.cargo.length });
+    }
+    if (b.rearm.t >= b.rearm.dur) { b.rearm = null; sim.emit('remora-ready'); } }
   if (!op && !s.rov) { b.warned = b.doorSaid = false; return; }
   if (kt <= BAY_SAFE_KT) b.warned = b.doorSaid = false;
   if (kt > BAY_SAFE_KT) {
