@@ -44,6 +44,14 @@ class MissionManager {
         const done = gameStateInstance.getProperty('mission.completedIds') || [];
         done.forEach(id => this.completedMissions.add(id));
         const objectives = gameStateInstance.getProperty('mission.objectives') || [];
+        // Saved objective text can be out of date after a game update: take the wording from the mission file.
+        let refreshed = false;
+        objectives.forEach(obj => {
+            const m = obj.missionId && this.missions.get(obj.missionId);
+            const def = m && (m.objectives || []).find(o => `${obj.missionId}_${o.id}` === obj.id);
+            if (def && def.description && def.description !== obj.description) { obj.description = def.description; refreshed = true; }
+        });
+        if (refreshed) gameStateInstance.updateProperty('mission.objectives', objectives);
         objectives.forEach(obj => {
             if (obj.missionId && this.missions.has(obj.missionId) && !this.completedMissions.has(obj.missionId)) {
                 this.activeMissions.add(obj.missionId);
