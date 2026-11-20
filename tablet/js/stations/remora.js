@@ -4,7 +4,7 @@ import { tell } from '../notify.js';
 import { sim, toward } from '../sim.js';
 import { launchRemora, recoverRemora, remoraRearm, bay } from '../bayops.js';
 import { ROV_NAME, rovRange, rovSite, rovFloor, rovCargo, REMORA_STORE, tetherBar } from '../rov.js';
-import { TOOLS, samples } from '../science.js';
+import { TOOLS, samples, pickKind } from '../science.js';
 import { el, toast } from '../util.js';
 import { mountCraftView } from '../craftview.js';
 
@@ -46,9 +46,15 @@ export function mount(body) {
     if (!r) return;
     cv.update();
     const t = toward(s, r), site = rovSite(), fl = rovFloor();
-    toolBtns.forEach((b) => { b.disabled = !!r.job || r.auto || rovCargo().length >= REMORA_STORE; });
+    const ids = Object.keys(TOOLS), near = fl != null && fl - r.depth <= 6;
+    toolBtns.forEach((b, i) => {
+      const id = ids[i], useful = !!pickKind(id, site);   // a tool that can take nothing at this spot is not shown
+      b.hidden = !useful;
+      b.disabled = !!r.job || r.auto || rovCargo().length >= REMORA_STORE || (TOOLS[id].needsFloor && !near);
+      b.title = TOOLS[id].needsFloor && !near ? 'Get within 6 m of the sea floor first.' : '';
+    });
     readout.textContent = `Range ${t.nm.toFixed(2)} of ${rovRange()} nm · bearing ${String(Math.round(t.brg)).padStart(3, '0')}° · heading ${String(Math.round(r.heading)).padStart(3, '0')}° · depth ${Math.round(r.depth)} m` +
-      (fl != null ? ` · floor ${Math.round(fl)} m` : '') + (site ? ` · at ${site.name}` : ' · no site here') +
+      (fl != null ? ` · floor ${Math.round(fl)} m` : '') + (site ? ` · at ${site.name}` : (() => { const n = s.pois.filter((p) => p.type !== 'dock').map((p) => ({ p, ...toward(r, p) })).sort((a, b) => a.nm - b.nm)[0]; return n ? ` · no site here: nearest is ${n.p.name}, ${n.nm.toFixed(2)} nm, bearing ${String(Math.round(n.brg)).padStart(3, '0')}° (get within 0.15 nm)` : ' · no site here'; })()) +
       (r.job ? ` · ${TOOLS[r.job.tool].name}: ${Math.max(0, Math.ceil((r.job.end - s.clock) / 60))} min left` : '') + ` · storage ${rovCargo().length} of ${REMORA_STORE}` + (r.auto ? ' · driving home' : r.home ? ' · alongside, ready to take aboard' : '');
   }
   update();

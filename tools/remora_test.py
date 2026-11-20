@@ -37,6 +37,18 @@ def main():
         page.evaluate("window.__aq.open('bay')"); page.wait_for_timeout(600)
         r = page.evaluate("(()=>{const b=document.querySelector('#station .tether'); return b && !b.hidden ? b.innerText : null})()")
         check("the Launch Bay page shows it on Remora's card", r and "0.50 of 1.0" in r, r)
+        # tools that can take nothing at this spot are not shown; at Mystic Reef the spectrometer is
+        js(setup + "s.rov.lat=s.lat; s.rov.lon=s.lon; s.rov.depth=5; return 1")
+        page.evaluate("window.__aq.open('remora')"); page.wait_for_timeout(500)
+        vis = lambda: page.evaluate("[...document.querySelectorAll('#station button.btn.chip')].filter(b=>!b.hidden && ['Sample collector','Core drill','Laser sampler','Spectrometer','Magnetometer'].includes(b.textContent)).map(b=>b.textContent)")
+        v = vis()
+        check("at Mystic Reef: spectrometer, collector and laser shown; drill and magnetometer hidden", "Spectrometer" in v and "Core drill" not in v and "Magnetometer" not in v, v)
+        js("const s=sim.s; s.rov.lat=s.lat+0.2; s.rov.lon=s.lon; return 1"); page.wait_for_timeout(800)
+        v = vis()
+        check("in open water only the tools that can take water are shown", "Core drill" not in v and "Laser sampler" not in v and "Magnetometer" not in v and "Spectrometer" in v, v)
+        # the survey mission: a sample counts when Remora brings it home
+        r = js("const m=(await import('../game/systems/missionManager.js')).default; const g=(await import('./js/persist.js')).gameState; const reef=sim.s.pois.find(p=>p.type==='reef'); const s=sim.s; s.rov.lat=reef.lat; s.rov.lon=reef.lon; s.rov.depth=5; s.lat=reef.lat+0.01; s.lon=reef.lon; sim.rovUse('spectrometer'); let n=0; while(s.rov.job&&n<999){sim.step(1);n++} const before=(g.getProperty('mission.science.stats')||{}).water_mystic_reef||0; s.rov.lat=s.lat; s.rov.lon=s.lon; sim.recoverRov(); return {before, after:(g.getProperty('mission.science.stats')||{}).water_mystic_reef||0}")
+        check("a reef water sample counts for the survey once she is home", r["after"] == r["before"] + 1, r)
         check("no page errors", not errors, errors)
         browser.close()
     server.shutdown()
