@@ -11,7 +11,7 @@ import { sim, toward, clockText, wskrName, TIMESCALE } from './sim.js';
 import { seafloor } from './seafloor.js';
 import { gameState, checkpoint, snapshotSim } from './persist.js';
 import { requestSync } from './sync.js';
-import { SHUTTLE_NAME, SHUTTLE_KT, shuttle, shuttleRangeNm, shuttleHours, bay, dockList } from './bayops.js';
+import { SHUTTLE_NAME, SHUTTLE_KT, shuttle, shuttleRangeNm, shuttleHours, bay, dockList, REMORA_REARM_S, REMORA_UNLOAD_S } from './bayops.js';
 import { addSample, pickKind, SAMPLE_KINDS } from './science.js';
 
 export const AWAY_CAPS = [4, 8, 12, 24];
@@ -19,6 +19,7 @@ export const AWAY_MIN_S = 90;            // away for less than this: no briefing
 export const AWAY_MAX_SIM_S = 48 * 3600; // never simulate more than this
 const KEEL = 8, LOOK_NM = 6, NM_LAT = 60;
 const LOW = { oxygen: 30, battery: 20, hull: 60 };
+const REMORA_DELAY_S = 300, REMORA_S = 1200;   // Remora goes 5 minutes after the away team; a dive, with launch and recovery, takes under 20 minutes
 const WAIT_S = 3600, SAMPLE_S = 1800, TRIP_LOAD_S = 2700, TRIP_MAX_NM = 40;   // wait an hour; sampling takes half an hour; loading at the dock three quarters of an hour
 
 const wake = new Set();
@@ -99,28 +100,31 @@ sim.on(listener);
 function rules(a, s) {
   const st = a.stop; if (!st || st.kind === 'cap' || !a.endClock || s.clock - st.c < WAIT_S) return;
   a.did = a.did || {};
-  if (!a.did.samples) {   // the science team sample the point of interest we stopped at
-    a.did.samples = true;
-    const poi = st.kind === 'arrived' && s.pois.find((p) => p.name === st.name);
-    if (poi && poi.type !== 'dock' && !s.docked && a.endClock - s.clock >= SAMPLE_S) {
-      const got = [];
-      for (const tool of ['spectrometer', 'laser', ...(poi.type === 'wreck' ? ['magnetometer'] : [])]) { const k = pickKind(tool, poi); if (k && !got.includes(k)) { addSample(k, poi, tool); got.push(k); } }
-      if (got.length) note(`The science team took ${got.length === 1 ? 'a' : got.length} ${got.map((k) => SAMPLE_KINDS[k].label.toLowerCase()).join(' and ')} sample${got.length > 1 ? 's' : ''} at ${poi.name}. They are in the lab, waiting for analysis.`);
-    }
-  }
-  if (!a.did.trip) {      // a port is close by: an away team takes the Tern for supplies
+  if (!a.did.trip) {      // a port is close by: an away team takes the Tern for supplies (she leaves first: Remora's tether holds the bay doors open)
     a.did.trip = true;
     const sh = shuttle(), docks = dockList().map((d) => ({ d, nm: toward(s, d).nm })).sort((x, y) => x.nm - y.nm), near = docks[0];
     if (near && !s.docked && sh.state === 'bay' && !s.rov && !bay().op && near.nm > 0.5 && near.nm <= TRIP_MAX_NM && shuttleRangeNm() >= near.nm) {
       const secs = (near.nm / SHUTTLE_KT) * 3600 * 2 + TRIP_LOAD_S + 2 * 60;
-      if (a.endClock - s.clock >= secs) { a.trip = { dock: near.d.name, nm: +near.nm.toFixed(1), done: s.clock + secs }; note(`An away team left in ${SHUTTLE_NAME} for ${near.d.name}, ${Math.round(near.nm)} miles away, to fetch supplies.`); }
+      if (a.endClock - s.clock >= secs) { a.trip = { dock: near.d.name, nm: +near.nm.toFixed(1), done: s.clock + secs }; note(`An away team left in ${SHUTTLE_NAME} for ${near.d.name}, ${Math.round(near.nm)} miles away, to fetch supplies: food, science equipment, mail and the like.`); }
+    }
+  }
+  if (!a.did.samples && s.clock - st.c >= WAIT_S + REMORA_DELAY_S) {   // five minutes after the away team: the science team send Remora down at the point of interest we stopped at
+    a.did.samples = true;
+    const poi = st.kind === 'arrived' && s.pois.find((p) => p.name === st.name), b = bay();
+    if (poi && poi.type !== 'dock' && !s.docked && a.endClock - s.clock >= REMORA_S) {
+      const free = !s.rov && !b.op && !b.rearm, tools = ['collector', 'laser', 'spectrometer', ...(poi.type === 'wreck' ? ['magnetometer'] : [])], got = [];
+      for (const tool of free ? tools : ['spectrometer', 'laser', ...(poi.type === 'wreck' ? ['magnetometer'] : [])]) { const k = pickKind(tool, poi); if (k && !got.includes(k)) { addSample(k, poi, tool); got.push(k); } }
+      if (got.length) {
+        const what = `${got.length === 1 ? 'a' : got.length} ${got.map((k) => SAMPLE_KINDS[k].label.toLowerCase()).join(' and ')} sample${got.length > 1 ? 's' : ''}`;
+        if (free) { b.rearm = { t: 0, dur: REMORA_REARM_S + got.length * REMORA_UNLOAD_S, load: got.length }; note(`The science team sent Remora down at ${poi.name} and brought back ${what}. They are in the lab, waiting for analysis.`); }
+        else note(`The bay was busy, so the science team took ${what} at ${poi.name} with the ship's own gear. They are in the lab, waiting for analysis.`);
+      }
     }
   }
   if (a.trip && !a.trip.fin && s.clock >= a.trip.done) {
     a.trip.fin = true;
-    const o = s.oxygen, b = s.battery; s.oxygen = Math.min(100, s.oxygen + 30); s.battery = Math.min(100, s.battery + 10);
     const sh = shuttle(); sh.bat = Math.max(20, (sh.bat == null ? 100 : sh.bat) - (a.trip.nm / SHUTTLE_KT / shuttleHours()) * 100);
-    note(`The away team is back from ${a.trip.dock} with supplies: air up ${Math.round(s.oxygen - o)} points, battery up ${Math.round(s.battery - b)}. ${SHUTTLE_NAME} is on charge.`);
+    note(`The away team is back from ${a.trip.dock} with supplies: food, science equipment, mail and more. ${SHUTTLE_NAME} is on charge.`);
   }
 }
 
