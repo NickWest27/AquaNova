@@ -22,11 +22,13 @@ const BY_SITE = {
   site: ['rock', 'sediment', 'water'], open_water: ['water'],
 };
 export const TOOLS = {
-  collector: { name: 'Sample collector', secs: 300, needsFloor: true, pick: ['bio', 'water', 'sediment'] },
-  drill: { name: 'Core drill', secs: 900, needsFloor: true, pick: ['rock'] },
-  laser: { name: 'Laser sampler', secs: 240, needsFloor: false, pick: ['rock', 'sediment'] },
-  spectrometer: { name: 'Spectrometer', secs: 180, needsFloor: false, pick: ['water'] },
-  magnetometer: { name: 'Magnetometer', secs: 180, needsFloor: false, pick: ['magnetic'] },
+  // Remora is a sample collector: she collects and drills, and the lab does the analysing. A water sample can be taken anywhere in the water.
+  collector: { name: 'Sample collector', secs: 300, needsFloor: true, pick: ['bio', 'water', 'sediment'], remora: true },
+  drill: { name: 'Core drill', secs: 900, needsFloor: true, pick: ['rock'], remora: true },
+  // The ship's own instruments (the science team use them when the Captain is asleep and Remora is busy). Not on Remora.
+  laser: { name: 'Laser sampler', secs: 240, needsFloor: false, pick: ['rock', 'sediment'], remora: false },
+  spectrometer: { name: 'Spectrometer', secs: 180, needsFloor: false, pick: ['water'], remora: false },
+  magnetometer: { name: 'Magnetometer', secs: 180, needsFloor: false, pick: ['magnetic'], remora: false },
 };
 export const TOPICS = [
   { id: 'rov-range', name: 'Longer tether', cost: 2, text: 'A better tether lets the Science ROV work 1.5 nm from the ship.' },

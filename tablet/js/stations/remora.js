@@ -28,7 +28,8 @@ export function mount(body) {
   };
   pilot.append(el('div', { class: 'row' }, hold('Forward', 'thr', 1), hold('Back', 'thr', -1), hold('Turn left', 'turn', -1), hold('Turn right', 'turn', 1), hold('Dive', 'dive', 1), hold('Rise', 'dive', -1)));
   const toolRow = el('div', { class: 'row', style: 'margin-top:0.6rem' });
-  const toolBtns = Object.entries(TOOLS).map(([id, t]) => el('button', { class: 'btn chip', text: t.name, onclick: () => {
+  const toolIds = Object.keys(TOOLS).filter((id) => TOOLS[id].remora !== false);
+  const toolBtns = toolIds.map((id) => [id, TOOLS[id]]).map(([id, t]) => el('button', { class: 'btn chip', text: t.name, onclick: () => {
     const r = sim.rovUse(id); tell('science', r.ok ? `${t.name} working` : WHY[r.why], r.ok ? '' : 'error'); update(); } }));
   toolRow.append(...toolBtns); pilot.append(toolRow);
   const readout = el('p', { style: 'color:var(--dim);margin-top:0.6rem' }); pilot.append(readout);
@@ -46,12 +47,12 @@ export function mount(body) {
     if (!r) return;
     cv.update();
     const t = toward(s, r), site = rovSite(), fl = rovFloor();
-    const ids = Object.keys(TOOLS), near = fl != null && fl - r.depth <= 6;
+    const ids = toolIds, near = fl != null && fl - r.depth <= 6;
     toolBtns.forEach((b, i) => {
       const id = ids[i], useful = !!pickKind(id, site);   // a tool that can take nothing at this spot is not shown
       b.hidden = !useful;
-      b.disabled = !!r.job || r.auto || rovCargo().length >= REMORA_STORE || (TOOLS[id].needsFloor && !near);
-      b.title = TOOLS[id].needsFloor && !near ? 'Get within 6 m of the sea floor first.' : '';
+      b.disabled = !!r.job || r.auto || rovCargo().length >= REMORA_STORE || (TOOLS[id].needsFloor && pickKind(id, site) !== 'water' && !near);
+      b.title = TOOLS[id].needsFloor && pickKind(id, site) !== 'water' && !near ? 'Get within 6 m of the sea floor first.' : '';
     });
     readout.textContent = `Range ${t.nm.toFixed(2)} of ${rovRange()} nm · bearing ${String(Math.round(t.brg)).padStart(3, '0')}° · heading ${String(Math.round(r.heading)).padStart(3, '0')}° · depth ${Math.round(r.depth)} m` +
       (fl != null ? ` · floor ${Math.round(fl)} m` : '') + (site ? ` · at ${site.name}` : (() => { const n = s.pois.filter((p) => p.type !== 'dock').map((p) => ({ p, ...toward(r, p) })).sort((a, b) => a.nm - b.nm)[0]; return n ? ` · no site here: nearest is ${n.p.name}, ${n.nm.toFixed(2)} nm, bearing ${String(Math.round(n.brg)).padStart(3, '0')}° (get within 0.15 nm)` : ' · no site here'; })()) +

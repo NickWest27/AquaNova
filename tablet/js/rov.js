@@ -35,13 +35,12 @@ export const rovFloor = () => { const r = sim.s.rov; return r && seafloor.ready 
 /** Start a tool. Returns { ok, why }. */
 sim.rovUse = (toolId) => {
   const r = sim.s.rov, t = TOOLS[toolId];
-  if (!r || !t) return { ok: false, why: 'none' };
+  if (!r || !t || t.remora === false) return { ok: false, why: 'none' };
   if (r.job) return { ok: false, why: 'busy' };
   if ((r.cargo || []).length >= REMORA_STORE) return { ok: false, why: 'full' };
-  const fl = rovFloor();
-  if (t.needsFloor && !(fl != null && fl - r.depth <= 6)) return { ok: false, why: 'floor' };
-  const site = rovSite();
-  if (!pickKind(toolId, site)) return { ok: false, why: 'nothing' };
+  const fl = rovFloor(), site = rovSite(), kind = pickKind(toolId, site);
+  if (!kind) return { ok: false, why: 'nothing' };
+  if (t.needsFloor && kind !== 'water' && !(fl != null && fl - r.depth <= 6)) return { ok: false, why: 'floor' };   // a water sample can be taken anywhere in the water
   r.cmd = { thr: 0, turn: 0, dive: 0 }; r.auto = false; r.home = false;
   r.job = { tool: toolId, end: sim.s.clock + t.secs, site: site ? site.id : null };
   sim.touch(); return { ok: true };

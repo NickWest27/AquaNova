@@ -25,9 +25,9 @@ def main():
         r = js("""const s=sim.s; const reef=s.pois.find(p=>p.type==='reef'); Object.assign(s,{lat:reef.lat,lon:reef.lon,docked:false,speed:0,throttle:0,depth:20,targetDepth:20,wpt:null,rov:null});
           const a=sim.launchRov(); const again=sim.launchRov(); return {a,again,reef:reef.name,floor:null}""")
         check("ROV launches once", r["a"]["ok"] and not r["again"]["ok"], r)
-        r = js("""const s=sim.s; const x=sim.rovUse('spectrometer'); return x""")
+        r = js("""const s=sim.s; const x=sim.rovUse('collector'); return x""")
         check("tool works at a site", r["ok"], r)
-        r = js("""const s=sim.s; let n=0; while(s.rov.job && n<2000){ sim.step(0.1); n++; } return {left:!!s.rov.job, n, count:sc.samples().length, cargo:s.rov.cargo.length, first:s.rov.cargo[0]}""")
+        r = js("""const s=sim.s; let n=0; while(s.rov.job && n<6000){ sim.step(0.1); n++; } return {left:!!s.rov.job, n, count:sc.samples().length, cargo:s.rov.cargo.length, first:s.rov.cargo[0]}""")
         check("a sample is made and carried in her storage, not yet in the lab", not r["left"] and r["cargo"] == 1 and r["count"] == 0, r)
         # tether: drive away and check range cap
         r = js("""const s=sim.s; s.rov.cmd={thr:1,turn:0,dive:0}; s.rov.heading=0; for(let i=0;i<3000;i++) sim.step(0.1); const d=Math.hypot((s.rov.lat-s.lat)*60,(s.rov.lon-s.lon)*60*Math.cos(s.lat*Math.PI/180)); s.rov.cmd={thr:0,turn:0,dive:0}; return d""")

@@ -28,13 +28,13 @@ def main():
         js("M.startMission('firstSurvey'); return 1")
         st = lambda: js("return (g.getProperty('mission.objectives')||[]).filter(o=>o.missionId==='firstSurvey').map(o=>o.status)")
         # launch at Mystic Reef, water sample
-        js("""const s=sim.s; const reef=s.pois.find(p=>p.name==='Mystic Reef'); Object.assign(s,{lat:reef.lat,lon:reef.lon,docked:false,depth:5,targetDepth:5,rov:null,wskrs:[]}); sim.launchRov(); const x=sim.rovUse('spectrometer'); let n=0; while(s.rov.job&&n<3000){sim.step(0.1);n++;} return x""")
+        js("""const s=sim.s; const reef=s.pois.find(p=>p.name==='Mystic Reef'); Object.assign(s,{lat:reef.lat,lon:reef.lon,docked:false,depth:5,targetDepth:5,rov:null,wskrs:[]}); sim.launchRov(); const x=sim.rovUse('collector'); let n=0; while(s.rov.job&&n<6000){sim.step(0.1);n++;} s.rov.lat=s.lat; s.rov.lon=s.lon; sim.recoverRov(); return x""")
         page.wait_for_timeout(1500)
         r = js("return {stats:sc.samples().length, s:(g.getProperty('mission.science')||{}).stats}")
         check("water sample at Mystic Reef is counted", r["s"].get("water_mystic_reef") == 1 and r["s"].get("launched") == 1, r)
         check("launch and reef objectives complete", st()[:2] == ["completed", "completed"], st())
         # rock core at Vineyard Ledge
-        r = js("""const s=sim.s; const l=s.pois.find(p=>p.name==='Vineyard Ledge'); if(!l) return {err:'no ledge'}; sim.recoverRov(); Object.assign(s,{lat:l.lat,lon:l.lon}); sim.launchRov(); const f=(await import('./js/seafloor.js')).seafloor.depthAt(l.lat,l.lon); s.rov.depth=f-3; const x=sim.rovUse('drill'); let n=0; while(s.rov.job&&n<5000){sim.step(0.1);n++;} return {x,f}""")
+        r = js("""const s=sim.s; const l=s.pois.find(p=>p.name==='Vineyard Ledge'); if(!l) return {err:'no ledge'}; Object.assign(s,{lat:l.lat,lon:l.lon}); sim.launchRov(); const f=(await import('./js/seafloor.js')).seafloor.depthAt(l.lat,l.lon); s.rov.depth=f-3; const x=sim.rovUse('drill'); let n=0; while(s.rov.job&&n<12000){sim.step(0.1);n++;} s.rov.lat=s.lat; s.rov.lon=s.lon; sim.recoverRov(); return {x,f}""")
         check("Vineyard Ledge exists and drilling works", "err" not in r and r["x"]["ok"], r)
         page.wait_for_timeout(1500)
         check("ledge objective complete", st()[:3] == ["completed"] * 3, st())

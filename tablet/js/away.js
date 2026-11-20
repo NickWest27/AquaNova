@@ -20,7 +20,7 @@ export const AWAY_MIN_S = 90;            // away for less than this: no briefing
 export const AWAY_MAX_SIM_S = 48 * 3600; // never simulate more than this
 const KEEL = 8, LOOK_NM = 6, NM_LAT = 60;
 const LOW = { oxygen: 30, battery: 20, hull: 60, scrubbers: 15 };
-const REMORA_DELAY_S = 300, REMORA_S = 1200;   // Remora goes 5 minutes after the away team; a dive, with launch and recovery, takes under 20 minutes
+const REMORA_DELAY_S = 300, REMORA_S = 1500;   // Remora goes 5 minutes after the away team; a dive, with launch and recovery, takes under 20 minutes
 const WAIT_S = 3600, SAMPLE_S = 1800, TRIP_LOAD_S = 2700, TRIP_MAX_NM = 40;   // wait an hour; sampling takes half an hour; loading at the dock three quarters of an hour
 
 const wake = new Set();
@@ -113,7 +113,7 @@ function rules(a, s) {
     a.did.samples = true;
     const poi = st.kind === 'arrived' && s.pois.find((p) => p.name === st.name), b = bay();
     if (poi && poi.type !== 'dock' && !s.docked && a.endClock - s.clock >= REMORA_S) {
-      const free = !s.rov && !b.op && !b.rearm, tools = ['collector', 'laser', 'spectrometer', ...(poi.type === 'wreck' ? ['magnetometer'] : [])], got = [];
+      const free = !s.rov && !b.op && !b.rearm, tools = ['collector', 'drill'], got = [];
       for (const tool of (free ? tools : ['spectrometer', 'laser', ...(poi.type === 'wreck' ? ['magnetometer'] : [])]).slice(0, free ? REMORA_STORE : 9)) { const k = pickKind(tool, poi); if (k && !got.includes(k)) { addSample(k, poi, tool); got.push(k); } }
       if (got.length) {
         const what = `${got.length === 1 ? 'a' : got.length} ${got.map((k) => SAMPLE_KINDS[k].label.toLowerCase()).join(' and ')} sample${got.length > 1 ? 's' : ''}`;
