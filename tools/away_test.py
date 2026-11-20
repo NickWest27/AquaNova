@@ -61,7 +61,7 @@ def main():
         check("at a point of interest the science team send Remora down after an hour", r["stop"] == "arrived" and r["n"] >= 1 and any("sent remora" in l.lower() for l in r["log"]), r)
         check("no port near: no supply run", not any("away team" in l.lower() for l in r["log"]), r["log"])
         # 5c. stopped near a port with low air: after an hour an away team fetches supplies in the Tern
-        r = js(setup + "Object.assign(s,{lat:41.35,lon:-70.55,heading:90,targetHeading:90,speed:8,throttle:0.4,oxygen:31,depth:0,targetDepth:0}); const sh=(await import('./js/bayops.js')).shuttle(); sh.state='bay'; sh.bat=100; A.armAway(12); s.oxygen=29; sim.away.real = Date.now() - 6*3600*1000; const rep=A.catchUp(); return {stop: rep.away.stop && rep.away.stop.kind, oxy: s.oxygen, log: rep.away.log.map(l=>l.t), lines: A.briefing(rep).lines.join(' | ')}")
+        r = js(setup + "const dk=sim.dockPoi(); Object.assign(s,{lat:dk.lat+0.07,lon:dk.lon,heading:90,targetHeading:90,speed:8,throttle:0.4,oxygen:31,depth:0,targetDepth:0}); const sh=(await import('./js/bayops.js')).shuttle(); sh.state='bay'; sh.bat=100; A.armAway(12); s.oxygen=29; sim.away.real = Date.now() - 6*3600*1000; const rep=A.catchUp(); return {stop: rep.away.stop && rep.away.stop.kind, oxy: s.oxygen, log: rep.away.log.map(l=>l.t), lines: A.briefing(rep).lines.join(' | ')}")
         check("near a port, an away team fetches supplies (the surface refilled the air meanwhile)", r["oxy"] > 95 and any("away team left" in l.lower() for l in r["log"]) and any("back from" in l for l in r["log"]), r)
         check("the briefing tells the Captain about the supply run", "supplies" in r["lines"], r["lines"])
 

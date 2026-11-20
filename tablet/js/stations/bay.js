@@ -9,7 +9,7 @@ import { WSKR_CHARGE_H } from '../sim.js';
 
 const mins = (m) => (m < 1 ? 'under a minute' : m < 60 ? `${Math.round(m)} min` : `${Math.floor(m / 60)} h ${Math.round(m % 60)} min`);
 const toFull = (bat, hours) => ((100 - bat) / 100) * hours * 60;
-const SHUTTLE_WORDS = { follow: 'alongside', going: 'under way to a dock', exchange: 'cycling the airlock', returning: 'coming home', moored: 'moored at a dock, charging' };
+const SHUTTLE_WORDS = { goto: 'under way to a position', station: 'holding position', steer: 'on a heading', relay: 'up as a relay', follow: 'alongside', going: 'under way to a dock', exchange: 'cycling the airlock', returning: 'coming home', moored: 'moored at a dock, charging' };
 
 export function mount(body) {
   body.style.flexDirection = 'column';

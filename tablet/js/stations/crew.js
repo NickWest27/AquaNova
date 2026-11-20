@@ -11,6 +11,8 @@ import { crewIcon } from '../icons.js';
 import { startReport } from '../transfer.js';
 import { topicsFor, askTopic } from '../topics.js';
 import { askDepth } from '../depthPad.js';
+import { orderTern, callBackTern, ternReport, launchTern, destinations } from '../tern.js';
+import { TERN_SAFE_M } from '../bayops.js';
 import { toggleDock } from '../dock.js';
 import { say as crewSay, takeHeld, unreadFor, unreadCount, transcript, logLine } from '../notify.js';
 
@@ -46,7 +48,7 @@ const hdgText = (h) => String(Math.round(((h % 360) + 360) % 360)).padStart(3, '
 // Orders added here show up even in old saves (a save keeps its own copy of the crew's lines).
 const unreadMail = () => (gameState.getProperty('mission.inbox') || []).filter((m) => !m.read).length;
 const reportFor = (ctx, id) => statusReport(id, { mail: unreadMail(), objective: (() => { try { const o = ctx.objectives().find((x) => !x.done); return o ? o.text : null; } catch (e) { return null; } })() });
-const EXTRA = { helm: ['Make periscope depth', 'Status report', 'Undock', 'Dock', 'Hug the floor', 'Stop hugging the floor', 'Engage super cruise', 'Disengage super cruise'], sensors: ['Status report', 'Set up a relay', 'Stand down the relay'], communications: ['Status report', 'Transmit a report'], science: ['Status report'], security: ['Status report'] };
+const EXTRA = { helm: ['Make periscope depth', 'Status report', 'Undock', 'Dock', 'Hug the floor', 'Stop hugging the floor', 'Engage super cruise', 'Disengage super cruise'], sensors: ['Status report', 'Set up a relay', 'Stand down the relay'], communications: ['Status report', 'Transmit a report', 'Call back the Tern', 'Order the Tern to', 'Report on the Tern'], science: ['Status report'], security: ['Status report', 'Launch the Tern to'] };
 const ORDERS = {
   'Undock': () => { if (!docked()) return 'We are already undocked, Captain.'; setTimeout(() => toggleDock(), 600); return 'Undocking. Disconnecting shore power and releasing the clamps.'; },
   'Dock': () => {
@@ -113,6 +115,23 @@ const PARAM = {
   'Make your heading': () => ({ title: 'Make your heading …', opts: HEADINGS.map(([l, v]) => [l, () => { sim.setHeading(v); sim.s.wpt = null; return `Steering ${hdgText(v)}, aye.`; }]) }),
   'Make your speed': () => ({ title: 'Make your speed …', opts: [['All stop', 0], ['20%', 0.2], ['40%', 0.4], ['60%', 0.6], ['80%', 0.8], ['Flank', 1]].map(([l, v]) => [l, () => { if (docked()) return 'We are docked, Captain.'; if (v) sim.setThrottle(v); else sim.stop(); return v ? `Speed ${Math.round(v * 100)} percent, aye.` : 'All stop, aye.'; }]) }),
 };
+// The Tern: by radio through Nicole when she is out, through Security when she is in the bay.
+const destOpts = (run) => destinations().map((d) => [`Go to ${d.name}`, () => run(d)]);
+PARAM['Order the Tern to'] = () => ({ title: 'Order the Tern to …', opts: [
+  ['Hold position', () => orderTern({ kind: 'hold' }).text],
+  ['Surface', () => orderTern({ kind: 'surface' }).text],
+  ['Set up a relay', () => orderTern({ kind: 'relay' }).text],
+  ['Return to mission', () => orderTern({ kind: 'resume' }).text],
+  ['Make depth …', () => ({ title: 'Make depth …', opts: [10, 50, 100, 200, 400, 600, TERN_SAFE_M].map((m) => [`${m} m`, () => orderTern({ kind: 'depth', m }).text]) })],
+  ['Make heading …', () => ({ title: 'Make heading …', opts: HEADINGS.map(([l, v]) => [l, () => orderTern({ kind: 'heading', deg: v }).text]) })],
+  ['Make speed …', () => ({ title: 'Make speed …', opts: [['All stop', 0], ['5 knots', 5], ['10 knots', 10], ['15 knots', 15], ['20 knots', 20]].map(([l, kt]) => [l, () => orderTern({ kind: 'speed', kt }).text]) })],
+  ['Go to …', () => ({ title: 'Go to …', opts: destOpts((d) => orderTern({ kind: 'goto', dest: d }).text) })]] });
+PARAM['Launch the Tern to'] = () => ({ title: 'Launch the Tern to …', opts: [
+  ['Supply run: closest dock', () => launchTern({ kind: 'supply' }).text],
+  ['Search and rescue', () => launchTern({ kind: 'sar' }).text],
+  ['Go to …', () => ({ title: 'Go to …', opts: destOpts((d) => launchTern({ kind: 'goto', dest: d }).text) })]] });
+ORDERS['Call back the Tern'] = () => callBackTern().text;
+ORDERS['Report on the Tern'] = () => ternReport();
 PARAM['Make you speed'] = PARAM['Make your speed']; // old saves keep the typo
 const works = (t, pleasantry) => pleasantry || t in ORDERS || t in PARAM;
 
@@ -191,7 +210,7 @@ export function mount(body, ctx) {
         line('Give me a moment …', () => { page = 'crew'; render(); }, 'back')];
     } else if (page === 'param') {
       kids = [el('div', { class: 'comm-head', text: param.title }),
-        el('div', { class: 'comm-chips' }, ...param.opts.map(([l, fn, custom]) => line(l, () => custom ? custom((text) => say(`${param.said}: ${l.replace(/ …$/, '').replace(/^Custom /, '')}`, text)) : say(`${param.said}: ${l}`, fn(ctx)), 'chip'))),
+        el('div', { class: 'comm-chips' }, ...param.opts.map(([l, fn, custom]) => line(l, () => { if (custom) return custom((text) => say(`${param.said}: ${l.replace(/ …$/, '').replace(/^Custom /, '')}`, text)); const r = fn(ctx); if (r && typeof r === 'object') { param = { said: `${param.said}: ${l.replace(/ …$/, '')}`, ...r }; render(); } else say(`${param.said}: ${l}`, r); }, 'chip'))),
         line('Belay that …', () => { page = 'lines'; render(); }, 'back')];
     } else {
       const T = transcript(cur.id), last = T[T.length - 1], live = !reply.stub && !reply.held && last && last.from === 'crew' ? last.text : null;

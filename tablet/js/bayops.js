@@ -8,7 +8,7 @@
 //  - Shuttle: 20 kt, 6 h on a full charge, airlocks 10 s. It carries crew and supplies between the ship and a dock, and away teams:
 //    2 cockpit seats and 6 passenger seats. Two pilots is usual; one pilot and a radio link (ship or shore within 20 nm) is enough.
 //    It has navigation and radio but no scanning gear.
-import { sim, toward, wskrName, TIMESCALE, SURFACE_M, WSKR_CHARGE_H, WSKR_LOW_PCT } from './sim.js';
+import { sim, toward, wskrName, TIMESCALE, SURFACE_M, SURFACE_KT, WSKR_CHARGE_H, WSKR_LOW_PCT } from './sim.js';
 import { seafloor } from './seafloor.js';
 import { planRoute } from './route.js';
 import { SHUTTLE_NAME } from './topics.js';
@@ -18,7 +18,7 @@ import './rov.js';
 export { SHUTTLE_NAME };
 export const BAY_SAFE_KT = 8, DOOR_DAMAGE_KT = 10, LAUNCH_S = 60, AIRLOCK_S = 10;
 export const SHUTTLE_SEATS = 6, SHUTTLE_COCKPIT = 2, SHUTTLE_LINK_NM = 20, SHUTTLE_KT = 20, SHUTTLE_CHARGE_H = 2, MIN_LAUNCH_PCT = 20, LOW_PCT = 15;
-export const TERN_SAFE_M = 800, TERN_CRUSH_M = 1000, TERN_HOLD_M = 600, TERN_STANDOFF_NM = 0.25;   // the Tern is a shuttle, not a deep sea vehicle
+export const TERN_SAFE_M = 800, TERN_CRUSH_M = 1000, TERN_HOLD_M = 600, TERN_STANDOFF_NM = 0.25, TERN_CRUISE_M = 20;   // the Tern is a shuttle, not a deep sea vehicle
 export const O2_CREW = 8, O2_CHARGE_H = 1, REMORA_REARM_S = 300, REMORA_UNLOAD_S = 120;   // air lasts O2 hours with 8 aboard; Remora: 5 min to re-equip plus 2 min per sample unloaded
 /** Shuttle battery life on a full charge: 1 h to start, research makes it 3 h then 6 h. */
 export const shuttleHours = () => (research.has('shuttle-battery-6') ? 6 : research.has('shuttle-battery-3') ? 3 : 1);
@@ -33,7 +33,7 @@ const passable = (lat, lon) => (seafloor.depthAt(lat, lon) ?? 0) >= 3;
 export const bay = () => sim.s.bay || (sim.s.bay = { op: null, doorDmg: 0, base: 0, rearm: null });
 export const rack = () => sim.s.rack || (sim.s.rack = {});
 export const shuttle = () => sim.s.shuttle || (sim.s.shuttle = { state: 'bay', bat: 100, mode: 'follow' });
-const mannedDefaults = (sh) => { if (sh.o2 == null) sh.o2 = 100; if (sh.pilots == null) sh.pilots = SHUTTLE_COCKPIT; if (sh.pax == null) sh.pax = 0; if (sh.ashore == null) sh.ashore = 0; return sh; };
+const mannedDefaults = (sh) => { if (sh.depth == null) sh.depth = 0; if (sh.o2 == null) sh.o2 = 100; if (sh.pilots == null) sh.pilots = SHUTTLE_COCKPIT; if (sh.pax == null) sh.pax = 0; if (sh.ashore == null) sh.ashore = 0; return sh; };
 /** Who rides: pilots 0 to 2, passengers 0 to 6. Only while the shuttle is in the bay. */
 export function setManning(pilots, pax) { const sh = mannedDefaults(shuttle()); if (sh.state !== 'bay') return { ok: false, why: 'out' }; sh.pilots = Math.max(0, Math.min(SHUTTLE_COCKPIT, pilots)); sh.pax = Math.max(0, Math.min(SHUTTLE_SEATS, pax)); sim.touch(); return { ok: true, pilots: sh.pilots, pax: sh.pax }; }
 /** Radio link for a single pilot: within range of the ship, or of a shore station at a dock. */
@@ -87,7 +87,7 @@ export function sendShuttle(poi, stay = false) {
   const sh = mannedDefaults(shuttle()); if (sh.state !== 'out' || sh.mode !== 'follow' || sh.dead) return { ok: false, why: 'away' };
   const trip = toward(sh, poi).nm + toward(poi, sim.s).nm, range = shuttleRangeNm();
   if (trip > range) return { ok: false, why: 'range', trip, range };
-  Object.assign(sh, { stay: !!stay && sh.pax > 0, mode: 'going', dest: { id: poi.id, name: poi.name, lat: poi.lat, lon: poi.lon }, route: null, air: 0 }); sim.touch();
+  Object.assign(sh, { stay: !!stay && sh.pax > 0, mode: 'going', dest: { id: poi.id, name: poi.name, lat: poi.lat, lon: poi.lon }, route: null, air: 0 }); sh.depth = Math.max(sh.depth || 0, sh.holdDepth == null ? TERN_CRUISE_M : sh.holdDepth); sh.mission = { kind: sh.supply ? 'supply' : 'dock', dest: sh.dest }; sim.touch();
   return { ok: true, nm: toward(sh, poi).nm, hours: toward(sh, poi).nm / SHUTTLE_KT };
 }
 export function recallShuttle() { const sh = mannedDefaults(shuttle()); if (sh.state !== 'out' || sh.mode === 'follow') return { ok: false, why: 'none' }; if (sh.mode === 'moored') { Object.assign(sh, { mode: 'exchange', boarding: true, air: 0 }); sim.touch(); return { ok: true, boarding: true }; } sh.mode = 'returning'; sh.route = null; sim.touch(); return { ok: true }; }
@@ -103,7 +103,7 @@ function finishOp(op) {
   }
   if (op.craft === 'wskr' && op.kind === 'launch') { const r = sim.deployWskr(op.n); if (r.ok) sim.emit('bay-launched', { craft: 'wskr', n: r.n }); }
   else if (op.craft === 'wskr') { const i = s.wskrs.findIndex((w) => w.n === op.n); if (i >= 0) { const w = s.wskrs[i]; s.wskrs.splice(i, 1); rack()[w.n] = w.bat == null ? 100 : w.bat; sim.emit('wskr-recovered', w); } }
-  else if (op.kind === 'launch') { const sh = shuttle(); Object.assign(sh, { state: 'out', mode: 'follow', lat: s.lat, lon: s.lon, dest: null, route: null, dead: false }); sim.emit('bay-launched', { craft: 'shuttle' }); }
+  else if (op.kind === 'launch') { const sh = shuttle(); Object.assign(sh, { depth: s.depth, mission: null, holdDepth: undefined, ordKt: undefined, ordHdg: undefined, queue: [], lost: false, missed: 0, nextCheck: s.clock + 3600, lastContact: s.clock, state: 'out', mode: 'follow', lat: s.lat, lon: s.lon, dest: null, route: null, dead: false }); sim.emit('bay-launched', { craft: 'shuttle' }); }
   else { const sh = shuttle(); Object.assign(sh, { state: 'bay', mode: 'follow', dest: null, route: null }); sim.emit('shuttle-aboard', sh); }
 }
 
@@ -146,6 +146,24 @@ function aim(sh, goal) {
   while (sh.route.length > 1 && toward(sh, sh.route[0]).nm < 0.12) sh.route.shift();
   return sh.route[0] || goal;
 }
+/** Her speed: what the Captain ordered, never more than 7 knots while she is on the surface. */
+const spd = (sh) => Math.min(sh.ordKt == null ? SHUTTLE_KT : sh.ordKt, (sh.depth || 0) < SURFACE_M ? SURFACE_KT : SHUTTLE_KT);
+/** Where she wants to be: ordered depth, the surface for a relay, the dock, or a check-in. 3 m a second. */
+function tickDepth(sh, g) {
+  if (sh.mode === 'follow' && !sh.standoff) { sh.depth = sim.s.depth; return; }
+  if (sh.standoff) return;
+  const s = sim.s;
+  const want = sh.surfUntil && s.clock < sh.surfUntil ? 0 : (sh.mode === 'moored' || sh.mode === 'exchange' || sh.mode === 'relay') ? 0 : sh.mode === 'station' ? (sh.holdDepth || 0) : (sh.holdDepth == null ? TERN_CRUISE_M : sh.holdDepth);
+  const d = want - sh.depth; sh.depth += Math.max(-3 * g, Math.min(3 * g, d));
+}
+/** Free steering: she holds a heading and speed until blocked by land or the edge of the Area of Operations. */
+function steer(sh, g) {
+  const kt = spd(sh); if (kt <= 0) { sh.mode = 'station'; return; }
+  const nm = (kt * g) / 3600, r = ((sh.ordHdg == null ? sh.heading : sh.ordHdg) * Math.PI) / 180;
+  const lat = sh.lat + (nm * Math.cos(r)) / 60, lon = sh.lon + (nm * Math.sin(r)) / (60 * Math.cos((sh.lat * Math.PI) / 180));
+  if (!passable(lat, lon) || !seafloor.inside(lat, lon)) { sh.mode = 'station'; sim.emit('shuttle-blocked', sh); return; }
+  sh.heading = sh.ordHdg == null ? sh.heading : sh.ordHdg; sh.lat = lat; sh.lon = lon; sh.moving = true;
+}
 function stepShuttle(g) {
   const s = sim.s, sh = shuttle();
   if (sh.state === 'bay') { mannedDefaults(sh); if (sh.bat < 100) sh.bat = Math.min(100, sh.bat + (100 / (SHUTTLE_CHARGE_H * 3600)) * g); if (sh.o2 < 100) sh.o2 = Math.min(100, sh.o2 + (100 / (O2_CHARGE_H * 3600)) * g); return; }
@@ -154,7 +172,8 @@ function stepShuttle(g) {
   mannedDefaults(sh);
   if (sh.pilots < 2 && sh.mode === 'going' && !shuttleLink(sh)) { sh.mode = 'returning'; sh.route = null; sim.emit('shuttle-nolink', sh); }   // one pilot needs a radio link
   let goal = null;
-  if (sh.mode === 'going') goal = sh.dest; else if (sh.mode === 'returning' || sh.mode === 'follow') goal = s;
+  if (sh.mode === 'going' || sh.mode === 'goto') goal = sh.dest; else if (sh.mode === 'returning' || sh.mode === 'follow' || sh.mode === 'relay') goal = s;
+  tickDepth(sh, g);
   // The ship is below the Tern's safe depth (800 m): she formates at a safe distance and depth, and hails the ship, until it is safe to dock.
   if (!sh.dead && (sh.mode === 'follow' || sh.mode === 'returning')) {
     if (s.depth > TERN_SAFE_M && !sh.standoff) { sh.standoff = true; sh.mode = 'follow'; sim.emit('shuttle-standoff', sh); }
@@ -162,7 +181,10 @@ function stepShuttle(g) {
   }
   if (sh.standoff) { sh.mode = 'follow'; goal = null; sh.lat = s.lat + TERN_STANDOFF_NM / 60; sh.lon = s.lon; sh.depth = Math.min(TERN_HOLD_M, s.depth); }
   else if (sh.mode === 'follow' && toward(sh, s).nm < 0.3) { sh.lat = s.lat; sh.lon = s.lon; goal = null; sh.depth = s.depth; }   // alongside: rides with the ship
+  else if (sh.mode === 'relay' && toward(sh, s).nm < 0.3) { sh.lat = s.lat; sh.lon = s.lon; goal = null; }   // a relay rides at the surface with the ship
   else if (sh.mode === 'follow') sh.mode = 'returning';
+  if (sh.mode === 'station') goal = null;
+  if (sh.mode === 'steer') { goal = null; steer(sh, g); }
   if (sh.mode === 'exchange') {
     sh.air = (sh.air || 0) + g;
     if (sh.air >= AIRLOCK_S) {
@@ -174,9 +196,11 @@ function stepShuttle(g) {
     const arrived = t.nm < (sh.mode === 'going' ? 0.1 : 0.15) || (sh.routeSnapped && toward(sh, end).nm < 0.12);
     if (arrived) {
       if (sh.mode === 'going') { sh.mode = 'exchange'; sh.air = 0; sim.emit('shuttle-arrived', sh); }
+      else if (sh.mode === 'goto') { sh.mode = 'station'; sh.route = null; sim.emit('shuttle-onstation', sh); }
+      else if (sh.mode === 'relay') { /* stays up with the ship */ }
       else { sh.mode = 'follow'; sh.lat = s.lat; sh.lon = s.lon; sh.route = null; if (s.depth <= TERN_SAFE_M) sim.emit('shuttle-alongside', sh); }
     } else {
-      const a = aim(sh, goal), ta = toward(sh, a), f = Math.min(1, ((SHUTTLE_KT * g) / 3600) / Math.max(0.001, ta.nm));
+      const a = aim(sh, goal), ta = toward(sh, a), f = Math.min(1, ((spd(sh) * g) / 3600) / Math.max(0.001, ta.nm));
       if (ta.nm > 0.01) { sh.heading = ta.brg; sh.lat += (a.lat - sh.lat) * f; sh.lon += (a.lon - sh.lon) * f; sh.moving = true; }
     }
   }
@@ -185,7 +209,7 @@ function stepShuttle(g) {
   else {
     sh.bat = Math.max(0, sh.bat - (100 / (shuttleHours() * 3600)) * (sh.moving ? 1 : 0.3) * g);
     // the Tern's air is her single-use scrubber stock: it is only used while she is submerged (not riding on the surface alongside a surfaced ship), and by whoever is aboard
-    const surfaced = sh.mode === 'follow' && sim.s.depth < SURFACE_M;
+    const surfaced = (sh.mode === 'follow' ? sim.s.depth : sh.depth) < SURFACE_M;
     if (!surfaced) sh.o2 = Math.max(0, sh.o2 - (100 / (shuttleO2Hours() * 3600)) * (aboard(sh) / O2_CREW) * g);
   }
   if (sh.bat <= 0) { sh.dead = true; sim.emit('shuttle-dead', sh); }

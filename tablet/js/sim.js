@@ -216,7 +216,7 @@ sim.wskrHelm = (n, { turn, thr } = {}) => { const w = sim.s.wskrs.find((q) => q.
 export const WSKR_LOST_MIN = 10;
 sim.wskrLink = (w, at = w) => { const s = sim.s; let nm = toward(s, at).nm; for (const r of s.wskrs) if (r !== w && r.mode === 'relay' && !r.dead) nm = Math.min(nm, toward(r, at).nm); const raw = nm <= WSKR_LINK_NM; return { nm, max: WSKR_LINK_NM, raw, ok: raw || !!w.surfaced, surfaced: !!w.surfaced }; };
 /** A relay WSKR following within link range lets the ship use its antennas as if it were at the surface (comms) and gives a GPS fix. */
-sim.relayUp = () => { const s = sim.s; return s.depth <= 2000 && s.wskrs.some((w) => w.mode === 'relay' && !w.dead && toward(s, w).nm <= WSKR_LINK_NM); };
+sim.relayUp = () => { const s = sim.s, t = s.shuttle; return s.depth <= 2000 && (s.wskrs.some((w) => w.mode === 'relay' && !w.dead && toward(s, w).nm <= WSKR_LINK_NM) || !!(t && t.state === 'out' && t.mode === 'relay' && !t.dead && (t.depth || 0) < 3 && toward(s, t).nm <= WSKR_LINK_NM)); };   // a relay WSKR, or the Tern up at the surface as a relay
 sim.hasGps = () => sim.s.depth <= 15 || sim.relayUp();
 /** Set up a relay for the Captain: the nearest WSKR holding formation (or none). Returns { ok, why, wskr }. */
 sim.setupRelay = () => {

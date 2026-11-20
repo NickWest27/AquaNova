@@ -103,7 +103,7 @@ function rules(a, s) {
   if (!a.did.trip) {      // a port is close by: an away team takes the Tern for supplies (she leaves first: Remora's tether holds the bay doors open)
     a.did.trip = true;
     const sh = shuttle(), docks = dockList().map((d) => ({ d, nm: toward(s, d).nm })).sort((x, y) => x.nm - y.nm), near = docks[0];
-    if (near && !s.docked && sh.state === 'bay' && !s.rov && !bay().op && near.nm > 0.5 && near.nm <= TRIP_MAX_NM && shuttleRangeNm() >= near.nm) {
+    if (near && !s.docked && sh.state === 'bay' && !s.rov && !bay().op && near.nm > 0.5 && near.nm <= TRIP_MAX_NM && shuttleRangeNm() >= near.nm * 2) {
       const secs = (near.nm / SHUTTLE_KT) * 3600 * 2 + TRIP_LOAD_S + 2 * 60;
       if (a.endClock - s.clock >= secs) { a.trip = { dock: near.d.name, nm: +near.nm.toFixed(1), done: s.clock + secs }; note(`An away team left in ${SHUTTLE_NAME} for ${near.d.name}, ${Math.round(near.nm)} miles away, to fetch supplies: food, science equipment, mail and CO2 scrubbers.`); }
     }
