@@ -78,6 +78,11 @@ export function mailZoom(up = true) {
   for (let k = 0; k < 4; k++) { const f = up ? 320 + k * 260 : 1100 - k * 260; blip(f, f * 1.15, k * 0.06, 0.07, 0.2, 'square', 'ui'); }
   blip(up ? 1500 : 220, up ? 1900 : 160, 0.25, 0.09, 0.18, 'triangle', 'ui');
 }
+/** An action happened (a sample taken, a craft launched): one short low tick. Not the communicator. */
+export function actionTick() {
+  if (!ac || !pref.on) return;
+  blip(300, 240, 0, 0.07, 0.22, 'square', 'ui');
+}
 /** A soft notice. */
 export function ping() {
   if (!ac || !pref.on) return;

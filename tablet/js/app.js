@@ -342,11 +342,11 @@ async function boot() {
       } else if (type === 'enter') { say('helm', `We are at ${data.name}, Captain.`); firstVisit(data); }
       else if (type === 'arrived') { flag('arrived'); say('helm', 'Destination reached, Captain.'); }
       else if (type === 'wskr-found') { const fresh = fileScan(data.poi); say('sensors', fresh ? `${wskrName(data.wskr)} has finished investigating ${data.poi.name}. Scan filed, Captain.` : `${wskrName(data.wskr)} re-checked ${data.poi.name}. Nothing new.`, 'mission'); }
-      else if (type === 'rov-sample') { say('science', `Remora has a ${SAMPLE_KINDS[data.kind].label.toLowerCase()} sample from ${data.site}, Captain. Storage ${data.stored} of ${data.store}.${data.full ? ' She is full. Bring her home so we can unload her.' : ' Bring her home when you have what you came for, and she will deliver it to the lab.'}`); }
-      else if (type === 'rov-home') say('science', 'Remora is alongside, Captain. She is ready to be taken aboard.');
+      else if (type === 'rov-sample') { say('science', `Remora has a ${SAMPLE_KINDS[data.kind].label.toLowerCase()} sample from ${data.site}, Captain. Storage ${data.stored} of ${data.store}.${data.full ? ' She is full. Bring her home so we can unload her.' : ' Bring her home when you have what you came for, and she will deliver it to the lab.'}`, '', { action: true }); }
+      else if (type === 'rov-home') say('science', 'Remora is alongside, Captain. She is ready to be taken aboard.', '', { action: true });
       else if (type === 'rov-blocked') say('science', 'Remora has hit shoal water on her way back, Captain. She has stopped. Somebody needs to pilot her round it.', 'error');
-      else if (type === 'rov-reading') say('science', `Magnetometer reading from ${data.site} is in the lab, live over the tether.`);
-      else if (type === 'remora-unloaded') say('science', `Sample unloaded and in the lab.${data.left ? ` ${data.left} to go.` : ''}`);
+      else if (type === 'rov-reading') say('science', `Magnetometer reading from ${data.site} is in the lab, live over the tether.`, '', { action: true });
+      else if (type === 'remora-unloaded') say('science', `Sample unloaded and in the lab.${data.left ? ` ${data.left} to go.` : ''}`, '', { action: true });
       else if (type === 'hug-off') say('helm', data.why === 'docked' ? 'Following the floor ended, Captain.' : 'The water is too shallow to follow the floor, Captain. Holding this depth.', 'mission', { hold: false });
       else if (type === 'shuttle-standoff') say('comms', `Aqua Nova, ${SHUTTLE_NAME}. You are below 800 metres, past our safe depth. We are holding off your beam at a safe distance and a safe depth. Bring her up above 800 metres and we will come in.`, 'mission');
       else if (type === 'shuttle-lostlink') say('comms', `Captain, we have lost radio contact with ${SHUTTLE_NAME}. She is continuing her mission, and she will surface to try a check-in every hour. Orders for her will wait until we have contact.`, 'mission');
@@ -368,12 +368,12 @@ async function boot() {
       else if (type === 'wskr-low') say('sensors', `${wskrName(data)} is down to its last charge, Captain. Recalling it.`, 'mission');
       else if (type === 'wskr-dead') say('sensors', `${wskrName(data)} has lost power and is adrift, Captain. Bring the ship alongside to recover it.`, 'mission');
       else if (type === 'wskr-search-done') say('sensors', `${wskrName(data)} has finished its search pattern and is rejoining the formation.`);
-      else if (type === 'bay-launched') say(data.craft === 'shuttle' ? 'helm' : data.craft === 'rov' ? 'science' : 'sensors', data.craft === 'shuttle' ? `${SHUTTLE_NAME} is away, Captain.` : data.craft === 'rov' ? 'Remora is away. The bay doors stay open for her tether until she is back aboard, Captain.' : `${wskrName(data)} is away.`);
+      else if (type === 'bay-launched') say(data.craft === 'shuttle' ? 'helm' : data.craft === 'rov' ? 'science' : 'sensors', data.craft === 'shuttle' ? `${SHUTTLE_NAME} is away, Captain.` : data.craft === 'rov' ? 'Remora is away. The bay doors stay open for her tether until she is back aboard, Captain.' : `${wskrName(data)} is away.`, '', { action: true });
       else if (type === 'bay-warn') say('engineering', `Captain, the bay doors are open and she is taking a beating at ${Math.round(data.kt)} knots. Come below ${BAY_SAFE_KT}, if ya please.`, 'mission');
       else if (type === 'bay-door-damage') say('engineering', `Captain, ya killing the bay doors at this speed! I recommend we slow down. They are ${Math.round(data.pct)} percent gone, and only a dry dock fixes that.`, 'mission');
       else if (type === 'bay-tether') say('engineering', `${wskrName(data)} is alongside, Captain, but Remora's tether is holding the bay doors open. Get her aboard first.`);
-      else if (type === 'remora-aboard') say('science', `Remora is aboard. The team are unloading ${data.load} sample${data.load === 1 ? '' : 's'} and re-equipping her: about ${Math.ceil(data.dur / 60)} minutes.`);
-      else if (type === 'remora-ready') say('science', 'Remora is unloaded and re-equipped, Captain. She is ready to launch.');
+      else if (type === 'remora-aboard') say('science', `Remora is aboard. The team are unloading ${data.load} sample${data.load === 1 ? '' : 's'} and re-equipping her: about ${Math.ceil(data.dur / 60)} minutes.`, '', { action: true });
+      else if (type === 'remora-ready') say('science', 'Remora is unloaded and re-equipped, Captain. She is ready to launch.', '', { action: true });
       else if (type === 'bay-wait') say('sensors', `${wskrName(data)} is alongside, Captain. Slow below ${BAY_SAFE_KT} knots and we will take it aboard.`);
       else if (type === 'shuttle-arrived') say('helm', `${SHUTTLE_NAME} is alongside ${(data.dest || {}).name || 'the pier'}. Cycling the airlock, ten seconds.`);
       else if (type === 'shuttle-landed') say('helm', `The away team is ashore at ${(data.dest || {}).name || 'the pier'}, ${SHUTTLE_NAME} is moored and charging. Recall her when they are ready.`);

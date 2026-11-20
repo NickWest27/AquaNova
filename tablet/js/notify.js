@@ -4,7 +4,7 @@
 import { fill } from './player.js';
 import { viewProbe, consoleLine } from './util.js';
 import { gameState } from './persist.js';
-import { chirp, ping } from './audio.js';
+import { chirp, ping, actionTick } from './audio.js';
 
 const CREW_ID = { helm: 'helm', aria: 'executiveOfficer', sensors: 'sensors', engineering: 'engineering', comms: 'communications', science: 'science' };
 const FALLBACK = { helm: ['Helm', 'Helm officer'], aria: ['ARIA', 'Executive officer'], sensors: ['Sensors', 'Sensors officer'], engineering: ['Engineering', 'Engineer'], comms: ['Comms', 'Communications'], science: ['Science', 'Science officer'] };
@@ -51,10 +51,11 @@ export function say(role, text, kind = '', opts = {}) {
   }
   if (viewProbe.fn()) {   // bridge: the upper display
     document.dispatchEvent(new CustomEvent('notice', { detail: { text: opts.notice || text, kind, who: w.name.split(' ').pop().toUpperCase() } }));
-    if (now - lastPing > 3000) { lastPing = now; ping(); }
+    if (opts.action) actionTick(); else if (now - lastPing > 3000) { lastPing = now; ping(); }
     return;
   }
-  if (now - lastChirp > 20000) { lastChirp = now; stats.chirps++; chirp(); }
+  if (opts.action) { actionTick(); }   // a routine action report: a short tick, not the communicator
+  else if (now - lastChirp > 20000) { lastChirp = now; stats.chirps++; chirp(); }
   stats.shown++;
   consoleLine(`${w.name} · ${w.role}: ${text}${kind === 'mission' || kind === 'error' ? '  (tap the pin to answer)' : ''}`, kind);   // docked readout; the pin pulses for held messages
 
