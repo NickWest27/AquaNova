@@ -94,7 +94,7 @@ def main():
             RES(["shuttle-battery-3"]); check("long-life cells make it 3 h", js(B + "return B.shuttleHours()") == 3)
             RES(["shuttle-battery-3", "shuttle-battery-6", "shuttle-o2"]); check("deep-cycle cells 6 h, scrubbers 10 h of air", js(B + "return [B.shuttleHours(), B.shuttleO2Hours()]") == [6, 10])
             RES([])
-            js("const s=sim.s; Object.assign(s.shuttle,{state:'out',mode:'follow',lat:s.lat,lon:s.lon,pilots:2,pax:6,o2:100,bat:100,dead:false}); return 1")
+            js("const s=sim.s; s.docked=false; s.autoAvoid=false; s.lat=39.0; s.lon=-68.0; s.at=null; s.depth=200; s.targetDepth=200; Object.assign(s.shuttle,{state:'out',mode:'follow',lat:s.lat,lon:s.lon,pilots:2,pax:6,o2:100,bat:100,dead:false}); return 1")
             js("for(let i=0;i<100;i++) sim.step(0.1); return 1")
             r = js("return 100-sim.s.shuttle.o2"); check("air falls about 4% in 20 game min with 8 aboard (8 h)", 3.4 < r < 5, str(r))
             js("const sh=sim.s.shuttle; Object.assign(sh,{pilots:1,pax:0,o2:100}); for(let i=0;i<100;i++) sim.step(0.1); return 1")

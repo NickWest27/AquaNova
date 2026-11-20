@@ -8,7 +8,7 @@
 //  - Shuttle: 20 kt, 6 h on a full charge, airlocks 10 s. It carries crew and supplies between the ship and a dock, and away teams:
 //    2 cockpit seats and 6 passenger seats. Two pilots is usual; one pilot and a radio link (ship or shore within 20 nm) is enough.
 //    It has navigation and radio but no scanning gear.
-import { sim, toward, wskrName, TIMESCALE, WSKR_CHARGE_H, WSKR_LOW_PCT } from './sim.js';
+import { sim, toward, wskrName, TIMESCALE, SURFACE_M, WSKR_CHARGE_H, WSKR_LOW_PCT } from './sim.js';
 import { seafloor } from './seafloor.js';
 import { planRoute } from './route.js';
 import { SHUTTLE_NAME } from './topics.js';
@@ -175,7 +175,9 @@ function stepShuttle(g) {
   if (!sh.moving && atDock(sh)) { sh.bat = Math.min(100, sh.bat + (100 / (SHUTTLE_CHARGE_H * 3600)) * g); sh.o2 = Math.min(100, sh.o2 + (100 / (O2_CHARGE_H * 3600)) * g); }
   else {
     sh.bat = Math.max(0, sh.bat - (100 / (shuttleHours() * 3600)) * (sh.moving ? 1 : 0.3) * g);
-    sh.o2 = Math.max(0, sh.o2 - (100 / (shuttleO2Hours() * 3600)) * (aboard(sh) / O2_CREW) * g);   // air is breathed by whoever is aboard
+    // the Tern's air is her single-use scrubber stock: it is only used while she is submerged (not riding on the surface alongside a surfaced ship), and by whoever is aboard
+    const surfaced = sh.mode === 'follow' && sim.s.depth < SURFACE_M;
+    if (!surfaced) sh.o2 = Math.max(0, sh.o2 - (100 / (shuttleO2Hours() * 3600)) * (aboard(sh) / O2_CREW) * g);
   }
   if (sh.bat <= 0) { sh.dead = true; sim.emit('shuttle-dead', sh); }
   else if (sh.o2 <= 0) { sh.dead = true; sim.emit('shuttle-o2-out', sh); }

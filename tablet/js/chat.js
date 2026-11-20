@@ -219,7 +219,7 @@ const REPORT = {
   engineering: (c, s) => [`Engineering report, Captain. Battery is at ${c.bat} percent and power draw is ${Math.round(s.power || 0)} kilowatts.`,
     c.docked ? 'We are on shore power.' : `The plant is steady at ${c.kt} knots.`, `Hull integrity is ${c.hull} percent.`, `Oxygen is ${c.o2} percent.`,
     c.cruise ? 'Super cruise is drawing heavily.' : null, c.bat < 30 ? 'The battery is low. I would not stay out long.' : null],
-  science: (c, s) => [`Science and medical report, Captain. The crew are healthy and rested. Air quality is ${c.o2} percent oxygen.`,
+  science: (c, s) => [`Science and medical report, Captain. The crew are healthy and rested. Air quality is ${c.o2} percent oxygen. The CO2 scrubbers are at ${Math.round(s.scrubbers == null ? 100 : s.scrubbers)} percent; they only wear out while we are submerged.`,
     c.rov ? 'Remora is out.' : 'Remora is aboard.', c.hull < 95 ? 'The hull took a knock; nobody is hurt.' : null],
   security: (c) => [`Security report, Captain. All secure.`, c.docked ? 'The gangway is secure and logged.' : 'The boat is sealed for sea.', 'No incidents on the watch.'],
   communications: (c) => [`Communications report, Captain. ${c.mail ? `${c.mail === 1 ? 'One message is' : c.mail + ' messages are'} waiting.` : 'No new traffic.'}`,

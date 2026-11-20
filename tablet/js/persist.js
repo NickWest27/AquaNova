@@ -44,7 +44,7 @@ export function snapshotSim() {
     gameState.updateProperty('navigation.wskrDepth', s.wskrDepth);
     gameState.updateProperty('navigation.rov', s.rov ? { lat: +s.rov.lat.toFixed(5), lon: +s.rov.lon.toFixed(5), heading: Math.round(s.rov.heading), depth: Math.round(s.rov.depth) } : null);
     gameState.updateProperty('progress.gameClock', Math.round(s.clock));
-    gameState.updateProperty('shipSystems.vitals', { battery: +s.battery.toFixed(1), oxygen: +s.oxygen.toFixed(1) });
+    gameState.updateProperty('shipSystems.vitals', { battery: +s.battery.toFixed(1), oxygen: +s.oxygen.toFixed(1), scrubbers: +(s.scrubbers == null ? 100 : s.scrubbers).toFixed(1) });
     gameState.updateProperty('shipSystems.hull.integrity', Math.round(s.hull));
   });
 }
@@ -70,6 +70,7 @@ export function restoreSim() {
   const v = gameState.getProperty('shipSystems.vitals');
   s.battery = v && v.battery != null ? v.battery : 100;
   s.oxygen = v && v.oxygen != null ? v.oxygen : 100;
+  s.scrubbers = v && v.scrubbers != null ? v.scrubbers : 100;
   const hull = gameState.getProperty('shipSystems.hull.integrity');
   s.hull = hull != null ? hull : 100; s.damage = 100 - s.hull;
   const name = nav.location.properties && nav.location.properties.name;

@@ -18,7 +18,7 @@ export const AWAY_CAPS = [4, 8, 12, 24];
 export const AWAY_MIN_S = 90;            // away for less than this: no briefing
 export const AWAY_MAX_SIM_S = 48 * 3600; // never simulate more than this
 const KEEL = 8, LOOK_NM = 6, NM_LAT = 60;
-const LOW = { oxygen: 30, battery: 20, hull: 60 };
+const LOW = { oxygen: 30, battery: 20, hull: 60, scrubbers: 15 };
 const REMORA_DELAY_S = 300, REMORA_S = 1200;   // Remora goes 5 minutes after the away team; a dive, with launch and recovery, takes under 20 minutes
 const WAIT_S = 3600, SAMPLE_S = 1800, TRIP_LOAD_S = 2700, TRIP_MAX_NM = 40;   // wait an hour; sampling takes half an hour; loading at the dock three quarters of an hour
 
@@ -105,7 +105,7 @@ function rules(a, s) {
     const sh = shuttle(), docks = dockList().map((d) => ({ d, nm: toward(s, d).nm })).sort((x, y) => x.nm - y.nm), near = docks[0];
     if (near && !s.docked && sh.state === 'bay' && !s.rov && !bay().op && near.nm > 0.5 && near.nm <= TRIP_MAX_NM && shuttleRangeNm() >= near.nm) {
       const secs = (near.nm / SHUTTLE_KT) * 3600 * 2 + TRIP_LOAD_S + 2 * 60;
-      if (a.endClock - s.clock >= secs) { a.trip = { dock: near.d.name, nm: +near.nm.toFixed(1), done: s.clock + secs }; note(`An away team left in ${SHUTTLE_NAME} for ${near.d.name}, ${Math.round(near.nm)} miles away, to fetch supplies: food, science equipment, mail and the like.`); }
+      if (a.endClock - s.clock >= secs) { a.trip = { dock: near.d.name, nm: +near.nm.toFixed(1), done: s.clock + secs }; note(`An away team left in ${SHUTTLE_NAME} for ${near.d.name}, ${Math.round(near.nm)} miles away, to fetch supplies: food, science equipment, mail and CO2 scrubbers.`); }
     }
   }
   if (!a.did.samples && s.clock - st.c >= WAIT_S + REMORA_DELAY_S) {   // five minutes after the away team: the science team send Remora down at the point of interest we stopped at
@@ -122,9 +122,9 @@ function rules(a, s) {
     }
   }
   if (a.trip && !a.trip.fin && s.clock >= a.trip.done) {
-    a.trip.fin = true;
+    a.trip.fin = true; s.scrubbers = 100;   // fresh scrubber canisters
     const sh = shuttle(); sh.bat = Math.max(20, (sh.bat == null ? 100 : sh.bat) - (a.trip.nm / SHUTTLE_KT / shuttleHours()) * 100);
-    note(`The away team is back from ${a.trip.dock} with supplies: food, science equipment, mail and more. ${SHUTTLE_NAME} is on charge.`);
+    note(`The away team is back from ${a.trip.dock} with supplies: food, science equipment, mail and fresh CO2 scrubbers. ${SHUTTLE_NAME} is on charge.`);
   }
 }
 
@@ -136,7 +136,8 @@ sim.hooks.push(() => {
   lastCheck = s.clock;
   if (a.stop) { rules(a, s); return; }
   if (!s.docked) {
-    if (s.oxygen < LOW.oxygen) { note(`Oxygen fell to ${Math.round(s.oxygen)}%.`); hold('oxygen', true); }
+    if (s.scrubbers != null && s.scrubbers < LOW.scrubbers && s.depth >= 3) { note(`The CO2 scrubbers are down to ${Math.round(s.scrubbers)}%.`); hold('scrubbers', true); }
+    else if (s.oxygen < LOW.oxygen) { note(`Oxygen fell to ${Math.round(s.oxygen)}%.`); hold('oxygen', true); }
     else if (s.battery < LOW.battery) { note(`Battery fell to ${Math.round(s.battery)}%.`); hold('battery', true); }
     else if (s.hull < LOW.hull) { note(`Hull integrity fell to ${Math.round(s.hull)}%.`); hold('hull'); }
   }
@@ -189,6 +190,7 @@ export function briefing(rep) {
   if (st && st.kind === 'arrived') lines.push(`${t}: we arrived at ${st.name || n.name}. Helm brought her to a stop and the crew held there.`);
   else if (st && st.kind === 'limit') lines.push(`${t}: Helm stopped us short of the Area of Operations limit. We are not cleared to go further, so we held position.`);
   else if (st && st.kind === 'floor') lines.push(`${t}: Helm stopped the ship. The sea floor ahead was too shallow for us.`);
+  else if (st && st.kind === 'scrubbers') lines.push(`${t}: the CO2 scrubbers were nearly used up, so the crew brought her to the surface and held. Nothing is used up on the surface.`);
   else if (st && st.kind === 'oxygen') lines.push(`${t}: air reserves were low, so the crew brought her up and held.`);
   else if (st && st.kind === 'battery') lines.push(`${t}: the battery was low, so the crew brought her up and held.`);
   else if (st && st.kind === 'hull') lines.push(`${t}: the hull was weakened, so the crew held the ship.`);

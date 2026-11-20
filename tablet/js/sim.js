@@ -17,6 +17,7 @@ const PITCH_TAN = Math.tan((20 * Math.PI) / 180), HOVER_MPS = 0.5, MAX_DIVE_MPS 
 export const diveRate = (kt, cruise = false) => Math.min(cruise ? MAX_DIVE_CRUISE_MPS : MAX_DIVE_MPS, Math.max(HOVER_MPS, Math.abs(kt) * KT_MPS * PITCH_TAN));
 const pace = () => 1;   // handling is per real second, so turns, speed changes and dives feel the same at any time compression
 const MAX_KT = 14;
+export const SURFACE_M = 3, SURFACE_KT = 7;   // above 3 m the ship is on the surface, where she is limited to 7 knots (built for sub-sea movement)
 /** Super cruise: Aqua Nova can run at 100 kt in deep water. It drops out on its own when the water ahead is shallow. WSKRs have one too (120 kt). */
 export const SUPER_KT = 100, SUPER_MIN_FLOOR = 120, SUPER_LOOK_NM = [3, 6, 9], WSKR_SUPER_KT = 120, WSKR_FAR_NM = 6;
 const NM_PER_DEG_LAT = 60;
@@ -413,6 +414,7 @@ const stepOnce = (dt) => {
   s.heading = norm360(s.heading + clamp(turn, -rate, rate));
   // speed (smooth)
   let wantKt = s.throttle * sim.maxKt() * (s.battery > 0 ? 1 : 0);
+  if (s.depth < SURFACE_M) wantKt = Math.min(wantKt, SURFACE_KT);
   if (s.wpt) wantKt = Math.min(wantKt, autopilotCap(Math.abs(turn), capDist));
   s.speed += clamp(wantKt - s.speed, -(s.speed > MAX_KT ? 6 : 2) * dt * pace(), (s.cruise ? 3 : 1.2) * dt * pace());
   // depth
@@ -473,11 +475,16 @@ const stepOnce = (dt) => {
   if (s.docked) { // shore power and air: about 20% battery and 30% oxygen per game hour
     const gh = (dt * TIMESCALE) / 3600;
     s.battery = clamp(s.battery + 20 * gh, 0, 100); s.oxygen = clamp(s.oxygen + 30 * gh, 0, 100);
+    s.scrubbers = clamp((s.scrubbers == null ? 100 : s.scrubbers) + 50 * gh, 0, 100);   // fresh scrubber canisters come aboard
   } else {
     s.battery = clamp(s.battery - (s.power / 100) * (1 + Math.max(0, s.speed - MAX_KT) / (SUPER_KT - MAX_KT) * 2) * 0.012 * dt * TIMESCALE / 30, 0, 100);
-    s.oxygen = clamp(s.oxygen - 0.0025 * dt * TIMESCALE / 30, 0, 100);
+    if (s.scrubbers == null) s.scrubbers = 100;
+    const gs = dt * TIMESCALE;
+    if (s.depth < SURFACE_M) s.oxygen = clamp(s.oxygen + 30 * gs / 3600, 0, 100);   // on the surface: fresh air, and the scrubbers are not used
+    else if (s.scrubbers > 0) s.scrubbers = clamp(s.scrubbers - 0.0025 * gs / 30, 0, 100);   // submerged: single-use CO2 scrubbers wear out (about 12 days)
+    else s.oxygen = clamp(s.oxygen - 100 * gs / (12 * 3600), 0, 100);   // scrubbers spent: the air goes bad in about 12 hours
   }
-  s.co2 = clamp(0.04 + (100 - s.oxygen) * 0.012, 0, 5);
+  s.co2 = clamp(0.04 + (100 - (s.scrubbers == null ? 100 : s.scrubbers)) * 0.012 + (100 - s.oxygen) * 0.012, 0, 5);
   s.temp = clamp(20 - Math.sqrt(s.depth) * 0.28, 1.5, 20);
   if (s.docked) s.damage = Math.max(0, s.damage - 6 * (dt * TIMESCALE) / 3600);   // the dock crew repair about 6% an hour
   s.hull = clamp(100 - s.damage - Math.max(0, s.depth - 4500) / 30, 0, 100);

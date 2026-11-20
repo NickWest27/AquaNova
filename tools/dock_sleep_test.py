@@ -68,7 +68,7 @@ def main():
         page.tap("#station .st-head .btn"); page.wait_for_timeout(200)
 
         # --- early wake-up: oxygen falls below 30% during a long sleep ---
-        js("sim.s.docked = false; sim.s.oxygen = 31")
+        js("sim.s.docked = false; sim.s.oxygen = 45; sim.s.scrubbers = 0; sim.s.autoAvoid = false; sim.s.depth = 200; sim.s.targetDepth = 200")
         c0 = js("return sim.s.clock")
         tap_hs("SLEEP"); page.tap('.modal button:text-is("12 h")'); page.tap('.modal button:text-is("Sleep")'); page.wait_for_timeout(2500)
         slept = (js("return sim.s.clock") - c0) / 3600
