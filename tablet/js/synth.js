@@ -74,9 +74,6 @@ export function createSynth(parent) {
         const q = [pts[j - 1][i], pts[j - 1][i + 1], pts[j][i + 1], pts[j][i]];   // near-left, near-right, far-right, far-left
         if (q.some((v) => !v) || q.every((v) => v.x < -30) || q.every((v) => v.x > W + 30)) continue;   // missing ground, or wholly off screen
         cells.push(q);
-        // the faint mesh: the far edge and the left side of each cell
-        g.beginPath(); g.strokeStyle = `rgba(150,170,255,${(0.07 + 0.13 * fade).toFixed(2)})`; g.lineWidth = 1;
-        seg(q[3].x, q[3].y, q[2].x, q[2].y); seg(q[0].x, q[0].y, q[3].x, q[3].y); g.stroke();
         // contour lines on the floor: marching squares on the cell, solid when known, dashed when interpolated
         const v = q.map((p) => p.fl), lo = Math.min(...v), hi = Math.max(...v); if (hi - lo < 0.01) continue;
         for (const [L, known, mid] of levelsFor(lo, hi, seafloor.ready && fineLoaded(q[0].lat, q[0].lon))) {
@@ -102,6 +99,25 @@ export function createSynth(parent) {
     const sinH = sH, cosH = cH;
     const P = (lat, lon, depth) => { const t = toward(craft, { lat, lon }), fwd = t.dy * cosH + t.dx * sinH, side = t.dx * cosH - t.dy * sinH; const f = fwd * M_PER_NM; if (f < 15) return null; return { x: cx + (F * side * M_PER_NM) / f, y: cy + (F * EXAG * (depth - craft.depth)) / f, nm: t.nm, fwd: fwd }; };
     const shown = (q) => { if (!q || q.x < -40 || q.x > W + 40 || q.nm > range * 1.05) return false; let j = rowD.findIndex((d) => d >= q.fwd); if (j < 1) j = 1; if (j >= ROWS) j = ROWS - 1; const col = Math.round(q.x); return col < 0 || col > W || q.y < snap[j][col] + 0.6; };
+    // the floor mesh is fixed to the sea floor (a 100 m lattice, north-south and east-west), so it slides past as the craft moves.
+    // Perspective does the rest: lines near the window sweep by quickly, far ones barely creep.
+    {
+      const GM = 100, STEP = 30, KFIX = 0.809, dLat = GM / (M_PER_NM * NM_PER_DEG), dLon = GM / (M_PER_NM * NM_PER_DEG * KFIX);
+      const Rm = range * M_PER_NM, rLat = Rm / (M_PER_NM * NM_PER_DEG), rLon = Rm / (M_PER_NM * NM_PER_DEG * Math.cos((craft.lat * Math.PI) / 180));
+      const tanH = Math.tan((FOV / 2) * Math.PI / 180) * 1.3;
+      const trace = (fn, from, to, stepDeg) => {   // fn(v) -> [lat, lon]; draws the visible parts as one path
+        let open = false, a0 = null; g.beginPath();
+        for (let v = from; v <= to; v += stepDeg) {
+          const [lat, lon] = fn(v), q = seafloor.isCharted(lat, lon) ? (() => { const dd = seafloor.depthAt(lat, lon); return dd == null || dd <= 0 ? null : P(lat, lon, dd); })() : null;
+          if (!q || Math.abs(q.x - cx) > W || !shown(q)) { open = false; continue; }
+          if (a0 === null) a0 = q.nm;
+          if (!open) { g.moveTo(q.x, q.y); open = true; } else g.lineTo(q.x, q.y);
+        }
+        const fade = 1 - Math.min(1, (a0 == null ? 1 : a0) / range) * 0.7; g.strokeStyle = `rgba(150,170,255,${(0.1 + 0.2 * fade).toFixed(2)})`; g.lineWidth = 1; g.stroke();
+      };
+      for (let i = Math.ceil((craft.lat - rLat) / dLat); i <= Math.floor((craft.lat + rLat) / dLat); i++) trace((v) => [i * dLat, v], craft.lon - rLon, craft.lon + rLon, (STEP / (M_PER_NM * NM_PER_DEG * KFIX)));
+      for (let i = Math.ceil((craft.lon - rLon) / dLon); i <= Math.floor((craft.lon + rLon) / dLon); i++) trace((v) => [v, i * dLon], craft.lat - rLat, craft.lat + rLat, STEP / (M_PER_NM * NM_PER_DEG));
+    }
     for (const p of sim.s.pois) {
       if (p.type === 'dock') continue; const fl = seafloor.depthAt(p.lat, p.lon); if (fl == null || toward(craft, p).nm > range * 1.1) continue;
       g.strokeStyle = 'rgba(255,225,74,0.9)'; g.lineWidth = 2; g.setLineDash([5, 4]); g.beginPath(); let st = false;
