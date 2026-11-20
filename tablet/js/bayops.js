@@ -2,6 +2,8 @@
 //  - A launch takes 1 minute with the doors open; so does taking a craft aboard (+10 s to cycle the shuttle's airlock).
 //  - Doors open above 8 kt: the ship takes damage at a rate. Above 10 kt: the doors themselves are permanently damaged
 //    (dry dock repair only, no dry dock built yet; `repairDoors()` is the hook) and slower to work.
+//  - Remora uses the bay too: one minute out, then its tether keeps the doors open (speed rules apply the whole time) and blocks every other
+//    launch and recovery until it is back. It needs no charge, but the science team unload its samples and re-equip it (5 min + 2 min a sample).
 //  - WSKRs and the shuttle recharge while racked (2 h for a full charge, in proportion to what was used).
 //  - Shuttle: 20 kt, 6 h on a full charge, airlocks 10 s. It carries crew and supplies between the ship and a dock, and away teams:
 //    2 cockpit seats and 6 passenger seats. Two pilots is usual; one pilot and a radio link (ship or shore within 20 nm) is enough.
@@ -10,17 +12,27 @@ import { sim, toward, wskrName, TIMESCALE, WSKR_CHARGE_H, WSKR_LOW_PCT } from '.
 import { seafloor } from './seafloor.js';
 import { planRoute } from './route.js';
 import { SHUTTLE_NAME } from './topics.js';
+import { research, samples } from './science.js';
+import './rov.js';
 
 export { SHUTTLE_NAME };
 export const BAY_SAFE_KT = 8, DOOR_DAMAGE_KT = 10, LAUNCH_S = 60, AIRLOCK_S = 10;
-export const SHUTTLE_SEATS = 6, SHUTTLE_COCKPIT = 2, SHUTTLE_LINK_NM = 20, SHUTTLE_KT = 20, SHUTTLE_HOURS = 6, SHUTTLE_CHARGE_H = 2, MIN_LAUNCH_PCT = 20, LOW_PCT = 15;
+export const SHUTTLE_SEATS = 6, SHUTTLE_COCKPIT = 2, SHUTTLE_LINK_NM = 20, SHUTTLE_KT = 20, SHUTTLE_CHARGE_H = 2, MIN_LAUNCH_PCT = 20, LOW_PCT = 15;
+export const O2_CREW = 8, O2_CHARGE_H = 1, REMORA_REARM_S = 300, REMORA_UNLOAD_S = 120;   // air lasts O2 hours with 8 aboard; Remora: 5 min to re-equip plus 2 min per sample unloaded
+/** Shuttle battery life on a full charge: 1 h to start, research makes it 3 h then 6 h. */
+export const shuttleHours = () => (research.has('shuttle-battery-6') ? 6 : research.has('shuttle-battery-3') ? 3 : 1);
+/** Air supply in hours with all 8 seats taken (fewer aboard lasts longer): 8 h, 10 h after research. */
+export const shuttleO2Hours = () => (research.has('shuttle-o2') ? 10 : 8);
+export const aboard = (sh) => (sh.pilots == null ? SHUTTLE_COCKPIT : sh.pilots) + (sh.pax || 0);
+/** Hours of air left at the present load. */
+export const o2HoursLeft = (sh) => (Math.max(0, (sh.o2 == null ? 100 : sh.o2)) / 100) * shuttleO2Hours() * (O2_CREW / Math.max(1, aboard(sh)));
 const HULL_PER_KT_S = 0.015, DOOR_PER_KT_S = 0.02;   // % per knot over the limit per game second
 
 const passable = (lat, lon) => (seafloor.depthAt(lat, lon) ?? 0) >= 3;
-export const bay = () => sim.s.bay || (sim.s.bay = { op: null, doorDmg: 0 });
+export const bay = () => sim.s.bay || (sim.s.bay = { op: null, doorDmg: 0, base: 0, rearm: null });
 export const rack = () => sim.s.rack || (sim.s.rack = {});
 export const shuttle = () => sim.s.shuttle || (sim.s.shuttle = { state: 'bay', bat: 100, mode: 'follow' });
-const mannedDefaults = (sh) => { if (sh.pilots == null) sh.pilots = SHUTTLE_COCKPIT; if (sh.pax == null) sh.pax = 0; if (sh.ashore == null) sh.ashore = 0; return sh; };
+const mannedDefaults = (sh) => { if (sh.o2 == null) sh.o2 = 100; if (sh.pilots == null) sh.pilots = SHUTTLE_COCKPIT; if (sh.pax == null) sh.pax = 0; if (sh.ashore == null) sh.ashore = 0; return sh; };
 /** Who rides: pilots 0 to 2, passengers 0 to 6. Only while the shuttle is in the bay. */
 export function setManning(pilots, pax) { const sh = mannedDefaults(shuttle()); if (sh.state !== 'bay') return { ok: false, why: 'out' }; sh.pilots = Math.max(0, Math.min(SHUTTLE_COCKPIT, pilots)); sh.pax = Math.max(0, Math.min(SHUTTLE_SEATS, pax)); sim.touch(); return { ok: true, pilots: sh.pilots, pax: sh.pax }; }
 /** Radio link for a single pilot: within range of the ship, or of a shore station at a dock. */
@@ -32,9 +44,9 @@ export const busy = () => !!bay().op;
 const docks = () => sim.s.pois.filter((p) => p.type === 'dock');
 export const dockList = docks;
 /** Range of the shuttle on its present charge, in nm, keeping the 15% reserve. */
-export const shuttleRangeNm = () => SHUTTLE_KT * SHUTTLE_HOURS * Math.max(0, shuttle().bat - LOW_PCT) / 100;
+export const shuttleRangeNm = () => { const sh = mannedDefaults(shuttle()); return SHUTTLE_KT * Math.min(shuttleHours() * Math.max(0, sh.bat - LOW_PCT) / 100, shuttleO2Hours() * (O2_CREW / Math.max(1, aboard(sh))) * Math.max(0, sh.o2 - LOW_PCT) / 100); };
 
-function startOp(op) { const b = bay(); if (b.op) return { ok: false, why: 'busy' }; if (b.doorDmg >= 100) return { ok: false, why: 'doors' }; b.op = { t: 0, dur: opSeconds(), air: 0, ...op }; sim.touch(); sim.emit('bay-op', b.op); return { ok: true, secs: b.op.dur + b.op.air }; }
+function startOp(op) { const b = bay(); if (b.op) return { ok: false, why: 'busy' }; if (b.doorDmg >= 100) return { ok: false, why: 'doors' }; if (sim.s.rov && op.craft !== 'rov') return { ok: false, why: 'tether' }; b.op = { t: 0, dur: opSeconds(), air: 0, ...op }; sim.touch(); sim.emit('bay-op', b.op); return { ok: true, secs: b.op.dur + b.op.air }; }
 
 /** Start a one-minute WSKR launch. Picks the racked WSKR with the most charge. */
 export function launchWskr(want) {
@@ -47,10 +59,19 @@ export function launchWskr(want) {
 }
 /** Take the WSKR waiting alongside aboard even though the ship is over the safe speed (the doors will cost us). */
 export function receiveWskrNow(n) { const w = sim.s.wskrs.find((q) => q.n === n && q.arrived); if (!w) return { ok: false, why: 'none' }; return startOp({ kind: 'recover', craft: 'wskr', n }); }
+/** Remora leaves through the bay: one minute, then the doors stay open for its tether until it is recovered. */
+export function launchRemora() {
+  const s = sim.s, b = bay(); if (s.rov) return { ok: false, why: 'out' }; if (s.docked) return { ok: false, why: 'docked' };
+  if (b.rearm) return { ok: false, why: 'rearm', mins: Math.ceil((b.rearm.dur - b.rearm.t) / 60) };
+  return startOp({ kind: 'launch', craft: 'rov' });
+}
+export function recoverRemora() { const s = sim.s; if (!s.rov) return { ok: false, why: 'aboard' }; if (toward(s, s.rov).nm > 0.2) return { ok: false, why: 'far' }; return startOp({ kind: 'recover', craft: 'rov' }); }
+export const remoraRearm = () => bay().rearm;
 export function launchShuttle() {
   const s = sim.s, sh = mannedDefaults(shuttle()); if (sh.state !== 'bay') return { ok: false, why: 'out' }; if (s.docked) return { ok: false, why: 'docked' };
   if (sh.pilots < 1) return { ok: false, why: 'pilot' };
   if (sh.bat < MIN_LAUNCH_PCT) return { ok: false, why: 'charge', bat: sh.bat };
+  if (sh.o2 < MIN_LAUNCH_PCT) return { ok: false, why: 'o2', o2: sh.o2 };
   return startOp({ kind: 'launch', craft: 'shuttle' });
 }
 export function recoverShuttle() {
@@ -72,30 +93,39 @@ export const repairDoors = () => { bay().doorDmg = 0; sim.touch(); };
 
 function finishOp(op) {
   const s = sim.s, b = bay(); b.op = null; sim.touch();
+  if (op.craft === 'rov') {
+    if (op.kind === 'launch') { const r = sim.launchRov(); b.base = samples().length; if (r.ok) sim.emit('bay-launched', { craft: 'rov' }); }
+    else { const load = Math.max(0, samples().length - (b.base || 0)); sim.recoverRov(); b.rearm = { t: 0, dur: REMORA_REARM_S + load * REMORA_UNLOAD_S, load }; sim.emit('remora-aboard', b.rearm); }
+    return;
+  }
   if (op.craft === 'wskr' && op.kind === 'launch') { const r = sim.deployWskr(op.n); if (r.ok) sim.emit('bay-launched', { craft: 'wskr', n: r.n }); }
   else if (op.craft === 'wskr') { const i = s.wskrs.findIndex((w) => w.n === op.n); if (i >= 0) { const w = s.wskrs[i]; s.wskrs.splice(i, 1); rack()[w.n] = w.bat == null ? 100 : w.bat; sim.emit('wskr-recovered', w); } }
   else if (op.kind === 'launch') { const sh = shuttle(); Object.assign(sh, { state: 'out', mode: 'follow', lat: s.lat, lon: s.lon, dest: null, route: null, dead: false }); sim.emit('bay-launched', { craft: 'shuttle' }); }
   else { const sh = shuttle(); Object.assign(sh, { state: 'bay', mode: 'follow', dest: null, route: null }); sim.emit('shuttle-aboard', sh); }
 }
 
+/** The doors are open for a launch or recovery, and the whole time Remora is out on its tether. */
 function stepOp(g) {
-  const b = bay(), op = b.op, s = sim.s, kt = s.speed; if (!op) return;
+  const b = bay(), op = b.op, s = sim.s, kt = s.speed;
+  if (b.rearm) { b.rearm.t += g; if (b.rearm.t >= b.rearm.dur) { b.rearm = null; sim.emit('remora-ready'); } }
+  if (!op && !s.rov) { b.warned = b.doorSaid = false; return; }
+  if (kt <= BAY_SAFE_KT) b.warned = b.doorSaid = false;
   if (kt > BAY_SAFE_KT) {
-    if (!op.warned) { op.warned = true; sim.emit('bay-warn', { kt }); }
+    if (!b.warned) { b.warned = true; sim.emit('bay-warn', { kt }); }
     s.damage = Math.min(100, s.damage + (kt - BAY_SAFE_KT) * HULL_PER_KT_S * g);
   }
   if (kt > DOOR_DAMAGE_KT) {
     b.doorDmg = Math.min(100, b.doorDmg + (kt - DOOR_DAMAGE_KT) * DOOR_PER_KT_S * g);
-    if (!op.doorSaid) { op.doorSaid = true; sim.emit('bay-door-damage', { kt, pct: b.doorDmg }); }
+    if (!b.doorSaid) { b.doorSaid = true; sim.emit('bay-door-damage', { kt, pct: b.doorDmg }); }
   }
-  op.t += g;
-  if (op.t >= op.dur + (op.air || 0)) finishOp(op);
+  if (op) { op.t += g; if (op.t >= op.dur + (op.air || 0)) finishOp(op); }
 }
 
 /** WSKRs that have come alongside are taken aboard once the bay is free and the ship is slow enough. */
 function receive() {
   const s = sim.s; if (bay().op) return;
   for (const w of s.wskrs) {
+    if (s.rov && w.arrived) { if (!w.tethered) { w.tethered = true; sim.emit('bay-tether', w); } continue; }
     if (!w.arrived) continue;
     if (s.speed <= BAY_SAFE_KT) { startOp({ kind: 'recover', craft: 'wskr', n: w.n }); return; }
     if (!w.hinted) { w.hinted = true; sim.emit('bay-wait', w); }
@@ -115,7 +145,7 @@ function aim(sh, goal) {
 }
 function stepShuttle(g) {
   const s = sim.s, sh = shuttle();
-  if (sh.state === 'bay') { if (sh.bat < 100) sh.bat = Math.min(100, sh.bat + (100 / (SHUTTLE_CHARGE_H * 3600)) * g); return; }
+  if (sh.state === 'bay') { mannedDefaults(sh); if (sh.bat < 100) sh.bat = Math.min(100, sh.bat + (100 / (SHUTTLE_CHARGE_H * 3600)) * g); if (sh.o2 < 100) sh.o2 = Math.min(100, sh.o2 + (100 / (O2_CHARGE_H * 3600)) * g); return; }
   sh.moving = false;
   if (sh.dead) { if (toward(s, sh).nm < 0.15) { sh.lat = s.lat; sh.lon = s.lon; sh.mode = 'follow'; } return; }   // adrift: the ship must come to it
   mannedDefaults(sh);
@@ -141,14 +171,18 @@ function stepShuttle(g) {
       if (ta.nm > 0.01) { sh.heading = ta.brg; sh.lat += (a.lat - sh.lat) * f; sh.lon += (a.lon - sh.lon) * f; sh.moving = true; }
     }
   }
-  // battery: 6 h at 20 kt; light draw at rest; topped up when it is at a dock
-  if (!sh.moving && atDock(sh)) sh.bat = Math.min(100, sh.bat + (100 / (SHUTTLE_CHARGE_H * 3600)) * g);
-  else sh.bat = Math.max(0, sh.bat - (100 / (SHUTTLE_HOURS * 3600)) * (sh.moving ? 1 : 0.3) * g);
+  // battery: 1 h at 20 kt to start (research: 3 h, 6 h); light draw at rest; topped up when it is at a dock (so is the air, in 1 h)
+  if (!sh.moving && atDock(sh)) { sh.bat = Math.min(100, sh.bat + (100 / (SHUTTLE_CHARGE_H * 3600)) * g); sh.o2 = Math.min(100, sh.o2 + (100 / (O2_CHARGE_H * 3600)) * g); }
+  else {
+    sh.bat = Math.max(0, sh.bat - (100 / (shuttleHours() * 3600)) * (sh.moving ? 1 : 0.3) * g);
+    sh.o2 = Math.max(0, sh.o2 - (100 / (shuttleO2Hours() * 3600)) * (aboard(sh) / O2_CREW) * g);   // air is breathed by whoever is aboard
+  }
   if (sh.bat <= 0) { sh.dead = true; sim.emit('shuttle-dead', sh); }
-  else if (sh.bat <= LOW_PCT && (sh.mode === 'going')) { sh.mode = 'returning'; sh.route = null; sim.emit('shuttle-low', sh); }
+  else if (sh.o2 <= 0) { sh.dead = true; sim.emit('shuttle-o2-out', sh); }
+  else if ((sh.bat <= LOW_PCT || sh.o2 <= LOW_PCT) && sh.mode === 'going') { sh.mode = 'returning'; sh.route = null; sim.emit(sh.o2 <= LOW_PCT ? 'shuttle-o2-low' : 'shuttle-low', sh); }
 }
 
 sim.hooks.push((dt) => { const g = dt * TIMESCALE; stepOp(g); receive(); chargeRack(g); stepShuttle(g); });
 
 /** What to tell the Captain about the result of launchWskr(). */
-export const launchText = (r) => r.ok ? `${wskrName({ n: r.n })} is being readied in the bay. About ${Math.round(r.secs)} seconds.` : ({ docked: 'Undock first', full: 'All four WSKRs are out', busy: 'The bay is busy with another craft', doors: 'The bay doors are too damaged to open: dry dock needed', charge: `${wskrName({ n: r.n })} is only at ${Math.round(r.bat || 0)} percent charge. It needs 20 percent` })[r.why] || 'Cannot launch now';
+export const launchText = (r) => r.ok ? `${wskrName({ n: r.n })} is being readied in the bay. About ${Math.round(r.secs)} seconds.` : ({ docked: 'Undock first', full: 'All four WSKRs are out', busy: 'The bay is busy with another craft', doors: 'The bay doors are too damaged to open: dry dock needed', tether: "Remora's tether is holding the bay doors open. Recover it first", charge: `${wskrName({ n: r.n })} is only at ${Math.round(r.bat || 0)} percent charge. It needs 20 percent` })[r.why] || 'Cannot launch now';

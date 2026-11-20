@@ -2,6 +2,7 @@
 // Hold a button to steer. Tools work only at a site, some only near the sea floor.
 import { tell } from '../notify.js';
 import { sim, toward } from '../sim.js';
+import { launchRemora, recoverRemora, remoraRearm, bay } from '../bayops.js';
 import { ROV_NAME, rovRange, rovSite, rovFloor } from '../rov.js';
 import { TOOLS, samples } from '../science.js';
 import { el, toast } from '../util.js';
@@ -13,8 +14,8 @@ export function mount(body) {
   body.style.flexDirection = 'column'; body.style.overflowY = 'auto';
   const head = el('div', { class: 'card' }, el('div', { class: 'lbl', text: ROV_NAME + ' (Science ROV)' }), el('div', { class: 'num' }), el('p', { style: 'color:var(--dim);margin:0.4rem 0' }));
   const row = el('div', { class: 'row' });
-  const launchBtn = el('button', { class: 'btn chip', text: 'Launch', onclick: () => { const r = sim.launchRov(); tell('science', r.ok ? `${ROV_NAME} launched` : r.why === 'docked' ? 'Undock first' : 'Already out', r.ok ? '' : 'error'); update(); } });
-  const recBtn = el('button', { class: 'btn chip', text: 'Recover', onclick: () => { const r = sim.recoverRov(); tell('science', r.ok ? `${ROV_NAME} recovered` : 'Bring the ROV within 0.2 nm of the ship first', r.ok ? '' : 'error'); update(); } });
+  const launchBtn = el('button', { class: 'btn chip', text: 'Launch', onclick: () => { const r = launchRemora(); tell('science', r.ok ? `${ROV_NAME} is being readied in the bay. About ${Math.round(r.secs)} seconds.` : ({ docked: 'Undock first', out: 'Already out', busy: 'The bay is busy with another craft', doors: 'The bay doors are too damaged to open', rearm: `The team are still unloading and re-equipping her: about ${r.mins} min` })[r.why] || 'Cannot launch now', r.ok ? 'mission' : 'error'); update(); } });
+  const recBtn = el('button', { class: 'btn chip', text: 'Recover', onclick: () => { const r = recoverRemora(); tell('science', r.ok ? `Bringing ${ROV_NAME} aboard. About ${Math.round(r.secs)} seconds.` : r.why === 'busy' ? 'The bay is busy' : 'Bring the ROV within 0.2 nm of the ship first', r.ok ? 'mission' : 'error'); update(); } });
   row.append(launchBtn, recBtn); head.append(row);
   const pilot = el('div', { class: 'card' });
   const hold = (label, key, val) => {
@@ -35,10 +36,10 @@ export function mount(body) {
   body.append(head, viewBox, pilot);
 
   function update() {
-    const s = sim.s, r = s.rov;
+    const s = sim.s, r = s.rov, op = bay().op, rr = remoraRearm();
     head.children[1].textContent = r ? 'OUT' : 'ABOARD'; head.children[1].className = 'num ' + (r ? 'ok' : '');
-    head.children[2].textContent = r ? 'Hand piloted. Slow (2 kt) and on a tether.' : 'Short range, slow, and it carries the instruments the WSKRs lack. Launch it at sea.';
-    launchBtn.disabled = !!r || s.docked; recBtn.disabled = !r; pilot.hidden = !r; viewBox.hidden = !r;
+    head.children[2].textContent = op ? `The bay doors are open: ${op.kind === 'launch' ? 'launching' : 'taking aboard'}, ${Math.max(0, Math.round(op.dur - op.t))} s.` : r ? 'Hand piloted. Slow (2 kt) and on a tether: the bay doors stay open until she is back aboard, so keep the ship slow.' : rr ? `Aboard. The team are unloading ${rr.load} sample${rr.load === 1 ? '' : 's'} and re-equipping her: ${Math.max(1, Math.ceil((rr.dur - rr.t) / 60))} min.` : 'Short range, slow, and it carries the instruments the WSKRs lack. Launch it at sea.';
+    launchBtn.disabled = !!r || s.docked || !!op || !!rr; recBtn.disabled = !r || !!op; pilot.hidden = !r; viewBox.hidden = !r;
     if (!r) return;
     cv.update();
     const t = toward(s, r), site = rovSite(), fl = rovFloor();
