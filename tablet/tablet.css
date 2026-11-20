@@ -674,3 +674,6 @@ input.mix { width: 100%; height: 2.4rem; accent-color: var(--cyan); }
 .xfer.stalled .xf-fill { background: #b8860b; } .xfer.stalled .xf-title { color: #ffd166; }
 .xfer .xf-note { font-size: 17px; color: var(--dim); }
 @keyframes xf-slide { to { background-position: 96px 0; } }
+
+/* analysis instrument screens (analysisView.js) */
+.an-screen { display: block; width: 100%; aspect-ratio: 960 / 300; margin: 0.5rem 0; border-radius: 6px; background: #021218; }
