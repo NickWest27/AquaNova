@@ -35,8 +35,13 @@ def main():
         txt = page.locator(".comm-reply").first.inner_text()
         check("Nicole says how long it will take", "seconds" in txt and "Sending it" in txt, txt)
         r = js("return {phase: tr.xfer.job && tr.xfer.job.phase, vis: !!document.querySelector('#stage .xfer'), out: (await import('./js/persist.js')).gameState.getProperty('mission.outbox')?.length||0}")
-        check("bar is up in the upload phase", r["phase"] == "up" and r["vis"], str(r))
-        check("report not in the outbox until the upload finishes", r["out"] == 0, str(r))
+        r0 = r
+        check("no pop-up over the bridge during the upload", r["phase"] == "up" and not r["vis"], str(r))
+        page.evaluate("window.__aq.open('comms')"); page.wait_for_timeout(600)
+        r = js("const b=document.querySelector('#station .xfer-slot .xfer'); return {on: !!b, title: b && b.querySelector('.xf-title').textContent}")
+        check("the upload bar is on the Communications console", r["on"] and "UPLINK" in (r["title"] or ""), str(r))
+        page.evaluate("window.__aq.scene('bridge')"); page.wait_for_timeout(300)
+        check("report not in the outbox until the upload finishes", r0["out"] == 0, str(r0))
         r = js("return tr.startReport().why")
         check("a second report is refused while busy", r == "busy", str(r))
         # 3. progress rises, then wait, then download, then done

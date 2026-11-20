@@ -11,7 +11,7 @@ import { gameState } from '../persist.js';
 import * as links from './commsLinks.js';
 import { mountControls, mountContacts } from './commsPanels.js';
 import { canTransmit } from '../commsModel.js';
-import { startReport, transferring } from '../transfer.js';
+import { startReport, transferring, xferBar } from '../transfer.js';
 import missions from '../../../game/systems/missionManager.js';
 import { logAccepted } from '../missionLog.js';
 
@@ -50,7 +50,9 @@ export function mount(body) {
     mailPane.style.display = tab === 'mail' ? 'flex' : 'none';
     for (const [id, [node]] of Object.entries(views)) node.style.display = tab === id ? '' : 'none';
   };
-  body.append(tabs, mailPane, linkPane, ctlPane, conPane);
+  const xferSlot = el('div', { class: 'xfer-slot' });   // the uplink and downlink bar sits on the console, above the tabs
+  const mountBar = () => { const b = xferBar(); if (b && b.parentNode !== xferSlot) xferSlot.append(b); };
+  body.append(xferSlot, tabs, mailPane, linkPane, ctlPane, conPane);
 
   // ---- reading a message: a 90s style zoom (4 outline frames) into a large window, and back out ----
   const FROM_FULL = { 'OERA Operations': 'O.E.R.A. - Oceanic Exploration and Research Alliance (Operations)' };
@@ -115,8 +117,8 @@ export function mount(body) {
   }
   // a message can arrive while the station is open
   const onMsg = () => render();
-  const onX = () => { render(); update(); };
+  const onX = () => { mountBar(); render(); update(); };
   document.addEventListener('comms-message', onMsg); document.addEventListener('xfer-change', onX);
-  render(); update();
+  mountBar(); render(); update();
   return { update, destroy() { lv.destroy(); cv.destroy(); nv.destroy(); document.removeEventListener('comms-message', onMsg); document.removeEventListener('xfer-change', onX); if (reading) { reading.back.remove(); reading = null; } } };
 }

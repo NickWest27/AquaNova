@@ -22,7 +22,6 @@ const emit = () => document.dispatchEvent(new CustomEvent('xfer-change'));
 
 function paint() {
   const j = xfer.job; if (!j || !bar) return;
-  const stage = document.getElementById('stage'); if (stage && bar.parentNode !== stage) stage.append(bar);
   const pct = Math.round(j.p * 100);
   bar.className = `xfer ${j.phase}${j.stalled ? ' stalled' : ''}`;
   bar.querySelector('.xf-title').textContent = j.phase === 'up' ? `UPLINK · ${j.label}` : j.phase === 'wait' ? `AWAITING OERA · ${j.label}` : j.phase === 'down' ? `DOWNLINK · ${j.label}` : j.phase === 'done' ? 'REPLY RECEIVED' : 'TRANSFER FAILED';
@@ -60,12 +59,12 @@ function step() {
   }
   j.stallFor = 0; j.dB = t.st.dB; j.f = speed(L, t.st);
   if (j.phase === 'up') { j.p = Math.min(1, j.p + dt * j.f / j.upS); if (j.p >= 1) finishUp(j); }
-  else if (j.phase === 'wait') { j.waitLeft -= dt; if (j.waitLeft <= 0) { j.phase = 'down'; j.p = 0; } }
+  else if (j.phase === 'wait') { j.waitLeft -= dt; if (j.waitLeft <= 0) { j.phase = 'down'; j.p = 0; lastBeep = now; dataTick(false); } }
   else if (j.phase === 'down') {
     j.p = Math.min(1, j.p + dt * j.f / j.downS);
     if (j.p >= 1) { j.phase = 'done'; dataDone(true); deliverReply(j); paint(); emit(); hideSoon(4000); return; }
   }
-  if ((j.phase === 'up' || j.phase === 'down') && now - lastBeep > 450) { lastBeep = now; dataTick(j.phase === 'up'); }
+  if ((j.phase === 'up' || j.phase === 'down') && now - lastBeep > 3000) { lastBeep = now; dataTick(j.phase === 'up'); }
   paint(); emit();
 }
 
@@ -84,4 +83,6 @@ export function startReport() {
   paint(); emit(); dataTick(true);
   return { ok: true, L, eta: xfer.job.upS / f };
 }
+/** The progress bar. The Communications console mounts it, so it is part of the console and never a pop-up over other scenes. */
+export const xferBar = () => (xfer.job && bar ? bar : null);
 export const transferring = () => !!xfer.job && xfer.job.phase !== 'done' && xfer.job.phase !== 'fail';

@@ -31,7 +31,7 @@ def main():
         page.wait_for_timeout(500)
         check("zoom frame is gone after 4 frames", page.query_selector(".mail-zoom") is None)
         txt = page.inner_text(".mail-win")
-        for want in ["From:", "O.E.R.A. - Ocean Exploration and Research Alliance", "To:", "Captain of the Aqua Nova", "Date:", "Subject:", "Sea Trials Order", "Line two."]:
+        for want in ["From:", "O.E.R.A. - Oceanic Exploration and Research Alliance", "To:", "Captain of the Aqua Nova", "Date:", "Subject:", "Sea Trials Order", "Line two."]:
             check("message shows " + want, want in txt, txt[:200])
         check("window is visible", page.is_visible(".mail-win"))
         wr = page.evaluate("(()=>{const r=document.querySelector('.mail-win').getBoundingClientRect(); return [r.width,r.height]})()")
