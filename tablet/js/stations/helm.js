@@ -1,5 +1,5 @@
 import { askDepth } from '../depthPad.js';
-import { sim, SUPER_KT } from '../sim.js';
+import { sim, SUPER_KT, PERISCOPE_M } from '../sim.js';
 import { tell } from '../notify.js';
 import { createLever, createDial } from '../ui.js';
 import { el } from '../util.js';
@@ -13,7 +13,7 @@ export function mount(body) {
   const spd = el('div', { class: 'num' }), dp = el('div', { class: 'num' });
   const card = (t, read, lever) => el('div', { class: 'helm-col lever-col' }, el('div', { class: 'card lever-card' }, el('div', { class: 'big-read' }, el('div', { class: 'lbl', text: t }), read), lever.root));
   const presets = el('div', { class: 'helm-presets' },
-    [['Stop', () => { sim.stop(); thr.set(0); }], ['Surface', () => { sim.setDepth(0); dep.set(1); }], ['Dive 500', () => { sim.setDepth(500); dep.set(1 - 500 / 6000); }], ['Set depth …', () => askDepth((v) => { const m = sim.deepest(), d = m == null ? v : Math.min(v, m); sim.setDepth(d); dep.set(1 - d / 6000); })],
+    [['Stop', () => { sim.stop(); thr.set(0); }], ['Surface', () => { sim.setDepth(0); dep.set(1); }], ['Periscope', () => { sim.setDepth(PERISCOPE_M); dep.set(1 - PERISCOPE_M / 6000); }], ['Dive 500', () => { sim.setDepth(500); dep.set(1 - 500 / 6000); }], ['Set depth …', () => askDepth((v) => { const m = sim.deepest(), d = m == null ? v : Math.min(v, m); sim.setDepth(d); dep.set(1 - d / 6000); })],
      ['Port 10°', () => sim.setHeading(sim.s.targetHeading - 10)], ['Stbd 10°', () => sim.setHeading(sim.s.targetHeading + 10)]]
       .map(([t, fn]) => el('button', { class: 'btn chip', text: t, onclick: fn })));
   const dockBtn = el('button', { class: 'btn chip', text: 'Dock', onclick: () => toggleDock(() => thr.set(0)) });

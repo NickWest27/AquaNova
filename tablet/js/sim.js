@@ -17,6 +17,8 @@ const PITCH_TAN = Math.tan((20 * Math.PI) / 180), HOVER_MPS = 0.5, MAX_DIVE_MPS 
 export const diveRate = (kt, cruise = false) => Math.min(cruise ? MAX_DIVE_CRUISE_MPS : MAX_DIVE_MPS, Math.max(HOVER_MPS, Math.abs(kt) * KT_MPS * PITCH_TAN));
 const pace = () => 1;   // handling is per real second, so turns, speed changes and dives feel the same at any time compression
 const MAX_KT = 14;
+export const SCRUB_DAYS = 90;   // the Aqua Nova carries scrubbers for about three months submerged
+export const CRUSH_M = 11000, DEEPEST_KNOWN_M = 10935, PERISCOPE_M = 10;   // crush depth: a little more than the Challenger Deep
 export const SURFACE_M = 3, SURFACE_KT = 7;   // above 3 m the ship is on the surface, where she is limited to 7 knots (built for sub-sea movement)
 /** Super cruise: Aqua Nova can run at 100 kt in deep water. It drops out on its own when the water ahead is shallow. WSKRs have one too (120 kt). */
 export const SUPER_KT = 100, SUPER_MIN_FLOOR = 120, SUPER_LOOK_NM = [3, 6, 9], WSKR_SUPER_KT = 120, WSKR_FAR_NM = 6;
@@ -69,6 +71,7 @@ export function toward(a, b) {
   return { nm: Math.hypot(dx, dy), brg: norm360((Math.atan2(dx, dy) * 180) / Math.PI), dx, dy };
 }
 
+sim.depthCaps = [];   // functions (s) => deepest allowed depth or null (the Tern's limit while she is out)
 sim.maxKt = () => (sim.s.cruise ? SUPER_KT : MAX_KT);
 /** Engage or drop super cruise. Needs deep water under and ahead of the ship, and not docked. */
 sim.setCruise = (on) => {
@@ -434,6 +437,8 @@ const stepOnce = (dt) => {
       if (!s.avoiding) { s.avoiding = true; const now = Date.now(); if (now - (sim.lastAvoid || 0) > 20000) { sim.lastAvoid = now; sim.emit('avoid-on', { hold: Math.round(lim), ordered: Math.round(s.targetDepth), ahead: s.speed > 0.5 }); } }
     } else if (s.avoiding) { s.avoiding = false; if (Date.now() - (sim.lastAvoid || 0) > 3000) sim.emit('avoid-off', { ordered: Math.round(s.targetDepth) }); }
   } else s.avoiding = false;
+  for (const f of sim.depthCaps) { const c = f(s); if (c != null && want > c) { want = c; if (!s.capSaid) { s.capSaid = true; sim.emit('depth-cap', { depth: c }); } } }
+  if (want <= 0 || s.depth < 5) s.capSaid = false;
   const dd = want - s.depth;
   const vz = diveRate(s.speed, s.cruise) * dt * pace();
   s.depth = clamp(s.depth + clamp(dd, -vz, vz), 0, 6000);
@@ -481,13 +486,13 @@ const stepOnce = (dt) => {
     if (s.scrubbers == null) s.scrubbers = 100;
     const gs = dt * TIMESCALE;
     if (s.depth < SURFACE_M) s.oxygen = clamp(s.oxygen + 30 * gs / 3600, 0, 100);   // on the surface: fresh air, and the scrubbers are not used
-    else if (s.scrubbers > 0) s.scrubbers = clamp(s.scrubbers - 0.0025 * gs / 30, 0, 100);   // submerged: single-use CO2 scrubbers wear out (about 12 days)
+    else if (s.scrubbers > 0) s.scrubbers = clamp(s.scrubbers - 100 * gs / (SCRUB_DAYS * 86400), 0, 100);   // submerged: single-use CO2 scrubbers wear out (months)
     else s.oxygen = clamp(s.oxygen - 100 * gs / (12 * 3600), 0, 100);   // scrubbers spent: the air goes bad in about 12 hours
   }
   s.co2 = clamp(0.04 + (100 - (s.scrubbers == null ? 100 : s.scrubbers)) * 0.012 + (100 - s.oxygen) * 0.012, 0, 5);
   s.temp = clamp(20 - Math.sqrt(s.depth) * 0.28, 1.5, 20);
   if (s.docked) s.damage = Math.max(0, s.damage - 6 * (dt * TIMESCALE) / 3600);   // the dock crew repair about 6% an hour
-  s.hull = clamp(100 - s.damage - Math.max(0, s.depth - 4500) / 30, 0, 100);
+  s.hull = clamp(100 - s.damage - Math.max(0, s.depth - CRUSH_M * 0.8) / 30, 0, 100);   // pressure strain starts at 80% of crush depth
   // arrival at POI
   let here = null;
   for (const p of s.pois) if (toward(s, p).nm < POI_RADIUS_NM) { here = p; break; }

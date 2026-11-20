@@ -31,7 +31,7 @@
             "bio": "Trained as a Navy coxswain and spent nine years bringing small boats through bad water, the last three ferrying scientists out to a research sub off Woods Hole. He asked for the Aqua Nova's helm because it was the first boat he had read about that he wanted to be good at. Precise and dry, and he does not like to be rushed in a harbour.",
             "image": "images/crew/Marcus_Chen.png",
             "dialogueOptions": {
-                "commands": ["Make your depth", "Come left", "Come right", "Make your heading", "Make your speed"],
+                "commands": ["Make your depth", "Make periscope depth", "Come left", "Come right", "Make your heading", "Make your speed"],
                 "emergency": ["All ahead flank", "All stop", "Emergency surfaace", "Emergency dive"],
                 "pleasantries": ["Say the word Captain", "Smooth sailing, Captain", "Smooth sailing, Sir", "All systems are green Captain.", "Yes, Captain?", "Yes, Commander?"]
             }

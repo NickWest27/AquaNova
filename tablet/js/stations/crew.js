@@ -2,7 +2,7 @@
 import { pendingDecisions, decide } from '../aria.js';
 import { fill } from '../player.js';
 import { reply as chatReply, statusReport } from '../chat.js';
-import { sim, toward, wskrName, HUG_ALT, HUG_MIN_FLOOR } from '../sim.js';
+import { sim, toward, wskrName, HUG_ALT, HUG_MIN_FLOOR, PERISCOPE_M } from '../sim.js';
 import { GATES_ON } from '../unlocks.js';
 import { research } from '../science.js';
 import { el, toast } from '../util.js';
@@ -46,7 +46,7 @@ const hdgText = (h) => String(Math.round(((h % 360) + 360) % 360)).padStart(3, '
 // Orders added here show up even in old saves (a save keeps its own copy of the crew's lines).
 const unreadMail = () => (gameState.getProperty('mission.inbox') || []).filter((m) => !m.read).length;
 const reportFor = (ctx, id) => statusReport(id, { mail: unreadMail(), objective: (() => { try { const o = ctx.objectives().find((x) => !x.done); return o ? o.text : null; } catch (e) { return null; } })() });
-const EXTRA = { helm: ['Status report', 'Undock', 'Dock', 'Hug the floor', 'Stop hugging the floor', 'Engage super cruise', 'Disengage super cruise'], sensors: ['Status report', 'Set up a relay', 'Stand down the relay'], communications: ['Status report', 'Transmit a report'], science: ['Status report'], security: ['Status report'] };
+const EXTRA = { helm: ['Make periscope depth', 'Status report', 'Undock', 'Dock', 'Hug the floor', 'Stop hugging the floor', 'Engage super cruise', 'Disengage super cruise'], sensors: ['Status report', 'Set up a relay', 'Stand down the relay'], communications: ['Status report', 'Transmit a report'], science: ['Status report'], security: ['Status report'] };
 const ORDERS = {
   'Undock': () => { if (!docked()) return 'We are already undocked, Captain.'; setTimeout(() => toggleDock(), 600); return 'Undocking. Disconnecting shore power and releasing the clamps.'; },
   'Dock': () => {
@@ -67,6 +67,7 @@ const ORDERS = {
     if (docked()) { setTimeout(() => toggleDock(() => crewSay('aria', go())), 600); return 'Undocking first, Captain. Then I will set a safe course out.'; }
     return go();
   },
+  'Make periscope depth': () => (docked() ? 'We are docked, Captain.' : dive(PERISCOPE_M, 'Periscope depth, aye.')),
   'Prepare for dive': () => { if (docked()) return 'We are still docked, Captain.'; return dive(100, 'Making ready.'); },
   "Let's go home": () => {
     const dock = sim.dockPoi(); if (!dock) return 'No dock on the charts.';

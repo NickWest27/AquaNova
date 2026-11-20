@@ -18,11 +18,12 @@ import './rov.js';
 export { SHUTTLE_NAME };
 export const BAY_SAFE_KT = 8, DOOR_DAMAGE_KT = 10, LAUNCH_S = 60, AIRLOCK_S = 10;
 export const SHUTTLE_SEATS = 6, SHUTTLE_COCKPIT = 2, SHUTTLE_LINK_NM = 20, SHUTTLE_KT = 20, SHUTTLE_CHARGE_H = 2, MIN_LAUNCH_PCT = 20, LOW_PCT = 15;
+export const TERN_SAFE_M = 800, TERN_CRUSH_M = 1000;   // the Tern is a shuttle, not a deep sea vehicle
 export const O2_CREW = 8, O2_CHARGE_H = 1, REMORA_REARM_S = 300, REMORA_UNLOAD_S = 120;   // air lasts O2 hours with 8 aboard; Remora: 5 min to re-equip plus 2 min per sample unloaded
 /** Shuttle battery life on a full charge: 1 h to start, research makes it 3 h then 6 h. */
 export const shuttleHours = () => (research.has('shuttle-battery-6') ? 6 : research.has('shuttle-battery-3') ? 3 : 1);
 /** Air supply in hours with all 8 seats taken (fewer aboard lasts longer): 8 h, 10 h after research. */
-export const shuttleO2Hours = () => (research.has('shuttle-o2') ? 10 : 8);
+export const shuttleO2Hours = () => (research.has('shuttle-o2') ? 9 : 7);
 export const aboard = (sh) => (sh.pilots == null ? SHUTTLE_COCKPIT : sh.pilots) + (sh.pax || 0);
 /** Hours of air left at the present load. */
 export const o2HoursLeft = (sh) => (Math.max(0, (sh.o2 == null ? 100 : sh.o2)) / 100) * shuttleO2Hours() * (O2_CREW / Math.max(1, aboard(sh)));
@@ -72,6 +73,7 @@ export function launchShuttle() {
   if (sh.pilots < 1) return { ok: false, why: 'pilot' };
   if (sh.bat < MIN_LAUNCH_PCT) return { ok: false, why: 'charge', bat: sh.bat };
   if (sh.o2 < MIN_LAUNCH_PCT) return { ok: false, why: 'o2', o2: sh.o2 };
+  if (sim.s.depth > TERN_SAFE_M) return { ok: false, why: 'deep' };
   return startOp({ kind: 'launch', craft: 'shuttle' });
 }
 export function recoverShuttle() {
@@ -188,3 +190,6 @@ sim.hooks.push((dt) => { const g = dt * TIMESCALE; stepOp(g); receive(); chargeR
 
 /** What to tell the Captain about the result of launchWskr(). */
 export const launchText = (r) => r.ok ? `${wskrName({ n: r.n })} is being readied in the bay. About ${Math.round(r.secs)} seconds.` : ({ docked: 'Undock first', full: 'All four WSKRs are out', busy: 'The bay is busy with another craft', doors: 'The bay doors are too damaged to open: dry dock needed', tether: "Remora's tether is holding the bay doors open. Recover it first", charge: `${wskrName({ n: r.n })} is only at ${Math.round(r.bat || 0)} percent charge. It needs 20 percent` })[r.why] || 'Cannot launch now';
+
+// While the Tern is out with the ship, the ship may not take her below the Tern's safe depth.
+sim.depthCaps.push((s) => (s.shuttle && s.shuttle.state === 'out' && !s.shuttle.dead && s.shuttle.mode === 'follow' ? TERN_SAFE_M : null));

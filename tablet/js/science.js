@@ -36,7 +36,7 @@ export const TOPICS = [
   { id: 'wskr-battery-24', name: 'WSKR deep-cycle cells', cost: 5, requires: 'wskr-battery-12', text: 'WSKR battery life goes from 12 hours to 24 hours. Needs the long-life cells first.' },
   { id: 'shuttle-battery-3', name: 'Tern long-life cells', cost: 3, text: 'The shuttle Tern runs 3 hours on a charge instead of 1.' },
   { id: 'shuttle-battery-6', name: 'Tern deep-cycle cells', cost: 5, requires: 'shuttle-battery-3', text: 'Tern runs 6 hours on a charge instead of 3. Needs the long-life cells first.' },
-  { id: 'shuttle-o2', name: 'Tern air scrubbers', cost: 3, text: 'Tern carries air for 10 hours with all eight seats taken, instead of 8.' },
+  { id: 'shuttle-o2', name: 'Tern air scrubbers', cost: 3, text: 'Tern carries air for 9 hours with all eight seats taken, instead of 7.' },
   { id: 'synthetic-view', name: 'Synthetic forward view', cost: 5, text: 'Builds a forward view on the bridge VIEW screen from charted sea floor, with known and interpolated contour lines.' },
 ];
 
