@@ -143,16 +143,17 @@ export const WSKR_LINK_NM = 10, SEARCH_LEG_NM = 0.45, SEARCH_LEGS = 14, WSKR_TUR
  *  Depth is one fleet setting, staggered so no two WSKRs share a layer: auto (the whole water column in equal layers),
  *  shallow (the surface down to just below Aqua Nova), deep (from just above Aqua Nova to the floor).
  *  Formation is one fleet setting, set by how much each WSKR's scan ring overlaps Aqua Nova's: loose 5%, tight 50%; the WSKRs space themselves evenly round the ship.
- *  Battery: 24 hours at normal draw (base speed); a full recharge in the bay takes 2 hours, in proportion to what was used (`WSKR_BATTERY_H`; research can change it later). */
+ *  Battery: 6 hours at normal draw (base speed), 12 and 24 with research; a full recharge in the bay takes 2 hours, in proportion to what was used (`WSKR_BATTERY_H`; research can change it later). */
 /** Battery draw factor for a WSKR right now (1 = normal). */
 export const wskrDraw = (w) => {
   const base = (WSKR_PERKS[w.n] && WSKR_PERKS[w.n].kt) || WSKR_KT, fast = w.moving && !w.super && w.mode !== 'manual' && w.kt ? (w.kt / base) ** 2 : 1;   // draw rises with the square of speed: 20 kt on a 16 kt craft draws 1.56
   return (w.mode === 'relay' ? 0.6 : w.mode === 'manual' ? 0.7 + 0.6 * (w.thr || 0) : w.moving ? 1 : 0.8) * (w.moving && w.super ? 2.2 : 1) * fast;
 };
 /** Game minutes of battery left at the current draw (to 0%), and to the 15% auto-recall. */
-export const wskrMinutes = (w) => { const per = (100 / (WSKR_BATTERY_H * 3600)) * wskrDraw(w); const b = w.bat == null ? 100 : w.bat; return { empty: Math.max(0, b / per / 60), recall: Math.max(0, (b - WSKR_LOW_PCT) / per / 60) }; };
-export const WSKR_BATTERY_H = 24, WSKR_CHARGE_H = 2, WSKR_LOW_PCT = 15, WSKR_STAGGER_M = 10, WSKR_RELAY_DEPTH = 4;
-export const wskrBatteryHours = () => WSKR_BATTERY_H;
+export const wskrMinutes = (w) => { const per = (100 / (wskrBatteryHours() * 3600)) * wskrDraw(w); const b = w.bat == null ? 100 : w.bat; return { empty: Math.max(0, b / per / 60), recall: Math.max(0, (b - WSKR_LOW_PCT) / per / 60) }; };
+export const WSKR_BATTERY_H = 6, WSKR_CHARGE_H = 2, WSKR_LOW_PCT = 15, WSKR_STAGGER_M = 10, WSKR_RELAY_DEPTH = 4;
+/** 6 hours; research raises it to 12 and then 24 (science.js sets `sim.batteryHours`). */
+export const wskrBatteryHours = () => (sim.batteryHours ? sim.batteryHours() : WSKR_BATTERY_H);
 export const WSKR_OVERLAP = { loose: 0.05, tight: 0.5 };
 /** Distance between two scan-ring centres (nm) at which the rings overlap by `frac` of the SMALLER ring's area. */
 export function ringDistance(r1, r2, frac) {
@@ -237,8 +238,8 @@ sim.deployWskr = (want) => {
   const rack = s.rack || (s.rack = {}), bat = rack[n] == null ? 100 : rack[n]; delete rack[n];
   s.wskrs.push({ n, lat: s.lat, lon: s.lon, mode: 'escort', target: null, busy: 0, bat }); sim.touch(); return { ok: true, n };
 };
-sim.taskWskr = (poi) => {
-  const w = sim.s.wskrs.find((q) => q.mode === 'escort');
+sim.taskWskr = (poi, n) => {
+  const w = sim.s.wskrs.find((q) => (n ? q.n === n && !q.dead && q.mode !== 'recall' && !q.arrived : q.mode === 'escort'));
   if (!w) return null;
   w.mode = 'task'; w.target = poi.id; w.busy = 0; w.route = null; sim.touch(); return w;
 };

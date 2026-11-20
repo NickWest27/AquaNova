@@ -55,8 +55,12 @@ def main():
         # WSKR page and craft views draw without errors
         r = js("""const s=sim.s; const c=s.pois.find(p=>p.name==='Canyon Head'); Object.assign(s,{lat:c.lat,lon:c.lon,wskrs:[],rov:null,docked:false}); sim.deployWskr(); sim.deployWskr(); for(let i=0;i<200;i++) sim.step(0.1); window.__aq.open('wskr'); return s.wskrs.length""")
         page.wait_for_timeout(800)
+        js("window.__aq.open('sensors'); return 1"); page.wait_for_timeout(500)
+        page.locator("#station .tabs .btn", has_text="WSKRs").tap(); page.wait_for_timeout(700)
         txt = page.inner_text("#station").lower()
-        check("WSKR page shows WSKR names and the view", "scout" in txt and "lantern" in txt and page.is_visible("#station .synth-canvas"), txt[:100])
+        check("WSKR page shows WSKR names", "scout" in txt and "lantern" in txt, txt[:100])
+        page.locator("#station .wk-tile").first.tap(); page.wait_for_timeout(600)
+        check("selected WSKR shows its synthetic view", page.is_visible("#station .synth-canvas"))
         page.evaluate("document.querySelector('#station .st-head .btn').click()"); page.wait_for_timeout(200)
         r = js("""const s=sim.s; s.wskrs=[]; sim.launchRov(); s.rov.depth=20; window.__aq.open('remora'); return 1""")
         page.wait_for_timeout(800)

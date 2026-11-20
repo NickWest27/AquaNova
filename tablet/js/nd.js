@@ -7,14 +7,14 @@ const RANGES = [0.5, 1, 2, 4, 8, 16, 32, 64, 128, 256];   // the chart is about 
 
 // stage: the canvas sits inside the scaled 1920x1080 bridge stage. Sizes then come from layout (not the scaled
 // rectangle), and `units` makes text and markers bigger so they read at the stage's smaller on-screen size.
-export function createND(wrap, { onPick, stage = false, units = 1, contours = false, rings = true, craft = null, trackUp = false } = {}) {   // trackUp: the ship's heading is up (the map turns); contours stay north-up, so use it without them   // craft: () => { lat, lon, heading } centres the map on a craft (Remora, a WSKR) instead of the ship
+export function createND(wrap, { onPick, stage = false, units = 1, contours = false, rings = true, craft = null, trackUp = false, focus = null, bigWskr = false, onWskr = null } = {}) {   // focus: () => a point to centre on (the ship keeps its place and, with trackUp, its heading is still up); bigWskr: WSKR diamonds carry their code; onWskr(q): a tap on a WSKR   // trackUp: the ship's heading is up (the map turns); contours stay north-up, so use it without them   // craft: () => { lat, lon, heading } centres the map on a craft (Remora, a WSKR) instead of the ship
   const canvas = document.createElement('canvas');
   wrap.prepend(canvas);
   const ctx = canvas.getContext('2d');
-  const ctr = () => (craft && craft()) || sim.s;
+  const ctr = () => { const f = focus && focus(); return f ? { lat: f.lat, lon: f.lon, heading: sim.s.heading } : (craft && craft()) || sim.s; };
   // rotate an east/north offset so the ship's heading points up (track up), or leave it north up
   const turn = (t) => { if (!trackUp) return t; const h = (ctr().heading * Math.PI) / 180, c = Math.cos(h), s = Math.sin(h); return { ...t, dx: t.dx * c - t.dy * s, dy: t.dx * s + t.dy * c }; };
-  const nd = { range: 2, sel: null, w: 0, h: 0, canvas };
+  const nd = { range: 2, sel: null, selWskr: null, w: 0, h: 0, canvas };
 
   function resize() {
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -39,14 +39,14 @@ export function createND(wrap, { onPick, stage = false, units = 1, contours = fa
   // Sonar sets how much of the sea floor is mapped in detail: sonar on 4 nm, off 0.8 nm (echo sounder only), active sweep 8 nm.
   const fineNm = (s) => sim.fineNm(s);
   const shade = (l) => (l === 0 ? 'rgba(255,214,120,0.9)' : l > -100 ? 'rgba(130,215,255,0.40)' : l > -500 ? 'rgba(90,170,255,0.45)' : 'rgba(110,130,255,0.55)');
-  function strokeLevels(levels, p, w, h, fine) {
+  function strokeLevels(levels, p, w, h, fine, ox = 0, oy = 0) {
     for (const lv of levels) {
       if (fine && (lv.l === 0 || !(lv.l > -200 || (lv.l > -500 ? lv.l % 50 === 0 : lv.l % 100 === 0)))) continue;   // 10 m on the shelf, thinning out with depth so slopes stay readable
       ctx.strokeStyle = fine ? (lv.l % 100 === 0 ? 'rgba(130,200,255,0.55)' : 'rgba(110,190,230,0.26)') : shade(lv.l);
       ctx.lineWidth = lv.l === 0 ? 1.8 : fine ? 0.9 : 1.1; ctx.beginPath();
       for (const ln of lv.lines) {
         const a = ln.a, n = a.length / 2;
-        if (p.x(ln.x1) < -20 || p.x(ln.x0) > w + 20 || p.y(ln.y0) < -20 || p.y(ln.y1) > h + 20) continue;   // outside the view
+        if (p.x(ln.x1) < -20 - ox || p.x(ln.x0) > w + 20 + ox || p.y(ln.y0) < -20 - oy || p.y(ln.y1) > h + 20 + oy) continue;   // outside the view
         ctx.moveTo(p.x(a[0]), p.y(a[1]));
         for (let i = 1; i < n; i++) ctx.lineTo(p.x(a[i * 2]), p.y(a[i * 2 + 1]));
       }
@@ -57,15 +57,11 @@ export function createND(wrap, { onPick, stage = false, units = 1, contours = fa
     if (!seafloor.ready) return;
     const s = ctr(), sh = sim.s, scale = R / nd.range, kx = 60 * Math.cos((s.lat * Math.PI) / 180) * scale, ky = 60 * scale;
     const p = { x: (lon) => w / 2 + (lon - s.lon) * kx, y: (lat) => h / 2 - (lat - s.lat) * ky };
-    strokeLevels(seafloor.rough, p, w, h, false);
-    if (!rings) {   // scale bar: the main screen has no range rings
-      const nice = [0.1, 0.25, 0.5, 1, 2, 5, 10, 20].filter((v) => v * scale < w * 0.25).pop() || 0.1, len = nice * scale, x0 = w - 60 - len, y0 = h - 34;
-      ctx.strokeStyle = '#9fd8ff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x0, y0 - 6); ctx.lineTo(x0, y0); ctx.lineTo(x0 + len, y0); ctx.lineTo(x0 + len, y0 - 6); ctx.stroke();
-      ctx.fillStyle = '#9fd8ff'; ctx.font = '600 15px ui-monospace, Menlo, monospace'; ctx.textAlign = 'center'; ctx.fillText(nice + ' nm', x0 + len / 2, y0 - 10);
-    }
+    const D = trackUp ? Math.hypot(w, h) : 0, ox = trackUp ? (D - w) / 2 : 0, oy = trackUp ? (D - h) / 2 : 0;   // track up turns the chart, so its corners reach further
+    strokeLevels(seafloor.rough, p, w, h, false, ox, oy);
     const src = [{ lat: sh.lat, lon: sh.lon, nm: fineNm(sh) }, ...(sh.wskrs || []).map((q) => ({ lat: q.lat, lon: q.lon, nm: WSKR_NM }))];
     // Fine contours show wherever we have charted (fog of war) plus what the sonar and WSKRs see right now. At very wide ranges they would only clutter.
-    const dLonV = w / 2 / kx, dLatV = h / 2 / ky;
+    const dLonV = (D || w) / 2 / kx, dLatV = (D || h) / 2 / ky;
     const view = nd.range <= 16 ? seafloor.chartView(s.lat - dLatV, s.lat + dLatV, s.lon - dLonV, s.lon + dLonV) : { runs: [], keys: [] };
     const tiles = nd.range <= 16 ? seafloor.loadTiles([...view.keys, ...src.flatMap((q) => seafloor.tilesNear(q.lat, q.lon, q.nm))], nd.redraw) : [];
     if (tiles.length) {
@@ -73,7 +69,7 @@ export function createND(wrap, { onPick, stage = false, units = 1, contours = fa
       for (const r of view.runs) clip.rect(p.x(r.lon0), p.y(r.lat1), (r.lon1 - r.lon0) * kx, (r.lat1 - r.lat0) * ky);
       for (const q of src) { const cx = p.x(q.lon), cy = p.y(q.lat); clip.moveTo(cx + q.nm * scale, cy); clip.arc(cx, cy, q.nm * scale, 0, 6.2832); }
       ctx.clip(clip);
-      for (const t of tiles) strokeLevels(t, p, w, h, true);
+      for (const t of tiles) strokeLevels(t, p, w, h, true, ox, oy);
       ctx.restore();
     }
     ctx.strokeStyle = 'rgba(100,255,218,0.25)'; ctx.setLineDash([4, 6]); ctx.lineWidth = 1; ctx.beginPath();
@@ -81,6 +77,11 @@ export function createND(wrap, { onPick, stage = false, units = 1, contours = fa
     ctx.stroke(); ctx.setLineDash([]);
   }
 
+  function drawScale(w, h, R) {   // scale bar: the main screen has no range rings
+    const scale = R / nd.range, nice = [0.1, 0.25, 0.5, 1, 2, 5, 10, 20].filter((v) => v * scale < w * 0.25).pop() || 0.1, len = nice * scale, x0 = w - 60 - len, y0 = h - 34;
+    ctx.strokeStyle = '#9fd8ff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x0, y0 - 6); ctx.lineTo(x0, y0); ctx.lineTo(x0 + len, y0); ctx.lineTo(x0 + len, y0 - 6); ctx.stroke();
+    ctx.fillStyle = '#9fd8ff'; ctx.font = '600 15px ui-monospace, Menlo, monospace'; ctx.textAlign = 'center'; ctx.fillText(nice + ' nm', x0 + len / 2, y0 - 10);
+  }
   nd.fineRadius = () => fineNm(sim.s);
 
   nd.draw = () => {
@@ -89,7 +90,9 @@ export function createND(wrap, { onPick, stage = false, units = 1, contours = fa
     if (R < 20) return; // not laid out yet (hidden)
     ctx.clearRect(0, 0, w, h);
     ctx.fillStyle = '#03121c'; ctx.fillRect(0, 0, w, h);
-    if (contours) drawSeafloor(w, h, R);
+    const hd = (c.heading * Math.PI) / 180;
+    if (contours) { if (trackUp) { ctx.save(); ctx.translate(cx, cy); ctx.rotate(-hd); ctx.translate(-cx, -cy); } drawSeafloor(w, h, R); if (trackUp) ctx.restore(); if (!rings) drawScale(w, h, R); }
+    const shipPt = (() => { const t = turn(toward(c, s)), sc = R / nd.range; return { x: cx + t.dx * sc, y: cy - t.dy * sc }; })();   // where Aqua Nova is on this chart
     if (rings) {
     ctx.lineWidth = 1.5; ctx.strokeStyle = 'rgba(100,255,218,0.25)';
     for (let i = 1; i <= 4; i++) { ctx.beginPath(); ctx.arc(cx, cy, (R * i) / 4, 0, 6.2832); ctx.stroke(); }
@@ -104,13 +107,20 @@ export function createND(wrap, { onPick, stage = false, units = 1, contours = fa
     if (s.wpt && !craft) {
       const p = px(s.wpt), legs = [...(s.route || [])];
       ctx.setLineDash([8, 8]); ctx.strokeStyle = '#ffb020'; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.moveTo(cx, cy); for (const q of legs) { const a = px(q); ctx.lineTo(a.x, a.y); } if (!legs.length || s.routeSnapped) ctx.lineTo(p.x, p.y); ctx.stroke(); ctx.setLineDash([]);
+      ctx.beginPath(); ctx.moveTo(shipPt.x, shipPt.y); for (const q of legs) { const a = px(q); ctx.lineTo(a.x, a.y); } if (!legs.length || s.routeSnapped) ctx.lineTo(p.x, p.y); ctx.stroke(); ctx.setLineDash([]);
       if (s.wpt.type === 'waypoint') { ctx.beginPath(); ctx.arc(p.x, p.y, 9, 0, 6.2832); ctx.moveTo(p.x - 14, p.y); ctx.lineTo(p.x + 14, p.y); ctx.moveTo(p.x, p.y - 14); ctx.lineTo(p.x, p.y + 14); ctx.stroke(); }
     }
     // WSKRs (deployed sensor probes): diamonds
     for (const q of s.wskrs || []) {
       const t = turn(toward(c, q)), scale = R / nd.range, x = w / 2 + t.dx * scale, y = h / 2 - t.dy * scale;
       if (x < -20 || x > w + 20 || y < -20 || y > h + 20) continue;
+      if (bigWskr) {
+        const k = 17, col = q.dead ? '#ff6b6b' : q.mode === 'task' ? '#ff9f43' : '#ffd666';
+        if (nd.selWskr === q.n) { ctx.strokeStyle = '#64ffda'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(x, y, k + 9, 0, 6.2832); ctx.stroke(); }
+        ctx.fillStyle = '#1d4a2c'; ctx.strokeStyle = col; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(x, y - k); ctx.lineTo(x + k, y); ctx.lineTo(x, y + k); ctx.lineTo(x - k, y); ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#e6f1ff'; ctx.font = '800 14px system-ui'; ctx.textAlign = 'center'; ctx.fillText(WSKR_CODES[q.n - 1] || 'W' + q.n, x, y + 5);
+        continue;
+      }
       ctx.fillStyle = q.mode === 'task' ? '#ff9f43' : '#ffd666'; ctx.beginPath(); ctx.moveTo(x, y - 7); ctx.lineTo(x + 6, y); ctx.lineTo(x, y + 7); ctx.lineTo(x - 6, y); ctx.fill();
       ctx.font = '700 14px system-ui'; ctx.textAlign = 'left'; ctx.fillText(WSKR_CODES[q.n - 1] || 'W' + q.n, x + 9, y + 5);
     }
@@ -139,11 +149,11 @@ export function createND(wrap, { onPick, stage = false, units = 1, contours = fa
     if (craft) {
       const t = toward(c, s), scale = R / nd.range; mark(w / 2 + t.dx * scale, h / 2 - t.dy * scale, s.heading, '#3ddc84', false);
       mark(cx, cy, c.heading, '#ffb020', true);
-    } else mark(cx, cy, trackUp ? 0 : s.heading, '#3ddc84', true);
+    } else mark(shipPt.x, shipPt.y, trackUp ? 0 : s.heading, '#3ddc84', true);
     // where we will be in an hour at the present speed: a light dashed vector from the ship
     if (!craft && s.speed > 0.2) {
-      const nm = s.speed, a = ((trackUp ? 0 : s.heading) * Math.PI) / 180, scale = R / nd.range, ex = cx + Math.sin(a) * nm * scale, ey = cy - Math.cos(a) * nm * scale;
-      ctx.save(); ctx.strokeStyle = 'rgba(190,235,255,0.65)'; ctx.lineWidth = 1.5; ctx.setLineDash([7, 7]); ctx.beginPath(); ctx.moveTo(cx + Math.sin(a) * 18, cy - Math.cos(a) * 18); ctx.lineTo(ex, ey); ctx.stroke(); ctx.setLineDash([]);
+      const nm = s.speed, a = ((trackUp ? 0 : s.heading) * Math.PI) / 180, scale = R / nd.range, ex = shipPt.x + Math.sin(a) * nm * scale, ey = shipPt.y - Math.cos(a) * nm * scale;
+      ctx.save(); ctx.strokeStyle = 'rgba(190,235,255,0.65)'; ctx.lineWidth = 1.5; ctx.setLineDash([7, 7]); ctx.beginPath(); ctx.moveTo(shipPt.x + Math.sin(a) * 18, shipPt.y - Math.cos(a) * 18); ctx.lineTo(ex, ey); ctx.stroke(); ctx.setLineDash([]);
       if (ex > 0 && ex < w && ey > 0 && ey < h) { ctx.beginPath(); ctx.arc(ex, ey, 4, 0, 6.2832); ctx.stroke(); ctx.fillStyle = 'rgba(190,235,255,0.85)'; ctx.font = '600 13px ui-monospace, Menlo, monospace'; ctx.textAlign = 'left'; ctx.fillText(`1 h · ${nm.toFixed(1)} nm`, ex + 8, ey - 6); }
       ctx.restore();
     }
@@ -159,6 +169,7 @@ export function createND(wrap, { onPick, stage = false, units = 1, contours = fa
   canvas.addEventListener('pointerdown', (e) => {
     const r = canvas.getBoundingClientRect();
     const x = (e.clientX - r.left) * (nd.w / r.width), y = (e.clientY - r.top) * (nd.h / r.height);   // into canvas units
+    if (onWskr) { let bw = null, dw = 40; for (const q of sim.s.wskrs || []) { const t = toward(ctr(), q), tt = turn(t), sc = (Math.min(nd.w, nd.h) / 2 - 24) / nd.range, d = Math.hypot(nd.w / 2 + tt.dx * sc - x, nd.h / 2 - tt.dy * sc - y); if (d < dw) { dw = d; bw = q; } } if (bw) { onWskr(bw); return; } }
     let best = null, bd = 44 / ((stage ? r.width / (wrap.offsetWidth || r.width) : 1) * units); // a finger-sized pick radius, in canvas units
     for (const poi of sim.s.pois) { const p = px(poi); const d = Math.hypot(p.x - x, p.y - y); if (d < bd) { bd = d; best = poi; } }
     nd.sel = best; nd.draw(); onPick && onPick(best);

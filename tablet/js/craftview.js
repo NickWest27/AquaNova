@@ -9,10 +9,10 @@ import { seafloor } from './seafloor.js';
 
 const RANGES = [0.25, 0.5, 1, 2, 4];
 
-export function mountCraftView(parent, { getCraft, title, range = 0.5, readouts }) {
+export function mountCraftView(parent, { getCraft, title, range = 0.5, readouts, only = null }) {
   let rng = range, last = 0, sig = '';
   const prof = el('div', { class: 'cv-prof' }), synth = el('div', { class: 'cv-synth' }), map = el('div', { class: 'cv-map' });
-  const row = el('div', { class: 'cv-row' }, prof, synth, map);
+  const row = el('div', { class: 'cv-row' }, ...(only === 'synth' ? [synth] : [prof, synth, map]));
   // corner readouts over the synthetic view: bottom left, Aqua Nova; bottom right, the selected target (bearing, range, pointer)
   const mkBox = (cls) => { const arrow = el('span', { class: 'cv-arrow', text: '▲' }), name = el('b'), brg = el('span'), rng = el('span'); return { box: el('div', { class: 'cv-ro ' + cls }, arrow, name, brg, rng), arrow, name, brg, rng }; };
   const roL = mkBox('l'), roR = mkBox('r');
@@ -27,8 +27,9 @@ export function mountCraftView(parent, { getCraft, title, range = 0.5, readouts 
   const rangeLbl = el('span', { class: 'cv-range' });
   const step = (d) => { const i = RANGES.indexOf(rng); rng = RANGES[Math.max(0, Math.min(RANGES.length - 1, i + d))]; nd.setRange(rng); sig = ''; draw(); };
   const bar = el('div', { class: 'row' }, el('button', { class: 'btn chip', text: 'Range −', onclick: () => step(-1) }), el('button', { class: 'btn chip', text: 'Range +', onclick: () => step(1) }), rangeLbl);
-  parent.append(row, bar);
-  const pr = createProfile(prof), sy = createSynth(synth), nd = createND(map, { stage: false, units: 1, contours: true, rings: false, craft: getCraft });
+  parent.append(row); if (!only) parent.append(bar);
+  const none = { draw() {}, setRange() {}, destroy() {} };
+  const pr = only ? none : createProfile(prof), sy = createSynth(synth), nd = only ? none : createND(map, { stage: false, units: 1, contours: true, rings: false, craft: getCraft });
   nd.range = rng;
   function draw() {
     const c = getCraft(); if (!c) return;

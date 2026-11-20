@@ -32,6 +32,8 @@ export const TOPICS = [
   { id: 'rov-range', name: 'Longer tether', cost: 2, text: 'A better tether lets the Science ROV work 1.5 nm from the ship.' },
   { id: 'sonar-sweep', name: 'Deep sonar sweep', cost: 3, text: 'Lets the full sweep chart further. (Effect comes later.)' },
   { id: 'wskr-orders', name: 'WSKR formations and orders', cost: 4, text: 'Unlocks WSKR orders on the WSKR page: manual control, search pattern, relay, tight or loose formation, and shallow or deep running.' },
+  { id: 'wskr-battery-12', name: 'WSKR long-life cells', cost: 3, text: 'WSKR battery life goes from 6 hours to 12 hours.' },
+  { id: 'wskr-battery-24', name: 'WSKR deep-cycle cells', cost: 5, requires: 'wskr-battery-12', text: 'WSKR battery life goes from 12 hours to 24 hours. Needs the long-life cells first.' },
   { id: 'synthetic-view', name: 'Synthetic forward view', cost: 5, text: 'Builds a forward view on the bridge VIEW screen from charted sea floor, with known and interpolated contour lines.' },
 ];
 
@@ -44,6 +46,7 @@ export const samples = () => root().samples;
 export const jobs = () => root().jobs;
 export const points = () => root().points;
 export const research = { has: (id) => root().done.includes(id), done: () => root().done };
+sim.batteryHours = () => (research.has('wskr-battery-24') ? 24 : research.has('wskr-battery-12') ? 12 : 6);   // WSKR battery life
 
 /** Add a raw sample. Returns it. */
 export function addSample(kind, site, tool) {
@@ -95,7 +98,7 @@ export function tickLab() {
 }
 export function startTopic(id) {
   const r = root(), t = TOPICS.find((q) => q.id === id);
-  if (!t || r.done.includes(id) || r.points < t.cost) return false;
+  if (!t || r.done.includes(id) || r.points < t.cost || (t.requires && !r.done.includes(t.requires))) return false;
   save({ ...r, points: r.points - t.cost, done: [...r.done, id] });
   return true;
 }

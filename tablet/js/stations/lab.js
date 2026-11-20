@@ -49,7 +49,7 @@ export function mount(body, ctx) {
         el('p', { style: 'color:var(--dim);margin-top:0.4rem', text: 'Each finished analysis gives one point.' })),
         ...TOPICS.map((t) => el('div', { class: 'card task' },
           el('div', { class: 'grow' }, el('h3', { text: t.name }), el('p', { style: 'color:var(--dim)', text: `${t.text} Cost: ${t.cost}.` })),
-          done.includes(t.id) ? el('span', { class: 'ok', text: 'Done' }) : el('button', { class: 'btn chip', text: 'Research', disabled: pts < t.cost, onclick: () => {
+          done.includes(t.id) ? el('span', { class: 'ok', text: 'Done' }) : el('button', { class: 'btn chip', text: 'Research', disabled: pts < t.cost || (t.requires && !done.includes(t.requires)), onclick: () => {
             if (startTopic(t.id)) tell('science', `Research complete: ${t.name}`, 'mission'); sig = ''; update(); } }))));
     }
   }

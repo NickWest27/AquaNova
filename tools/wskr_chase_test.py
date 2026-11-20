@@ -50,6 +50,7 @@ def main():
             page.locator("#station .card.task .btn", has_text="Select").first.tap(); page.wait_for_timeout(400)
             check("a contact can be selected", page.locator("#station .card.task.sel").count()==1 and js("return !!sim.s.selContact"))
             page.locator("#station .tabs .btn", has_text="WSKRs").tap(); page.wait_for_timeout(1200)
+            page.locator("#station .wk-tile").first.tap(); page.wait_for_timeout(900)
             ro=page.inner_text("#station .cv-synth") if page.locator("#station .cv-ro").count() else ""
             check("synthetic view shows Aqua Nova BRG and RNG", "AQUA NOVA" in ro and "BRG" in ro and "RNG" in ro, ro)
             check("target box shows the selected contact tag and figures", page.locator("#station .cv-ro.r").count()==1 and "S" in page.inner_text("#station .cv-ro.r") and "RNG" in page.inner_text("#station .cv-ro.r"), page.inner_text("#station .cv-ro.r"))

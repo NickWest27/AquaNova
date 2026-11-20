@@ -28,7 +28,7 @@ def main():
             B = "const B=await import('./js/bayops.js');"
             js("const s=sim.s; const c=sim.dockPoi(); Object.assign(s,{lat:c.lat+0.07,lon:c.lon,wskrs:[],rov:null,docked:false,wpt:null,speed:0,throttle:0,depth:0,targetDepth:0,heading:0,at:null}); s.rack={}; s.bay={op:null,doorDmg:0}; s.shuttle={state:'bay',bat:100,mode:'follow'}; return 1")
             r = js("sim.deployWskr(); const w=sim.s.wskrs[0]; w.mode='escort'; w.moving=false; const m=T.wskrMinutes(w); sim.s.wskrs=[]; return m.empty")
-            check("WSKR battery lasts 24 h holding station (about 1800 min at draw 0.8)", 1700 < r < 1900, str(r))
+            check("WSKR battery lasts 6 h holding station (about 450 min at draw 0.8)", 430 < r < 470, str(r))
             r = js(B + "return B.launchWskr()")
             check("a launch starts a timed bay operation", r["ok"] and r["secs"] >= 59, str(r))
             check("WSKR is not out until the minute is up", js("return sim.s.wskrs.length") == 0)
