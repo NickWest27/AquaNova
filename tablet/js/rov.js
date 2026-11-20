@@ -11,7 +11,7 @@ export const rovRange = () => (research.has('rov-range') ? 1.5 : 1);
 const MAX_ROV_DEPTH = 600;
 export const REMORA_STORE = 3;   // she is small: three samples, then she has to come home and be unloaded
 export const rovCargo = () => (sim.s.rov && sim.s.rov.cargo) || [];
-const HOME_NM = 0.1;
+const HOME_NM = 0.03;   // about 55 m: alongside
 
 /** s.rov = null (aboard) or { lat, lon, heading, depth, cmd:{thr,turn,dive}, job:null|{tool,end,site} } */
 sim.launchRov = () => {
@@ -86,18 +86,20 @@ sim.hooks.push((dt) => {
 sim.rovAuto = () => {
   const r = sim.s.rov; if (!r) return { ok: false, why: 'none' };
   if (r.job) return { ok: false, why: 'busy' };
-  r.cmd = { thr: 0, turn: 0, dive: 0 }; r.auto = true; r.home = toward(sim.s, r).nm <= HOME_NM;
+  r.cmd = { thr: 0, turn: 0, dive: 0 }; r.auto = true; r.home = false;
   sim.touch(); return { ok: true, nm: toward(sim.s, r).nm, hours: toward(sim.s, r).nm / ROV_KT };
 };
 function autoReturn(r, dt) {
   const s = sim.s, t = toward(r, s);
-  if (t.nm <= HOME_NM) { if (!r.home) { r.home = true; r.auto = false; sim.emit('rov-home', r); } r.auto = false; return; }
-  const nm = Math.min(t.nm, (ROV_KT * dt * TIMESCALE) / 3600), a = (t.brg * Math.PI) / 180;
-  const lat = r.lat + (nm * Math.cos(a)) / NM_PER_DEG, lon = r.lon + (nm * Math.sin(a)) / (NM_PER_DEG * Math.cos((r.lat * Math.PI) / 180));
-  if (seafloor.ready) { const f = seafloor.depthAt(lat, lon); if (f == null || f < 2) { r.auto = false; sim.emit('rov-blocked', r); return; } }   // shoal or land in the way: she stops and waits for a pilot
-  r.heading = t.brg; r.lat = lat; r.lon = lon;
   const fl = rovFloor(), want = Math.min(s.depth, fl != null ? fl - 0.5 : MAX_ROV_DEPTH);
+  if (t.nm > HOME_NM) {
+    const nm = Math.min(t.nm, (ROV_KT * dt * TIMESCALE) / 3600), a = (t.brg * Math.PI) / 180;
+    const lat = r.lat + (nm * Math.cos(a)) / NM_PER_DEG, lon = r.lon + (nm * Math.sin(a)) / (NM_PER_DEG * Math.cos((r.lat * Math.PI) / 180));
+    if (seafloor.ready) { const f = seafloor.depthAt(lat, lon); if (f == null || f < 2) { r.auto = false; sim.emit('rov-blocked', r); return; } }   // shoal or land in the way: she stops and waits for a pilot
+    r.heading = t.brg; r.lat = lat; r.lon = lon;
+  }
   r.depth += Math.max(-8 * dt, Math.min(8 * dt, want - r.depth));
+  if (t.nm <= HOME_NM && Math.abs(want - r.depth) < 1) { r.home = true; r.auto = false; sim.emit('rov-home', r); }   // alongside, at the ship's depth
   sim.dirty = true;
 }
 
