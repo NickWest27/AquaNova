@@ -2,7 +2,7 @@
 // WSKRs are flown from Sensors, Remora from the Science Lab, and the shuttle is sent from here.
 import { tell } from '../notify.js';
 import { sim, toward, wskrName, WSKR_PERKS } from '../sim.js';
-import { ROV_NAME } from '../rov.js';
+import { ROV_NAME, tetherBar } from '../rov.js';
 import { el } from '../util.js';
 import { TERN_SAFE_M, TERN_CRUSH_M, launchRemora, recoverRemora, remoraRearm, shuttleHours, shuttleO2Hours, o2HoursLeft, O2_CHARGE_H, O2_CREW, setManning, SHUTTLE_SEATS, SHUTTLE_COCKPIT, bay, busy, rackBat, shuttle, launchWskr, launchText, receiveWskrNow, launchShuttle, recoverShuttle, sendShuttle, recallShuttle, dockList, shuttleRangeNm, SHUTTLE_NAME, BAY_SAFE_KT, DOOR_DAMAGE_KT, SHUTTLE_KT, SHUTTLE_CHARGE_H, MIN_LAUNCH_PCT } from '../bayops.js';
 import { WSKR_CHARGE_H } from '../sim.js';
@@ -16,13 +16,16 @@ export function mount(body) {
   const view = el('div', { class: 'tab-body', style: 'flex:1;min-height:0' });
   body.append(view);
   let sig = '';
+  const tether = tetherBar();   // how much of Remora's tether is out (shown on her card while she is out)
   function update() {
     const s = sim.s, w = s.wskrs, r = s.rov, b = bay(), sh = shuttle(), op = b.op;
     const secs = op ? Math.round(op.dur + (op.air || 0) - op.t) : 0;
     const fast = s.speed > BAY_SAFE_KT, vfast = s.speed > DOOR_DAMAGE_KT;
     const next = JSON.stringify([!!r, w.map((q) => [q.n, q.mode, !!q.arrived, Math.round(q.bat || 0)]), s.docked, Math.round(s.speed), op && [op.kind, op.craft, op.n, secs], Math.round(b.doorDmg), sh.state, sh.mode, Math.round(sh.bat), Math.round(sh.o2 == null ? 100 : sh.o2), remoraRearm() && Math.round(remoraRearm().t / 10), shuttleHours(), shuttleO2Hours(), sh.pilots, sh.pax, sh.ashore, Math.round(rackBat(1) + rackBat(2) * 3 + rackBat(3) * 7 + rackBat(4) * 11), Math.round(toward(s, sh).nm * 10)]);
+    tether.refresh();
     if (next === sig) return; sig = next;
     const card = (name, state, text, ...btns) => el('div', { class: 'card task' }, el('div', { class: 'grow' }, el('h3', { text: name }), el('p', { style: 'color:var(--dim)', text })), el('span', { class: state ? 'ok' : '', style: state ? '' : 'color:var(--amber)', text: state ? 'In bay' : 'Out' }), ...btns);
+    const rovCard = (...a) => { const c = card(...a); c.querySelector('.grow').append(tether); return c; };
     const act = (label, fn, off) => el('button', { class: 'btn chip', text: label, disabled: !!off, onclick: () => { fn(); sig = ''; update(); } });
     const launchRov = () => { const x = launchRemora(); tell('science', x.ok ? `${ROV_NAME} is being readied. About ${Math.round(x.secs)} seconds.` : ({ docked: 'Undock first', out: 'Already out', busy: 'The bay is busy with another craft', doors: 'The bay doors are too damaged to open', rearm: `The team are still unloading and re-equipping her: about ${x.mins} min` })[x.why] || 'Cannot launch now', x.ok ? 'mission' : 'error'); };
     const recoverRov = () => { const x = recoverRemora(); tell('science', x.ok ? `Bringing ${ROV_NAME} aboard. About ${Math.round(x.secs)} seconds.` : x.why === 'busy' ? 'The bay is busy' : 'Bring Remora within 0.2 nm of the ship first', x.ok ? 'mission' : 'error'); };
@@ -48,7 +51,7 @@ export function mount(body) {
         ...(sh.mode === 'follow' && !sh.dead ? [...dk.flatMap((p) => [act(`Send to ${p.name}`, () => { const x = sendShuttle(p); tell('helm', x.ok ? `${SHUTTLE_NAME} is off to ${p.name}, ${x.nm.toFixed(1)} nm, about ${mins(x.hours * 60)}.` : x.why === 'range' ? `${p.name} is ${x.trip.toFixed(0)} nm there and back, more than ${SHUTTLE_NAME}'s ${x.range.toFixed(0)} nm range` : 'Not available', x.ok ? 'mission' : 'error'); }), ...(sh.pax ? [act(`Drop team at ${p.name}`, () => { const x = sendShuttle(p, true); tell('helm', x.ok ? `${SHUTTLE_NAME} is taking the team to ${p.name}.` : 'Not available', x.ok ? 'mission' : 'error'); })] : [])]),
           act('Take aboard', () => { const x = recoverShuttle(); tell('helm', x.ok ? `Bringing ${SHUTTLE_NAME} aboard.` : x.why === 'far' ? `${SHUTTLE_NAME} is too far from the ship` : 'Not available', x.ok ? '' : 'error'); }, busy())] : (sh.mode === 'moored' ? [] : [act('Recall', () => { recallShuttle(); tell('helm', `${SHUTTLE_NAME} recalled`); }, sh.dead)])));
     view.replaceChildren(doors,
-      card(`${ROV_NAME} (Science ROV)`, !r, r ? 'Out on her tether, hand piloted from the Science Lab. The bay doors stay open until she is back aboard, so no other craft can launch or be taken aboard. Keep the ship under 8 knots.' : remoraRearm() ? `Aboard. The science team are unloading ${remoraRearm().load} sample${remoraRearm().load === 1 ? '' : 's'} and re-equipping her: ${Math.max(1, Math.ceil((remoraRearm().dur - remoraRearm().t) / 60))} min to go. She needs no charge.` : 'Slow, short range, hand piloted from the Science Lab. Launching takes a minute, and the doors then stay open for her tether. Needs no charging, but the team unload her samples and re-equip her after every dive (5 min and 2 min a sample).', r ? act('Recover', recoverRov, busy()) : act('Launch', launchRov, s.docked || busy() || !!remoraRearm())),
+      rovCard(`${ROV_NAME} (Science ROV)`, !r, r ? 'Out on her tether, hand piloted from the Science Lab. The bay doors stay open until she is back aboard, so no other craft can launch or be taken aboard. Keep the ship under 8 knots.' : remoraRearm() ? `Aboard. The science team are unloading ${remoraRearm().load} sample${remoraRearm().load === 1 ? '' : 's'} and re-equipping her: ${Math.max(1, Math.ceil((remoraRearm().dur - remoraRearm().t) / 60))} min to go. She needs no charge.` : 'Slow, short range, hand piloted from the Science Lab. Launching takes a minute, and the doors then stay open for her tether. Needs no charging, but the team unload her samples and re-equip her after every dive (5 min and 2 min a sample).', r ? act('Recover', recoverRov, busy()) : act('Launch', launchRov, s.docked || busy() || !!remoraRearm())),
       ...[1, 2, 3, 4].map(wskrCard), shuttleCard);
   }
   update();

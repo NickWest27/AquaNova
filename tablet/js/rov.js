@@ -3,6 +3,7 @@
 import { sim, toward, TIMESCALE } from './sim.js';
 import { seafloor } from './seafloor.js';
 import { TOOLS, addSample, pickKind, research, bumpStat } from './science.js';
+import { el } from './util.js';
 
 export const ROV_NAME = 'Remora';
 export const ROV_KT = 2, SITE_NM = 0.15, NM_PER_DEG = 60;
@@ -92,4 +93,17 @@ function autoReturn(r, dt) {
   const fl = rovFloor(), want = Math.min(s.depth, fl != null ? fl - 0.5 : MAX_ROV_DEPTH);
   r.depth += Math.max(-8 * dt, Math.min(8 * dt, want - r.depth));
   sim.dirty = true;
+}
+
+/** A progress bar for how much tether is out: her distance from the ship against the tether's length. Build a fresh one on each repaint, or call refresh(). */
+export function tetherBar() {
+  const txt = el('span'), fill = el('div', { class: 'tt-fill' });
+  const box = el('div', { class: 'tether' }, el('div', { class: 'tt-head' }, el('span', { text: 'TETHER' }), txt), el('div', { class: 'tt-track' }, fill));
+  box.refresh = () => {
+    const r = sim.s.rov; box.hidden = !r; if (!r) return;
+    const out = toward(sim.s, r).nm, max = rovRange(), f = Math.min(1, out / max);
+    fill.style.width = `${Math.round(f * 100)}%`; box.className = `tether${f >= 0.98 ? ' taut' : f >= 0.8 ? ' long' : ''}`;
+    txt.textContent = `${out.toFixed(2)} of ${max.toFixed(1)} nm out${f >= 0.98 ? ' · taut' : ''}`;
+  };
+  box.refresh(); return box;
 }

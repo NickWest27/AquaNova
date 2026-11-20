@@ -703,3 +703,11 @@ input.mix { width: 100%; height: 2.4rem; accent-color: var(--cyan); }
 .wk-cmds { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; padding-top: 0.2rem; border-top: 1px solid var(--line-soft); }
 .wk-for { color: var(--cyan); letter-spacing: 0.08em; font-weight: 700; margin-right: 0.4rem; } .wk-sep { color: var(--dim); margin-left: 0.8rem; font-size: 0.85rem; }
 .wk .bad { color: var(--red, #ff5c5c); } .wk .warn { color: var(--amber); }
+/* Remora's tether: a progress bar of how much is out */
+.tether { margin-top: 0.6rem; font-family: var(--mono); }
+.tether .tt-head { display: flex; justify-content: space-between; font-size: 15px; letter-spacing: 0.1em; color: #7fe3ff; }
+.tether .tt-track { height: 12px; margin-top: 4px; background: #06293a; border: 1px solid #1a5f78; border-radius: 3px; overflow: hidden; }
+.tether .tt-fill { height: 100%; width: 0; background: linear-gradient(90deg, #1fa7c9, #7fe3ff); transition: width 0.25s linear; }
+.tether.long .tt-fill { background: #b8860b; } .tether.long .tt-head { color: #ffd166; }
+.tether.taut .tt-fill { background: #d9534f; } .tether.taut .tt-head { color: #ff8a84; }
+.tether[hidden] { display: none; }
