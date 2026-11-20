@@ -11,6 +11,7 @@ export const rovRange = () => (research.has('rov-range') ? 1.5 : 1);
 const MAX_ROV_DEPTH = 600;
 export const REMORA_STORE = 3;   // she is small: three samples, then she has to come home and be unloaded
 export const rovCargo = () => (sim.s.rov && sim.s.rov.cargo) || [];
+const GO_ARRIVE_NM = 0.03;
 const HOME_NM = 0.03;   // about 55 m: alongside
 
 /** s.rov = null (aboard) or { lat, lon, heading, depth, cmd:{thr,turn,dive}, job:null|{tool,end,site} } */
@@ -44,7 +45,7 @@ sim.rovUse = (toolId) => {
   if (!kind) return { ok: false, why: 'nothing' };
   if (kind !== 'magnetic' && (r.cargo || []).length >= REMORA_STORE) return { ok: false, why: 'full' };   // readings go up the tether, so they need no storage
   if (t.needsFloor && kind !== 'water' && !(fl != null && fl - r.depth <= 6)) return { ok: false, why: 'floor' };   // a water sample can be taken anywhere in the water
-  r.cmd = { thr: 0, turn: 0, dive: 0 }; r.auto = false; r.home = false;
+  r.cmd = { thr: 0, turn: 0, dive: 0 }; r.auto = false; r.home = false; r.go = null; r.thrSet = 0; r.hdgTo = null; r.depTo = null;
   r.job = { tool: toolId, end: sim.s.clock + t.secs, site: site ? site.id : null };
   sim.touch(); return { ok: true };
 };
@@ -64,29 +65,55 @@ sim.hooks.push((dt) => {
     }
     return;
   }
-  const c = r.cmd;
-  if (c.thr || c.turn || c.dive) { r.auto = false; r.home = false; }
+  const c = r.cmd, manual = c.thr || c.turn || c.dive;
+  if (manual) { r.auto = false; r.home = false; r.go = null; if (c.turn) r.hdgTo = null; if (c.dive) r.depTo = null; }
+  else if (r.go) { r.auto = false; r.home = false; }
   else if (r.auto) { autoReturn(r, dt); return; }
-  else { r.home = r.home && toward(s, r).nm <= HOME_NM * 2; return; }
-  r.heading = (r.heading + c.turn * 40 * dt + 360) % 360;
-  const nm = (c.thr * ROV_KT * dt * TIMESCALE) / 3600, a = (r.heading * Math.PI) / 180;
+  // set-and-go: a target site, or a set speed, heading and depth that she holds until told otherwise
+  let thr = c.thr || r.thrSet || 0;
+  if (!manual && r.go) {
+    const g = toward(r, r.go);
+    if (g.nm <= GO_ARRIVE_NM) { const name = r.go.name; r.go = null; r.thrSet = 0; r.hdgTo = null; sim.emit('rov-arrived', { name }); thr = 0; }
+    else { r.hdgTo = g.brg; thr = 1; }
+  }
+  const idle = !thr && !c.turn && !c.dive && r.hdgTo == null && r.depTo == null;
+  if (idle) { r.home = r.home && toward(s, r).nm <= HOME_NM * 2; return; }
+  if (!c.turn && r.hdgTo != null) {   // turn toward the set heading at 40 degrees a second
+    const diff = ((r.hdgTo - r.heading + 540) % 360) - 180, step = 40 * dt;
+    if (Math.abs(diff) <= step) { r.heading = (r.hdgTo + 360) % 360; if (!r.go) r.hdgTo = null; } else r.heading = (r.heading + Math.sign(diff) * step + 360) % 360;
+  } else r.heading = (r.heading + c.turn * 40 * dt + 360) % 360;
+  const turning = r.hdgTo != null && Math.abs(((r.hdgTo - r.heading + 540) % 360) - 180) > 20;   // she does not drive far off line while still swinging round
+  const nm = (turning ? 0 : thr * ROV_KT * dt * TIMESCALE) / 3600, a = (r.heading * Math.PI) / 180;
   let lat = r.lat + (nm * Math.cos(a)) / NM_PER_DEG, lon = r.lon + (nm * Math.sin(a)) / (NM_PER_DEG * Math.cos((r.lat * Math.PI) / 180));
-  if (seafloor.ready) { const f = seafloor.depthAt(lat, lon); if (f == null || f < 2) { lat = r.lat; lon = r.lon; } }   // no driving onto land
+  let blocked = false;
+  if (seafloor.ready) { const f = seafloor.depthAt(lat, lon); if (f == null || f < 2) { lat = r.lat; lon = r.lon; blocked = nm > 0; } }   // no driving onto land
   const t = toward(s, { lat, lon });
-  if (t.nm > Math.max(rovRange(), toward(s, r).nm)) { lat = r.lat; lon = r.lon; }   // the tether is taut
+  if (t.nm > Math.max(rovRange(), toward(s, r).nm)) { lat = r.lat; lon = r.lon; blocked = nm > 0; }   // the tether is taut
+  if (blocked && (r.go || r.thrSet)) { r.go = null; r.thrSet = 0; r.hdgTo = null; sim.emit('rov-blocked', r); }
   r.lat = lat; r.lon = lon;
-  let d = r.depth + c.dive * 8 * dt;   // m per real second
+  let d = r.depth;
+  if (!c.dive && r.depTo != null) { const step = 8 * dt; if (Math.abs(r.depTo - d) <= step) { d = r.depTo; r.depTo = null; } else d += Math.sign(r.depTo - d) * step; }
+  else d += c.dive * 8 * dt;   // m per real second
   const fl = rovFloor();
   d = Math.max(0, Math.min(MAX_ROV_DEPTH, d)); if (fl != null) d = Math.min(d, fl - 0.5);
   r.depth = d;
   sim.dirty = true;
 });
 
+/** Set-and-go controls. Each cancels auto return and a trip, as a hand on the stick would. */
+const rv = () => { const r = sim.s.rov; if (!r || r.job) return null; r.auto = false; r.home = false; return r; };
+sim.rovSpeed = (delta) => { const r = rv(); if (!r) return null; r.go = null; r.thrSet = Math.max(0, Math.min(1, Math.round(((r.thrSet || 0) + delta) * 4) / 4)); sim.touch(); return r.thrSet; };
+sim.rovStop = () => { const r = sim.s.rov; if (!r) return; r.thrSet = 0; r.go = null; r.hdgTo = null; r.depTo = null; r.auto = false; sim.touch(); };
+sim.rovYaw = (deg) => { const r = rv(); if (!r) return null; r.go = null; const from = r.hdgTo != null ? r.hdgTo : r.heading; r.hdgTo = (from + deg + 360) % 360; sim.touch(); return r.hdgTo; };
+sim.rovDepth = (deg) => { const r = rv(); if (!r) return null; const from = r.depTo != null ? r.depTo : r.depth; r.depTo = Math.max(0, Math.min(MAX_ROV_DEPTH, from + deg)); sim.touch(); return r.depTo; };
+sim.rovToFloor = () => { const r = rv(), fl = rovFloor(); if (!r || fl == null) return null; r.depTo = Math.max(0, fl - 3); sim.touch(); return r.depTo; };   // 3 m off the bottom: inside the 6 m the tools need
+/** Drive to a point and stop there. */
+sim.rovGo = (poi) => { const r = rv(); if (!r) return { ok: false, why: 'none' }; const nm = toward(r, poi).nm; r.go = { lat: poi.lat, lon: poi.lon, name: poi.name || 'the mark' }; r.thrSet = 0; sim.touch(); return { ok: true, nm, minutes: nm / ROV_KT * 60 }; };
 /** Automatic return: she drives back to the ship at her own slow speed and rises to the ship's depth. Then she waits alongside to be taken aboard. */
 sim.rovAuto = () => {
   const r = sim.s.rov; if (!r) return { ok: false, why: 'none' };
   if (r.job) return { ok: false, why: 'busy' };
-  r.cmd = { thr: 0, turn: 0, dive: 0 }; r.auto = true; r.home = false;
+  r.cmd = { thr: 0, turn: 0, dive: 0 }; r.auto = true; r.home = false; r.go = null; r.thrSet = 0; r.hdgTo = null; r.depTo = null;
   sim.touch(); return { ok: true, nm: toward(sim.s, r).nm, hours: toward(sim.s, r).nm / ROV_KT };
 };
 function autoReturn(r, dt) {

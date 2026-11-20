@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Aqua Nova: launch and airlock sounds</title>
+<style>
+body{margin:0;padding:20px;background:#04101c;color:#bfe;font:16px/1.4 system-ui,sans-serif}
+h1{font-size:20px;margin:0 0 4px}p{margin:4px 0 14px;color:#8ab}
+button{display:block;width:100%;margin:8px 0;padding:16px;font-size:17px;border:1px solid #3dd;background:#082634;color:#7fffe0;border-radius:10px}
+button:active{background:#0e4658}small{display:block;color:#79a;font-size:13px;margin-top:2px}
+</style></head><body>
+<h1>Launch and airlock sounds</h1>
+<p>Tap each one. Turn the volume up a little. All are synthesised, no files.</p>
+<button data-s="airlock">Airlock cycle<small>clunk, pressure hiss, second clunk, soft chime</small></button>
+<button data-s="launch">Craft launch (bay)<small>clamps release, doors rumble, a whoosh and a splash away</small></button>
+<button data-s="recover">Craft recovery (bay)<small>rising whoosh, clamps catch, doors close, pressurise</small></button>
+<button data-s="door">Hatch only<small>one heavy clunk and a short seal hiss</small></button>
+<script>
+let ac, master;
+function init(){ if(!ac){ ac=new (window.AudioContext||window.webkitAudioContext)(); master=ac.createGain(); master.gain.value=0.8; master.connect(ac.destination);} if(ac.state!=='running') ac.resume(); }
+const T=()=>ac.currentTime;
+function tone(f0,f1,at,dur,vol=0.25,type='sine'){const t=T()+at,o=ac.createOscillator(),g=ac.createGain();o.type=type;o.frequency.setValueAtTime(f0,t);o.frequency.exponentialRampToValueAtTime(Math.max(20,f1),t+dur);g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(vol,t+0.01);g.gain.exponentialRampToValueAtTime(0.0001,t+dur);o.connect(g);g.connect(master);o.start(t);o.stop(t+dur+0.05);}
+let nb; function noise(){ if(!nb){nb=ac.createBuffer(1,ac.sampleRate*2,ac.sampleRate);const d=nb.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;} const s=ac.createBufferSource();s.buffer=nb;s.loop=true;return s;}
+// filtered noise with a volume shape and a moving filter: hiss, whoosh, rumble
+function hiss(at,dur,{f0=3000,f1=3000,q=0.7,vol=0.3,type='bandpass',attack=0.05}={}){const t=T()+at,s=noise(),f=ac.createBiquadFilter(),g=ac.createGain();f.type=type;f.Q.value=q;f.frequency.setValueAtTime(f0,t);f.frequency.exponentialRampToValueAtTime(f1,t+dur);g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(vol,t+attack);g.gain.exponentialRampToValueAtTime(0.0001,t+dur);s.connect(f);f.connect(g);g.connect(master);s.start(t,Math.random());s.stop(t+dur+0.05);}
+// a heavy metal clunk: low thump plus a short metallic ring
+function clunk(at,vol=0.5){tone(110,45,at,0.18,vol,'sine');tone(180,70,at,0.1,vol*0.6,'triangle');tone(820,610,at,0.12,vol*0.18,'square');hiss(at,0.08,{f0:1800,f1:500,vol:vol*0.5,q:1.2,attack:0.005});}
+function chime(at){tone(880,880,at,0.25,0.12,'triangle');tone(1320,1320,at+0.14,0.4,0.12,'triangle');}
+const S={
+ airlock(){ clunk(0,0.45); hiss(0.35,1.6,{f0:5200,f1:1500,vol:0.35,q:0.6,attack:0.15}); tone(90,70,0.35,1.6,0.05,'sine'); clunk(2.1,0.5); chime(2.4); },
+ door(){ clunk(0,0.55); hiss(0.12,0.5,{f0:4500,f1:1800,vol:0.25,attack:0.03}); },
+ launch(){
+  clunk(0,0.5); clunk(0.22,0.4);                                   // clamps release
+  hiss(0.5,2.6,{f0:90,f1:140,vol:0.5,type:'lowpass',q:0.5,attack:0.6}); tone(55,40,0.5,2.6,0.2,'sine');  // doors rumble
+  hiss(1.5,1.8,{f0:400,f1:3500,vol:0.38,q:0.7,attack:0.5});         // she slides out: whoosh
+  tone(180,420,1.6,1.3,0.06,'sawtooth');                           // thruster whine rises
+  hiss(2.2,1.4,{f0:2500,f1:700,vol:0.28,q:0.5,attack:0.04});        // water rush
+  tone(70,45,2.3,0.4,0.3,'sine');
+  clunk(3.7,0.35); },                                              // doors shut behind her
+ recover(){
+  hiss(0,1.8,{f0:3000,f1:350,vol:0.3,q:0.7,attack:0.6}); tone(420,160,0,1.5,0.05,'sawtooth');   // she approaches: whoosh falls
+  hiss(1.0,2.2,{f0:90,f1:130,vol:0.45,type:'lowpass',q:0.5,attack:0.5}); tone(55,40,1.0,2.2,0.18,'sine');   // doors rumble
+  clunk(2.1,0.5); clunk(2.35,0.4);                                 // clamps catch
+  clunk(3.5,0.5); hiss(3.8,1.4,{f0:5000,f1:1500,vol:0.3,attack:0.15}); chime(5.2); }
+};
+document.querySelectorAll('button').forEach(b=>b.onclick=()=>{try{init();S[b.dataset.s]();}catch(e){}});
+</script></body></html>

@@ -42,7 +42,7 @@ export function snapshotSim() {
     gameState.updateProperty('navigation.selContact', s.selContact || null);
     gameState.updateProperty('navigation.away', sim.away || null);   // "crew has the con" plan (away.js)
     gameState.updateProperty('navigation.wskrDepth', s.wskrDepth);
-    gameState.updateProperty('navigation.rov', s.rov ? { lat: +s.rov.lat.toFixed(5), lon: +s.rov.lon.toFixed(5), heading: Math.round(s.rov.heading), depth: Math.round(s.rov.depth), cargo: s.rov.cargo || [], auto: !!s.rov.auto, home: !!s.rov.home } : null);
+    gameState.updateProperty('navigation.rov', s.rov ? { lat: +s.rov.lat.toFixed(5), lon: +s.rov.lon.toFixed(5), heading: Math.round(s.rov.heading), depth: Math.round(s.rov.depth), cargo: s.rov.cargo || [], auto: !!s.rov.auto, home: !!s.rov.home, thrSet: s.rov.thrSet || 0, hdgTo: s.rov.hdgTo == null ? null : s.rov.hdgTo, depTo: s.rov.depTo == null ? null : s.rov.depTo, go: s.rov.go || null } : null);
     gameState.updateProperty('progress.gameClock', Math.round(s.clock));
     gameState.updateProperty('shipSystems.vitals', { battery: +s.battery.toFixed(1), oxygen: +s.oxygen.toFixed(1), scrubbers: +(s.scrubbers == null ? 100 : s.scrubbers).toFixed(1) });
     gameState.updateProperty('shipSystems.hull.integrity', Math.round(s.hull));

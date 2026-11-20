@@ -343,6 +343,7 @@ async function boot() {
       else if (type === 'arrived') { flag('arrived'); say('helm', 'Destination reached, Captain.'); }
       else if (type === 'wskr-found') { const fresh = fileScan(data.poi); say('sensors', fresh ? `${wskrName(data.wskr)} has finished investigating ${data.poi.name}. Scan filed, Captain.` : `${wskrName(data.wskr)} re-checked ${data.poi.name}. Nothing new.`, 'mission'); }
       else if (type === 'rov-sample') { say('science', `Remora has a ${SAMPLE_KINDS[data.kind].label.toLowerCase()} sample from ${data.site}, Captain. Storage ${data.stored} of ${data.store}.${data.full ? ' She is full. Bring her home so we can unload her.' : ' Bring her home when you have what you came for, and she will deliver it to the lab.'}`, '', { action: true }); }
+      else if (type === 'rov-arrived') say('science', `Remora is on station at ${data.name}, Captain. Take her down to the floor and take your sample.`, '', { action: true });
       else if (type === 'rov-home') say('science', 'Remora is alongside, Captain. She is ready to be taken aboard.', '', { action: true });
       else if (type === 'rov-blocked') say('science', 'Remora has hit shoal water on her way back, Captain. She has stopped. Somebody needs to pilot her round it.', 'error');
       else if (type === 'rov-reading') say('science', `Magnetometer reading from ${data.site} is in the lab, live over the tether.`, '', { action: true });
