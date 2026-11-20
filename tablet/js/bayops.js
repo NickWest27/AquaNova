@@ -98,7 +98,7 @@ function finishOp(op) {
   const s = sim.s, b = bay(); b.op = null; sim.touch();
   if (op.craft === 'rov') {
     if (op.kind === 'launch') { const r = sim.launchRov(); b.base = samples().length; if (r.ok) sim.emit('bay-launched', { craft: 'rov' }); }
-    else { const load = Math.max(0, samples().length - (b.base || 0)); sim.recoverRov(); b.rearm = { t: 0, dur: REMORA_REARM_S + load * REMORA_UNLOAD_S, load }; sim.emit('remora-aboard', b.rearm); }
+    else { const load = ((sim.s.rov && sim.s.rov.cargo) || []).length; sim.recoverRov(); b.rearm = { t: 0, dur: REMORA_REARM_S + load * REMORA_UNLOAD_S, load }; sim.emit('remora-aboard', b.rearm); }
     return;
   }
   if (op.craft === 'wskr' && op.kind === 'launch') { const r = sim.deployWskr(op.n); if (r.ok) sim.emit('bay-launched', { craft: 'wskr', n: r.n }); }

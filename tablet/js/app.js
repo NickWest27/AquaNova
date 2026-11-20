@@ -342,7 +342,10 @@ async function boot() {
       } else if (type === 'enter') { say('helm', `We are at ${data.name}, Captain.`); firstVisit(data); }
       else if (type === 'arrived') { flag('arrived'); say('helm', 'Destination reached, Captain.'); }
       else if (type === 'wskr-found') { const fresh = fileScan(data.poi); say('sensors', fresh ? `${wskrName(data.wskr)} has finished investigating ${data.poi.name}. Scan filed, Captain.` : `${wskrName(data.wskr)} re-checked ${data.poi.name}. Nothing new.`, 'mission'); }
-      else if (type === 'rov-sample') say('science', `The ROV has a ${SAMPLE_KINDS[data.kind].label.toLowerCase()} sample from ${data.site}. It is in the lab, Captain.`);
+      else if (type === 'rov-sample') { say('science', `Remora has a ${SAMPLE_KINDS[data.kind].label.toLowerCase()} sample from ${data.site}, Captain. Storage ${data.stored} of ${data.store}.${data.full ? ' She is full. Bring her home so we can unload her.' : ''}`); }
+      else if (type === 'rov-home') say('science', 'Remora is alongside, Captain. She is ready to be taken aboard.');
+      else if (type === 'rov-blocked') say('science', 'Remora has hit shoal water on her way back, Captain. She has stopped. Somebody needs to pilot her round it.', 'error');
+      else if (type === 'rov-recovered' && data && data.delivered) say('science', `Remora is aboard. ${data.delivered} sample${data.delivered > 1 ? 's' : ''} going to the lab.`);
       else if (type === 'hug-off') say('helm', data.why === 'docked' ? 'Following the floor ended, Captain.' : 'The water is too shallow to follow the floor, Captain. Holding this depth.', 'mission', { hold: false });
       else if (type === 'shuttle-standoff') say('comms', `Aqua Nova, ${SHUTTLE_NAME}. You are below 800 metres, past our safe depth. We are holding off your beam at a safe distance and a safe depth. Bring her up above 800 metres and we will come in.`, 'mission');
       else if (type === 'shuttle-lostlink') say('comms', `Captain, we have lost radio contact with ${SHUTTLE_NAME}. She is continuing her mission, and she will surface to try a check-in every hour. Orders for her will wait until we have contact.`, 'mission');

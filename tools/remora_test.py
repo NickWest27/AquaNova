@@ -1,0 +1,38 @@
+#!/usr/bin/env python3
+"""Remora: limited sample storage, auto return, samples reach the lab only when she is recovered.  python3 tools/remora_test.py"""
+import os, sys, importlib.util
+from playwright.sync_api import sync_playwright
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+spec = importlib.util.spec_from_file_location("smoke", os.path.join(ROOT, "tools", "smoke.py"))
+smoke = importlib.util.module_from_spec(spec); spec.loader.exec_module(smoke)
+fails = []
+def check(name, ok, extra=""):
+    print(("ok   " if ok else "FAIL ") + name + (f"  {extra}" if extra and not ok else ""))
+    if not ok: fails.append(name)
+def main():
+    server, site = smoke.start_server()
+    base = f"http://127.0.0.1:{server.server_address[1]}/AquaNova/tablet/"
+    with sync_playwright() as p:
+        browser = smoke.launch(p)
+        page = browser.new_context(viewport={"width": 1180, "height": 820}, has_touch=True).new_page(); errors = []
+        page.on("pageerror", lambda e: errors.append(str(e)[:200]))
+        page.on("console", lambda m: errors.append(m.text[:200]) if m.type == "error" else None)
+        js = lambda code: page.evaluate("(async()=>{const sim=(await import('./js/sim.js')).sim;const sc=await import('./js/science.js');const R=await import('./js/rov.js');" + code + "})()")
+        page.goto(base); page.wait_for_function("!document.getElementById('board-btn').disabled", timeout=20000)
+        page.tap("#board-btn"); page.wait_for_timeout(800)
+        if page.is_visible(".modal .btn"): page.tap(".modal .btn"); page.wait_for_timeout(300)
+        setup = "const s=sim.s; const reef=s.pois.find(p=>p.type==='reef'); Object.assign(s,{lat:reef.lat,lon:reef.lon,docked:false,speed:0,throttle:0,depth:20,targetDepth:20,wpt:null,rov:null,autoAvoid:false}); sim.launchRov(); "
+        r = js(setup + "const out=[]; for (let k=0;k<4;k++){ const x=sim.rovUse('spectrometer'); out.push(x.ok?'ok':x.why); let n=0; while(s.rov.job && n<3000){ sim.step(1); n++; } } return {out, cargo:s.rov.cargo.length, lab:sc.samples().length}")
+        check("she holds three samples, the fourth is refused: storage full", r["out"] == ["ok", "ok", "ok", "full"] and r["cargo"] == 3, r)
+        r = js("const s=sim.s; s.rov.lat=s.lat+0.01; s.rov.lon=s.lon+0.008; const x=sim.rovAuto(); let n=0; while(s.rov && s.rov.auto && n<20000){ sim.step(5); n++; } const home=s.rov.home; return {x, home, still: !!s.rov, auto:s.rov.auto, lab:sc.samples().length}")
+        check("auto return drives her home and she waits alongside; the samples are still aboard her", r["x"]["ok"] and r["home"] and r["still"] and r["lab"] == 0, r)
+        r = js("const s=sim.s; const x=sim.recoverRov(); return {x, lab:sc.samples().length, out: !!s.rov}")
+        check("once taken aboard the three samples go to the lab", r["x"]["ok"] and r["x"]["delivered"] == 3 and r["lab"] == 3 and not r["out"], r)
+        r = js(setup + "s.rov.lat=s.lat+0.15; s.rov.lon=s.lon; sim.rovAuto(); const t0=s.clock; let n=0; while(s.rov && s.rov.auto && n<40000){ sim.step(5); n++; } const mins=(s.clock-t0)/60; return {mins:Math.round(mins), home:s.rov.home}")
+        check("the drive home takes real time at her 2 knots (9 nm: about 4.5 h; here 9 nm north)", r["home"] and r["mins"] > 200, r)
+        check("no page errors", not errors, errors)
+        browser.close()
+    server.shutdown()
+    print("\nAll checks passed." if not fails else f"\n{len(fails)} FAILED: {fails}")
+    sys.exit(1 if fails else 0)
+main()

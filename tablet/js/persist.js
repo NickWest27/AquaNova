@@ -42,7 +42,7 @@ export function snapshotSim() {
     gameState.updateProperty('navigation.selContact', s.selContact || null);
     gameState.updateProperty('navigation.away', sim.away || null);   // "crew has the con" plan (away.js)
     gameState.updateProperty('navigation.wskrDepth', s.wskrDepth);
-    gameState.updateProperty('navigation.rov', s.rov ? { lat: +s.rov.lat.toFixed(5), lon: +s.rov.lon.toFixed(5), heading: Math.round(s.rov.heading), depth: Math.round(s.rov.depth) } : null);
+    gameState.updateProperty('navigation.rov', s.rov ? { lat: +s.rov.lat.toFixed(5), lon: +s.rov.lon.toFixed(5), heading: Math.round(s.rov.heading), depth: Math.round(s.rov.depth), cargo: s.rov.cargo || [], auto: !!s.rov.auto, home: !!s.rov.home } : null);
     gameState.updateProperty('progress.gameClock', Math.round(s.clock));
     gameState.updateProperty('shipSystems.vitals', { battery: +s.battery.toFixed(1), oxygen: +s.oxygen.toFixed(1), scrubbers: +(s.scrubbers == null ? 100 : s.scrubbers).toFixed(1) });
     gameState.updateProperty('shipSystems.hull.integrity', Math.round(s.hull));
@@ -85,7 +85,7 @@ export function restoreSim() {
   s.selContact = typeof nav.selContact === 'string' ? nav.selContact : null;
   sim.away = nav.away && typeof nav.away === 'object' && nav.away.maxH ? JSON.parse(JSON.stringify(nav.away)) : null;
   s.wskrDepth = ['shallow', 'deep'].includes(nav.wskrDepth) ? nav.wskrDepth : 'auto';
-  s.rov = nav.rov ? { cmd: { thr: 0, turn: 0, dive: 0 }, job: null, ...nav.rov } : null;
+  s.rov = nav.rov ? { cmd: { thr: 0, turn: 0, dive: 0 }, job: null, cargo: [], ...nav.rov } : null;
   const clk = gameState.getProperty('progress.gameClock'); if (typeof clk === 'number') s.clock = clk;
   s.wpt = nav.destination ? s.pois.find((p) => p.name === nav.destination) || null : null;
   if (!s.wpt && nav.destination && nav.waypoint && nav.waypoint.name === nav.destination) s.wpt = { id: 'wpt', type: 'waypoint', text: 'Plotted position', ...nav.waypoint };

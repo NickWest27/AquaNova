@@ -13,6 +13,7 @@ import { gameState, checkpoint, snapshotSim } from './persist.js';
 import { requestSync } from './sync.js';
 import { SHUTTLE_NAME, SHUTTLE_KT, shuttle, shuttleRangeNm, shuttleHours, bay, dockList, REMORA_REARM_S, REMORA_UNLOAD_S } from './bayops.js';
 import { addSample, pickKind, SAMPLE_KINDS } from './science.js';
+import { REMORA_STORE } from './rov.js';
 
 export const AWAY_CAPS = [4, 8, 12, 24];
 export const AWAY_MIN_S = 90;            // away for less than this: no briefing
@@ -113,7 +114,7 @@ function rules(a, s) {
     const poi = st.kind === 'arrived' && s.pois.find((p) => p.name === st.name), b = bay();
     if (poi && poi.type !== 'dock' && !s.docked && a.endClock - s.clock >= REMORA_S) {
       const free = !s.rov && !b.op && !b.rearm, tools = ['collector', 'laser', 'spectrometer', ...(poi.type === 'wreck' ? ['magnetometer'] : [])], got = [];
-      for (const tool of free ? tools : ['spectrometer', 'laser', ...(poi.type === 'wreck' ? ['magnetometer'] : [])]) { const k = pickKind(tool, poi); if (k && !got.includes(k)) { addSample(k, poi, tool); got.push(k); } }
+      for (const tool of (free ? tools : ['spectrometer', 'laser', ...(poi.type === 'wreck' ? ['magnetometer'] : [])]).slice(0, free ? REMORA_STORE : 9)) { const k = pickKind(tool, poi); if (k && !got.includes(k)) { addSample(k, poi, tool); got.push(k); } }
       if (got.length) {
         const what = `${got.length === 1 ? 'a' : got.length} ${got.map((k) => SAMPLE_KINDS[k].label.toLowerCase()).join(' and ')} sample${got.length > 1 ? 's' : ''}`;
         if (free) { b.rearm = { t: 0, dur: REMORA_REARM_S + got.length * REMORA_UNLOAD_S, load: got.length }; note(`The science team sent Remora down at ${poi.name} and brought back ${what}. They are in the lab, waiting for analysis.`); }

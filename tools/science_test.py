@@ -27,13 +27,15 @@ def main():
         check("ROV launches once", r["a"]["ok"] and not r["again"]["ok"], r)
         r = js("""const s=sim.s; const x=sim.rovUse('spectrometer'); return x""")
         check("tool works at a site", r["ok"], r)
-        r = js("""const s=sim.s; let n=0; while(s.rov.job && n<2000){ sim.step(0.1); n++; } return {left:!!s.rov.job, n, count:sc.samples().length, first:sc.samples()[0]}""")
-        check("a sample is made", not r["left"] and r["count"] == 1, r)
+        r = js("""const s=sim.s; let n=0; while(s.rov.job && n<2000){ sim.step(0.1); n++; } return {left:!!s.rov.job, n, count:sc.samples().length, cargo:s.rov.cargo.length, first:s.rov.cargo[0]}""")
+        check("a sample is made and carried in her storage, not yet in the lab", not r["left"] and r["cargo"] == 1 and r["count"] == 0, r)
         # tether: drive away and check range cap
         r = js("""const s=sim.s; s.rov.cmd={thr:1,turn:0,dive:0}; s.rov.heading=0; for(let i=0;i<3000;i++) sim.step(0.1); const d=Math.hypot((s.rov.lat-s.lat)*60,(s.rov.lon-s.lon)*60*Math.cos(s.lat*Math.PI/180)); s.rov.cmd={thr:0,turn:0,dive:0}; return d""")
         check("tether holds the ROV within 1 nm", r <= 1.001, r)
         r = js("""const s=sim.s; s.rov.lat=s.lat; s.rov.lon=s.lon; return sim.recoverRov()""")
         check("ROV is recovered near the ship", r["ok"], r)
+        r = js("return sc.samples().length")
+        check("the sample reaches the lab once she is aboard", r == 1, r)
         # analysis and research
         r = js("""const id=sc.samples()[0].id; const ok=sc.startAnalysis(id); const dup=sc.startAnalysis(id); sim.s.clock+=5000; const done=sc.tickLab(); return {ok,dup,done:done.length,pts:sc.points(),disc:(await import('./js/findings.js')).findings().filter(f=>f.type==='sample').length}""")
         check("analysis runs and files a finding", r["ok"] and not r["dup"] and r["done"] == 1 and r["pts"] == 1 and r["disc"] == 1, r)
