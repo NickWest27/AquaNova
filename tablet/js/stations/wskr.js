@@ -18,7 +18,7 @@ export function mountWskrPanel(body) {
   let sel = null, sig = '', rowSig = '';
   const cur = () => sim.s.wskrs.find((q) => q.n === sel);
   const head = el('div', { class: 'card' }), fleet = el('div', { class: 'card' }), list = el('div', { class: 'wst' }), orders = el('div', { class: 'card wo' }), helm = el('div', { class: 'card wo-helm' }), stat = el('div', { class: 'wo-stat', style: 'color:var(--dim);margin:0.3rem 0' }), viewBox = el('div', { class: 'card cv' });
-  const cv = mountCraftView(viewBox, { title: () => { const w = cur(); return w ? wskrName(w) : 'WSKR'; }, range: 2, getCraft: () => { const w = cur(); return w ? wskrCraft(w) : null; } });
+  const cv = mountCraftView(viewBox, { title: () => { const w = cur(); return w ? wskrName(w) : 'WSKR'; }, range: 2, readouts: () => { const w = cur(); const poi = w && w.target != null ? sim.s.pois.find((p) => p.id === w.target) : null; return { ship: sim.s, target: poi }; }, getCraft: () => { const w = cur(); return w ? wskrCraft(w) : null; } });
   body.append(head, fleet, list, orders, helm, viewBox);
   const say = (t) => tell('sensors', t);
   const act = (text, on, fn, disabled) => el('button', { class: 'btn chip' + (on ? ' on' : ''), text, disabled: !!disabled, onclick: () => { fn(); sig = ''; update(); } });

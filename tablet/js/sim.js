@@ -187,7 +187,7 @@ export function wskrDepthFor(w) {
   else if (st.wskrDepth === 'deep') lo = Math.min(bot, Math.max(2, st.depth - WSKR_STAGGER_M));
   return Math.max(2, Math.min(bot, Math.round(lo + ((hi - lo) * (i + 0.5)) / N)));
 }
-export const wskrCraft = (w) => ({ lat: w.lat, lon: w.lon, heading: w.heading == null ? sim.s.heading : w.heading, depth: wskrDepthFor(w), kt: w.moving ? (wskrPerk(w).kt || WSKR_KT) : 0 });
+export const wskrCraft = (w) => ({ lat: w.lat, lon: w.lon, heading: w.heading == null ? sim.s.heading : w.heading, depth: wskrDepthFor(w), kt: w.moving ? (w.super ? WSKR_SUPER_KT * ((wskrPerk(w).kt || WSKR_KT) / WSKR_KT) : w.chase || wskrPerk(w).kt || WSKR_KT) : 0 });
 sim.recallWskr = (n) => { const w = sim.s.wskrs.find((q) => q.n === n); if (!w) return false; w.mode = 'recall'; w.target = null; w.route = null; sim.touch(); return true; };
 /** Give an order to one WSKR. order: 'escort' | 'manual' | 'search' | 'relay'. Returns false if there is no such WSKR. */
 sim.orderWskr = (n, order) => {
@@ -281,6 +281,10 @@ function stepWskrs(dt) {
     else goal = s;
     w.super = !!s.cruise || toward(w, goal).nm > WSKR_FAR_NM;      // far to go, or the ship is in super cruise: super cruise too
     if (w.super) step = (WSKR_SUPER_KT * kf * dt * TIMESCALE) / 3600;
+    else if ((w.mode === 'escort' || w.mode === 'relay' || w.mode === 'recall') && s.speed > (perk.kt || WSKR_KT) - 4 && toward(w, goal).nm > 0.3) {
+      // chasing a ship that is as fast as the WSKR: run faster than the ship until back in station
+      const kt = Math.min(WSKR_SUPER_KT * kf, s.speed + 6); step = (kt * dt * TIMESCALE) / 3600; w.chase = kt;
+    } else w.chase = 0;
     // Route round land. Replanned when the goal has moved on (escorts and recalls follow the ship) or after a failed attempt.
     if (!w.route || (w.routeGoal && toward(w.routeGoal, goal).nm > 0.6) || (w.routeRetry != null && s.clock >= w.routeRetry)) {
       const r = seafloor.ready ? planRoute(w, goal, wskrPassable) : [];
