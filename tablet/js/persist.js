@@ -40,6 +40,7 @@ export function snapshotSim() {
     gameState.updateProperty('navigation.shuttle', s.shuttle ? { state: s.shuttle.state, mode: s.shuttle.mode, bat: +s.shuttle.bat.toFixed(1), o2: +(s.shuttle.o2 == null ? 100 : s.shuttle.o2).toFixed(1), lat: s.shuttle.lat, lon: s.shuttle.lon, dest: s.shuttle.dest || null, dead: s.shuttle.dead || undefined, air: s.shuttle.air || 0, pilots: s.shuttle.pilots, pax: s.shuttle.pax, ashore: s.shuttle.ashore, stay: s.shuttle.stay || undefined, boarding: s.shuttle.boarding || undefined } : null);
     gameState.updateProperty('navigation.wskrForm', s.wskrForm);
     gameState.updateProperty('navigation.selContact', s.selContact || null);
+    gameState.updateProperty('navigation.away', sim.away || null);   // "crew has the con" plan (away.js)
     gameState.updateProperty('navigation.wskrDepth', s.wskrDepth);
     gameState.updateProperty('navigation.rov', s.rov ? { lat: +s.rov.lat.toFixed(5), lon: +s.rov.lon.toFixed(5), heading: Math.round(s.rov.heading), depth: Math.round(s.rov.depth) } : null);
     gameState.updateProperty('progress.gameClock', Math.round(s.clock));
@@ -81,6 +82,7 @@ export function restoreSim() {
   s.rack = nav.rack && typeof nav.rack === 'object' ? { ...nav.rack } : {};
   s.shuttle = nav.shuttle && nav.shuttle.state ? { state: 'bay', mode: 'follow', bat: 100, ...nav.shuttle } : { state: 'bay', mode: 'follow', bat: 100 };
   s.selContact = typeof nav.selContact === 'string' ? nav.selContact : null;
+  sim.away = nav.away && typeof nav.away === 'object' && nav.away.maxH ? JSON.parse(JSON.stringify(nav.away)) : null;
   s.wskrDepth = ['shallow', 'deep'].includes(nav.wskrDepth) ? nav.wskrDepth : 'auto';
   s.rov = nav.rov ? { cmd: { thr: 0, turn: 0, dive: 0 }, job: null, ...nav.rov } : null;
   const clk = gameState.getProperty('progress.gameClock'); if (typeof clk === 'number') s.clock = clk;

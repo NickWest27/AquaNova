@@ -21,6 +21,7 @@ export function buildStatus() {
     destination: s.wpt ? s.wpt.name : null,
     objectives: (gameState.getProperty('mission.objectives') || []).map((o) => ({ text: o.description, done: o.status === 'completed' })),
     discoveries: gameState.getProperty('mission.discoveries') || [],
+    away: sim.away ? { t: new Date(sim.away.real || Date.now()).toISOString(), maxH: sim.away.maxH, armClock: sim.away.armClock, clock: sim.away.clock, from: sim.away.from, plan: sim.away.plan, stop: sim.away.stop ? sim.away.stop.kind : null, nm: +sim.away.nm.toFixed(1) } : null,   // "crew has the con": the phone works out where the ship should be from this
   };
 }
 

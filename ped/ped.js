@@ -58,6 +58,38 @@ async function sync({ manual = false } = {}) {
   } finally { busy = false; paint(); }
 }
 
+
+// ---------- "crew has the con": where the ship should be now ----------
+// The iPad is closed, so nothing is running. This works out the ship's position from the plan the iPad sent when it went to sleep.
+// The iPad does the real simulation when it is opened; it can stop sooner (a shoal, supplies, a lost craft).
+function projection(away, nowMs) {
+  const p = away && away.plan; if (!p || !p.pts || !p.pts.length) return null;
+  const elapsedH = Math.max(0, (nowMs - new Date(away.t)) / 3.6e6);
+  const capLeftH = Math.max(0, away.maxH - ((away.clock || 0) - (away.armClock || 0)) / 3600);
+  const runH = Math.min(elapsedH, capLeftH);
+  const limit = p.stopNm != null && p.stopNm <= p.nm ? p.stopNm : p.nm;
+  const held = !!away.stop || !(p.kt > 0.5);
+  const dist = held ? 0 : Math.min(p.kt * runH, limit);
+  // walk the path (flat-earth legs, scaled to the iPad's distance)
+  const leg = (a, b) => Math.hypot((b[0] - a[0]) * 60, (b[1] - a[1]) * 60 * Math.cos(a[0] * Math.PI / 180));
+  let tot = 0; for (let i = 1; i < p.pts.length; i++) tot += leg(p.pts[i - 1], p.pts[i]);
+  const k = tot > 0 ? p.nm / tot : 1; let left = dist, pos = p.pts[0];
+  for (let i = 1; i < p.pts.length; i++) {
+    const l = leg(p.pts[i - 1], p.pts[i]) * k;
+    if (left <= l || i === p.pts.length - 1) { const f = l > 0 ? Math.min(1, left / l) : 1; pos = [p.pts[i - 1][0] + (p.pts[i][0] - p.pts[i - 1][0]) * f, p.pts[i - 1][1] + (p.pts[i][1] - p.pts[i - 1][1]) * f]; break; }
+    left -= l;
+  }
+  let state = 'under way';
+  if (away.stop) state = { limit: 'held at the Area of Operations limit', arrived: 'arrived', floor: 'held: shallow water', oxygen: 'surfaced: low air', battery: 'surfaced: low battery', hull: 'held: hull damage', craft: 'held: a craft is lost', cap: 'standing down' }[away.stop] || 'held';
+  else if (held) state = 'holding position';
+  else if (dist >= limit - 0.01 && limit < p.nm) state = p.why === 'floor' ? 'will hold: shallow water ahead' : 'will hold at the Area of Operations limit';
+  else if (dist >= p.nm - 0.01) state = 'arrived' + (p.dest ? ' at ' + p.dest : '');
+  else if (elapsedH >= capLeftH) state = 'standing down: the crew\'s time limit';
+  const toGo = Math.max(0, limit - dist), etaH = p.kt > 0.5 && toGo > 0 && elapsedH < capLeftH ? toGo / p.kt : null;
+  return { pos, dist, total: p.nm, limit, toGo, etaH, state, elapsedH, kt: p.kt, dest: p.dest, held };
+}
+const hm = (h) => (h < 1 ? `${Math.round(h * 60)} min` : `${Math.floor(h)} h ${String(Math.round((h % 1) * 60)).padStart(2, '0')} min`);
+
 // ---------- views ----------
 const views = {
   status() {
@@ -66,10 +98,18 @@ const views = {
     const stale = (Date.now() - new Date(s.t)) > 5 * 60000;
     const cls = (v, lo, bad) => (v < bad ? 'bad' : v < lo ? 'warn' : 'ok');
     const num = (label, html, extra = '') => el('div', { class: 'card' }, el('div', { class: 'lbl', text: label }), el('div', { class: `num ${extra}`, html }));
+    const away = s.away ? projection(s.away, Date.now()) : null;
+    const awayCard = s.away && el('div', { class: 'card' }, el('div', { class: 'lbl', text: 'Crew has the con' }),
+      away ? [el('div', { class: 'num', style: 'font-size:1.15rem', text: away.state }),
+        el('div', { class: 'bar', style: 'height:.5rem;border-radius:.3rem;background:#16303f;margin:.6rem 0;overflow:hidden' }, el('div', { style: `height:100%;width:${Math.min(100, away.total ? (away.dist / away.total) * 100 : 0)}%;background:#64ffda` })),
+        el('p', { class: 'note', text: `Estimated position ${away.pos[0].toFixed(2)}°N ${Math.abs(away.pos[1]).toFixed(2)}°${away.pos[1] < 0 ? 'W' : 'E'} · ${away.kt} kt` }),
+        el('p', { class: 'note', text: away.etaH != null ? `${Math.round(away.toGo)} nm to go, about ${hm(away.etaH)}${away.dest ? ' to ' + away.dest : ''}.` : away.held ? 'The ship is holding.' : `${Math.round(away.toGo)} nm to go.`}),
+        el('p', { class: 'note', text: `The iPad has been closed ${hm(away.elapsedH)}. This is an estimate. When you open the iPad, the crew's real run is worked out and ARIA briefs you.` })] : el('p', { class: 'note', text: 'The crew have the con. No forecast was sent.' }));
     return [
+      awayCard,
       el('div', { class: 'card' }, el('div', { class: 'lbl', text: 'Location' }), el('div', { class: 'num', style: 'font-size:1.3rem', text: s.location }),
         s.clock && el('p', { class: 'note', text: `${s.clock}${s.docked ? ' · docked' : ''}` }),
-        el('p', { class: `note ${stale ? 'warn' : ''}`, text: stale ? `iPad last reported ${ago(s.t)}` : `Live from the iPad, ${ago(s.t)}` })),
+        el('p', { class: `note ${stale ? 'warn' : ''}`, text: s.away ? `iPad went to sleep ${ago(s.t)}. Position below is from then.` : stale ? `iPad last reported ${ago(s.t)}` : `Live from the iPad, ${ago(s.t)}` })),
       el('div', { class: 'grid' },
         num('Depth', `${s.depth}<small>m</small>`), num('Heading', `${String(s.heading).padStart(3, '0')}°`),
         num('Speed', `${s.speed}<small>kt</small>`), num('Position', `${s.lat.toFixed(2)}°N<br>${Math.abs(s.lon).toFixed(2)}°W`),

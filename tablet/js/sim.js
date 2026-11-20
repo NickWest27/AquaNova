@@ -541,7 +541,7 @@ sim.warp = (hours) => {
   return { hours: done / 3600, reason, arrived };
 };
 
-sim.emit = (type, data) => sim.listeners.forEach((fn) => { try { fn(type, data); } catch (e) { console.error(e); } });
+sim.emit = (type, data) => sim.listeners.forEach((fn) => { if (sim.muted && !fn.keep) return; try { fn(type, data); } catch (e) { console.error(e); } });   // muted: the crew catching up while the app was closed (away.js) do not chatter at the screen
 
 sim.start = () => {
   if (sim.timer) return;

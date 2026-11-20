@@ -15,6 +15,7 @@ import { startSync, syncAtBoot } from './sync.js';
 import { getPlayer, setPlayer, fill } from './player.js';
 import { runIntake } from './intake.js';
 import { startAria } from './aria.js';
+import { armAway, catchUp, wakeNow, briefing, onWake, AWAY_CAPS } from './away.js';
 import { isCommissioned, excuse } from './unlocks.js';
 import { initMissionLog } from './missionLog.js';
 import { initAudio, updateHum, chirp, ping } from './audio.js';
@@ -215,8 +216,17 @@ function sleepDialog() {
   const draw = () => chips.replaceChildren(
     ...[2, 4, 8, 12, 24].map((h) => el('button', { class: `btn chip ${!untilArrival && h === hours ? 'on primary' : ''}`, text: `${h} h`, onclick: () => { hours = h; untilArrival = false; draw(); } })),
     eta && el('button', { class: `btn chip ${untilArrival ? 'on primary' : ''}`, text: `Until arrival (${fmt(eta)})`, onclick: () => { hours = eta; untilArrival = true; draw(); } }));
+  let mode = 'skip', cap = 8;   // skip = jump the clock ahead; away = the crew have the con and the app may be closed
+  const modes = el('div', { class: 'row' });
+  const awayNote = el('p', { text: 'The crew have the con. Close the app whenever you like: when you open it again, ARIA briefs you on what happened. They keep your course and speed, hold at the Area of Operations limit, and stop on arrival, on a shoal, when supplies run low or if a craft is lost. If you are still asleep an hour after a stop, the science team sample the point of interest you reached, and if a port is close by an away team takes the Tern for supplies. They stand down after the limit you choose. Your iPhone shows where the ship should be.' });
+  const drawAll = () => {
+    modes.replaceChildren(el('button', { class: `btn chip ${mode === 'skip' ? 'on primary' : ''}`, text: 'Skip time', onclick: () => { mode = 'skip'; drawAll(); } }), el('button', { class: `btn chip ${mode === 'away' ? 'on primary' : ''}`, text: 'Crew has the con', onclick: () => { mode = 'away'; drawAll(); } }));
+    if (mode === 'skip') { note.hidden = false; awayNote.hidden = true; draw(); }
+    else { note.hidden = true; awayNote.hidden = false; chips.replaceChildren(el('span', { class: 'note', text: 'Crew stand down after ' }), ...AWAY_CAPS.map((h) => el('button', { class: `btn chip ${h === cap ? 'on primary' : ''}`, text: `${h} h`, onclick: () => { cap = h; drawAll(); } }))); }
+  };
   draw();
-  modal({ title: 'Sleep', body: el('div', {}, note, chips), actions: [{ label: 'Cancel' }, { label: 'Sleep', primary: true, run: () => {
+  modal({ title: 'Sleep', body: el('div', {}, modes, note, awayNote, chips), actions: [{ label: 'Cancel' }, { label: 'Sleep', primary: true, run: () => {
+    if (mode === 'away') { saveBeforeSleep(); armAway(cap); awayScreen(cap); syncUI(); return; }
     saveBeforeSleep();                         // a save before sleep, as agreed
     const r = sim.warp(hours);
     const h = fmt(r.hours);
@@ -225,6 +235,19 @@ function sleepDialog() {
     modal({ title: r.arrived ? 'We have arrived' : r.reason ? 'ARIA woke you' : 'Good morning, Captain', body: el('p', { text }), actions: [{ label: 'OK', primary: true }] });
     ping(); liveNav(); syncUI(); scene.update();
   } }] });
+  drawAll();
+}
+
+// "Crew has the con" screen: shown while the app is open and the Captain sleeps. Closing the app is fine.
+let awayClose = null;
+function awayScreen(cap) {
+  awayClose = modal({ title: 'Good night, Captain', body: el('div', {}, el('p', { text: `The crew have the con for up to ${cap} hours. You can close the app now. When you open it again, I will tell you what happened.` })), actions: [{ label: 'Wake up now', primary: true, run: () => { const rep = wakeNow(); syncUI(); scene.update(); showBriefing(rep); } }] });
+}
+function showBriefing(rep) {
+  if (!rep) { modal({ title: 'Good morning, Captain', body: el('p', { text: 'Nothing to report. The ship is as you left her.' }), actions: [{ label: 'OK', primary: true }] }); return; }
+  const b = briefing(rep);
+  modal({ title: b.title, body: el('div', {}, b.lines.map((t) => el('p', { text: t }))), actions: [{ label: 'OK', primary: true }] });
+  ping(); liveNav(); syncUI(); scene && scene.update();
 }
 
 // ---------- status line (no buttons: stations open from hotspots in the rooms) ----------
@@ -296,6 +319,9 @@ async function boot() {
     const st = buildDock();
     new ResizeObserver(fit).observe($('#scene-wrap')); fit();
     boarded = true;
+    const awayRep = catchUp();   // the app was closed while the crew had the con: work out what happened
+    if (awayRep) pendingModals.push(() => showBriefing(awayRep));
+    onWake((rep) => { if (awayClose) { awayClose(); awayClose = null; } showBriefing(rep); });   // or it was only in the background
     sim.start(); startExitSave(); startSync();
     gameState.addObserver(syncUI);
     $('#pin').addEventListener('click', toggleComm);
