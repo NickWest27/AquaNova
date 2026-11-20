@@ -18,7 +18,7 @@ import './rov.js';
 export { SHUTTLE_NAME };
 export const BAY_SAFE_KT = 8, DOOR_DAMAGE_KT = 10, LAUNCH_S = 60, AIRLOCK_S = 10;
 export const SHUTTLE_SEATS = 6, SHUTTLE_COCKPIT = 2, SHUTTLE_LINK_NM = 20, SHUTTLE_KT = 20, SHUTTLE_CHARGE_H = 2, MIN_LAUNCH_PCT = 20, LOW_PCT = 15;
-export const TERN_SAFE_M = 800, TERN_CRUSH_M = 1000;   // the Tern is a shuttle, not a deep sea vehicle
+export const TERN_SAFE_M = 800, TERN_CRUSH_M = 1000, TERN_HOLD_M = 600, TERN_STANDOFF_NM = 0.25;   // the Tern is a shuttle, not a deep sea vehicle
 export const O2_CREW = 8, O2_CHARGE_H = 1, REMORA_REARM_S = 300, REMORA_UNLOAD_S = 120;   // air lasts O2 hours with 8 aboard; Remora: 5 min to re-equip plus 2 min per sample unloaded
 /** Shuttle battery life on a full charge: 1 h to start, research makes it 3 h then 6 h. */
 export const shuttleHours = () => (research.has('shuttle-battery-6') ? 6 : research.has('shuttle-battery-3') ? 3 : 1);
@@ -78,6 +78,7 @@ export function launchShuttle() {
 }
 export function recoverShuttle() {
   const sh = shuttle(); if (sh.state !== 'out' || sh.mode !== 'follow') return { ok: false, why: 'away' };
+  if (sh.standoff) return { ok: false, why: 'standoff' };
   if (toward(sim.s, sh).nm > 0.2) return { ok: false, why: 'far' };
   return startOp({ kind: 'recover', craft: 'shuttle', air: AIRLOCK_S });
 }
@@ -154,7 +155,13 @@ function stepShuttle(g) {
   if (sh.pilots < 2 && sh.mode === 'going' && !shuttleLink(sh)) { sh.mode = 'returning'; sh.route = null; sim.emit('shuttle-nolink', sh); }   // one pilot needs a radio link
   let goal = null;
   if (sh.mode === 'going') goal = sh.dest; else if (sh.mode === 'returning' || sh.mode === 'follow') goal = s;
-  if (sh.mode === 'follow' && toward(sh, s).nm < 0.3) { sh.lat = s.lat; sh.lon = s.lon; goal = null; }   // alongside: rides with the ship
+  // The ship is below the Tern's safe depth (800 m): she formates at a safe distance and depth, and hails the ship, until it is safe to dock.
+  if (!sh.dead && (sh.mode === 'follow' || sh.mode === 'returning')) {
+    if (s.depth > TERN_SAFE_M && !sh.standoff) { sh.standoff = true; sh.mode = 'follow'; sim.emit('shuttle-standoff', sh); }
+    else if (s.depth <= TERN_SAFE_M && sh.standoff) { sh.standoff = false; sim.emit('shuttle-clear', sh); }
+  }
+  if (sh.standoff) { sh.mode = 'follow'; goal = null; sh.lat = s.lat + TERN_STANDOFF_NM / 60; sh.lon = s.lon; sh.depth = Math.min(TERN_HOLD_M, s.depth); }
+  else if (sh.mode === 'follow' && toward(sh, s).nm < 0.3) { sh.lat = s.lat; sh.lon = s.lon; goal = null; sh.depth = s.depth; }   // alongside: rides with the ship
   else if (sh.mode === 'follow') sh.mode = 'returning';
   if (sh.mode === 'exchange') {
     sh.air = (sh.air || 0) + g;
@@ -167,7 +174,7 @@ function stepShuttle(g) {
     const arrived = t.nm < (sh.mode === 'going' ? 0.1 : 0.15) || (sh.routeSnapped && toward(sh, end).nm < 0.12);
     if (arrived) {
       if (sh.mode === 'going') { sh.mode = 'exchange'; sh.air = 0; sim.emit('shuttle-arrived', sh); }
-      else { sh.mode = 'follow'; sh.lat = s.lat; sh.lon = s.lon; sh.route = null; sim.emit('shuttle-alongside', sh); }
+      else { sh.mode = 'follow'; sh.lat = s.lat; sh.lon = s.lon; sh.route = null; if (s.depth <= TERN_SAFE_M) sim.emit('shuttle-alongside', sh); }
     } else {
       const a = aim(sh, goal), ta = toward(sh, a), f = Math.min(1, ((SHUTTLE_KT * g) / 3600) / Math.max(0.001, ta.nm));
       if (ta.nm > 0.01) { sh.heading = ta.brg; sh.lat += (a.lat - sh.lat) * f; sh.lon += (a.lon - sh.lon) * f; sh.moving = true; }
@@ -191,5 +198,3 @@ sim.hooks.push((dt) => { const g = dt * TIMESCALE; stepOp(g); receive(); chargeR
 /** What to tell the Captain about the result of launchWskr(). */
 export const launchText = (r) => r.ok ? `${wskrName({ n: r.n })} is being readied in the bay. About ${Math.round(r.secs)} seconds.` : ({ docked: 'Undock first', full: 'All four WSKRs are out', busy: 'The bay is busy with another craft', doors: 'The bay doors are too damaged to open: dry dock needed', tether: "Remora's tether is holding the bay doors open. Recover it first", charge: `${wskrName({ n: r.n })} is only at ${Math.round(r.bat || 0)} percent charge. It needs 20 percent` })[r.why] || 'Cannot launch now';
 
-// While the Tern is out with the ship, the ship may not take her below the Tern's safe depth.
-sim.depthCaps.push((s) => (s.shuttle && s.shuttle.state === 'out' && !s.shuttle.dead && s.shuttle.mode === 'follow' ? TERN_SAFE_M : null));
