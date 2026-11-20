@@ -23,11 +23,12 @@ from scipy.ndimage import uniform_filter
 ap = argparse.ArgumentParser()
 ap.add_argument('--src', required=True)
 ap.add_argument('--out', default=os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data', 'seafloor'))
-ap.add_argument('--west', type=float, default=-74.63); ap.add_argument('--east', type=float, default=-60.0)
+ap.add_argument('--west', type=float, default=-74.63); ap.add_argument('--east', type=float, default=0.0)
 ap.add_argument('--south', type=float, default=30.0); ap.add_argument('--north', type=float, default=42.4)
 ap.add_argument('--detail', default='-74.63,-69.0,37.0,42.4', help='W,E,S,N of the box that gets the fine grid and 10 m lines (west and north should match the map)')
 ap.add_argument('--cell', type=float, default=0.005, help='detail depth grid cell, degrees')
 ap.add_argument('--wide', type=float, default=0.02, help='wide depth grid cell, degrees')
+ap.add_argument('--simplify', type=float, default=0.004, help='rough-line simplification outside the detail box, degrees')
 ap.add_argument('--tile', type=float, default=0.5, help='contour tile size, degrees')
 a = ap.parse_args()
 W, E, S, N = a.west, a.east, a.south, a.north
@@ -91,22 +92,22 @@ for m in need:
     data[m] = lines
 for m in need: log(f'{m} m: {len(data[m])} lines, {sum(len(l) for _, l in data[m])} points')
 
-def points(levels, box, margin=0.0):
+def points(levels, box, margin=0.0, lattice=0.0015):
     bw, be, bs, bn = box; P, V = [], []
     for m in levels:
         for el, ln in data[m]:
             for x, y in ln:
                 if bw - margin <= x <= be + margin and bs - margin <= y <= bn + margin: P.append((x, y)); V.append(-el)
     P = np.array(P); V = np.array(V, float)
-    # thin dense points: one per 0.0015 degree lattice cell (the grids are 0.005 or coarser)
-    key = np.round(P / 0.0015).astype(np.int64); _, u = np.unique(key, axis=0, return_index=True)
+    # thin dense points: one per lattice cell (0.0015 degrees for the detail grid, a third of a cell for the wide grid)
+    key = np.round(P / lattice).astype(np.int64); _, u = np.unique(key, axis=0, return_index=True)
     return P[u], V[u]
 
-def make_grid(box, cell, levels, margin, name):
+def make_grid(box, cell, levels, margin, name, lattice=0.0015):
     bw, be, bs, bn = box
     nx = int(round((be - bw) / cell)) + 1; ny = int(round((bn - bs) / cell)) + 1
     gx = bw + np.arange(nx) * cell; gy = bn - np.arange(ny) * cell
-    P, V = points(levels, box, margin); log(f'{name}: grid {nx} x {ny}, {len(P)} points')
+    P, V = points(levels, box, margin, lattice); log(f'{name}: grid {nx} x {ny}, {len(P)} points')
     X, Y = np.meshgrid(gx, gy)
     z = griddata(P, V, (X, Y), method='linear')
     bad = np.isnan(z)
@@ -118,7 +119,7 @@ def make_grid(box, cell, levels, margin, name):
 
 os.makedirs(os.path.join(a.out, 'fine'), exist_ok=True)
 for f in glob.glob(os.path.join(a.out, 'fine', '*.json')): os.remove(f)
-wide, wnx, wny = make_grid(full, a.wide, [100, 500, 1000], 0.1, 'wide')
+wide, wnx, wny = make_grid(full, a.wide, [100, 500, 1000], 0.1, 'wide', a.wide / 3)
 wide.tofile(os.path.join(a.out, 'depth_wide.bin'))
 det_g, dnx, dny = make_grid(det, a.cell, need, 0.1, 'detail')
 det_g.tofile(os.path.join(a.out, 'depth.bin'))
@@ -139,6 +140,33 @@ in_rough = lambda el: (-500 < el < 0 and el % 100 == 0) or (el <= -500 and el % 
 coast = [(el, ln) for el, ln in data[1000] if el == 0]
 # one spacing everywhere (the 100 m files hold finer levels in some tiles, which would show as a seam at the tile edge)
 rough_lines = coast + [(el, ln) for el, ln in data[100] if -500 < el < 0 and el % 100 == 0] + [(el, ln) for el, ln in data[500] if el <= -500 and el % 500 == 0]
+def rdp(ln, tol):
+    """Douglas-Peucker (iterative): keep the points that bend the line by more than tol degrees."""
+    P = np.asarray(ln, float); n = len(P)
+    if n < 3: return ln
+    keep = np.zeros(n, bool); keep[0] = keep[-1] = True; st = [(0, n - 1)]
+    while st:
+        i, j = st.pop()
+        if j <= i + 1: continue
+        a_, b_ = P[i], P[j]; d = b_ - a_; L = np.hypot(*d)
+        q = P[i + 1:j] - a_
+        dist = np.hypot(q[:, 0], q[:, 1]) if L == 0 else np.abs(d[0] * q[:, 1] - d[1] * q[:, 0]) / L
+        k = int(np.argmax(dist))
+        if dist[k] > tol: m = i + 1 + k; keep[m] = True; st += [(i, m), (m, j)]
+    return [tuple(p) for p in P[keep]]
+def slim(lines):
+    """Outside the detail box the rough lines are simplified (0.004 degrees, about 0.25 nm) and tiny loops dropped: the chart only shows them from far away."""
+    out = []
+    for el, ln in lines:
+        if inside(ln[0]): out.append((el, ln)); continue
+        xs = [p[0] for p in ln]; ys = [p[1] for p in ln]
+        if len(ln) < 12 and max(max(xs) - min(xs), max(ys) - min(ys)) < 0.05: continue
+        r = rdp(ln, a.simplify)
+        if len(r) > 1: out.append((el, r))
+    return out
+inside = lambda p: DW <= p[0] <= DE and DS <= p[1] <= DN
+rough_lines = slim(rough_lines)
+log('rough lines', len(rough_lines), 'points', sum(len(l) for _, l in rough_lines))
 rough = group(rough_lines, lambda e: True)
 json.dump({'q': Q, 'levels': rough}, open(os.path.join(a.out, 'rough.json'), 'w'), separators=(',', ':'))
 t = a.tile; fine = {}
