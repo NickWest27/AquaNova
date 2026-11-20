@@ -41,7 +41,7 @@ export function createND(wrap, { onPick, stage = false, units = 1, contours = fa
   const shade = (l) => (l === 0 ? 'rgba(255,214,120,0.9)' : l > -100 ? 'rgba(130,215,255,0.40)' : l > -500 ? 'rgba(90,170,255,0.45)' : 'rgba(110,130,255,0.55)');
   function strokeLevels(levels, p, w, h, fine, ox = 0, oy = 0) {
     for (const lv of levels) {
-      if (fine && (lv.l === 0 || !(lv.l > -200 || (lv.l > -500 ? lv.l % 50 === 0 : lv.l % 100 === 0)))) continue;   // 10 m on the shelf, thinning out with depth so slopes stay readable
+      if (fine && (lv.l === 0 || !(lv.l > -200 || (lv.l > -1000 ? lv.l % 20 === 0 : lv.l > -3500 ? lv.l % 50 === 0 : lv.l % 100 === 0)))) continue;   // 10 m on the shelf, then every 20 m to 1000 m, 50 m to 3500 m and 100 m below: finer than before so the deep canyon keeps its detail
       ctx.strokeStyle = fine ? (lv.l % 100 === 0 ? 'rgba(130,200,255,0.55)' : 'rgba(110,190,230,0.26)') : shade(lv.l);
       ctx.lineWidth = lv.l === 0 ? 1.8 : fine ? 0.9 : 1.1; ctx.beginPath();
       for (const ln of lv.lines) {

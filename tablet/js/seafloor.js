@@ -1,5 +1,6 @@
 // Real sea floor for the game map (built by tools/make_seafloor.py from GEBCO contours).
-//   depthAt(lat, lon)  metres of water under that point (0 = land), or null outside the charted area
+//   depthAt(lat, lon)  metres of water under that point (0 = land), or null outside the charted area or where there is no source data
+//   grids              a fine grid (0.005 degree) round the home waters and the deep canyon, and a wide grid (0.02) over the whole map; the finest one that holds the point answers
 //   rough              contour lines for the whole map (coast, 100 m shelf lines, 500 m deep lines)
 //   fine tiles         10 m contours, loaded only near the ship (and WSKRS), drawn clipped to a circle around them
 // Paths are relative to this file, so they work under /AquaNova/.
@@ -9,7 +10,7 @@ const base = new URL('../../data/seafloor/', import.meta.url);
 const NM_PER_DEG = 60;
 
 export const seafloor = {
-  ready: false, idx: null, grid: null, rough: null,
+  ready: false, idx: null, grids: [], rough: null,
   tiles: new Map(),      // "ix_iy" -> decoded tile, or null while loading / missing
 };
 
@@ -27,29 +28,39 @@ seafloor.load = async () => {
   if (seafloor.ready) return true;
   try {
     const idx = await (await fetch(new URL('index.json', base))).json();
-    const [buf, rough] = await Promise.all([
-      fetch(new URL(idx.depth, base)).then((r) => r.arrayBuffer()),
+    const list = idx.grids || [{ file: idx.depth, bounds: idx.bounds, cell: idx.cell, nx: idx.nx, ny: idx.ny }];   // older data had one grid
+    const [bufs, rough] = await Promise.all([
+      Promise.all(list.map((g) => fetch(new URL(g.file, base)).then((r) => r.arrayBuffer()))),
       fetch(new URL(idx.rough, base)).then((r) => r.json()),
     ]);
-    seafloor.idx = idx; seafloor.grid = new Uint16Array(buf); seafloor.rough = decode(rough);
+    seafloor.idx = idx; seafloor.grids = list.map((g, i) => ({ ...g, data: new Uint16Array(bufs[i]) })); seafloor.rough = decode(rough);
     seafloor.have = new Set(idx.tiles.map(([i, j]) => `${i}_${j}`));
     seafloor.ready = true;
-    dlog('seafloor: loaded', idx.nx, 'x', idx.ny, 'grid');
+    dlog('seafloor: loaded', seafloor.grids.map((g) => `${g.nx}x${g.ny}`).join(' + '));
     return true;
   } catch (e) { console.warn('Sea floor data not available', e); return false; }
 };
 
-/** True when the point is inside the charted square. */
-seafloor.inside = (lat, lon) => { const [W, S, E, N] = seafloor.idx.bounds; return lon >= W && lon <= E && lat >= S && lat <= N; };
-
-/** Water depth in metres (bilinear), 0 on land, null outside the chart or before the data has loaded. */
+const inBox = (lat, lon, [W, S, E, N]) => lon >= W && lon <= E && lat >= S && lat <= N;
+/** Bilinear sample of one grid in decimetres, or -1 where a corner has no data. */
+function sample(g, lat, lon) {
+  const { bounds: [W, , , N], cell, nx, ny, data } = g;
+  const fx = (lon - W) / cell, fy = (N - lat) / cell, i = Math.max(0, Math.min(nx - 2, Math.floor(fx))), j = Math.max(0, Math.min(ny - 2, Math.floor(fy))), tx = fx - i, ty = fy - j;
+  const a = data[j * nx + i], b = data[j * nx + i + 1], c = data[(j + 1) * nx + i], d = data[(j + 1) * nx + i + 1];
+  if (a === NODATA || b === NODATA || c === NODATA || d === NODATA) return -1;
+  return (a * (1 - tx) + b * tx) * (1 - ty) + (c * (1 - tx) + d * tx) * ty;
+}
+const NODATA = 65535;
+/** Water depth in metres (bilinear), 0 on land, null outside the chart, where there is no source data, or before the data has loaded. */
 seafloor.depthAt = (lat, lon) => {
-  if (!seafloor.ready || !seafloor.inside(lat, lon)) return null;
-  const { bounds: [W, , , N], cell, nx, ny } = seafloor.idx, g = seafloor.grid;
-  const fx = (lon - W) / cell, fy = (N - lat) / cell, i = Math.min(nx - 2, Math.floor(fx)), j = Math.min(ny - 2, Math.floor(fy)), tx = fx - i, ty = fy - j;
-  const v = (a, b) => g[b * nx + a];
-  return ((v(i, j) * (1 - tx) + v(i + 1, j) * tx) * (1 - ty) + (v(i, j + 1) * (1 - tx) + v(i + 1, j + 1) * tx) * ty) / 10;
+  if (!seafloor.ready) return null;
+  for (const g of seafloor.grids) if (inBox(lat, lon, g.bounds)) { const v = sample(g, lat, lon); return v < 0 ? null : v / 10; }
+  return null;
 };
+/** True when the point is on the chart: inside the map square and over source data (the north-east corner has none yet). */
+seafloor.inside = (lat, lon) => seafloor.ready && seafloor.depthAt(lat, lon) !== null;
+/** True when the point is in the fine-detail box (home waters and the deep canyon), where the 10 m lines and the 0.005 degree grid are. */
+seafloor.inDetail = (lat, lon) => !!(seafloor.idx && seafloor.idx.detail && inBox(lat, lon, [seafloor.idx.detail[0], seafloor.idx.detail[1], seafloor.idx.detail[2], seafloor.idx.detail[3]]));
 
 /** Fine tiles that touch a circle (centre lat/lon, radius in nm). */
 seafloor.tilesNear = (lat, lon, nm) => {
@@ -136,7 +147,7 @@ seafloor.chartView = (latMin, latMax, lonMin, lonMax) => {
 /** Run-length text: alternating lengths of clear and charted cells, base 36. */
 seafloor.chartToString = () => {
   if (!chart.bits || !seafloor.chartedCount()) return '';
-  const out = []; let cur = 0, n = 0;
+  const out = [`w${chart.nx}`]; let cur = 0, n = 0;
   for (let i = 0; i < chart.bits.length; i++) { if (chart.bits[i] === cur) n++; else { out.push(n.toString(36)); cur = chart.bits[i]; n = 1; } }
   out.push(n.toString(36)); return out.join(',');
 };
@@ -144,6 +155,13 @@ seafloor.setChart = (str) => {
   if (!chart.bits) { chart.pending = str || ''; return; }
   chart.bits.fill(0); chart.last.clear(); chart.version++;
   if (!str) return;
+  // New saves start with "w<columns>"; saves from before the map grew have no prefix and were 463 columns wide. Rows start at the same north edge, so cells map straight across.
+  const parts = String(str).split(','); let nxo = 463;
+  if (/^w\d+$/.test(parts[0])) nxo = parseInt(parts.shift().slice(1), 10);
   let pos = 0, cur = 0;
-  for (const part of String(str).split(',')) { const n = parseInt(part, 36); if (!(n >= 0)) break; if (cur) chart.bits.fill(1, pos, Math.min(chart.bits.length, pos + n)); pos += n; cur ^= 1; if (pos >= chart.bits.length) break; }
+  for (const part of parts) {
+    const n = parseInt(part, 36); if (!(n >= 0)) break;
+    if (cur) for (let k = pos; k < pos + n; k++) { const row = Math.floor(k / nxo), col = k - row * nxo; if (row < chart.ny && col < chart.nx) chart.bits[row * chart.nx + col] = 1; }
+    pos += n; cur ^= 1;
+  }
 };
