@@ -3,7 +3,7 @@ import { sim, toward, WSKR_CODES } from './sim.js';
 import { frameThrottle } from './util.js';
 import { seafloor } from './seafloor.js';
 import { seen as seenShips } from './traffic.js';
-import { affiliation, frameColour, drawFrame } from './contactIcons.js';
+import { affiliation, frameColour, drawContact, placeAffiliation } from './contactIcons.js';
 
 const RANGES = [0.5, 1, 2, 4, 8, 16, 32, 64, 128, 256];   // the chart is about 216 nm across, so 128 and 256 show all of it
 
@@ -160,11 +160,11 @@ export function createND(wrap, { onPick, stage = false, units = 1, contours = fa
       const p = px(poi);
       if (p.x < -40 || p.x > w + 40 || p.y < -40 || p.y > h + 40) continue;
       const isSel = nd.sel && nd.sel.id === poi.id, isW = s.wpt && s.wpt.id === poi.id;
-      ctx.fillStyle = isW ? '#ffb020' : isSel ? '#ffffff' : poi.stance === 'hostile' ? '#ff6b6b' : poi.stance === 'wary' ? '#ffb86b' : '#64ffda';
-      ctx.beginPath();
-      if (poi.kind === 'colony' || poi.kind === 'mine' || poi.kind === 'platform') { for (let k = 0; k < 6; k++) { const a = (k * Math.PI) / 3; ctx[k ? 'lineTo' : 'moveTo'](p.x + 10 * Math.cos(a), p.y + 10 * Math.sin(a)); } ctx.closePath(); }
-      else if (poi.type === 'dock') { ctx.rect(p.x - 8, p.y - 8, 16, 16); } else { ctx.moveTo(p.x, p.y - 10); ctx.lineTo(p.x + 9, p.y + 7); ctx.lineTo(p.x - 9, p.y + 7); ctx.closePath(); }
-      ctx.fill();
+      if (poi.type === 'dock') { ctx.save(); ctx.translate(p.x, p.y); drawContact(ctx, 'installation', placeAffiliation(poi), 10); ctx.restore(); if (isW) { ctx.strokeStyle = '#ffb020'; ctx.lineWidth = 3; ctx.strokeRect(p.x - 14, p.y - 14, 28, 28); } }
+      else {
+        ctx.fillStyle = isW ? '#ffb020' : isSel ? '#ffffff' : poi.stance === 'hostile' ? '#ff6b6b' : poi.stance === 'wary' ? '#ffb86b' : '#64ffda';
+        ctx.beginPath(); ctx.moveTo(p.x, p.y - 10); ctx.lineTo(p.x + 9, p.y + 7); ctx.lineTo(p.x - 9, p.y + 7); ctx.closePath(); ctx.fill();
+      }
       if (isSel) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(p.x, p.y, 18, 0, 6.2832); ctx.stroke(); }
       if (nd.range > 32 && !isSel && !isW) continue;   // zoomed far out the sites sit on top of each other: names only for the selected one and the destination
       ctx.fillStyle = '#e6f1ff'; ctx.fillText(poi.name.length > 22 ? poi.name.slice(0, 21) + '…' : poi.name, p.x, p.y + 28);
@@ -179,7 +179,7 @@ export function createND(wrap, { onPick, stage = false, units = 1, contours = fa
           const o = px(ln.from), th = ((ln.brg - (trackUp ? s.heading : 0)) * Math.PI) / 180, ux = Math.sin(th), uy = -Math.cos(th), len = Math.min(w, h) / 2 - 20;
           ctx.beginPath(); ctx.moveTo(o.x, o.y); ctx.lineTo(o.x + ux * len * 1.15, o.y + uy * len * 1.15); ctx.stroke();
           const lx = Math.max(24, Math.min(w - 24, o.x + ux * len * 0.8)), ly = Math.max(14, Math.min(h - 8, o.y + uy * len * 0.8));
-          ctx.setLineDash([]); ctx.fillText('? ' + String(Math.round(ln.brg)).padStart(3, '0') + '°', lx, ly); ctx.setLineDash([7, 5]);
+          ctx.setLineDash([]); ctx.save(); ctx.translate(lx - 24, ly - 4); drawContact(ctx, 'unknown', 'unknown', 8); ctx.restore(); ctx.fillText(String(Math.round(ln.brg)).padStart(3, '0') + '°', lx + 6, ly); ctx.setLineDash([7, 5]);
         }
         ctx.restore(); continue;
       }
@@ -191,7 +191,7 @@ export function createND(wrap, { onPick, stage = false, units = 1, contours = fa
         const th = ((a.pos.hdg - (trackUp ? s.heading : 0)) * Math.PI) / 180, L = r + 6 + v.kt * 1.6;
         ctx.save(); ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(q.x + Math.sin(th) * r, q.y - Math.cos(th) * r); ctx.lineTo(q.x + Math.sin(th) * L, q.y - Math.cos(th) * L); ctx.stroke(); ctx.restore();
       }
-      ctx.save(); ctx.translate(q.x, q.y); drawFrame(ctx, aff, r, { solid: !fixOnly }); ctx.restore();
+      ctx.save(); ctx.translate(q.x, q.y); drawContact(ctx, 'surface', aff, r, { faint: fixOnly }); ctx.restore();
       if (isSel) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(q.x, q.y, r + 7, 0, 6.2832); ctx.stroke(); }
       if (nd.range <= 16) {
         ctx.fillStyle = col; ctx.font = '700 12px system-ui'; ctx.textAlign = 'left';

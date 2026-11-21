@@ -10,7 +10,7 @@ import { findings, scanned, fileScan } from '../findings.js';
 import { mountWskrPanel } from './wskr.js';
 import { isCommissioned, EXCUSES } from '../unlocks.js';
 import { seen as seenShips, shownName, sweep, canSweep } from '../traffic.js';
-import { affiliation, frameSvg } from '../contactIcons.js';
+import { affiliation, contactSvg } from '../contactIcons.js';
 
 const SONAR_RANGE_NM = 4, SWEEP_GAME_S = 1800;
 
@@ -78,7 +78,7 @@ export function mount(body, ctx) {
       const where = a.pos ? toward(s, a.pos) : null, brg = String(Math.round(where ? where.brg : a.ear)).padStart(3, '0');
       const how = a.ais ? 'AIS' : a.pos && a.pos.err > 0.05 ? `Fix ±${a.pos.err.toFixed(1)} nm` : a.pos ? 'Visual' : 'Sonar bearing only. A WSKR on another bearing gives a fix.';
       return el('div', { class: 'card task' + (picked ? ' sel' : '') },
-        el('div', { class: 'grow' }, el('h3', {}, (() => { const i = document.createElement('span'); i.style.cssText = 'display:inline-block;vertical-align:-3px;margin-right:6px'; i.innerHTML = frameSvg(affiliation(a.v), 18); return i; })(), shownName(a)), el('p', { style: 'color:var(--dim)', text: `${a.v.ident ? a.v.label + ' · ' + a.v.factionName + ' · ' : ''}${where ? where.nm.toFixed(1) + ' nm · ' : ''}bearing ${brg}° · ${how}${a.v.ais && a.pos ? ' · VHF ' + a.v.mhz.toFixed(3) : ''}` })),
+        el('div', { class: 'grow' }, el('h3', {}, (() => { const i = document.createElement('span'); i.style.cssText = 'display:inline-block;vertical-align:-3px;margin-right:6px'; i.innerHTML = contactSvg('surface', affiliation(a.v), 20); return i; })(), shownName(a)), el('p', { style: 'color:var(--dim)', text: `${a.v.ident ? a.v.label + ' · ' + a.v.factionName + ' · ' : ''}${where ? where.nm.toFixed(1) + ' nm · ' : ''}bearing ${brg}° · ${how}${a.v.ais && a.pos ? ' · VHF ' + a.v.mhz.toFixed(3) : ''}` })),
         hot && el('span', { style: 'color:#ff9a9a', text: 'HOSTILE' }),
         (a.pos || canSweep(a)) ? el('button', { class: 'btn chip' + (picked ? ' on' : ''), text: picked ? 'Selected' : 'Select', onclick: () => { selectContact(id); sig = ''; update(); } }) : null,
         !a.v.ident && canSweep(a) ? (a.v.sweepAt ? el('span', { style: 'color:var(--amber)', text: 'Sweeping…' }) : el('button', { class: 'btn primary', text: 'Sweep', onclick: () => { sweep(a.v); tell('sensors', 'Sensor sweep started on the contact'); sig = ''; update(); } })) : null);
