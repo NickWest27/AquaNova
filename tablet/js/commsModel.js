@@ -4,6 +4,7 @@ import { tell } from './notify.js';
 import { sim } from './sim.js';
 import { toast } from './util.js';
 import { gameState } from './persist.js';
+import { hailContacts } from './traffic.js';
 
 const RE = 6371, rad = Math.PI / 180;
 export const HOME = { name: 'NAVSTA WOODS HOLE', lat: 41.5223, lon: -70.6709 };
@@ -107,20 +108,21 @@ const sig = (c, s = sim.s) => Math.max(1, Math.round(44 - 16 * Math.log10(1 + di
 export function scan() {
   const s = sim.s;
   if (!bandOpen(cm.band)) { cm.found = []; return { ok: false, msg: `Antenna too deep for ${cm.band}.` }; }
-  cm.found = (cm.contacts || []).filter((c) => isActive(c) && c.band === cm.band && distNm(s, c) <= c.range)
-    .map((c) => ({ id: c.id, mhz: c.mhz, dB: sig(c, s), brg: Math.round(bearing(s, c)), name: hailed().includes(c.id) ? c.name : null, distress: !!c.distress }));
+  cm.found = [...(cm.contacts || []), ...hailContacts()].filter((c) => isActive(c) && c.band === cm.band && distNm(s, c) <= c.range)
+    .map((c) => ({ id: c.id, mhz: c.mhz, dB: sig(c, s), brg: Math.round(bearing(s, c)), name: hailed().includes(c.id) || (c.vessel && c.vessel.ident) ? c.name : null, distress: !!c.distress }));
   return { ok: true, msg: cm.found.length ? `${cm.found.length} carrier${cm.found.length === 1 ? '' : 's'} found on ${cm.band}.` : `No carriers on ${cm.band}.` };
 }
 export function hail() {
   const s = sim.s;
   if (!bandOpen(cm.band)) return { ok: false, msg: `Antenna too deep for ${cm.band}. Raise it.` };
   const step = DIAL[cm.band].fine;
-  const c = (cm.contacts || []).find((x) => isActive(x) && x.band === cm.band && Math.abs(x.mhz - cm.mhz) < step * 0.6);
+  const c = [...(cm.contacts || []), ...hailContacts()].find((x) => isActive(x) && x.band === cm.band && Math.abs(x.mhz - cm.mhz) < step * 0.6);
   if (!c) return { ok: false, msg: 'Only static. Nobody answers on this frequency.' };
   if (distNm(s, c) > c.range) return { ok: false, msg: `A faint carrier, but too far to answer (${Math.round(distNm(s, c))} nm).` };
   const entry = { at: s.clock, id: c.id, name: c.name, text: c.reply, secure: cm.secure, band: c.band, mhz: c.mhz, route: c.band === 'UHF' ? 'NORPAC CH 26-H' : `${c.band} DIRECT`, dist: Math.round(distNm(s, c)), distress: !!c.distress };
   cm.log = [entry, ...cm.log].slice(0, 6);
-  if (!hailed().includes(c.id)) gameState.updateProperty('mission.comms.hailed', [...hailed(), c.id]);
+  if (c.vessel) c.vessel.ident = true;   // a hailed ship is identified
+  else if (!hailed().includes(c.id)) gameState.updateProperty('mission.comms.hailed', [...hailed(), c.id]);
   document.dispatchEvent(new CustomEvent('comms-hail', { detail: { id: c.id, name: c.name, secure: cm.secure } }));
   return { ok: true, msg: `${c.name} answers.`, entry };
 }

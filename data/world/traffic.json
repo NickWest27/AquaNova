@@ -1,0 +1,438 @@
+{
+ "cell_nm": 20,
+ "bubble_nm": 10,
+ "cap": 12,
+ "leg_max_nm": 45,
+ "density": {
+  "open": 0.12,
+  "shelf": 0.5,
+  "lane": 1.4,
+  "port": 1.2,
+  "lane_width_nm": 25,
+  "port_radius_nm": 45,
+  "per_cell_max": 3
+ },
+ "lanes": [
+  {
+   "name": "New York to the Azores",
+   "pts": [
+    [
+     40.4,
+     -73.9
+    ],
+    [
+     40.0,
+     -62.0
+    ],
+    [
+     39.0,
+     -45.0
+    ],
+    [
+     38.0,
+     -30.0
+    ]
+   ]
+  },
+  {
+   "name": "Azores to Madeira",
+   "pts": [
+    [
+     37.7,
+     -25.6
+    ],
+    [
+     35.0,
+     -21.0
+    ],
+    [
+     32.6,
+     -16.9
+    ]
+   ]
+  },
+  {
+   "name": "Boston to New York coastal",
+   "pts": [
+    [
+     42.3,
+     -70.9
+    ],
+    [
+     41.2,
+     -70.3
+    ],
+    [
+     40.4,
+     -72.0
+    ],
+    [
+     40.4,
+     -73.9
+    ]
+   ]
+  },
+  {
+   "name": "Bermuda to New York",
+   "pts": [
+    [
+     32.4,
+     -64.7
+    ],
+    [
+     36.0,
+     -69.0
+    ],
+    [
+     40.4,
+     -73.9
+    ]
+   ]
+  },
+  {
+   "name": "Bermuda to the Azores",
+   "pts": [
+    [
+     32.4,
+     -64.7
+    ],
+    [
+     35.0,
+     -45.0
+    ],
+    [
+     37.7,
+     -28.0
+    ]
+   ]
+  }
+ ],
+ "kinds": {
+  "cargo": {
+   "faction": "cargo",
+   "label": "Container ship",
+   "kt": [
+    11,
+    16
+   ],
+   "leg": [
+    28,
+    45
+   ],
+   "size": 3,
+   "names": [
+    "Atlantic Pioneer",
+    "Northern Trader",
+    "Cape Meridian",
+    "Grand Banks Express",
+    "Sable Carrier",
+    "Harbor Star",
+    "Oceanic Dawn"
+   ],
+   "pre": "MV"
+  },
+  "tanker": {
+   "faction": "cargo",
+   "label": "Tanker",
+   "kt": [
+    9,
+    13
+   ],
+   "leg": [
+    28,
+    45
+   ],
+   "size": 3,
+   "names": [
+    "Crude Venture",
+    "Atlantic Fuel",
+    "Blue Ember",
+    "Nordic Pearl",
+    "Sable Spirit"
+   ],
+   "pre": "MT"
+  },
+  "trawler": {
+   "faction": "fishing",
+   "label": "Trawler",
+   "kt": [
+    3,
+    8
+   ],
+   "leg": [
+    10,
+    30
+   ],
+   "size": 1,
+   "names": [
+    "Marguerite",
+    "Sea Hawk",
+    "Lucky Anne",
+    "Two Brothers",
+    "Georges Pride",
+    "Gannet Bay",
+    "Dawn Patrol"
+   ],
+   "pre": "FV"
+  },
+  "yacht": {
+   "faction": "pleasure",
+   "label": "Yacht",
+   "kt": [
+    6,
+    12
+   ],
+   "leg": [
+    8,
+    25
+   ],
+   "size": 1,
+   "names": [
+    "Second Wind",
+    "Reverie",
+    "Moonshadow",
+    "Blue Sovereign",
+    "Idle Hours"
+   ],
+   "pre": "MY"
+  },
+  "patrol": {
+   "faction": "civil",
+   "label": "Patrol cutter",
+   "kt": [
+    14,
+    20
+   ],
+   "leg": [
+    18,
+    35
+   ],
+   "size": 2,
+   "names": [
+    "Vigilant",
+    "Sentinel",
+    "Resolute",
+    "Steadfast"
+   ],
+   "pre": "CGC"
+  },
+  "navy": {
+   "faction": "foreign",
+   "label": "Naval frigate",
+   "kt": [
+    14,
+    22
+   ],
+   "leg": [
+    20,
+    40
+   ],
+   "size": 3,
+   "names": [
+    "Aegir",
+    "Falken",
+    "Tarquin",
+    "Borealis"
+   ],
+   "pre": "CNS"
+  },
+  "research": {
+   "faction": "oera",
+   "label": "Research vessel",
+   "kt": [
+    7,
+    11
+   ],
+   "leg": [
+    15,
+    35
+   ],
+   "size": 2,
+   "names": [
+    "Gannet",
+    "Plover",
+    "Kittiwake",
+    "Petrel"
+   ],
+   "pre": "RV"
+  },
+  "tender": {
+   "faction": "miners",
+   "label": "Mining tender",
+   "kt": [
+    6,
+    10
+   ],
+   "leg": [
+    8,
+    18
+   ],
+   "size": 2,
+   "names": [
+    "Tender 4",
+    "Haul Rat",
+    "Slag Runner",
+    "Lode Hauler",
+    "Ore Moth"
+   ],
+   "pre": ""
+  },
+  "rig": {
+   "faction": "oil",
+   "label": "Platform supply boat",
+   "kt": [
+    8,
+    12
+   ],
+   "leg": [
+    8,
+    18
+   ],
+   "size": 2,
+   "names": [
+    "Sable Runner",
+    "Sable Provider",
+    "Sable Tern"
+   ],
+   "pre": "MV"
+  },
+  "raider": {
+   "faction": "pirates",
+   "label": "Fast raider",
+   "kt": [
+    16,
+    26
+   ],
+   "leg": [
+    15,
+    30
+   ],
+   "size": 1,
+   "names": [
+    "Cutlass",
+    "Barracuda",
+    "Grey Widow",
+    "Hook",
+    "Salt Wolf",
+    "Marauder"
+   ],
+   "pre": ""
+  },
+  "poacher": {
+   "faction": "poachers",
+   "label": "Unmarked trawler",
+   "kt": [
+    3,
+    6
+   ],
+   "leg": [
+    3,
+    8
+   ],
+   "size": 1,
+   "names": [
+    "No Name",
+    "Star Eleven",
+    "Nightjar",
+    "Lady Luck",
+    "Sparrow"
+   ],
+   "pre": ""
+  }
+ },
+ "zone_weights": {
+  "open": {
+   "cargo": 2,
+   "tanker": 1,
+   "trawler": 2,
+   "yacht": 2,
+   "research": 1,
+   "navy": 1
+  },
+  "shelf": {
+   "trawler": 8,
+   "yacht": 3,
+   "cargo": 2,
+   "patrol": 1
+  },
+  "lane": {
+   "cargo": 8,
+   "tanker": 4,
+   "yacht": 1,
+   "navy": 1,
+   "research": 1
+  },
+  "port": {
+   "cargo": 3,
+   "yacht": 4,
+   "trawler": 3,
+   "patrol": 2,
+   "tanker": 1
+  }
+ },
+ "site_weights": {
+  "mine": {
+   "tender": 6
+  },
+  "platform": {
+   "rig": 6
+  },
+  "colony": {
+   "yacht": 1,
+   "research": 1
+  }
+ },
+ "poacher_per_sanctuary_cell": 1.2,
+ "pirate_haven_radius_nm": 160,
+ "pirate_share": 0.5,
+ "hail": {
+  "cargo": [
+   "{name}. Container ship, under way and deep draft. Please keep well clear, we cannot turn quickly.",
+   "{name} here. Heavy and slow, Aqua Nova. We will hold our lane."
+  ],
+  "tanker": [
+   "{name}. Tanker, fully laden. Do not cross ahead of us, Captain."
+  ],
+  "trawler": [
+   "{name}. Nets are out, Captain. Please keep clear below us.",
+   "{name}. Fishing. Mind the gear, deep boat."
+  ],
+  "yacht": [
+   "{name}. Wow, are you really a submarine? Can we get a picture?",
+   "{name}. Lovely evening. Are you the research boat?"
+  ],
+  "patrol": [
+   "{name}. We have you on the plot, Aqua Nova. Keep this channel clear for calls and distress."
+  ],
+  "navy": [
+   "{name}. This is a foreign naval vessel. Identify your intentions and maintain your distance.",
+   "{name}. We are watching you, Aqua Nova. Do not approach."
+  ],
+  "research": [
+   "{name}. Good to hear a friendly voice. We are on a survey line, Aqua Nova."
+  ],
+  "tender": [
+   "{name}. Station hauler, Captain. Stay out of the dredge pattern, please.",
+   "{name}. Busy. State your business."
+  ],
+  "rig": [
+   "{name}. Supply run to the platform. Keep your distance from the risers."
+  ],
+  "raider_bold": [
+   "Back off, grey boat. You are in the wrong water.",
+   "Nobody called you here. Turn around while you can."
+  ],
+  "raider_timid": [
+   "We are only passing through! No trouble, no trouble.",
+   "Easy, boat. We are leaving."
+  ],
+  "poacher_bold": [
+   "Mind your own business. We are fishing, that is all.",
+   "This water is ours. Move along."
+  ],
+  "poacher_timid": [
+   "We are not fishing! We are lost. We are leaving now!",
+   "Do not report us. Please. We will go."
+  ]
+ }
+}

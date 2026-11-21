@@ -1,4 +1,5 @@
 import '../../utils/debugPanel.js';
+import * as traffic from './traffic.js';
 import { dlog } from '../../utils/log.js';
 import { sim, clockText, toward, wskrName } from './sim.js';
 import { createScene } from './scene.js';
@@ -298,6 +299,7 @@ async function boot() {
     await sim.loadPois();
     seafloor.load().then((ok) => ok && sim.touch());      // sea floor data loads in the background
     await loadGame();                       // saveManager + GameState + sim restore
+    try { await traffic.load(); } catch (e) { console.warn('traffic not loaded', e); }   // after the save: the world seed and the sunk ships live in it
     Object.keys(gameState.getProperty('progress.flags') || {}).forEach((k) => gameState.updateProperty('tutorial.' + k, true));   // lesson flags come back with the save
     await syncAtBoot();                     // pick up journal notes and tasks from the phone
     try {

@@ -535,7 +535,8 @@ export const gameDateText = (secs = sim.s.clock) => {
 export const clockText = (secs = sim.s.clock) => `Day ${Math.floor(secs / 86400) + 1} ${String(Math.floor(secs / 3600) % 24).padStart(2, '0')}:${String(Math.floor(secs / 60) % 60).padStart(2, '0')}`;
 
 /** One update. A long step is cut into pieces of about 8 game seconds or less, so fast ships and high time compression stay safe. */
-sim.step = (dt) => { const n = Math.max(1, Math.ceil((dt * TIMESCALE) / 8)); for (let i = 0; i < n; i++) stepOnce(dt / n); };
+sim.afterStep = [];   // functions run once after each update (traffic)
+sim.step = (dt) => { const n = Math.max(1, Math.ceil((dt * TIMESCALE) / 8)); for (let i = 0; i < n; i++) stepOnce(dt / n); for (const f of sim.afterStep) f(dt); };
 
 /** Sleep: jump the game forward. The ship keeps its course, speed and destination, so a long
  *  transit takes less of the player's time. The crew wake the player early for an emergency, or on arrival.

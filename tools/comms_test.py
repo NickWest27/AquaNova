@@ -52,7 +52,7 @@ def main():
         check("tapping a contact tunes the dial", "8.145" in page.inner_text(".cp-freq"), page.inner_text(".cp-freq"))
         page.tap('button:text-is("Hail")'); page.wait_for_timeout(300)
         check("hail answered by Woods Hole", "Woods Hole" in page.inner_text(".cc"), page.inner_text(".cc")[-300:])
-        page.tap('button:text-is("▶")'); page.wait_for_timeout(200); page.tap('button:text-is("Hail")'); page.wait_for_timeout(200)
+        page.tap("#station button:text-is(\"▶\")"); page.wait_for_timeout(200); page.tap('button:text-is("Hail")'); page.wait_for_timeout(200)
         check("off frequency gives static", "static" in page.inner_text(".cp-msg").lower(), page.inner_text(".cp-msg"))
         page.evaluate("(async()=>{const m=await import('./js/commsModel.js'); m.tune('HF',4.125);})()"); page.wait_for_timeout(200)
         page.tap('button:text-is("Hail")'); page.wait_for_timeout(200)
