@@ -83,6 +83,10 @@ def main():
         print("     ident ranges", r)
         check("a ship inside 4 nm is identified", r.get("none") or r["n3"], r)
         check("a sensor sweep identifies a ship at 6 nm and is refused beyond 8 nm", r.get("none") or not r["heard6"] or (not r["before"] and r["ok6"] and r["after"] and r["refused"]), r)
+        # the dashed bearing agrees with the chart's own geometry (within sensor noise)
+        r = js(place + setup + """const f=put(null,false); if(!f) return {none:true}; Object.assign(sim.s,{lat:f.p.lat+0.06,lon:f.p.lon+0.06,depth:60}); tr.traffic.candKey=''; tr.step(); const a=tr.traffic.active.find(x=>x.v===f.v); if(!a||!a.lines.length) return {none:true}; const ln=a.lines[0]; const real=sim_toward(ln.from, a.lat!=null?{lat:a.lat,lon:a.lon}:f.p).brg; let d=Math.abs(ln.brg-real); d=Math.min(d,360-d); return {d, brg:ln.brg, real}""".replace("sim_toward","(await import('./js/sim.js')).toward"))
+        print("     bearing vs chart", r)
+        check("a bearing line points at the ship on the chart", r.get("none") or r["d"] < 3, r)
         # a deep boat cannot hit a surface ship
         r = js(place + """g.updateProperty('world.seed', 4242); g.updateProperty('world.sunk', []); tr.traffic.sunk.clear(); tr.traffic.cells.clear(); let small=null; for(let k=0;k<400&&!small;k++){ sim.s.lat=39.8+(k%20)*0.05; sim.s.lon=-58.0-Math.floor(k/20)*0.1; tr.traffic.candKey=''; sim.s.clock=k*50; tr.step(); small=tr.traffic.cand.find(v=>v.size<=1&&v.stance!=='hostile'); }
           if(!small) return {none:true}; const p=tr.posAt(small, sim.s.clock); Object.assign(sim.s,{lat:p.lat,lon:p.lon,depth:40,speed:6}); tr.traffic.candKey=''; const h0=sim.s.damage; tr.step(); return {sunk:tr.traffic.sunk.has(small.id), damage:sim.s.damage-h0}""")

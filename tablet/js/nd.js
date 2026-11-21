@@ -3,6 +3,7 @@ import { sim, toward, WSKR_CODES } from './sim.js';
 import { frameThrottle } from './util.js';
 import { seafloor } from './seafloor.js';
 import { seen as seenShips } from './traffic.js';
+import { affiliation, frameColour, drawFrame } from './contactIcons.js';
 
 const RANGES = [0.5, 1, 2, 4, 8, 16, 32, 64, 128, 256];   // the chart is about 216 nm across, so 128 and 256 show all of it
 
@@ -168,27 +169,36 @@ export function createND(wrap, { onPick, stage = false, units = 1, contours = fa
       if (nd.range > 32 && !isSel && !isW) continue;   // zoomed far out the sites sit on top of each other: names only for the selected one and the destination
       ctx.fillStyle = '#e6f1ff'; ctx.fillText(poi.name.length > 22 ? poi.name.slice(0, 21) + '…' : poi.name, p.x, p.y + 28);
     }
-    // surface traffic. AIS ships show where they are; a bearing-only sonar contact is a dashed line from the listener; two bearings make a fix (a ring that shows the error)
+    // surface traffic, drawn like a naval tactical plot: a frame for what we know (yellow clover unknown, blue circle friendly, green square neutral, amber diamond suspect, red diamond hostile), a course vector, and a label.
+    // A bearing-only sonar contact is a dashed bearing line from the listener with its bearing at the end; two bearings make a fix (dashed ring = error).
     if (!craft) for (const a of seenShips()) {
-      const v = a.v, col = !v.ident ? '#cfd8dc' : v.stance === 'hostile' ? '#ff6b6b' : v.stance === 'wary' ? '#ffb86b' : '#9bd1ff', k = 5 + v.size * 2;
+      const v = a.v, aff = affiliation(v), col = frameColour(aff), r = 9 + v.size * 1.5;
       if (!a.pos) {
-        ctx.save(); ctx.strokeStyle = col; ctx.globalAlpha = 0.7; ctx.lineWidth = 1.5; ctx.setLineDash([6, 6]);
-        for (const ln of a.lines) { const o = px(ln.from), th = ((ln.brg - (trackUp ? s.heading : 0)) * Math.PI) / 180, len = Math.max(w, h); ctx.beginPath(); ctx.moveTo(o.x, o.y); ctx.lineTo(o.x + Math.sin(th) * len, o.y - Math.cos(th) * len); ctx.stroke(); }
+        ctx.save(); ctx.strokeStyle = col; ctx.fillStyle = col; ctx.globalAlpha = 0.8; ctx.lineWidth = 1.5; ctx.setLineDash([7, 5]); ctx.font = '700 12px ui-monospace, Menlo, monospace'; ctx.textAlign = 'center';
+        for (const ln of a.lines) {
+          const o = px(ln.from), th = ((ln.brg - (trackUp ? s.heading : 0)) * Math.PI) / 180, ux = Math.sin(th), uy = -Math.cos(th), len = Math.min(w, h) / 2 - 20;
+          ctx.beginPath(); ctx.moveTo(o.x, o.y); ctx.lineTo(o.x + ux * len * 1.15, o.y + uy * len * 1.15); ctx.stroke();
+          const lx = Math.max(24, Math.min(w - 24, o.x + ux * len * 0.8)), ly = Math.max(14, Math.min(h - 8, o.y + uy * len * 0.8));
+          ctx.setLineDash([]); ctx.fillText('? ' + String(Math.round(ln.brg)).padStart(3, '0') + '°', lx, ly); ctx.setLineDash([7, 5]);
+        }
         ctx.restore(); continue;
       }
       const q = px(a.pos);
       if (q.x < -20 || q.x > w + 20 || q.y < -20 || q.y > h + 20) continue;
       const isSel = s.selContact === 'ship:' + v.id, fixOnly = !a.ais && a.pos.err > 0.05;
-      ctx.save(); ctx.translate(q.x, q.y);
-      if (a.ais || a.pos.hdg != null) {
-        ctx.rotate(((a.pos.hdg - (trackUp ? s.heading : 0)) * Math.PI) / 180);
-        ctx.fillStyle = col; ctx.strokeStyle = '#04101f'; ctx.lineWidth = 1.5;
-        ctx.beginPath(); ctx.moveTo(0, -k); ctx.lineTo(k * 0.7, k * 0.8); ctx.lineTo(0, k * 0.4); ctx.lineTo(-k * 0.7, k * 0.8); ctx.closePath(); ctx.fill(); ctx.stroke();
-      } else { ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, 5, 0, 6.2832); ctx.stroke(); ctx.beginPath(); ctx.moveTo(-9, 0); ctx.lineTo(9, 0); ctx.moveTo(0, -9); ctx.lineTo(0, 9); ctx.stroke(); }
-      ctx.restore();
-      if (fixOnly) { const r = Math.max(8, (a.pos.err / nd.range) * Math.min(w, h) / 2); ctx.save(); ctx.strokeStyle = col; ctx.globalAlpha = 0.6; ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.arc(q.x, q.y, r, 0, 6.2832); ctx.stroke(); ctx.restore(); }
-      if (isSel) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(q.x, q.y, k + 8, 0, 6.2832); ctx.stroke(); }
-      if (nd.range <= 16) { ctx.fillStyle = col; ctx.font = '600 13px system-ui'; ctx.textAlign = 'left'; ctx.fillText((v.ident ? v.name : 'Unidentified') + (a.ais ? ' · AIS' : ''), q.x + k + 4, q.y + 4); }
+      if (fixOnly) { const er = Math.max(r + 4, (a.pos.err / nd.range) * (Math.min(w, h) / 2 - 24)); ctx.save(); ctx.strokeStyle = col; ctx.globalAlpha = 0.7; ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.arc(q.x, q.y, er, 0, 6.2832); ctx.stroke(); ctx.restore(); }
+      if (a.pos.hdg != null && v.kt > 0.3) {   // course vector: longer for a faster ship
+        const th = ((a.pos.hdg - (trackUp ? s.heading : 0)) * Math.PI) / 180, L = r + 6 + v.kt * 1.6;
+        ctx.save(); ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(q.x + Math.sin(th) * r, q.y - Math.cos(th) * r); ctx.lineTo(q.x + Math.sin(th) * L, q.y - Math.cos(th) * L); ctx.stroke(); ctx.restore();
+      }
+      ctx.save(); ctx.translate(q.x, q.y); drawFrame(ctx, aff, r, { solid: !fixOnly }); ctx.restore();
+      if (isSel) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(q.x, q.y, r + 7, 0, 6.2832); ctx.stroke(); }
+      if (nd.range <= 16) {
+        ctx.fillStyle = col; ctx.font = '700 12px system-ui'; ctx.textAlign = 'left';
+        ctx.fillText(v.ident ? v.name : 'UNKNOWN', q.x + r + 6, q.y - 1);
+        ctx.font = '11px ui-monospace, Menlo, monospace'; ctx.fillStyle = '#b8c9dc';
+        ctx.fillText(`${a.ais ? 'AIS ' : fixOnly ? 'FIX ' : ''}${String(Math.round(toward(s, a.pos).brg)).padStart(3, '0')}° ${a.pos.hdg != null ? Math.round(v.kt) + ' kt' : ''}`, q.x + r + 6, q.y + 12);
+      }
     }
     // ship (centre), or in craft mode the craft at the centre and the ship where it is
     const mark = (x, y, hd, col, big) => {

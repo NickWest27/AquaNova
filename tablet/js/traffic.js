@@ -20,6 +20,10 @@ const pick = (rng, a) => a[Math.floor(rng() * a.length)];
 const between = (rng, [lo, hi]) => lo + rng() * (hi - lo);
 const flat = (a, b) => { const dy = (b.lat - a.lat) * NM, dx = (b.lon - a.lon) * NM * LON_K; return Math.hypot(dx, dy); };
 const toLat = (nm) => nm / NM, toLon = (nm) => nm / (NM * LON_K);
+// Sensing and movement near the ship use the same flat-earth scale as the chart and the log (cos of the ship's latitude), so bearings and fixes line up on the map. Cell building keeps the fixed scale so the sea does not depend on where you are.
+let SK = LON_K;
+const dist = (a, b) => { const dy = (b.lat - a.lat) * NM, dx = (b.lon - a.lon) * NM * SK; return Math.hypot(dx, dy); };
+const toLonS = (nm) => nm / (NM * SK);
 const seedOf = () => { let s = gameState.getProperty('world.seed'); if (s == null) { s = Math.floor(Math.random() * 2147483647); gameState.updateProperty('world.seed', s); } return s | 0; };
 
 export async function load() {
@@ -94,7 +98,7 @@ function cellVessels(cx, cy) {
 export function posAt(v, t) {
   if (v.dyn) return v.dyn;
   const u = (((t / 3600) * v.kt) / v.L + v.phase) % 2, s = u <= 1 ? u : 2 - u;
-  return { lat: v.A.lat + (v.B.lat - v.A.lat) * s, lon: v.A.lon + (v.B.lon - v.A.lon) * s, hdg: ((Math.atan2((v.B.lon - v.A.lon) * LON_K, v.B.lat - v.A.lat) * 180 / Math.PI + (u <= 1 ? 0 : 180)) + 360) % 360 };
+  return { lat: v.A.lat + (v.B.lat - v.A.lat) * s, lon: v.A.lon + (v.B.lon - v.A.lon) * s, hdg: ((Math.atan2((v.B.lon - v.A.lon) * SK, v.B.lat - v.A.lat) * 180 / Math.PI + (u <= 1 ? 0 : 180)) + 360) % 360 };
 }
 const sonarNm = (s) => (s.clock < (s.sweepUntil || 0) ? 8 : s.sonar ? 4 : 1);
 
@@ -102,6 +106,7 @@ const sonarNm = (s) => (s.clock < (s.sweepUntil || 0) ? 8 : s.sonar ? 4 : 1);
 export function step() {
   if (!traffic.ready || !sim.s.pois.length) return;
   const t0 = performance.now(), s = sim.s, c = traffic.cfg, now = s.clock;
+  SK = Math.cos((s.lat * Math.PI) / 180);
   const dt = traffic.lastClock == null ? 0 : now - traffic.lastClock; traffic.lastClock = now;
   const [cx, cy] = cellOf(s.lat, s.lon), key = cx + ',' + cy;
   if (key !== traffic.candKey) {   // the ship changed cell: rebuild the candidate list (a few cells round it)
@@ -112,12 +117,12 @@ export function step() {
   const near = [];
   for (const v of traffic.cand) {
     if (traffic.sunk.has(v.id)) continue;
-    let p = posAt(v, now), d = flat(s, p);
+    let p = posAt(v, now), d = dist(s, p);
     if (v.dyn) {   // a reacting vessel is moved a step at a time; far away it goes back to its leg
-      if (d > 14) { v.dyn = null; p = posAt(v, now); d = flat(s, p); }
+      if (d > 14) { v.dyn = null; p = posAt(v, now); d = dist(s, p); }
       else if (dt > 0 && dt < 120) {
-        const toS = Math.atan2((s.lon - p.lon) * LON_K, s.lat - p.lat), a = v.boldness >= 0.5 ? toS : toS + Math.PI, nm = (v.kt * 1.2 * dt) / 3600;
-        v.dyn = { lat: p.lat + toLat(Math.cos(a) * nm), lon: p.lon + toLon(Math.sin(a) * nm), hdg: ((a * 180) / Math.PI + 360) % 360 }; p = v.dyn; d = flat(s, p);
+        const toS = Math.atan2((s.lon - p.lon) * SK, s.lat - p.lat), a = v.boldness >= 0.5 ? toS : toS + Math.PI, nm = (v.kt * 1.2 * dt) / 3600;
+        v.dyn = { lat: p.lat + toLat(Math.cos(a) * nm), lon: p.lon + toLonS(Math.sin(a) * nm), hdg: ((a * 180) / Math.PI + 360) % 360 }; p = v.dyn; d = dist(s, p);
       }
     }
     if (d > c.bubble_nm) continue;
@@ -136,24 +141,24 @@ export function step() {
     const loud = sn.sonar_size_factor[v.size] * (0.8 + Math.min(v.kt, 20) / 50);
     const ears = [];
     const noise = (k) => (v.bias * (k ? -0.7 : 1) + 0.8 * Math.sin(now / (37 + 16 * k) + v.phase * 3)) * Math.PI / 180;
-    const bearingFrom = (o, k) => { const dy = (p.lat - o.lat) * NM, dx = (p.lon - o.lon) * NM * LON_K; return { from: { lat: o.lat, lon: o.lon }, brg: ((Math.atan2(dx, dy) + noise(k)) * 180 / Math.PI + 360) % 360, nm: Math.hypot(dx, dy) }; };
+    const bearingFrom = (o, k) => { const dy = (p.lat - o.lat) * NM, dx = (p.lon - o.lon) * NM * SK; return { from: { lat: o.lat, lon: o.lon }, brg: ((Math.atan2(dx, dy) + noise(k)) * 180 / Math.PI + 360) % 360, nm: Math.hypot(dx, dy) }; };
     if (d <= sonarNm(s) * loud) ears.push(bearingFrom(s, 0));
-    obs.forEach((w, i) => { if (flat(w, p) <= sn.wskr_sonar_nm * loud) ears.push(bearingFrom(w, i + 1)); });
+    obs.forEach((w, i) => { if (dist(w, p) <= sn.wskr_sonar_nm * loud) ears.push(bearingFrom(w, i + 1)); });
     // 3. a fix: two bearings from different places that cross at a good angle
     let fix = null;
     if (!ais) for (let i = 0; i < ears.length; i++) for (let j = i + 1; j < ears.length; j++) {
       const A = ears[i], B = ears[j], a1 = (A.brg * Math.PI) / 180, a2 = (B.brg * Math.PI) / 180, sinD = Math.sin(a1 - a2);
       if (Math.abs(sinD) < Math.sin((sn.min_cross_deg * Math.PI) / 180)) continue;
-      const bx = (B.from.lon - A.from.lon) * NM * LON_K, by = (B.from.lat - A.from.lat) * NM;   // from A to B
+      const bx = (B.from.lon - A.from.lon) * NM * SK, by = (B.from.lat - A.from.lat) * NM;   // from A to B
       const t1 = (bx * Math.cos(a2) - by * Math.sin(a2)) / sinD, t2 = (bx * Math.cos(a1) - by * Math.sin(a1)) / sinD;
       if (t1 <= 0 || t2 <= 0) continue;
       const err = Math.max(0.05, (Math.max(t1, t2) * 0.035) / Math.abs(sinD));
-      if (!fix || err < fix.err) fix = { lat: A.from.lat + (t1 * Math.cos(a1)) / NM, lon: A.from.lon + (t1 * Math.sin(a1)) / (NM * LON_K), err };
+      if (!fix || err < fix.err) fix = { lat: A.from.lat + (t1 * Math.cos(a1)) / NM, lon: A.from.lon + (t1 * Math.sin(a1)) / (NM * SK), err };
     }
     // 4. identity: AIS, inside 4 nm, a WSKR within 2 nm, a hail answered on VHF, or a sensor sweep (started from Sensors, ship inside 8 nm)
     const vis = s.depth <= sn.visual_max_depth_m && d <= sn.visual_nm[v.size];
     if (v.sweepAt && now >= v.sweepAt) { if (d <= sn.sweep_nm) v.ident = true; v.sweepAt = 0; }
-    if (ais || d <= sn.ident_nm || obs.some((w) => flat(w, p) <= sn.wskr_camera_nm)) v.ident = true;
+    if (ais || d <= sn.ident_nm || obs.some((w) => dist(w, p) <= sn.wskr_camera_nm)) v.ident = true;
     const b = toward(s, p), heard = ears.length > 0 || vis;
     const pos = ais ? { lat: p.lat, lon: p.lon, err: 0, hdg: p.hdg } : fix ? { lat: fix.lat, lon: fix.lon, err: fix.err } : vis ? { lat: p.lat, lon: p.lon, err: 0.05, hdg: p.hdg } : null;
     out.push({ v, lat: p.lat, lon: p.lon, hdg: p.hdg, nm: d, brg: b.brg, shown: ais || heard, ais, pos, lines: ears.map((e) => ({ from: e.from, brg: e.brg })), ear: ears.length ? ears[0].brg : null });
