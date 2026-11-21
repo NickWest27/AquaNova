@@ -56,13 +56,14 @@ export function createBridgeConsole({ top, main, display, center, left, right, o
       if (nds[0]) nd.setRange(nds[0].range);
       nd.sel = sel; nds.push(nd); if (!compact) bigNd = nd;
       if (compact) return { m, update() { nd.redraw(); } };
-      const logCur = el('div'), logPlace = el('div', { class: 'nl-place' }), logDest = el('div'), logTime = el('div');
-      m.append(el('div', { class: 'nav-log' }, el('b', { text: 'NAVIGATIONAL POSITION LOG' }), logTime, logCur, logPlace, logDest));
+      const row = (l) => { const v = el('span'); return [el('div', { class: 'nl-r' }, el('small', { text: l }), v), v]; };
+      const [rT, logTime] = row('TIME'), [rP, logCur] = row('POS'), [rA, logPlace] = row('AT'), [rD, logDest] = row('DEST'), [rE, logEta] = row('');
+      m.append(el('div', { class: 'nav-log' }, el('b', { text: 'NAV POSITION LOG' }), rT, rP, rA, rD, rE));
       return { m, update() {
         const s = sim.s;
-        set(logTime, `MISSION TIME INDEX ${clockText()}`);
-        set(logCur, `CURR POS ${deg(s.lat, 'N', 'S', 2)} ${deg(s.lon, 'E', 'W', 3)}`); set(logPlace, s.at ? s.at.name : 'Open water');
-        if (s.wpt) { const t = toward(s, s.wpt); set(logDest, `DEST POS ${s.wpt.name}  ${t.nm.toFixed(1)} nm  ETA ${etaText(t.nm, s.speed)}`); } else set(logDest, 'DEST POS none');
+        set(logTime, clockText());
+        set(logCur, `${deg(s.lat, 'N', 'S', 2)} ${deg(s.lon, 'E', 'W', 3)}`); set(logPlace, s.at ? s.at.name : 'Open water');
+        if (s.wpt) { const t = toward(s, s.wpt); set(logDest, s.wpt.name); set(logEta, `${t.nm.toFixed(1)} nm · ETA ${etaText(t.nm, s.speed)}`); } else { set(logDest, 'none'); set(logEta, ''); }
         nd.redraw();
       } };
     };
