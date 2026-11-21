@@ -68,14 +68,11 @@ export function createBridgeConsole({ top, main, display, center, left, right, o
       nd.sel = sel; nds.push(nd);
       if (compact) return { m, update() { nd.redraw(); } };
       const logCur = el('div'), logPlace = el('div', { class: 'nl-place' }), logDest = el('div'), logTime = el('div');
-      const rSpd = el('b'), rDep = el('b'), rFlr = el('b'), rHdg = el('b');
       const prof = createProfile(el('div', { class: 'nav-prof' })); const profBox = prof.canvas.parentNode;
       profBox.prepend(el('div', { class: 'np-title', text: 'VERTICAL PROFILE' }));
-      m.append(el('div', { class: 'nav-read' }, rdRow('SPEED KT', rSpd), rdRow('DEPTH M', rDep), rdRow('FLOOR M', rFlr), rdRow('HDG', rHdg)),
-        el('div', { class: 'nav-log' }, el('b', { text: 'NAVIGATIONAL POSITION LOG' }), logTime, logCur, logPlace, logDest), profBox);
+      m.append(el('div', { class: 'nav-log' }, el('b', { text: 'NAVIGATIONAL POSITION LOG' }), logTime, logCur, logPlace, logDest), profBox);
       return { m, update() {
         const s = sim.s;
-        set(rSpd, s.speed.toFixed(1)); set(rDep, String(Math.round(s.depth))); set(rFlr, s.floor == null ? '—' : String(Math.round(s.floor))); set(rHdg, pad(s.heading) + '°');
         set(logTime, `MISSION TIME INDEX ${clockText()}`);
         set(logCur, `CURR POS ${deg(s.lat, 'N', 'S', 2)} ${deg(s.lon, 'E', 'W', 3)}`); set(logPlace, s.at ? s.at.name : 'Open water');
         if (s.wpt) { const t = toward(s, s.wpt); set(logDest, `DEST POS ${s.wpt.name}  ${t.nm.toFixed(1)} nm  ETA ${etaText(t.nm, s.speed)}`); } else set(logDest, 'DEST POS none');
@@ -86,8 +83,7 @@ export function createBridgeConsole({ top, main, display, center, left, right, o
     const zoom = (dir) => { const r = nds[0].zoom(dir); nds.forEach((n) => n.setRange(r)); refresh(); };
     const plot = bbtn('Plot a course', () => openPlotDialog({ preselect: sel, onPlotted: refresh }), 'wide');
     const clear = bbtn('Clear', () => { sel = null; nds.forEach((n) => { n.sel = null; }); sim.s.wpt = null; sim.touch(); refresh(); });
-    const c = el('div', { class: 'bc' }, el('div', { class: 'rowN' },
-      bbtn('−', () => zoom(-1), 'sq'), el('div', { class: 'rngbox' }, el('small', { text: 'RANGE' }), rangeTxt), bbtn('+', () => zoom(1), 'sq'), plot, clear));
+    const c = el('div', { class: 'bc' }, el('div', { class: 'rowN' }, plot, clear));
     const r = el('div', { class: 'br' }); const rA = el('small'), rB = el('b'), rC = el('div'); r.append(rA, rB, rC);
     function refresh() {
       const s = sim.s;
@@ -96,7 +92,7 @@ export function createBridgeConsole({ top, main, display, center, left, right, o
       else if (s.wpt) { const t = toward(s, s.wpt); set(rA, 'COURSE SET'); set(rB, s.wpt.name); set(rC, `${t.nm.toFixed(1)} nm  ETA ${etaText(t.nm, s.speed)}`); }
       else { set(rA, 'DESTINATION'); set(rB, 'None'); set(rC, 'Tap a marker'); }
     }
-    return { make, c, r, expand: 'nav', side: refresh, nds };
+    return { make, c, r, expand: 'nav', side: refresh, nds, zoom, rangeTxt };
   })();
 
   // ---------- HELM ----------
@@ -196,16 +192,26 @@ export function createBridgeConsole({ top, main, display, center, left, right, o
   })();
 
   // ---------- build: one large and one compact copy of each ----------
+  // Info Left and Info Right are always on, either side of the main screen.
+  const ilVals = {}, il = el('div', { class: 'bm-info il' }), ir = el('div', { class: 'bm-info ir' }), viewWrap = el('div', { class: 'bm-view' });
+  for (const [k, l] of [['spd', 'SPEED KT'], ['dep', 'DEPTH M'], ['flr', 'FLOOR M'], ['hdg', 'HEADING']]) { ilVals[k] = el('b'); il.append(el('div', { class: 'ilr' }, el('small', { text: l }), ilVals[k])); }
+  const irBars = {};
+  for (const [k, l] of [['pres', 'PRESSURE'], ['temp', 'TEMP'], ['bat', 'ENERGY'], ['o2', 'O₂'], ['co2', 'CO₂'], ['hull', 'HULL']]) { const fill = el('i'), val = el('b'); irBars[k] = { fill, val }; ir.append(el('div', { class: 'bar' }, el('small', { text: l }), el('div', { class: 'track' }, fill), val)); }
+  main.append(il, viewWrap, ir);
   const big = {}, small = {}, sel = el('div', { class: 'selector' }), btns = {};
   for (const id of order) {
     big[id] = views[id].make(false); small[id] = views[id].make(true);
-    main.append(big[id].m); display.append(small[id].m); center.append(views[id].c); right.append(views[id].r);
+    viewWrap.append(big[id].m); display.append(small[id].m); center.append(views[id].c);
     btns[id] = bbtn(labels[id], () => select(id)); sel.append(btns[id]);
   }
   left.append(sel);
   const expand = el('button', { class: 'bd-expand', 'aria-label': 'Open this display full screen', text: '⤢', onclick: () => { const v = views[mainId]; if (v && v.expand) onExpand(v.expand); } });
   const promote = el('button', { class: 'bd-promote', 'aria-label': 'Send to the main screen', text: 'MAIN ▲', onclick: () => { mainId = current === 'nav' || mainId === current ? 'nav' : current; paint(); update(); } });
-  main.append(expand); display.append(promote);
+  viewWrap.append(expand); display.append(promote);
+  // Right desk: Main Screen Control (zoom, which page is on the main screen, full screen)
+  const rngBox = el('div', { class: 'rngbox' }, el('small', { text: 'RANGE' }), views.nav.rangeTxt);
+  const showB = bbtn('Page ▲', () => { mainId = current; paint(); update(); }, 'wide'), navB = bbtn('Nav', () => { mainId = 'nav'; paint(); update(); }), fullB = bbtn('⤢ Full', () => { const v = views[mainId]; if (v && v.expand) onExpand(v.expand); });
+  right.append(el('div', { class: 'bc msc' }, el('div', { class: 'rowN' }, bbtn('−', () => views.nav.zoom(-1), 'sq'), rngBox, bbtn('+', () => views.nav.zoom(1), 'sq')), el('div', { class: 'rowN' }, showB, navB, fullB)));
 
   let current = 'nav', mainId = 'nav';
   function paint() {
@@ -213,7 +219,8 @@ export function createBridgeConsole({ top, main, display, center, left, right, o
       small[k].m.hidden = k !== current; views[k].c.hidden = k !== current; views[k].r.hidden = k !== current;
       big[k].m.hidden = k !== mainId; btns[k].classList.toggle('on', k === current);
     }
-    expand.hidden = !views[mainId].expand;
+    expand.hidden = true;   // the right desk has the full screen button now
+    navB.classList.toggle('on', mainId === 'nav'); showB.classList.toggle('on', mainId === current && current !== 'nav'); fullB.disabled = !views[mainId].expand;
     promote.classList.toggle('on', mainId === current);
   }
   function select(id) {
@@ -231,6 +238,11 @@ export function createBridgeConsole({ top, main, display, center, left, right, o
     set(tNote, `BAT ${Math.round(s.battery)}%   O₂ ${Math.round(s.oxygen)}%   HULL ${Math.round(s.hull)}%`);
     big[mainId].update(); if (current !== mainId) small[current].update(); else small[current].update();
     views[current].side();
+    set(ilVals.spd, s.speed.toFixed(1)); set(ilVals.dep, String(Math.round(s.depth))); set(ilVals.flr, s.floor == null ? '—' : String(Math.round(s.floor))); set(ilVals.hdg, pad(s.heading) + '°');
+    const bar = (k, pct, text, bad) => { irBars[k].fill.style.width = Math.max(0, Math.min(100, pct)) + '%'; irBars[k].fill.className = bad ? 'bad' : ''; set(irBars[k].val, text); };
+    bar('pres', (s.depth / 6000) * 100, Math.round(s.depth / 10 + 1) + ' bar', s.depth > 4800); bar('temp', (s.temp / 20) * 100, s.temp.toFixed(1) + '°C', false);
+    bar('bat', s.battery, Math.round(s.battery) + '%', s.battery < 25); bar('o2', s.oxygen, Math.round(s.oxygen) + '%', s.oxygen < 30);
+    bar('co2', (s.co2 / 5) * 100, s.co2.toFixed(2) + '%', s.co2 > 1); bar('hull', s.hull, Math.round(s.hull) + '%', s.hull < 50);
   }
 
   let saved = 'nav'; try { saved = localStorage.getItem(KEY) || 'nav'; } catch (e) { /* ignore */ }

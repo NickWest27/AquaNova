@@ -1,8 +1,9 @@
 // Bridge and quarters scenes on the fixed 1920x1080 stage. Updates only touch text nodes that changed.
-import { sim } from './sim.js';
+import { sim, toward, gameDateText } from './sim.js';
 import { el } from './util.js';
 import { createBridgeConsole } from './bridge.js';
-import { samples, sampleName, jobs, points, research, LABS } from './science.js';
+import { samples, sampleName, jobs, points, research, LABS, SAMPLE_KINDS } from './science.js';
+import { rovRange } from './rov.js';
 
 const box = (cls, x, y, w, h, kids) => el('div', { class: `disp ${cls}`, style: `left:${x}px;top:${y}px;width:${w}px;height:${h}px` }, kids);
 
@@ -18,6 +19,8 @@ function warp(node, W, H, q) {
   const [a, bb, c, d, e, f, g, h] = b.map((v, i) => v / A[i][i]);
   node.style.cssText += `;position:absolute;left:0;top:0;width:${W}px;height:${H}px;inset:auto;transform-origin:0 0;transform:matrix3d(${a},${d},0,${g},${bb},${e},0,${h},0,0,1,0,${c},${f},0,1)`;
 }
+// A flat (front-facing) screen clipped to the cut-out's outline. Points are relative to the box.
+const boxClip = (cls, x, y, w, h, pts, kids) => { const b = box(cls, x, y, w, h, kids); b.style.clipPath = `polygon(${pts.map(([px, py]) => `${px}px ${py}px`).join(',')})`; return b; };
 // A screen in the art: its bounding box plus the four corners of the slanted glass (stage pixels).
 function slanted(cls, node, W, H, corners) {
   const xs = corners.map((p) => p[0]), ys = corners.map((p) => p[1]);
@@ -50,11 +53,11 @@ export function createScene(stage, { onOpen }) {
   topD.classList.add('compact');
   bridge.append(
     box('bmainbox', 243, 168, 1433, 351, [mainD]),                                                        // the big window
-    slanted('btbox', topD, 720, 48, [[604, 55], [1313, 52], [1278, 92], [632, 92]]),                      // strip over the window
+    boxClip('btbox', 604, 52, 709, 40, [[0, 3], [709, 0], [674, 40], [28, 40]], [topD]),                  // Top Strip: front-facing, two lines
     slanted('bdispbox', dispD, 560, 190, [[719, 584], [1203, 584], [1253, 740], [664, 735]]),             // centre display
     slanted('', ctrD, 612, 130, [[752, 793], [1159, 792], [1206, 872], [713, 867]]),                      // centre desk
-    slanted('', leftD, 224, 132, [[389, 774], [614, 778], [552, 870], [304, 865]]),                       // left desk panel
-    slanted('', rightD, 224, 132, [[1306, 776], [1530, 772], [1616, 864], [1369, 869]]),                  // right desk panel
+    slanted('', leftD, 300, 116, [[389, 774], [614, 778], [552, 870], [304, 865]]),                       // left desk panel
+    slanted('', rightD, 300, 116, [[1306, 776], [1530, 772], [1616, 864], [1369, 869]]),                  // right desk panel
     slanted('', stnL, 200, 74, [[266, 508], [444, 510], [413, 573], [231, 568]]),                         // left station screen
     slanted('', stnR, 200, 74, [[1479, 510], [1652, 508], [1689, 572], [1504, 573]]),                     // right station screen
     frame,
@@ -114,8 +117,8 @@ export function createScene(stage, { onOpen }) {
   science.append(
     slanted('', sci.banner, 350, 72, [[365, 215], [715, 225], [723, 289], [370, 282]]),
     slanted('', sci.samples, 250, 206, [[1569, 110], [1816, 36], [1810, 242], [1566, 281]]),
-    slanted('', sci.research, 296, 186, [[1596, 335], [1887, 301], [1882, 487], [1596, 483]]),
-    slanted('', sci.analysis, 160, 172, [[1107, 345], [1265, 311], [1268, 482], [1109, 483]]),
+    slanted('', sci.analysis, 296, 186, [[1596, 335], [1887, 301], [1882, 487], [1596, 483]]),                 // Main Computer
+    slanted('', sci.research, 160, 172, [[1107, 345], [1265, 311], [1268, 482], [1109, 483]]),
     slanted('', sci.remora, 190, 96, [[749, 378], [936, 378], [936, 472], [750, 475]]),
     sciFrame,
     hs('SAMPLES', 666, 620, 680, 430, () => onOpen('lab'), 'top'),                 // the island bench
@@ -124,9 +127,9 @@ export function createScene(stage, { onOpen }) {
     hs('MEDBAY', 0, 700, 330, 380, () => onOpen('medbay'), 'mid'),                // no door for it in the art yet
     hs('WALKWAY ▸', 345, 345, 255, 300, () => onOpen('walkway'), 'mid'),          // the door
     hs('SAMPLES', 1530, 60, 330, 250, () => onOpen('lab'), 'bottom'),             // the screens
-    hs('RESEARCH', 1590, 300, 310, 200, () => onOpen('lab-research'), 'bottom'),
-    hs('ANALYSIS', 1100, 310, 175, 180, () => onOpen('lab-analysis'), 'bottom'),
-    hs('REMORA', 745, 370, 195, 110, () => onOpen('remora'), 'bottom'));
+    hs('MAIN COMPUTER', 1590, 300, 310, 200, () => onOpen('lab-analysis'), 'bottom'),
+    hs('RESEARCH COMPUTER', 1100, 310, 175, 180, () => onOpen('lab-research'), 'bottom'),
+    hs('ROV STATION', 745, 370, 195, 110, () => onOpen('remora'), 'bottom'));
   // medbay (concept art). Treatment and crew health are not built yet; the exam table is a locked tap area for now.
   const medbay = el('div', { class: 'scene medbay', hidden: true });
   const mbRead = el('div', { class: 'mb-read' });
@@ -158,11 +161,21 @@ export function createScene(stage, { onOpen }) {
   function updateScience() {
     const sm = samples(), jb = jobs(), s = sim.s, r = s.rov, done = research.done();
     const put = (key, html) => { if (cache.get('sci' + key) !== html) { cache.set('sci' + key, html); sci[key].innerHTML = html; } };
-    put('banner', `<h4>SCIENCE LAB</h4><p>${sm.length} sample${sm.length === 1 ? '' : 's'} · ${jb.length ? jb.length + ' analysing' : 'labs idle'}</p>`);
-    put('samples', `<h4>SAMPLES</h4>${sm.length ? sm.slice(-5).reverse().map((q) => `<p class="${q.status === 'done' ? 'ok' : ''}">${sampleName(q, sm)}</p>`).join('') : '<p class="dim">None yet</p>'}`);
-    put('analysis', `<h4>ANALYSIS</h4>${Object.entries(LABS).map(([id, l]) => { const j = jb.find((x) => x.lab === id); return row(l.name.split(' ')[0], j ? Math.max(0, Math.round((j.end - s.clock) / 60)) + ' min' : 'idle'); }).join('')}`);
-    put('research', `<h4>RESEARCH</h4>${row('Points', points())}${row('Topics done', done.length)}`);
-    put('remora', `<h4>REMORA</h4>${r ? row('Status', r.auto ? 'coming home' : r.job ? 'working' : 'out') + row('Storage', `${(r.cargo || []).length} of 3`) : row('Status', 'in bay')}`);
+    const mins = (j) => Math.max(1, Math.round((j.end - s.clock) / 60)), pct = (j) => Math.round(Math.max(0, Math.min(1, (s.clock - j.start) / (j.end - j.start))) * 100);
+    const tether = r ? Math.round(Math.min(1, toward(s, r).nm / rovRange()) * 100) : 0, held = r ? (r.cargo || []).length : 0;
+    const rovTxt = !r ? 'in bay' : r.auto ? 'coming home' : r.go ? 'under way' : r.job ? 'sampling' : 'out';
+    const j0 = jb[0], q0 = j0 && sm.find((q) => q.id === j0.sample);
+    // Banner: the state of the lab at a glance
+    put('banner', `<p>ROV ${rovTxt} | ${tether}% Tether | ${held}/3 Samples</p><p>${j0 && q0 ? `Analysing ${sampleName(q0, sm)} ${pct(j0)}% | ETA ${mins(j0)} min` : 'Labs idle'}</p>`);
+    // Upper right: the latest sample and its labels
+    const q = sm[sm.length - 1];
+    put('samples', `<h4>LATEST SAMPLE</h4>${q ? `<p class="big">${sampleName(q, sm)}</p>${row('Type', SAMPLE_KINDS[q.kind].label)}${row('Place', q.site)}${row('Taken', q.at ? gameDateText(q.at).replace('  ', ', ').slice(0, -3) : '')}${row('Status', q.status === 'done' ? 'analysed' : jb.some((x) => x.sample === q.id) ? 'analysing' : 'raw')}` : '<p class="dim">No samples yet</p>'}`);
+    // Main Computer: the analysis pages (Material, Spectral, Gene)
+    put('analysis', `<h4>MAIN COMPUTER</h4>${Object.entries(LABS).map(([id, l]) => { const j = jb.find((x) => x.lab === id); return row(l.name, j ? `${pct(j)}% · ${mins(j)} min` : 'idle'); }).join('')}<p class="dim">Tap to open</p>`);
+    // Research Computer
+    put('research', `<h4>RESEARCH</h4>${row('Points', points())}${row('Done', done.length)}`);
+    // ROV Station
+    put('remora', `<h4>ROV STATION</h4>${row('Remora', rovTxt)}${r ? row('Tether', tether + '%') : ''}${row('Storage', `${held} of 3`)}`);
   }
   const api = {
     inQuarters: false, where: 'bridge',

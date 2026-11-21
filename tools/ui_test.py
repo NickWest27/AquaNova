@@ -38,7 +38,7 @@ def main():
         page.tap("#ped-btn"); page.wait_for_timeout(500)
         check("PED button opens the PED", page.is_visible("#ped-pop .ped-panel"))
         page.evaluate("document.querySelector(\'#ped-pop\').click()"); page.wait_for_timeout(300)
-        page.locator('.bd-expand:visible').tap(force=True); page.wait_for_timeout(700)
+        page.locator('.msc button:has-text("Full")').tap(force=True); page.wait_for_timeout(700)
         check("back button says Bridge", page.inner_text("#station .st-head .btn").strip().lower() == "‹ bridge", page.inner_text("#station .st-head .btn"))
         txt = lambda: page.locator(".readouts .num").last.inner_text().strip()
         a = txt(); page.tap('button[aria-label="Increase range"]'); page.wait_for_timeout(200); b = txt()

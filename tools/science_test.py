@@ -76,7 +76,7 @@ def main():
         check("to walkway", tap("TO WALKWAY") or tap("◂ WALKWAY")); page.wait_for_timeout(300)
         check("walkway to science", tap("SCIENCE")); page.wait_for_timeout(500)
         page.screenshot(path=os.path.join(ROOT, "tools", "shots", "science_room.png"))
-        for label, text in [("SAMPLES", "Samples"), ("ANALYSIS", "Analysis"), ("RESEARCH", "Research"), ("REMORA", "Remora")]:
+        for label, text in [("SAMPLES", "Samples"), ("ANALYSIS", "Analysis"), ("RESEARCH", "Research"), ("ROV STATION", "Remora")]:
             check("open " + label, tap(label)); page.wait_for_timeout(600)
             check(label + " station shows", page.is_visible("#station") and text.lower() in page.inner_text("#station").lower(), page.inner_text("#station")[:80])
             page.screenshot(path=os.path.join(ROOT, "tools", "shots", "science_" + label.lower().replace(" ", "_") + ".png"))
