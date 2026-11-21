@@ -150,9 +150,10 @@ export function step() {
       const err = Math.max(0.05, (Math.max(t1, t2) * 0.035) / Math.abs(sinD));
       if (!fix || err < fix.err) fix = { lat: A.from.lat + (t1 * Math.cos(a1)) / NM, lon: A.from.lon + (t1 * Math.sin(a1)) / (NM * LON_K), err };
     }
-    // 4. identity: AIS, or seen by eye (mast up, close enough), or a WSKR's camera alongside. A hail does not identify a ship that carries no AIS.
+    // 4. identity: AIS, inside 4 nm, a WSKR within 2 nm, a hail answered on VHF, or a sensor sweep (started from Sensors, ship inside 8 nm)
     const vis = s.depth <= sn.visual_max_depth_m && d <= sn.visual_nm[v.size];
-    if (ais || vis || obs.some((w) => flat(w, p) <= sn.wskr_camera_nm)) v.ident = true;
+    if (v.sweepAt && now >= v.sweepAt) { if (d <= sn.sweep_nm) v.ident = true; v.sweepAt = 0; }
+    if (ais || d <= sn.ident_nm || obs.some((w) => flat(w, p) <= sn.wskr_camera_nm)) v.ident = true;
     const b = toward(s, p), heard = ears.length > 0 || vis;
     const pos = ais ? { lat: p.lat, lon: p.lon, err: 0, hdg: p.hdg } : fix ? { lat: fix.lat, lon: fix.lon, err: fix.err } : vis ? { lat: p.lat, lon: p.lon, err: 0.05, hdg: p.hdg } : null;
     out.push({ v, lat: p.lat, lon: p.lon, hdg: p.hdg, nm: d, brg: b.brg, shown: ais || heard, ais, pos, lines: ears.map((e) => ({ from: e.from, brg: e.brg })), ear: ears.length ? ears[0].brg : null });
@@ -182,6 +183,9 @@ function sink(v, p) {
 }
 
 // ---- what the rest of the game sees ----
+/** Start a sensor sweep on a ship inside the sweep range. It identifies the ship a few seconds later. */
+export function sweep(v) { const sn = traffic.cfg.sensing, a = traffic.active.find((x) => x.v === v); if (!a || a.nm > sn.sweep_nm) return false; v.sweepAt = sim.s.clock + sn.sweep_s; return true; }
+export const canSweep = (a) => a.nm <= traffic.cfg.sensing.sweep_nm;
 export const seen = () => traffic.active.filter((a) => a.shown);
 /** Contacts with a position the player may use (AIS, a fix, or seen by eye). */
 export const plotted = () => traffic.active.filter((a) => a.shown && a.pos);

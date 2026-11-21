@@ -55,7 +55,7 @@ def main():
         # hail: a ship in the bubble answers on its channel and is identified
         r = js(place + """sim.s.lat=39.8; sim.s.lon=-58.0; tr.traffic.cells.clear(); g.updateProperty('world.seed', 777); tr.traffic.candKey=''; let v=null; for(let k=0;k<48&&!v;k++){ sim.s.clock=k*1800; tr.step(); v=tr.traffic.active[0]; } if(!v) return {none:true}; const x=tr.hailContacts().find(c=>c.vessel===v.v); cm.cm.band='VHF'; cm.cm.mhz=x.mhz; sim.s.depth=0; sim.s.ants && 0; cm.setAnt && 0; const before=v.v.ident; const res=cm.hail(); return {before, ok:res.ok, msg:res.msg, after:v.v.ident, reply:x.reply}""")
         print("     hail", r)
-        check("a hail gets an answer or a clear refusal, and does not identify a ship without AIS", r.get("none") or ((r.get("ok") or "Antenna" in r.get("msg", "")) and (r["after"] or r["before"] == r["after"])), r)
+        check("a hail gets an answer or a clear refusal, and names the ship", r.get("none") or (r.get("ok") and r["after"]) or "Antenna" in r.get("msg", ""), r)
         # sensing: AIS, bearings, fixes, identity
         setup = """g.updateProperty('world.seed', 99); g.updateProperty('world.sunk', []); tr.traffic.sunk.clear(); tr.traffic.cells.clear(); sim.s.wskrs=[]; Object.assign(sim.s,{depth:60,speed:0,sonar:true});
           const put=(kind, ais)=>{ for(let k=0;k<600;k++){ sim.s.lat=39.8+(k%30)*0.05; sim.s.lon=-58.0-Math.floor(k/30)*0.12; tr.traffic.candKey=''; sim.s.clock=k*97; tr.step(); const v=tr.traffic.cand.find(x=>(kind?x.kind===kind:x.ais===ais)&&x.size>=1); if(v){ const p=tr.posAt(v,sim.s.clock); return {v,p}; } } return null; };"""
@@ -65,7 +65,7 @@ def main():
         print("     ais", r)
         check("AIS ships are plotted and named when the VHF mast is up", r.get("none") or (r["withAis"]["pos"] and r["withAis"]["ais"] and r["withAis"]["ident"]), r)
         check("with the mast down a distant AIS ship is not plotted", r.get("none") or not r["noMast"]["pos"], r)
-        r = js(place + setup + """const f=put(null,false); if(!f) return {none:true}; Object.assign(sim.s,{lat:f.p.lat+0.02,lon:f.p.lon,depth:60}); tr.traffic.candKey=''; tr.step(); const a=tr.traffic.active.find(x=>x.v===f.v);
+        r = js(place + setup + """const f=put(null,false); if(!f) return {none:true}; Object.assign(sim.s,{lat:f.p.lat+0.07,lon:f.p.lon,depth:60}); tr.traffic.candKey=''; tr.step(); const a=tr.traffic.active.find(x=>x.v===f.v);
           const one={shown:!!a&&a.shown, pos:!!(a&&a.pos), lines:a?a.lines.length:0, ident:f.v.ident, name:a?tr.shownName(a):''};
           const old=sim.wskrLink; sim.wskrLink=()=>({raw:true}); sim.s.wskrs=[{id:1,dead:false,arrived:false,lat:f.p.lat,lon:f.p.lon+0.04}]; tr.traffic.candKey=''; sim.s.clock+=1; tr.step(); const b=tr.traffic.active.find(x=>x.v===f.v);
           const two={pos:!!(b&&b.pos), err:b&&b.pos?b.pos.err:null, lines:b?b.lines.length:0, ident:f.v.ident};
@@ -77,6 +77,12 @@ def main():
         check("a WSKR camera alongside identifies the ship", r.get("none") or r["seenBy"], r)
         r = js(place + setup + """const f=put(null,false); if(!f) return {none:true}; Object.assign(sim.s,{lat:f.p.lat,lon:f.p.lon,depth:5}); tr.traffic.candKey=''; f.v.ident=false; tr.step(); const a=tr.traffic.active.find(x=>x.v===f.v); return {pos:!!(a&&a.pos), ident:f.v.ident}""")
         check("close and near the surface a ship is seen by eye and identified", r.get("none") or (r["pos"] and r["ident"]), r)
+        r = js(place + setup + """const f=put(null,false); if(!f) return {none:true}; const at=(dn)=>{ Object.assign(sim.s,{lat:f.p.lat+dn/60,lon:f.p.lon,depth:60}); f.v.ident=false; f.v.sweepAt=0; tr.traffic.candKey=''; tr.step(); return tr.traffic.active.find(a=>a.v===f.v); };
+          const in3=at(3), n3=f.v.ident; const a6=at(6); const heard6=!!a6, before=f.v.ident; const ok6=a6?tr.sweep(f.v):false; sim.s.clock+=25; tr.traffic.candKey=''; tr.step(); const after=f.v.ident;
+          const a10=at(10); const refused=a10?!tr.sweep(f.v):true; return {n3, heard6, before, ok6, after, refused}""")
+        print("     ident ranges", r)
+        check("a ship inside 4 nm is identified", r.get("none") or r["n3"], r)
+        check("a sensor sweep identifies a ship at 6 nm and is refused beyond 8 nm", r.get("none") or not r["heard6"] or (not r["before"] and r["ok6"] and r["after"] and r["refused"]), r)
         # a deep boat cannot hit a surface ship
         r = js(place + """g.updateProperty('world.seed', 4242); g.updateProperty('world.sunk', []); tr.traffic.sunk.clear(); tr.traffic.cells.clear(); let small=null; for(let k=0;k<400&&!small;k++){ sim.s.lat=39.8+(k%20)*0.05; sim.s.lon=-58.0-Math.floor(k/20)*0.1; tr.traffic.candKey=''; sim.s.clock=k*50; tr.step(); small=tr.traffic.cand.find(v=>v.size<=1&&v.stance!=='hostile'); }
           if(!small) return {none:true}; const p=tr.posAt(small, sim.s.clock); Object.assign(sim.s,{lat:p.lat,lon:p.lon,depth:40,speed:6}); tr.traffic.candKey=''; const h0=sim.s.damage; tr.step(); return {sunk:tr.traffic.sunk.has(small.id), damage:sim.s.damage-h0}""")

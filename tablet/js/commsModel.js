@@ -122,6 +122,7 @@ export function hail() {
   if (distNm(s, c) > c.range) return { ok: false, msg: `A faint carrier, but too far to answer (${Math.round(distNm(s, c))} nm).` };
   const entry = { at: s.clock, id: c.id, name: c.name, text: c.reply, secure: cm.secure, band: c.band, mhz: c.mhz, route: c.band === 'UHF' ? 'NORPAC CH 26-H' : `${c.band} DIRECT`, dist: Math.round(distNm(s, c)), distress: !!c.distress };
   cm.log = [entry, ...cm.log].slice(0, 6);
+  if (c.vessel) c.vessel.ident = true;   // a ship that answers a hail gives its name
   if (!c.vessel && !hailed().includes(c.id)) gameState.updateProperty('mission.comms.hailed', [...hailed(), c.id]);
   document.dispatchEvent(new CustomEvent('comms-hail', { detail: { id: c.id, name: c.name, secure: cm.secure } }));
   return { ok: true, msg: `${c.name} answers.`, entry };

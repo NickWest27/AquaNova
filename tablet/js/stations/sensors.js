@@ -9,7 +9,7 @@ import { el, toast } from '../util.js';
 import { findings, scanned, fileScan } from '../findings.js';
 import { mountWskrPanel } from './wskr.js';
 import { isCommissioned, EXCUSES } from '../unlocks.js';
-import { seen as seenShips, shownName } from '../traffic.js';
+import { seen as seenShips, shownName, sweep, canSweep } from '../traffic.js';
 
 const SONAR_RANGE_NM = 4, SWEEP_GAME_S = 1800;
 
@@ -60,7 +60,7 @@ export function mount(body, ctx) {
     const idle = s.wskrs.some((w) => w.mode === 'escort');
     const tagOf = Object.fromEntries(contactList().filter((c) => c.poi).map((c) => [c.poi.id, c]));
     const ships = seenShips();
-    const next = JSON.stringify([ships.map((a) => [a.v.id, a.pos ? a.pos.lat.toFixed(3) + a.pos.lon.toFixed(3) : Math.round(a.ear), a.v.ident, a.ais]), s.selContact, s.sonar, sweeping, s.wskrs.map((w) => [w.n, w.mode, w.target]), s.docked, rows.map((r) => [r.p.id, r.nm.toFixed(1), Math.round(r.brg), s.at && s.at.id === r.p.id, scanned(r.p)])]);
+    const next = JSON.stringify([ships.map((a) => [a.v.id, a.pos ? a.pos.lat.toFixed(3) + a.pos.lon.toFixed(3) : Math.round(a.ear), a.v.ident, a.ais, !!a.v.sweepAt, canSweep(a)]), s.selContact, s.sonar, sweeping, s.wskrs.map((w) => [w.n, w.mode, w.target]), s.docked, rows.map((r) => [r.p.id, r.nm.toFixed(1), Math.round(r.brg), s.at && s.at.id === r.p.id, scanned(r.p)])]);
     if (next === sig) return;   // redraw only when something visible changed
     sig = next;
     list.replaceChildren(...(rows.length ? rows.map((r) => {
@@ -75,11 +75,12 @@ export function mount(body, ctx) {
     }) : [el('div', { class: 'empty', text: s.sonar ? 'No contacts in range.' : 'Sonar is off.' })]).concat(ships.map((a) => {
       const id = 'ship:' + a.v.id, picked = s.selContact === id, hot = a.v.ident && a.v.stance === 'hostile';
       const where = a.pos ? toward(s, a.pos) : null, brg = String(Math.round(where ? where.brg : a.ear)).padStart(3, '0');
-      const how = a.ais ? 'AIS' : a.pos && a.pos.err > 0.05 ? `Fix ±${a.pos.err.toFixed(1)} nm` : a.pos ? 'Visual' : 'Sonar bearing only. A WSKR on another bearing will give a fix.';
+      const how = a.ais ? 'AIS' : a.pos && a.pos.err > 0.05 ? `Fix ±${a.pos.err.toFixed(1)} nm` : a.pos ? 'Visual' : 'Sonar bearing only. A WSKR on another bearing gives a fix.';
       return el('div', { class: 'card task' + (picked ? ' sel' : '') },
         el('div', { class: 'grow' }, el('h3', { text: shownName(a) }), el('p', { style: 'color:var(--dim)', text: `${a.v.ident ? a.v.label + ' · ' + a.v.factionName + ' · ' : ''}${where ? where.nm.toFixed(1) + ' nm · ' : ''}bearing ${brg}° · ${how}${a.v.ais && a.pos ? ' · VHF ' + a.v.mhz.toFixed(3) : ''}` })),
         hot && el('span', { style: 'color:#ff9a9a', text: 'HOSTILE' }),
-        a.pos ? el('button', { class: 'btn chip' + (picked ? ' on' : ''), text: picked ? 'Selected' : 'Select', onclick: () => { selectContact(id); sig = ''; update(); } }) : null);
+        (a.pos || canSweep(a)) ? el('button', { class: 'btn chip' + (picked ? ' on' : ''), text: picked ? 'Selected' : 'Select', onclick: () => { selectContact(id); sig = ''; update(); } }) : null,
+        !a.v.ident && canSweep(a) ? (a.v.sweepAt ? el('span', { style: 'color:var(--amber)', text: 'Sweeping…' }) : el('button', { class: 'btn primary', text: 'Sweep', onclick: () => { sweep(a.v); tell('sensors', 'Sensor sweep started on the contact'); sig = ''; update(); } })) : null);
     })));
   }
   go('contacts');

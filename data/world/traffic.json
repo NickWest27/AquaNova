@@ -454,7 +454,10 @@
    5
   ],
   "visual_max_depth_m": 15,
-  "wskr_camera_nm": 1,
+  "wskr_camera_nm": 2,
+  "ident_nm": 4,
+  "sweep_nm": 8,
+  "sweep_s": 20,
   "min_cross_deg": 20,
   "bearing_noise_deg": 1.5
  },
