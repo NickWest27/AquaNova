@@ -3,7 +3,7 @@ import { tell } from '../notify.js';
 import { sim } from '../sim.js';
 import { el, toast } from '../util.js';
 import { drawScreen } from '../analysisView.js';
-import { SAMPLE_KINDS, LABS, TOPICS, samples, jobs, points, research, startAnalysis, startTopic, tickLab } from '../science.js';
+import { SAMPLE_KINDS, LABS, TOPICS, samples, sampleName, jobs, points, research, startAnalysis, startTopic, tickLab } from '../science.js';
 
 const fmt = (secs) => { const m = Math.max(0, Math.ceil(secs / 60)); return m >= 60 ? `${Math.floor(m / 60)} h ${m % 60} min` : `${m} min`; };
 
@@ -26,7 +26,7 @@ export function mount(body, ctx) {
     screens = [];
     if (tab === 'samples') {
       view.replaceChildren(...(sm.length ? [...sm].reverse().map((q) => el('div', { class: 'card task' },
-        el('div', { class: 'grow' }, el('h3', { text: `#${q.id} ${SAMPLE_KINDS[q.kind].label}` }),
+        el('div', { class: 'grow' }, el('h3', { text: sampleName(q, sm) }),
           el('p', { style: 'color:var(--dim)', text: `${q.site} · ${q.tool} · ${q.status === 'done' ? q.result : q.status === 'running' ? 'being analysed' : 'waiting for analysis'}` })),
         q.status === 'done' ? el('span', { class: 'ok', text: 'Done' }) : q.status === 'running' ? el('span', { style: 'color:var(--amber)', text: 'Running' })
           : el('button', { class: 'btn chip', text: 'Analyse', onclick: () => go('analysis') }))) :
@@ -38,10 +38,10 @@ export function mount(body, ctx) {
         const canvas = el('canvas', { class: 'an-screen', 'aria-label': `${lab.name} display` });
         screens.push({ id, canvas });
         return el('div', { class: 'card' }, el('h3', { text: lab.name }), canvas,
-          el('p', { style: 'color:var(--dim);margin:0.3rem 0' }, job ? `Running sample #${job.sample}. ${fmt(job.end - s.clock)} left.` : 'Idle.'),
-          el('div', { class: 'row' }, ...(running ? [] : raw.map((q) => el('button', { class: 'btn chip', text: `Run #${q.id} ${SAMPLE_KINDS[q.kind].label}`, onclick: () => {
-            if (startAnalysis(q.id)) tell('science', `${lab.name}: sample #${q.id} started`); sig = ''; update(); } })))),
-          el('div', { class: 'row' }, ...(!job ? [...finished].reverse().slice(0, 4).map((q) => el('button', { class: 'btn chip' + (shown[id] === q.id ? ' on' : ''), text: `Show #${q.id}`, onclick: () => { shown[id] = shown[id] === q.id ? null : q.id; sig = ''; update(); } })) : [])),
+          el('p', { style: 'color:var(--dim);margin:0.3rem 0' }, job ? `Running ${sampleName(sm.find((q) => q.id === job.sample) || { kind: 'water', site: '', id: job.sample }, sm)}. ${fmt(job.end - s.clock)} left.` : 'Idle.'),
+          el('div', { class: 'row' }, ...(running ? [] : raw.map((q) => el('button', { class: 'btn chip', text: `Run ${sampleName(q, sm)}`, onclick: () => {
+            if (startAnalysis(q.id)) tell('science', `${lab.name}: ${sampleName(q, sm)} started`); sig = ''; update(); } })))),
+          el('div', { class: 'row' }, ...(!job ? [...finished].reverse().slice(0, 4).map((q) => el('button', { class: 'btn chip' + (shown[id] === q.id ? ' on' : ''), text: `Show ${sampleName(q, sm)}`, onclick: () => { shown[id] = shown[id] === q.id ? null : q.id; sig = ''; update(); } })) : [])),
           !job && !raw.length && !finished.length && el('p', { style: 'color:var(--dim)', text: 'No samples for this instrument.' }));
       }));
     } else {

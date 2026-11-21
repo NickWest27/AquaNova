@@ -61,6 +61,11 @@ export function addSample(kind, site, tool) {
   save({ ...r, seq: id, samples: [...r.samples, sm], stats: { ...r.stats, samples: (r.stats.samples || 0) + 1, [k]: (r.stats[k] || 0) + 1 } });
   return sm;
 }
+/** An automatic label: kind, place and a running number for that kind at that place ("Water, Mystic Reef 2"). */
+export function sampleName(q, list = samples()) {
+  const n = list.filter((x) => x.kind === q.kind && x.site === q.site && x.id <= q.id).length;
+  return `${SAMPLE_KINDS[q.kind].label}, ${q.site} ${n}`;
+}
 /** Pick a sample kind for a tool at a site. */
 export function pickKind(toolId, site) {
   const tool = TOOLS[toolId], ok = BY_SITE[site ? site.type : 'open_water'] || BY_SITE.open_water;
