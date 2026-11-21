@@ -49,10 +49,8 @@ export function say(role, text, kind = '', opts = {}) {
   if ((kind === 'mission' || kind === 'error') && opts.hold !== false) {   // worth keeping until read
     const id = CREW_ID[role] || role, l = held.get(id) || []; l.push({ text: opts.keep || text, at: now }); held.set(id, l.slice(-5)); emitChange();
   }
-  if (viewProbe.fn()) {   // bridge: the upper display
-    document.dispatchEvent(new CustomEvent('notice', { detail: { text: opts.notice || text, kind, who: w.name.split(' ').pop().toUpperCase() } }));
-    if (opts.action) actionTick(); else if (now - lastPing > 3000) { lastPing = now; ping(); }
-    return;
+  if (viewProbe.fn() && opts.notice) {   // bridge: ship-state notices go to the upper display. Voice never does; it uses the line at the foot of the screen like everywhere else.
+    document.dispatchEvent(new CustomEvent('notice', { detail: { text: opts.notice, kind, who: w.name.split(' ').pop().toUpperCase() } }));
   }
   if (opts.action) { actionTick(); }   // a routine action report: a short tick, not the communicator
   else if (now - lastChirp > 20000) { lastChirp = now; stats.chirps++; chirp(); }

@@ -11,7 +11,7 @@ export function createND(wrap, { onPick, stage = false, units = 1, contours = fa
   const canvas = document.createElement('canvas');
   wrap.prepend(canvas);
   const ctx = canvas.getContext('2d');
-  const ctr = () => { const f = focus && focus(); return f ? { lat: f.lat, lon: f.lon, heading: sim.s.heading } : (craft && craft()) || sim.s; };
+  const ctr = () => { if (nd.pan) return { lat: nd.pan.lat, lon: nd.pan.lon, heading: sim.s.heading }; const f = focus && focus(); return f ? { lat: f.lat, lon: f.lon, heading: sim.s.heading } : (craft && craft()) || sim.s; };
   // rotate an east/north offset so the ship's heading points up (track up), or leave it north up
   const turn = (t) => { if (!trackUp) return t; const h = (ctr().heading * Math.PI) / 180, c = Math.cos(h), s = Math.sin(h); return { ...t, dx: t.dx * c - t.dy * s, dy: t.dx * s + t.dy * c }; };
   const nd = { range: 2, sel: null, selWskr: null, w: 0, h: 0, canvas };
@@ -187,6 +187,7 @@ export function createND(wrap, { onPick, stage = false, units = 1, contours = fa
     }
   };
 
+  nd.setPan = (p) => { nd.pan = p; nd.draw(); };   // centre the chart on a point (null = back on the ship)
   nd.setRange = (r) => { nd.range = r; nd.draw(); };
   nd.zoom = (dir) => {
     const i = RANGES.indexOf(nd.range);

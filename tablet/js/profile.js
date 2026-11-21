@@ -3,7 +3,7 @@
 // the ship sits at its own depth. Terrain turns amber when it is close under the keel and red when it reaches the keel.
 import { seafloor } from './seafloor.js';
 
-const NM_PER_DEG = 60, KEEL = 8, WARN_M = 40, N = 72, W = 360, H = 216, SCALE = 2;
+const NM_PER_DEG = 60, KEEL = 8, WARN_M = 40, N = 72, SCALE = 2;
 
 export function profileSamples(s, rangeNm) {
   const r = (s.heading * Math.PI) / 180, kx = NM_PER_DEG * Math.cos((s.lat * Math.PI) / 180), out = [];
@@ -14,7 +14,7 @@ export function profileSamples(s, rangeNm) {
   return out;
 }
 
-export function createProfile(parent) {
+export function createProfile(parent, { w: W = 360, h: H = 216 } = {}) {
   const canvas = document.createElement('canvas');
   canvas.width = W * SCALE; canvas.height = H * SCALE; canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
   canvas.className = 'prof-canvas';

@@ -35,29 +35,18 @@ const labels = { nav: 'NAV', helm: 'HELM', sys: 'SYS', view: 'VIEW' };
 
 export function createBridgeConsole({ top, main, display, center, left, right, onExpand }) {
   // ---------- top display ----------
-  const tPlace = el('div', { class: 'bt-place' }), tPos = el('div', { class: 'bt-pos' }), tNote = el('div', { class: 'bt-note' }), tStack = el('div', { class: 'bt-stack' });
-  top.append(tPlace, tPos, tNote, tStack);
-  // Notices stack: the newest is the big bright title, the one before it drops to a body line, and so on (three at most).
-  // After NOTE_HOLD ms with nothing new they all clear and the normal readout returns.
-  const NOTE_HOLD = 5000, notes = []; let noteAt = 0, noteKey = '';
-  document.addEventListener('notice', (e) => {
-    const d = e.detail || {};
-    notes.unshift({ text: String(d.text || ''), kind: d.kind || '', who: d.who || '' }); notes.length = Math.min(notes.length, 3); noteAt = Date.now();
-  });
-  function paintNotes() {
-    const key = notes.map((n) => n.kind + n.who + n.text).join('|');
-    if (key === noteKey) return; noteKey = key;
-    if (!notes.length) { tStack.replaceChildren(); return; }
-    const t = notes[0], size = t.text.length <= 26 ? 'big' : t.text.length <= 46 ? 'mid' : 'small';
-    tStack.replaceChildren(el('div', { class: `bt-title ${size} ${t.kind}`, text: t.text }),
-      ...notes.slice(1).map((n) => el('div', { class: 'bt-body', text: (n.who ? n.who + ' · ' : '') + n.text })));
-  }
+  // Two lines, centred. Line 1: the ship's state ("Arrival at ...", "Bay door opening", "Incoming message"); line 2: position, date and time.
+  // Voice from the crew never shows here (it goes to the line at the foot of the screen).
+  const tPlace = el('div', { class: 'bt-place' }), tPos = el('div', { class: 'bt-pos' });
+  top.append(tPlace, tPos);
+  const NOTE_HOLD = 6000; let note = null;
+  document.addEventListener('notice', (e) => { const d = e.detail || {}; if (d.text) note = { text: String(d.text), kind: d.kind || '', at: Date.now() }; });
 
   const views = {};
 
   // ---------- NAV ----------
   views.nav = (() => {
-    const nds = []; let sel = null;
+    const nds = []; let sel = null, bigNd = null, panAt = null;
     const syncSel = (p) => { sel = p; nds.forEach((n) => { n.sel = p; n.redraw(); }); refresh(); };
     const rangeTxt = el('span', { class: 'rng' });
     const make = (compact) => {
@@ -65,10 +54,10 @@ export function createBridgeConsole({ top, main, display, center, left, right, o
       const wrap = el('div', { class: 'nd-stage' }); m.append(wrap);
       const nd = createND(wrap, { stage: true, units: compact ? 1.25 : 1.7, contours: !compact, rings: compact, trackUp: compact, onPick: syncSel });   // the big main screen stays north up; the medium main display is track up
       if (nds[0]) nd.setRange(nds[0].range);
-      nd.sel = sel; nds.push(nd);
+      nd.sel = sel; nds.push(nd); if (!compact) bigNd = nd;
       if (compact) return { m, update() { nd.redraw(); } };
       const logCur = el('div'), logPlace = el('div', { class: 'nl-place' }), logDest = el('div'), logTime = el('div');
-      const prof = createProfile(el('div', { class: 'nav-prof' })); const profBox = prof.canvas.parentNode;
+      const prof = createProfile(el('div', { class: 'nav-prof' }), { w: 380, h: 351 }); const profBox = prof.canvas.parentNode;
       profBox.prepend(el('div', { class: 'np-title', text: 'VERTICAL PROFILE' }));
       m.append(el('div', { class: 'nav-log' }, el('b', { text: 'NAVIGATIONAL POSITION LOG' }), logTime, logCur, logPlace, logDest), profBox);
       return { m, update() {
@@ -80,6 +69,13 @@ export function createBridgeConsole({ top, main, display, center, left, right, o
         nd.redraw();
       } };
     };
+    // Pan moves the chart's centre (north up); panOff puts the ship back in the middle.
+    const panBy = (dxNm, dyNm) => {
+      if (!bigNd) return; const s0 = sim.s;
+      if (!panAt) panAt = { lat: s0.lat, lon: s0.lon };
+      panAt = { lat: panAt.lat + dyNm / 60, lon: panAt.lon + dxNm / (60 * Math.cos((panAt.lat * Math.PI) / 180)) }; bigNd.setPan(panAt);
+    };
+    const panOff = () => { panAt = null; if (bigNd) bigNd.setPan(null); };
     const zoom = (dir) => { const r = nds[0].zoom(dir); nds.forEach((n) => n.setRange(r)); refresh(); };
     const plot = bbtn('Plot a course', () => openPlotDialog({ preselect: sel, onPlotted: refresh }), 'wide');
     const clear = bbtn('Clear', () => { sel = null; nds.forEach((n) => { n.sel = null; }); sim.s.wpt = null; sim.touch(); refresh(); });
@@ -92,7 +88,7 @@ export function createBridgeConsole({ top, main, display, center, left, right, o
       else if (s.wpt) { const t = toward(s, s.wpt); set(rA, 'COURSE SET'); set(rB, s.wpt.name); set(rC, `${t.nm.toFixed(1)} nm  ETA ${etaText(t.nm, s.speed)}`); }
       else { set(rA, 'DESTINATION'); set(rB, 'None'); set(rC, 'Tap a marker'); }
     }
-    return { make, c, r, expand: 'nav', side: refresh, nds, zoom, rangeTxt };
+    return { make, c, r, expand: 'nav', side: refresh, nds, zoom, rangeTxt, panBy, panOff, panStep: () => (nds[0] ? nds[0].range * 0.25 : 1) };
   })();
 
   // ---------- HELM ----------
@@ -205,23 +201,23 @@ export function createBridgeConsole({ top, main, display, center, left, right, o
     btns[id] = bbtn(labels[id], () => select(id)); sel.append(btns[id]);
   }
   left.append(sel);
-  const expand = el('button', { class: 'bd-expand', 'aria-label': 'Open this display full screen', text: '⤢', onclick: () => { const v = views[mainId]; if (v && v.expand) onExpand(v.expand); } });
-  const promote = el('button', { class: 'bd-promote', 'aria-label': 'Send to the main screen', text: 'MAIN ▲', onclick: () => { mainId = current === 'nav' || mainId === current ? 'nav' : current; paint(); update(); } });
-  viewWrap.append(expand); display.append(promote);
-  // Right desk: Main Screen Control (zoom, which page is on the main screen, full screen)
+  // Right desk: Main Screen Control. RANGE − +, DSP (the main screen shows the Centre Display's page, or the nav map), PAN (arrows on the Centre Desk Strip)
   const rngBox = el('div', { class: 'rngbox' }, el('small', { text: 'RANGE' }), views.nav.rangeTxt);
-  const showB = bbtn('Page ▲', () => { mainId = current; paint(); update(); }, 'wide'), navB = bbtn('Nav', () => { mainId = 'nav'; paint(); update(); }), fullB = bbtn('⤢ Full', () => { const v = views[mainId]; if (v && v.expand) onExpand(v.expand); });
-  right.append(el('div', { class: 'bc msc' }, el('div', { class: 'rowN' }, bbtn('−', () => views.nav.zoom(-1), 'sq'), rngBox, bbtn('+', () => views.nav.zoom(1), 'sq')), el('div', { class: 'rowN' }, showB, navB, fullB)));
+  const dspB = bbtn('DSP', () => { dspOn = !dspOn; paint(); update(); }), panB = bbtn('PAN', () => { panOn = !panOn; if (!panOn) views.nav.panOff(); paint(); update(); });
+  right.append(el('div', { class: 'bc msc' }, el('div', { class: 'rowN' }, bbtn('−', () => views.nav.zoom(-1), 'sq'), rngBox, bbtn('+', () => views.nav.zoom(1), 'sq')), el('div', { class: 'rowN' }, dspB, panB)));
+  // Pan arrows replace the controls on the Centre Desk Strip while PAN is on
+  const arrow = (t, dx, dy, label) => el('button', { class: 'bbtn sq', text: t, 'aria-label': label, onclick: () => { const k = views.nav.panStep(); views.nav.panBy(dx * k, dy * k); } });
+  const panC = el('div', { class: 'bc' }, el('div', { class: 'rowN' }, el('div', { class: 'cap', text: 'PAN CHART' }), arrow('◀', -1, 0, 'Pan west'), arrow('▲', 0, 1, 'Pan north'), arrow('▼', 0, -1, 'Pan south'), arrow('▶', 1, 0, 'Pan east')));
+  center.append(panC);
 
-  let current = 'nav', mainId = 'nav';
+  let current = 'nav', mainId = 'nav', dspOn = false, panOn = false;
   function paint() {
+    mainId = dspOn ? current : 'nav';
     for (const k of order) {
-      small[k].m.hidden = k !== current; views[k].c.hidden = k !== current; views[k].r.hidden = k !== current;
+      small[k].m.hidden = k !== current; views[k].c.hidden = panOn || k !== current; views[k].r.hidden = k !== current;
       big[k].m.hidden = k !== mainId; btns[k].classList.toggle('on', k === current);
     }
-    expand.hidden = true;   // the right desk has the full screen button now
-    navB.classList.toggle('on', mainId === 'nav'); showB.classList.toggle('on', mainId === current && current !== 'nav'); fullB.disabled = !views[mainId].expand;
-    promote.classList.toggle('on', mainId === current);
+    panC.hidden = !panOn; dspB.classList.toggle('on', dspOn); panB.classList.toggle('on', panOn);
   }
   function select(id) {
     if (!views[id]) id = 'nav';
@@ -231,11 +227,10 @@ export function createBridgeConsole({ top, main, display, center, left, right, o
   }
   function update() {
     const s = sim.s;
-    set(tPlace, s.at ? s.at.name.toUpperCase() : s.wpt ? 'EN ROUTE: ' + s.wpt.name.toUpperCase() : 'OPEN WATER');
+    if (note && Date.now() - note.at > NOTE_HOLD) note = null;
+    set(tPlace, note ? note.text.toUpperCase() : s.docked ? 'DOCKED' + (s.at ? ' · ' + s.at.name.toUpperCase() : '') : s.at ? s.at.name.toUpperCase() : s.wpt ? 'EN ROUTE: ' + s.wpt.name.toUpperCase() : 'OPEN WATER');
+    const cls = 'bt-place' + (note && note.kind ? ' ' + note.kind : ''); if (tPlace.className !== cls) tPlace.className = cls;
     set(tPos, `${deg(s.lat, 'N', 'S', 2)}  ${deg(s.lon, 'E', 'W', 3)}  ·  ${gameDateText()}`);
-    if (notes.length && Date.now() - noteAt > NOTE_HOLD) notes.length = 0;
-    paintNotes(); top.classList.toggle('noting', notes.length > 0);
-    set(tNote, `BAT ${Math.round(s.battery)}%   O₂ ${Math.round(s.oxygen)}%   HULL ${Math.round(s.hull)}%`);
     big[mainId].update(); if (current !== mainId) small[current].update(); else small[current].update();
     views[current].side();
     set(ilVals.spd, s.speed.toFixed(1)); set(ilVals.dep, String(Math.round(s.depth))); set(ilVals.flr, s.floor == null ? '—' : String(Math.round(s.floor))); set(ilVals.hdg, pad(s.heading) + '°');

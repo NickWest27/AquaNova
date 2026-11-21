@@ -73,7 +73,7 @@ def main():
         check("a WSKR left on land is moved back into water", r["before"] is not None and r["before"] < 3 and r["after"] >= 3, r)
         # rooms and stations through touch
         tap = lambda label: page.evaluate("(l)=>{const b=[...document.querySelectorAll('button')].find(x=>x.getAttribute('aria-label')===l && x.offsetParent); if(!b) return false; b.click(); return true}", label)
-        check("to walkway", tap("TO WALKWAY") or tap("◂ WALKWAY")); page.wait_for_timeout(300)
+        check("to walkway", tap("TO WALKWAY") or tap("WALKWAY")); page.wait_for_timeout(300)
         check("walkway to science", tap("SCIENCE")); page.wait_for_timeout(500)
         page.screenshot(path=os.path.join(ROOT, "tools", "shots", "science_room.png"))
         for label, text in [("SAMPLES", "Samples"), ("ANALYSIS", "Analysis"), ("RESEARCH", "Research"), ("ROV STATION", "Remora")]:

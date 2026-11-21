@@ -339,7 +339,7 @@ async function boot() {
         const o = ctx.objectives().find((x) => !x.done); const ot = o ? 'Objective: ' + o.text : '';
         if (st.obj.textContent !== ot) st.obj.textContent = ot;
         const b = `BAT ${Math.round(s.battery)}%`; if (st.bat.textContent !== b) st.bat.textContent = b;
-      } else if (type === 'enter') { say('helm', `We are at ${data.name}, Captain.`); firstVisit(data); }
+      } else if (type === 'enter') { say('helm', `We are at ${data.name}, Captain.`, '', { notice: `Arrival at ${data.name}` }); firstVisit(data); }
       else if (type === 'arrived') { flag('arrived'); say('helm', 'Destination reached, Captain.'); }
       else if (type === 'wskr-found') { const fresh = fileScan(data.poi); say('sensors', fresh ? `${wskrName(data.wskr)} has finished investigating ${data.poi.name}. Scan filed, Captain.` : `${wskrName(data.wskr)} re-checked ${data.poi.name}. Nothing new.`, 'mission'); }
       else if (type === 'rov-sample') { say('science', `Remora has a ${SAMPLE_KINDS[data.kind].label.toLowerCase()} sample from ${data.site}, Captain. Storage ${data.stored} of ${data.store}.${data.full ? ' She is full. Bring her home so we can unload her.' : ' Bring her home when you have what you came for, and she will deliver it to the lab.'}`, '', { action: true }); }

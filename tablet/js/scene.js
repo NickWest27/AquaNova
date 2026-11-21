@@ -61,10 +61,9 @@ export function createScene(stage, { onOpen }) {
     slanted('', stnL, 200, 74, [[266, 508], [444, 510], [413, 573], [231, 568]]),                         // left station screen
     slanted('', stnR, 200, 74, [[1479, 510], [1652, 508], [1689, 572], [1504, 573]]),                     // right station screen
     frame,
-    hs('COMMS', 40, 430, 520, 350, () => onOpen('comms'), 'top'),        // comms officer, left station
-    hs('SENSORS', 1380, 430, 520, 350, () => onOpen('sensors'), 'top'),  // sensors, right station
-    hs('◂ WALKWAY', 0, 890, 330, 190, () => onOpen('walkway'), 'mid'),    // lower corners leave the bridge
-    hs('WALKWAY ▸', 1590, 890, 330, 190, () => onOpen('walkway'), 'mid'),
+    hs('COMMS', 150, 470, 360, 170, () => onOpen('comms'), 'top'),        // comms officer, left station
+    hs('SENSORS', 1410, 470, 360, 170, () => onOpen('sensors'), 'top'),  // sensors, right station
+    hs('WALKWAY', 0, 890, 1920, 190, () => onOpen('walkway'), 'mid'),    // the whole bottom edge leaves the bridge
   );
 
   // quarters
@@ -124,7 +123,6 @@ export function createScene(stage, { onOpen }) {
     hs('SAMPLES', 666, 620, 680, 430, () => onOpen('lab'), 'top'),                 // the island bench
     hs('ANALYSIS', 1280, 540, 640, 300, () => onOpen('lab-analysis'), 'top'),     // the bench with the racks and the microscope
     hs('RESEARCH', 0, 380, 240, 260, () => onOpen('lab-research'), 'bottom'),     // the machine on the left
-    hs('MEDBAY', 0, 700, 330, 380, () => onOpen('medbay'), 'mid'),                // no door for it in the art yet
     hs('WALKWAY ▸', 345, 345, 255, 300, () => onOpen('walkway'), 'mid'),          // the door
     hs('SAMPLES', 1530, 60, 330, 250, () => onOpen('lab'), 'bottom'),             // the screens
     hs('MAIN COMPUTER', 1590, 300, 310, 200, () => onOpen('lab-analysis'), 'bottom'),
@@ -166,12 +164,13 @@ export function createScene(stage, { onOpen }) {
     const rovTxt = !r ? 'in bay' : r.auto ? 'coming home' : r.go ? 'under way' : r.job ? 'sampling' : 'out';
     const j0 = jb[0], q0 = j0 && sm.find((q) => q.id === j0.sample);
     // Banner: the state of the lab at a glance
-    put('banner', `<p>ROV ${rovTxt} | ${tether}% Tether | ${held}/3 Samples</p><p>${j0 && q0 ? `Analysing ${sampleName(q0, sm)} ${pct(j0)}% | ETA ${mins(j0)} min` : 'Labs idle'}</p>`);
+    const left = (j) => { const m = Math.max(1, Math.round((j.end - s.clock) / 60)); return m >= 60 ? `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, '0')} min` : `${m} min`; };
+    put('banner', `<p>ROV ${rovTxt} | ${tether}% Tether | ${held}/3 Samples</p><p>${j0 && q0 ? `Analysing ${sampleName(q0, sm)} ${pct(j0)}% | ${left(j0)} left${jb.length > 1 ? ` | +${jb.length - 1} queued` : ''}` : 'Labs idle'}</p>`);
     // Upper right: the latest sample and its labels
     const q = sm[sm.length - 1];
     put('samples', `<h4>LATEST SAMPLE</h4>${q ? `<p class="big">${sampleName(q, sm)}</p>${row('Type', SAMPLE_KINDS[q.kind].label)}${row('Place', q.site)}${row('Taken', q.at ? gameDateText(q.at).replace('  ', ', ').slice(0, -3) : '')}${row('Status', q.status === 'done' ? 'analysed' : jb.some((x) => x.sample === q.id) ? 'analysing' : 'raw')}` : '<p class="dim">No samples yet</p>'}`);
-    // Main Computer: the analysis pages (Material, Spectral, Gene)
-    put('analysis', `<h4>MAIN COMPUTER</h4>${Object.entries(LABS).map(([id, l]) => { const j = jb.find((x) => x.lab === id); return row(l.name, j ? `${pct(j)}% · ${mins(j)} min` : 'idle'); }).join('')}<p class="dim">Tap to open</p>`);
+    // Main Computer: whatever is being worked on now
+    put('analysis', `<h4>MAIN COMPUTER</h4>${j0 && q0 ? `<p class="big">${LABS[j0.lab] ? LABS[j0.lab].name : j0.lab}</p><p>${sampleName(q0, sm)}</p><span class="pbar"><i style="width:${pct(j0)}%"></i></span>${row('Done', pct(j0) + '%')}${row('Time left', left(j0))}${jb.length > 1 ? row('Queued', jb.length - 1) : ''}` : `<p class="big">No analysis running</p><p class="dim">Tap to start one</p>`}`);
     // Research Computer
     put('research', `<h4>RESEARCH</h4>${row('Points', points())}${row('Done', done.length)}`);
     // ROV Station

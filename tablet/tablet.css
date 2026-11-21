@@ -747,3 +747,27 @@ input.mix { width: 100%; height: 2.4rem; accent-color: var(--cyan); }
 .bd-nav:not(.compact) .nav-log { left: 8px; top: 8px; bottom: auto; width: 300px; font-size: 13px; line-height: 1.2; padding: 3px 8px; }
 .bd-nav:not(.compact) .nav-log .nl-place { max-width: 280px; }
 .bm-view .bd-expand { right: 8px; top: 8px; width: 44px; height: 44px; font-size: 26px; }
+
+/* ---- bridge v4: Info Left / Info Right in the corners, wider main screen, full-height profile, two-line centred strip ---- */
+.bmain { padding: 0; gap: 0; }
+.bm-info { width: 196px; justify-content: center; gap: 14px; }
+.bm-info.il { padding-left: 6px; }
+.bm-info.ir { padding-right: 6px; }
+.bm-info .ilr:nth-child(n) { margin-left: 0; }
+.bm-info .ilr b { font-size: 38px; line-height: 38px; }
+.bm-info.ir .bar { grid-template-columns: 58px 1fr 52px; gap: 5px; } .bm-info.ir .bar small { font-size: 12px; letter-spacing: .04em; } .bm-info.ir .bar b { font-size: 14px; }
+.bt.compact { flex-direction: column; flex-wrap: nowrap; justify-content: center; align-items: center; column-gap: 0; row-gap: 0; }
+.bt.compact .bt-place { width: 100%; max-width: none; font-size: 20px; line-height: 22px; letter-spacing: .1em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bt.compact .bt-place.mission { color: #ffd98a; } .bt.compact .bt-place.error { color: #ff9a9a; }
+.bt.compact .bt-pos { font-size: 14px; line-height: 16px; letter-spacing: 0; }
+.bd-nav:not(.compact) .nd-stage { right: 380px; }
+.bd-nav:not(.compact) .nav-prof { position: absolute; right: 0; top: 0; bottom: auto; width: 380px; height: 351px; transform: none; border-radius: 0; border-width: 0 0 0 2px; }
+.bd-nav:not(.compact) .nav-log { left: 8px; top: 8px; width: 330px; font-size: 15px; line-height: 1.25; padding: 4px 8px; }
+.bd-nav:not(.compact) .nav-log .nl-place { max-width: 310px; }
+.bd-nav:not(.compact) .nav-prof canvas { width: 380px !important; height: 351px !important; }
+/* the window glass has cut corners: keep the info columns inside the straight part */
+.bm-info.il { width: 214px; padding-left: 36px; gap: 8px; } .bm-info.il .ilr b { font-size: 34px; line-height: 34px; }
+.bm-info.ir { width: 230px; padding-right: 40px; gap: 9px; }
+.bm-info.ir .bar { grid-template-columns: 62px 1fr 56px; }
+.bm-info.il { padding-top: 26px; }
+.sciscr .pbar { display: block; height: 10px; margin: 4px 0 6px; border: 1px solid #1d6a7a; border-radius: 6px; overflow: hidden; } .sciscr .pbar i { display: block; height: 100%; background: var(--cyan); }
