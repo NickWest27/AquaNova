@@ -57,15 +57,12 @@ export function createBridgeConsole({ top, main, display, center, left, right, o
       nd.sel = sel; nds.push(nd); if (!compact) bigNd = nd;
       if (compact) return { m, update() { nd.redraw(); } };
       const logCur = el('div'), logPlace = el('div', { class: 'nl-place' }), logDest = el('div'), logTime = el('div');
-      const prof = createProfile(el('div', { class: 'nav-prof' }), { w: 380, h: 351 }); const profBox = prof.canvas.parentNode;
-      profBox.prepend(el('div', { class: 'np-title', text: 'VERTICAL PROFILE' }));
-      m.append(el('div', { class: 'nav-log' }, el('b', { text: 'NAVIGATIONAL POSITION LOG' }), logTime, logCur, logPlace, logDest), profBox);
+      m.append(el('div', { class: 'nav-log' }, el('b', { text: 'NAVIGATIONAL POSITION LOG' }), logTime, logCur, logPlace, logDest));
       return { m, update() {
         const s = sim.s;
         set(logTime, `MISSION TIME INDEX ${clockText()}`);
         set(logCur, `CURR POS ${deg(s.lat, 'N', 'S', 2)} ${deg(s.lon, 'E', 'W', 3)}`); set(logPlace, s.at ? s.at.name : 'Open water');
         if (s.wpt) { const t = toward(s, s.wpt); set(logDest, `DEST POS ${s.wpt.name}  ${t.nm.toFixed(1)} nm  ETA ${etaText(t.nm, s.speed)}`); } else set(logDest, 'DEST POS none');
-        prof.draw(s, nds[0].range); profBox.dataset.warn = prof.warn;
         nd.redraw();
       } };
     };
@@ -191,8 +188,11 @@ export function createBridgeConsole({ top, main, display, center, left, right, o
   // Info Left and Info Right are always on, either side of the main screen.
   const ilVals = {}, il = el('div', { class: 'bm-info il' }), ir = el('div', { class: 'bm-info ir' }), viewWrap = el('div', { class: 'bm-view' });
   for (const [k, l] of [['spd', 'SPEED KT'], ['dep', 'DEPTH M'], ['flr', 'FLOOR M'], ['hdg', 'HEADING']]) { ilVals[k] = el('b'); il.append(el('div', { class: 'ilr' }, el('small', { text: l }), ilVals[k])); }
-  const irBars = {};
-  for (const [k, l] of [['pres', 'PRESSURE'], ['temp', 'TEMP'], ['bat', 'ENERGY'], ['o2', 'O₂'], ['co2', 'CO₂'], ['hull', 'HULL']]) { const fill = el('i'), val = el('b'); irBars[k] = { fill, val }; ir.append(el('div', { class: 'bar' }, el('small', { text: l }), el('div', { class: 'track' }, fill), val)); }
+  const irBars = {}, irWrap = el('div', { class: 'ir-bars' });
+  const prof = createProfile(el('div', { class: 'nav-prof' }), { w: 196, h: 250 }), profBox = prof.canvas.parentNode;   // Info Right shows this on the NAV page
+  profBox.prepend(el('div', { class: 'np-title', text: 'VERTICAL PROFILE' }));
+  for (const [k, l] of [['pres', 'PRESSURE'], ['temp', 'TEMP'], ['bat', 'ENERGY'], ['o2', 'O₂'], ['co2', 'CO₂'], ['hull', 'HULL']]) { const fill = el('i'), val = el('b'); irBars[k] = { fill, val }; irWrap.append(el('div', { class: 'bar' }, el('small', { text: l }), el('div', { class: 'track' }, fill), val)); }
+  ir.append(irWrap, profBox);
   main.append(il, viewWrap, ir);
   const big = {}, small = {}, sel = el('div', { class: 'selector' }), btns = {};
   for (const id of order) {
@@ -207,7 +207,7 @@ export function createBridgeConsole({ top, main, display, center, left, right, o
   right.append(el('div', { class: 'bc msc' }, el('div', { class: 'rowN' }, bbtn('−', () => views.nav.zoom(-1), 'sq'), rngBox, bbtn('+', () => views.nav.zoom(1), 'sq')), el('div', { class: 'rowN' }, dspB, panB)));
   // Pan arrows replace the controls on the Centre Desk Strip while PAN is on
   const arrow = (t, dx, dy, label) => el('button', { class: 'bbtn sq', text: t, 'aria-label': label, onclick: () => { const k = views.nav.panStep(); views.nav.panBy(dx * k, dy * k); } });
-  const panC = el('div', { class: 'bc' }, el('div', { class: 'rowN' }, el('div', { class: 'cap', text: 'PAN CHART' }), arrow('◀', -1, 0, 'Pan west'), arrow('▲', 0, 1, 'Pan north'), arrow('▼', 0, -1, 'Pan south'), arrow('▶', 1, 0, 'Pan east')));
+  const panC = el('div', { class: 'bc pan' }, el('div', { class: 'rowN' }, arrow('◀', -1, 0, 'Pan west'), arrow('▲', 0, 1, 'Pan north'), arrow('▼', 0, -1, 'Pan south'), arrow('▶', 1, 0, 'Pan east')));
   center.append(panC);
 
   let current = 'nav', mainId = 'nav', dspOn = false, panOn = false;
@@ -233,6 +233,8 @@ export function createBridgeConsole({ top, main, display, center, left, right, o
     set(tPos, `${deg(s.lat, 'N', 'S', 2)}  ${deg(s.lon, 'E', 'W', 3)}  ·  ${gameDateText()}`);
     big[mainId].update(); if (current !== mainId) small[current].update(); else small[current].update();
     views[current].side();
+    const showProf = mainId === 'nav'; irWrap.hidden = showProf; profBox.hidden = !showProf;
+    if (showProf) { prof.draw(s, views.nav.nds[0].range); profBox.dataset.warn = prof.warn; }
     set(ilVals.spd, s.speed.toFixed(1)); set(ilVals.dep, String(Math.round(s.depth))); set(ilVals.flr, s.floor == null ? '—' : String(Math.round(s.floor))); set(ilVals.hdg, pad(s.heading) + '°');
     const bar = (k, pct, text, bad) => { irBars[k].fill.style.width = Math.max(0, Math.min(100, pct)) + '%'; irBars[k].fill.className = bad ? 'bad' : ''; set(irBars[k].val, text); };
     bar('pres', (s.depth / 6000) * 100, Math.round(s.depth / 10 + 1) + ' bar', s.depth > 4800); bar('temp', (s.temp / 20) * 100, s.temp.toFixed(1) + '°C', false);
