@@ -711,3 +711,16 @@ input.mix { width: 100%; height: 2.4rem; accent-color: var(--cyan); }
 .tether.long .tt-fill { background: #b8860b; } .tether.long .tt-head { color: #ffd166; }
 .tether.taut .tt-fill { background: #d9534f; } .tether.taut .tt-head { color: #ff8a84; }
 .tether[hidden] { display: none; }
+
+/* ---- new bridge art: the strip over the window is one line; station screens ---- */
+.bt.compact { flex-direction: row; gap: 14px; justify-content: center; align-items: center; }
+.bt.compact .bt-place { font-size: 19px; max-width: 250px; } .bt.compact .bt-pos { font-size: 14px; letter-spacing: 0; } .bt.compact .bt-note { font-size: 16px; max-width: 280px; }
+.bt.compact .bt-stack { gap: 0; } .bt.compact .bt-title.big, .bt.compact .bt-title.mid { font-size: 24px; line-height: 28px; } .bt.compact .bt-title.small { font-size: 20px; line-height: 22px; -webkit-line-clamp: 1; } .bt.compact .bt-body { display: none; }
+.bstn { position: absolute; inset: 0; background: #04121f; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: var(--mono); color: var(--cyan); background-image: repeating-linear-gradient(0deg, rgba(100,255,218,.05) 0 2px, transparent 2px 5px); }
+.bstn b { font-size: 24px; letter-spacing: .16em; } .bstn span { font-size: 15px; letter-spacing: .2em; color: var(--dim); }
+
+/* ---- science lab screens ---- */
+.sciscr { position: absolute; inset: 0; background: #04121f; font-family: var(--mono); color: var(--text); padding: 8px 10px; box-sizing: border-box; overflow: hidden; background-image: repeating-linear-gradient(0deg, rgba(100,255,218,.04) 0 2px, transparent 2px 5px); }
+.sciscr h4 { margin: 0 0 4px; font-size: 20px; letter-spacing: .14em; color: var(--cyan); }
+.sciscr p { margin: 0; font-size: 15px; line-height: 20px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #cfe9f2; } .sciscr p.ok { color: #7dffb0; } .sciscr p.dim { color: var(--dim); }
+.sciscr div { display: flex; justify-content: space-between; gap: 8px; font-size: 15px; line-height: 21px; } .sciscr div span { color: var(--dim); } .sciscr div b { color: #fff; font-weight: 700; }

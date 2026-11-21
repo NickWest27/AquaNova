@@ -2,6 +2,7 @@
 import { sim } from './sim.js';
 import { el } from './util.js';
 import { createBridgeConsole } from './bridge.js';
+import { samples, sampleName, jobs, points, research, LABS } from './science.js';
 
 const box = (cls, x, y, w, h, kids) => el('div', { class: `disp ${cls}`, style: `left:${x}px;top:${y}px;width:${w}px;height:${h}px` }, kids);
 
@@ -42,11 +43,21 @@ export function createScene(stage, { onOpen }) {
     el('button', { class: `hs ${extra}`, style: `left:${x}px;top:${y}px;width:${w}px;height:${h}px`, 'aria-label': label, onclick },
       el('span', { class: `tag ${tagPos}`, text: label }));
 
+  // The art (bridge.png, 1920x1080) has eight cut-outs; each screen sits behind its cut-out. Corners are TL, TR, BR, BL on the stage.
+  // W x H is the screen's own size, with the perspective undone (flat desk panels are deeper than they look), so the picture is tilted and squeezed the way the glass is.
+  const stnL = el('div', { class: 'bstn' }, el('b', { text: 'COMMS' }), el('span', { text: 'STANDBY' }));
+  const stnR = el('div', { class: 'bstn' }, el('b', { text: 'SENSORS' }), el('span', { text: 'STANDBY' }));
+  topD.classList.add('compact');
   bridge.append(
-    box('bmainbox', 254, 189, 1410, 364, [mainD]), box('', 594, 76, 733, 94, [topD]), slanted('bdispbox', dispD, 478, 204, [[730, 581], [1187, 581], [1206, 781], [711, 781]]),
-    slanted('', ctrD, 612, 118, [[674, 832], [1243, 832], [1287, 947], [641, 947]]),
-    slanted('', leftD, 205, 146, [[470, 805], [640, 808], [595, 947], [379, 947]]),
-    slanted('', rightD, 180, 128, [[1292, 812], [1441, 816], [1515, 938], [1327, 938]]), frame,
+    box('bmainbox', 243, 168, 1433, 351, [mainD]),                                                        // the big window
+    slanted('btbox', topD, 720, 48, [[604, 55], [1313, 52], [1278, 92], [632, 92]]),                      // strip over the window
+    slanted('bdispbox', dispD, 560, 190, [[719, 584], [1203, 584], [1253, 740], [664, 735]]),             // centre display
+    slanted('', ctrD, 612, 130, [[752, 793], [1159, 792], [1206, 872], [713, 867]]),                      // centre desk
+    slanted('', leftD, 224, 132, [[389, 774], [614, 778], [552, 870], [304, 865]]),                       // left desk panel
+    slanted('', rightD, 224, 132, [[1306, 776], [1530, 772], [1616, 864], [1369, 869]]),                  // right desk panel
+    slanted('', stnL, 200, 74, [[266, 508], [444, 510], [413, 573], [231, 568]]),                         // left station screen
+    slanted('', stnR, 200, 74, [[1479, 510], [1652, 508], [1689, 572], [1504, 573]]),                     // right station screen
+    frame,
     hs('COMMS', 40, 430, 520, 350, () => onOpen('comms'), 'top'),        // comms officer, left station
     hs('SENSORS', 1380, 430, 520, 350, () => onOpen('sensors'), 'top'),  // sensors, right station
     hs('◂ WALKWAY', 0, 890, 330, 190, () => onOpen('walkway'), 'mid'),    // lower corners leave the bridge
@@ -96,16 +107,26 @@ export function createScene(stage, { onOpen }) {
     door('LAUNCH BAY', 396, 287, 494, 586, 'launchbay'),
     door('ENGINEERING', 1062, 300, 413, 440, 'engineering'),
     hs('A1 DECK ▼', 560, 900, 800, 180, () => onOpen('walkway'), 'mid'));
-  // science lab: placeholder art (medbay concept). Samples, analysis and research live in the Lab station; the ROV in the Launch Bay.
+  // science lab (science.png, 1920x1080): five cut-outs hold live screens that open the stations they show. The door leads out to the walkway.
+  const sci = { banner: el('div', { class: 'sciscr' }), samples: el('div', { class: 'sciscr' }), analysis: el('div', { class: 'sciscr' }), research: el('div', { class: 'sciscr' }), remora: el('div', { class: 'sciscr' }) };
+  const sciFrame = el('img', { class: 'frame', src: 'assets/science.webp', alt: '', draggable: 'false', decoding: 'async' });
   const science = el('div', { class: 'scene science', hidden: true });
-  science.append(el('img', { src: 'assets/science.webp', alt: '', draggable: 'false', style: 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover' }),
-    hs('SAMPLES', 20, 400, 780, 560, () => onOpen('lab'), 'top'),
-    hs('ANALYSIS', 520, 250, 300, 340, () => onOpen('lab-analysis'), 'top'),
-    hs('RESEARCH', 1660, 440, 260, 560, () => onOpen('lab-research'), 'bottom'),
-    hs('REMORA', 830, 300, 190, 220, () => onOpen('remora'), 'top'),
-    hs('WALKWAY ▸', 1500, 320, 260, 330, () => onOpen('walkway'), 'mid'),
-    hs('MEDBAY', 1040, 540, 520, 300, () => onOpen('medbay'), 'mid'),
-    el('div', { class: 'art-note', text: 'Placeholder art' }));
+  science.append(
+    slanted('', sci.banner, 350, 72, [[365, 215], [715, 225], [723, 289], [370, 282]]),
+    slanted('', sci.samples, 250, 206, [[1569, 110], [1816, 36], [1810, 242], [1566, 281]]),
+    slanted('', sci.research, 296, 186, [[1596, 335], [1887, 301], [1882, 487], [1596, 483]]),
+    slanted('', sci.analysis, 160, 172, [[1107, 345], [1265, 311], [1268, 482], [1109, 483]]),
+    slanted('', sci.remora, 190, 96, [[749, 378], [936, 378], [936, 472], [750, 475]]),
+    sciFrame,
+    hs('SAMPLES', 666, 620, 680, 430, () => onOpen('lab'), 'top'),                 // the island bench
+    hs('ANALYSIS', 1280, 540, 640, 300, () => onOpen('lab-analysis'), 'top'),     // the bench with the racks and the microscope
+    hs('RESEARCH', 0, 380, 240, 260, () => onOpen('lab-research'), 'bottom'),     // the machine on the left
+    hs('MEDBAY', 0, 700, 330, 380, () => onOpen('medbay'), 'mid'),                // no door for it in the art yet
+    hs('WALKWAY ▸', 345, 345, 255, 300, () => onOpen('walkway'), 'mid'),          // the door
+    hs('SAMPLES', 1530, 60, 330, 250, () => onOpen('lab'), 'bottom'),             // the screens
+    hs('RESEARCH', 1590, 300, 310, 200, () => onOpen('lab-research'), 'bottom'),
+    hs('ANALYSIS', 1100, 310, 175, 180, () => onOpen('lab-analysis'), 'bottom'),
+    hs('REMORA', 745, 370, 195, 110, () => onOpen('remora'), 'bottom'));
   // medbay (concept art). Treatment and crew health are not built yet; the exam table is a locked tap area for now.
   const medbay = el('div', { class: 'scene medbay', hidden: true });
   const mbRead = el('div', { class: 'mb-read' });
@@ -133,6 +154,16 @@ export function createScene(stage, { onOpen }) {
     stage.addEventListener('click', (e) => { if (Date.now() - shown < 600) { e.stopPropagation(); e.preventDefault(); } }, true);   // the press that revealed the labels is not a tap
   }
 
+  const row = (k, v) => `<div><span>${k}</span><b>${v}</b></div>`;
+  function updateScience() {
+    const sm = samples(), jb = jobs(), s = sim.s, r = s.rov, done = research.done();
+    const put = (key, html) => { if (cache.get('sci' + key) !== html) { cache.set('sci' + key, html); sci[key].innerHTML = html; } };
+    put('banner', `<h4>SCIENCE LAB</h4><p>${sm.length} sample${sm.length === 1 ? '' : 's'} · ${jb.length ? jb.length + ' analysing' : 'labs idle'}</p>`);
+    put('samples', `<h4>SAMPLES</h4>${sm.length ? sm.slice(-5).reverse().map((q) => `<p class="${q.status === 'done' ? 'ok' : ''}">${sampleName(q, sm)}</p>`).join('') : '<p class="dim">None yet</p>'}`);
+    put('analysis', `<h4>ANALYSIS</h4>${Object.entries(LABS).map(([id, l]) => { const j = jb.find((x) => x.lab === id); return row(l.name.split(' ')[0], j ? Math.max(0, Math.round((j.end - s.clock) / 60)) + ' min' : 'idle'); }).join('')}`);
+    put('research', `<h4>RESEARCH</h4>${row('Points', points())}${row('Topics done', done.length)}`);
+    put('remora', `<h4>REMORA</h4>${r ? row('Status', r.auto ? 'coming home' : r.job ? 'working' : 'out') + row('Storage', `${(r.cargo || []).length} of 3`) : row('Status', 'in bay')}`);
+  }
   const api = {
     inQuarters: false, where: 'bridge',
     show(which) {
@@ -146,6 +177,7 @@ export function createScene(stage, { onOpen }) {
         if (cache.get('mb') !== t) { cache.set('mb', t); mbRead.textContent = t; mbView.style.setProperty('--dark', Math.min(0.92, 0.25 + sim.s.depth / 700).toFixed(2)); }
         return;
       }
+      if (api.where === 'science') { updateScience(); return; }
       if (api.where !== 'bridge') return;
       const s = sim.s;
       consoleApi.update();
