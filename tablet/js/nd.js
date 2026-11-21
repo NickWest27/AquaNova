@@ -158,9 +158,10 @@ export function createND(wrap, { onPick, stage = false, units = 1, contours = fa
       const p = px(poi);
       if (p.x < -40 || p.x > w + 40 || p.y < -40 || p.y > h + 40) continue;
       const isSel = nd.sel && nd.sel.id === poi.id, isW = s.wpt && s.wpt.id === poi.id;
-      ctx.fillStyle = isW ? '#ffb020' : isSel ? '#ffffff' : '#64ffda';
+      ctx.fillStyle = isW ? '#ffb020' : isSel ? '#ffffff' : poi.stance === 'hostile' ? '#ff6b6b' : poi.stance === 'wary' ? '#ffb86b' : '#64ffda';
       ctx.beginPath();
-      if (poi.type === 'dock') { ctx.rect(p.x - 8, p.y - 8, 16, 16); } else { ctx.moveTo(p.x, p.y - 10); ctx.lineTo(p.x + 9, p.y + 7); ctx.lineTo(p.x - 9, p.y + 7); ctx.closePath(); }
+      if (poi.kind === 'colony' || poi.kind === 'mine' || poi.kind === 'platform') { for (let k = 0; k < 6; k++) { const a = (k * Math.PI) / 3; ctx[k ? 'lineTo' : 'moveTo'](p.x + 10 * Math.cos(a), p.y + 10 * Math.sin(a)); } ctx.closePath(); }
+      else if (poi.type === 'dock') { ctx.rect(p.x - 8, p.y - 8, 16, 16); } else { ctx.moveTo(p.x, p.y - 10); ctx.lineTo(p.x + 9, p.y + 7); ctx.lineTo(p.x - 9, p.y + 7); ctx.closePath(); }
       ctx.fill();
       if (isSel) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(p.x, p.y, 18, 0, 6.2832); ctx.stroke(); }
       if (nd.range > 32 && !isSel && !isW) continue;   // zoomed far out the sites sit on top of each other: names only for the selected one and the destination

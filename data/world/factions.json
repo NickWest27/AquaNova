@@ -1,0 +1,81 @@
+{
+ "factions": {
+  "oera": {
+   "name": "O.E.R.A.",
+   "stance": "friendly",
+   "blurb": "Oceanic Exploration and Research Alliance. Your employer."
+  },
+  "civil": {
+   "name": "Civil Harbour Authority",
+   "stance": "friendly",
+   "blurb": "Public ports, coast guards and pilots."
+  },
+  "pleasure": {
+   "name": "Private Yachts",
+   "stance": "neutral",
+   "blurb": "Owners with more money than seamanship."
+  },
+  "cargo": {
+   "name": "Atlantic Freight Lines",
+   "stance": "neutral",
+   "blurb": "Container ships and tankers on the lanes. Big, slow, and hard to stop."
+  },
+  "fishing": {
+   "name": "North Atlantic Fleet Cooperative",
+   "stance": "neutral",
+   "blurb": "Trawlers and longliners. Honest work until a quota gets tight."
+  },
+  "oil": {
+   "name": "Sable Offshore Energy",
+   "stance": "neutral",
+   "blurb": "Platforms and supply boats."
+  },
+  "foreign": {
+   "name": "Concord Naval Command",
+   "stance": "wary",
+   "blurb": "A foreign navy that does not like uninvited submarines near its listening posts."
+  },
+  "deepcut": {
+   "name": "Deepcut Mining Consortium",
+   "stance": "neutral",
+   "group": "miners",
+   "blurb": "Nodule miners. Blunt, well funded, short on patience for inspections."
+  },
+  "abyssal": {
+   "name": "Abyssal Metals Cooperative",
+   "stance": "neutral",
+   "group": "miners",
+   "blurb": "Vent sulphide miners on the Ridge. A workers' co-op with a safety record it is proud of."
+  },
+  "ridgeline": {
+   "name": "Ridgeline Extraction Ltd",
+   "stance": "wary",
+   "group": "miners",
+   "blurb": "Cuts corners and claims. Their ships do not always answer hails."
+  },
+  "meridian": {
+   "name": "Meridian Free Colony",
+   "stance": "friendly",
+   "blurb": "Independent deep-water settlers. Polite, proud, short of supplies."
+  },
+  "poachers": {
+   "name": "Grey Net Fleet",
+   "stance": "hostile",
+   "boldness": [
+    0.0,
+    0.5
+   ],
+   "blurb": "Illegal fishers in protected waters. They cut their nets and run."
+  },
+  "pirates": {
+   "name": "Black Tide Syndicate",
+   "stance": "hostile",
+   "boldness": [
+    0.4,
+    1.0
+   ],
+   "blurb": "Raiders who hit miners and lone ships. Some fight, some flee, depending on the captain."
+  }
+ },
+ "note": "boldness: 0 = runs at the first sign of trouble, 1 = fights to the end. Each hostile vessel rolls its own value in this range."
+}

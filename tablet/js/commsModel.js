@@ -84,7 +84,16 @@ export const DIAL = {   // per band: tuning range, coarse and fine steps (MHz)
 };
 export async function loadContacts() {
   if (cm.contacts) return cm.contacts;
-  try { cm.contacts = await (await fetch(new URL('../../data/commsContacts.json', import.meta.url))).json(); } catch (e) { console.warn('comms contacts not loaded', e); cm.contacts = []; }
+  try {
+    cm.contacts = await (await fetch(new URL('../../data/commsContacts.json', import.meta.url))).json();
+    // every inhabited place answers on its own VHF channel; the reply comes from the place or, failing that, its faction
+    for (const p of sim.s.pois) {
+      if (!p.mhz) continue;
+      const f = (sim.world.factions || {})[p.faction] || {};
+      cm.contacts.push({ id: 'place-' + p.id, kind: p.kind === 'port' || p.kind === 'base' ? 'base' : 'org', name: p.name, band: 'VHF', mhz: p.mhz, lat: p.lat, lon: p.lon, range: 60, faction: p.faction,
+        reply: p.reply || `${p.name}. ${f.name ? f.name + ' here. ' : ''}We read you, Aqua Nova.` });
+    }
+  } catch (e) { console.warn('comms contacts not loaded', e); cm.contacts = []; }
   return cm.contacts;
 }
 export const activated = () => gameState.getProperty('mission.comms.active') || [];

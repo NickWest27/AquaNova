@@ -45,6 +45,7 @@ export const sim = {
 sim.on = (fn) => { sim.listeners.add(fn); return () => sim.listeners.delete(fn); };
 sim.touch = () => { sim.dirty = true; };
 
+sim.world = { factions: {} };
 sim.loadPois = async () => {
   try {
     const res = await fetch(new URL('../../data/locations.json', import.meta.url));
@@ -60,6 +61,11 @@ sim.loadPois = async () => {
         if (p) Object.assign(p, o); else sim.s.pois.push({ id: sim.s.pois.length, text: '', ...o });
       }
     } catch (e) { dlog('sim: no POI overrides'); }
+    try {   // the wider world: factions and places (appended last so the older ids stay put)
+      const [fj, pj] = await Promise.all(['factions', 'places'].map((n) => fetch(new URL(`../../data/world/${n}.json`, import.meta.url)).then((r) => r.json())));
+      sim.world.factions = fj.factions;
+      for (const w of pj) if (!sim.s.pois.some((q) => q.name === w.name)) sim.s.pois.push({ id: sim.s.pois.length, ...w, stance: (fj.factions[w.faction] || {}).stance });
+    } catch (e) { dlog('sim: no world data'); }
     dlog('sim: loaded', sim.s.pois.length, 'POIs');
   } catch (e) { console.error('Could not load locations.json', e); }
 };

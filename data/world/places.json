@@ -1,0 +1,234 @@
+[
+ {
+  "name": "Port of Boston",
+  "type": "dock",
+  "lat": 42.33,
+  "lon": -70.95,
+  "text": "A deep-water container and cruise port. Pilots board outbound ships here.",
+  "faction": "civil",
+  "kind": "port",
+  "mhz": 156.575
+ },
+ {
+  "name": "Port of New York (Ambrose Channel)",
+  "type": "dock",
+  "lat": 40.48,
+  "lon": -73.97,
+  "text": "The busiest harbour on the coast. Expect crossing traffic and impatient pilots.",
+  "faction": "civil",
+  "kind": "port",
+  "mhz": 156.6
+ },
+ {
+  "name": "Naval Station Newport",
+  "type": "dock",
+  "lat": 41.5,
+  "lon": -71.33,
+  "text": "A naval base at the mouth of Narragansett Bay. They will answer hails promptly.",
+  "faction": "civil",
+  "kind": "base",
+  "mhz": 156.65
+ },
+ {
+  "name": "St. George's Harbour, Bermuda",
+  "type": "dock",
+  "lat": 32.38,
+  "lon": -64.68,
+  "text": "A small, busy mid-ocean port. Last fuel and fresh water for a long way.",
+  "faction": "civil",
+  "kind": "port",
+  "mhz": 156.7
+ },
+ {
+  "name": "Horta, Faial (Azores)",
+  "type": "dock",
+  "lat": 38.53,
+  "lon": -28.63,
+  "text": "A yacht harbour and the Atlantic's crossroads. Every ocean sailor stops here.",
+  "faction": "civil",
+  "kind": "port",
+  "mhz": 156.725
+ },
+ {
+  "name": "Ponta Delgada, S\u00e3o Miguel (Azores)",
+  "type": "dock",
+  "lat": 37.73,
+  "lon": -25.65,
+  "text": "The Azores' main commercial port and a supply base for the Ridge.",
+  "faction": "civil",
+  "kind": "port",
+  "mhz": 156.75
+ },
+ {
+  "name": "Funchal, Madeira",
+  "type": "dock",
+  "lat": 32.64,
+  "lon": -16.91,
+  "text": "A cruise and cargo port on the eastern edge of the chart.",
+  "faction": "civil",
+  "kind": "port",
+  "mhz": 156.775
+ },
+ {
+  "name": "Meridian Habitat",
+  "type": "dock",
+  "lat": 34.2,
+  "lon": -63.0,
+  "text": "A permanent deep-water colony of about four hundred people on a seamount, started by former OERA contractors. Independent and proud of it.",
+  "faction": "meridian",
+  "kind": "colony",
+  "mhz": 156.825,
+  "reply": "Meridian Habitat. Welcome, Aqua Nova. Please announce your approach. Our docking arms are narrow and our patience is wide."
+ },
+ {
+  "name": "Deepcut Station",
+  "type": "dock",
+  "lat": 39.2,
+  "lon": -61.5,
+  "text": "A nodule-mining station on the abyssal plain. Dredge ships work the floor for miles around and do not like visitors in the pattern.",
+  "faction": "deepcut",
+  "kind": "mine",
+  "mhz": 156.85,
+  "reply": "Deepcut Station. State your business. Do not enter the dredge pattern. You are not insured."
+ },
+ {
+  "name": "Lucky Strike Sulphide Works",
+  "type": "dock",
+  "lat": 37.29,
+  "lon": -32.28,
+  "text": "Seafloor massive sulphide mining on a live vent field. A co-op runs it, and their safety board is strict.",
+  "faction": "abyssal",
+  "kind": "mine",
+  "mhz": 156.875,
+  "reply": "Lucky Strike Works. Aqua Nova, welcome. Keep to the marked corridor. The vents are hot and the miners are tired."
+ },
+ {
+  "name": "Rainbow Camp",
+  "type": "dock",
+  "lat": 36.23,
+  "lon": -33.9,
+  "text": "A rival claim on the Rainbow vent field, run on a thin budget and thick paperwork.",
+  "faction": "ridgeline",
+  "kind": "mine",
+  "mhz": 156.9,
+  "reply": "Rainbow Camp. Who is this? We have no visitors scheduled. State your registry."
+ },
+ {
+  "name": "Sable Shelf-1 Platform",
+  "type": "dock",
+  "lat": 39.75,
+  "lon": -70.3,
+  "text": "An oil platform on the outer shelf, a supply stop for the fishing fleet and the oil crews.",
+  "faction": "oil",
+  "kind": "platform",
+  "mhz": 156.925,
+  "reply": "Sable Shelf One. Aqua Nova, we have you. Keep your distance from the risers, please."
+ },
+ {
+  "name": "Concord Station Echo",
+  "type": "dock",
+  "lat": 35.5,
+  "lon": -40.0,
+  "text": "A foreign seabed listening post. Officially it does not exist.",
+  "faction": "foreign",
+  "kind": "base",
+  "mhz": 156.95,
+  "reply": "This is a restricted area. Aqua Nova, change course immediately."
+ },
+ {
+  "name": "Sargasso Haven",
+  "type": "hideout",
+  "lat": 33.5,
+  "lon": -55.0,
+  "text": "A drifting anchorage in the weed where the Black Tide Syndicate trades. Unconfirmed. Ships that go in do not always come out.",
+  "faction": "pirates"
+ },
+ {
+  "name": "Hydrographer Canyon Sanctuary",
+  "type": "sanctuary",
+  "lat": 39.85,
+  "lon": -69.7,
+  "text": "A protected canyon system. Fishing is banned, which is why the poachers come.",
+  "faction": "poachers",
+  "radius": 12
+ },
+ {
+  "name": "Block Canyon Closed Area",
+  "type": "sanctuary",
+  "lat": 39.55,
+  "lon": -72.7,
+  "text": "A seasonal closure to let the fish recover. Patrols are thin.",
+  "faction": "poachers",
+  "radius": 15
+ },
+ {
+  "name": "Andrea Doria",
+  "type": "wreck",
+  "lat": 40.47,
+  "lon": -69.87,
+  "text": "The liner that sank after a collision in fog in 1956. A famous, dangerous dive. Her hull is a magnet for fishing nets and curious divers."
+ },
+ {
+  "name": "USS San Diego",
+  "type": "wreck",
+  "lat": 40.55,
+  "lon": -73.05,
+  "text": "An armoured cruiser that struck a mine in 1918, the largest US warship lost in the First World War."
+ },
+ {
+  "name": "U-853",
+  "type": "wreck",
+  "lat": 41.22,
+  "lon": -71.44,
+  "text": "A German U-boat sunk off Block Island in the last days of the Second World War."
+ },
+ {
+  "name": "SS Portland",
+  "type": "wreck",
+  "lat": 42.3,
+  "lon": -70.5,
+  "text": "A paddle steamer lost with everyone aboard in the Portland Gale of 1898."
+ },
+ {
+  "name": "Hudson Canyon",
+  "type": "canyon",
+  "lat": 39.4,
+  "lon": -72.1,
+  "text": "The largest submarine canyon on the US east coast. Its head holds cold, nutrient-rich water and a lot of life."
+ },
+ {
+  "name": "Bear Seamount",
+  "type": "seamount",
+  "lat": 39.92,
+  "lon": -67.42,
+  "text": "The first of the New England Seamounts. Corals, sponges and a ring of hungry fish."
+ },
+ {
+  "name": "Kelvin Seamount",
+  "type": "seamount",
+  "lat": 38.8,
+  "lon": -63.5,
+  "text": "Part of the New England Seamount chain. A good place to see how the deep sea hugs a mountain."
+ },
+ {
+  "name": "Baltimore Canyon Seep",
+  "type": "seep",
+  "lat": 38.05,
+  "lon": -73.82,
+  "text": "A cold seep where methane leaks from the slope and mussels feed on it in the dark."
+ },
+ {
+  "name": "Lost City Hydrothermal Field",
+  "type": "vent",
+  "lat": 30.13,
+  "lon": -42.12,
+  "text": "Towers of white carbonate rise like cathedral spires from a vent field that has run for tens of thousands of years."
+ },
+ {
+  "name": "Menez Gwen Vent Field",
+  "type": "vent",
+  "lat": 37.84,
+  "lon": -31.52,
+  "text": "A shallow vent field on the Ridge, home to dense beds of mussels and shrimp."
+ }
+]
