@@ -11,6 +11,8 @@ import { gameState } from './persist.js';
 import { say } from './notify.js';
 
 const NM = 60, LON_K = 0.82;   // nm per degree of latitude; a fixed squash so cells are roughly square in the mid-latitudes
+/** Gates other modules set: is the VHF mast up high enough to hear AIS? */
+export const gates = { ais: () => true };
 export const traffic = { cfg: null, cells: new Map(), cand: [], candKey: '', active: [], sunk: new Set(), ready: false, stats: { active: 0, cells: 0, ms: 0 }, lastClock: null };
 const mulberry = (a) => () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
 const mix = (seed, x, y) => (Math.imul(seed ^ 0x9E3779B1, 0x85EBCA6B) ^ Math.imul(x, 73856093) ^ Math.imul(y, 19349663)) | 0;
@@ -57,7 +59,7 @@ function buildCell(cx, cy) {
     const half = leg / 2, A = { lat: org.lat - toLat(Math.cos(hdg) * half), lon: org.lon - toLon(Math.sin(hdg) * half) }, B = { lat: org.lat + toLat(Math.cos(hdg) * half), lon: org.lon + toLon(Math.sin(hdg) * half) };
     const hostile = f2.stance === 'hostile', unreg = kind === 'raider' || kind === 'poacher';
     return { id: `${cx}:${cy}:${i}`, kind, faction: group, factionName: f2.name || group, stance: f2.stance || 'neutral', label: k.label, size: k.size, kt, A, B, L: Math.max(0.5, leg), phase: rng() * 2, boldness: hostile && f2.boldness ? between(rng, f2.boldness) : 0,
-      name: unreg ? (kind === 'raider' ? pick(rng, k.names) : 'Unmarked trawler') : (k.pre + ' ' + pick(rng, k.names)).trim(), mhz: +(156 + 0.025 * Math.floor(rng() * 240)).toFixed(3), reply: Math.floor(rng() * 1000), ident: false, alerted: false, dyn: null, hitAt: -1e9 };
+      ais: k.ais !== false, bias: (rng() - 0.5) * c.sensing.bearing_noise_deg * 2, name: unreg ? (kind === 'raider' ? pick(rng, k.names) : 'Unmarked trawler') : (k.pre + ' ' + pick(rng, k.names)).trim(), mhz: +(156 + 0.025 * Math.floor(rng() * 240)).toFixed(3), reply: Math.floor(rng() * 1000), ident: false, alerted: false, dyn: null, hitAt: -1e9 };
   };
   for (let i = 0; i < n; i++) {
     const w = {};
@@ -123,18 +125,42 @@ export function step() {
     near.push({ v, p, d });
   }
   near.sort((a, b) => a.d - b.d); near.length = Math.min(near.length, c.cap);
-  const seen = sonarNm(s), out = [];
+  const sn = c.sensing, aisUp = gates.ais(), out = [];
+  const obs = s.wskrs.filter((w) => !w.dead && !w.arrived && w.lat != null && sim.wskrLink(w).raw);   // WSKRs the control link reaches add their own ears
   for (const { v, p, d } of near) {
     const hostile = v.stance === 'hostile';
     if (hostile && !v.dyn && d < 6) v.dyn = { lat: p.lat, lon: p.lon, hdg: p.hdg };
-    if (d < 1.5) v.ident = true;
-    const b = toward(s, p);
-    out.push({ v, lat: p.lat, lon: p.lon, hdg: p.hdg, nm: d, brg: b.brg, shown: d <= seen });
-    if (d <= seen && (hostile || d < 2) && !v.alerted && (hostile || v.size >= 2 && d < 1)) {
-      v.alerted = true;
-      say('sensors', hostile ? `Captain, contact bearing ${String(Math.round(b.brg)).padStart(3, '0')}, ${d.toFixed(1)} miles. ${v.ident ? `${v.label}, ${v.factionName}. Hostile.` : 'Unidentified, moving fast. I do not like it.'}` : `Captain, ${v.label.toLowerCase()} bearing ${String(Math.round(b.brg)).padStart(3, '0')}, ${d.toFixed(1)} miles. Watch the traffic.`, hostile ? 'mission' : '', { notice: hostile ? 'HOSTILE CONTACT' : 'SURFACE TRAFFIC' });
+    // 1. AIS: friendly and commercial traffic tells us who and where it is, if the VHF mast is up
+    const ais = v.ais && aisUp && d <= c.ais_nm;
+    // 2. sonar: a bearing only, from the ship and from each WSKR in range; bigger and faster vessels are heard from further
+    const loud = sn.sonar_size_factor[v.size] * (0.8 + Math.min(v.kt, 20) / 50);
+    const ears = [];
+    const noise = (k) => (v.bias * (k ? -0.7 : 1) + 0.8 * Math.sin(now / (37 + 16 * k) + v.phase * 3)) * Math.PI / 180;
+    const bearingFrom = (o, k) => { const dy = (p.lat - o.lat) * NM, dx = (p.lon - o.lon) * NM * LON_K; return { from: { lat: o.lat, lon: o.lon }, brg: ((Math.atan2(dx, dy) + noise(k)) * 180 / Math.PI + 360) % 360, nm: Math.hypot(dx, dy) }; };
+    if (d <= sonarNm(s) * loud) ears.push(bearingFrom(s, 0));
+    obs.forEach((w, i) => { if (flat(w, p) <= sn.wskr_sonar_nm * loud) ears.push(bearingFrom(w, i + 1)); });
+    // 3. a fix: two bearings from different places that cross at a good angle
+    let fix = null;
+    if (!ais) for (let i = 0; i < ears.length; i++) for (let j = i + 1; j < ears.length; j++) {
+      const A = ears[i], B = ears[j], a1 = (A.brg * Math.PI) / 180, a2 = (B.brg * Math.PI) / 180, sinD = Math.sin(a1 - a2);
+      if (Math.abs(sinD) < Math.sin((sn.min_cross_deg * Math.PI) / 180)) continue;
+      const bx = (B.from.lon - A.from.lon) * NM * LON_K, by = (B.from.lat - A.from.lat) * NM;   // from A to B
+      const t1 = (bx * Math.cos(a2) - by * Math.sin(a2)) / sinD, t2 = (bx * Math.cos(a1) - by * Math.sin(a1)) / sinD;
+      if (t1 <= 0 || t2 <= 0) continue;
+      const err = Math.max(0.05, (Math.max(t1, t2) * 0.035) / Math.abs(sinD));
+      if (!fix || err < fix.err) fix = { lat: A.from.lat + (t1 * Math.cos(a1)) / NM, lon: A.from.lon + (t1 * Math.sin(a1)) / (NM * LON_K), err };
     }
-    if (s.depth < 15 && d < 0.05 && now - v.hitAt > 60) collide(v, p, d);
+    // 4. identity: AIS, or seen by eye (mast up, close enough), or a WSKR's camera alongside. A hail does not identify a ship that carries no AIS.
+    const vis = s.depth <= sn.visual_max_depth_m && d <= sn.visual_nm[v.size];
+    if (ais || vis || obs.some((w) => flat(w, p) <= sn.wskr_camera_nm)) v.ident = true;
+    const b = toward(s, p), heard = ears.length > 0 || vis;
+    const pos = ais ? { lat: p.lat, lon: p.lon, err: 0, hdg: p.hdg } : fix ? { lat: fix.lat, lon: fix.lon, err: fix.err } : vis ? { lat: p.lat, lon: p.lon, err: 0.05, hdg: p.hdg } : null;
+    out.push({ v, lat: p.lat, lon: p.lon, hdg: p.hdg, nm: d, brg: b.brg, shown: ais || heard, ais, pos, lines: ears.map((e) => ({ from: e.from, brg: e.brg })), ear: ears.length ? ears[0].brg : null });
+    if ((ais || heard) && (hostile || v.size >= 2 && d < 1) && !v.alerted && (hostile || v.ident)) {
+      v.alerted = true; const bb = String(Math.round(ears.length ? ears[0].brg : b.brg)).padStart(3, '0');
+      say('sensors', hostile ? `Captain, sonar contact bearing ${bb}. ${v.ident ? `${v.label}, ${v.factionName}. Hostile.` : 'Unidentified, no range yet, moving fast. I do not like it.'}` : `Captain, ${v.label.toLowerCase()} bearing ${bb}. Watch the traffic.`, hostile ? 'mission' : '', { notice: hostile ? 'HOSTILE CONTACT' : 'SURFACE TRAFFIC' });
+    }
+    if (d < 0.05 && s.depth < c.draft_m[v.size] + c.collide_margin_m && now - v.hitAt > 60) collide(v, p, d);   // only on or just below the surface
   }
   traffic.active = out; traffic.stats.active = out.length; traffic.stats.ms = performance.now() - t0;
 }
@@ -157,7 +183,9 @@ function sink(v, p) {
 
 // ---- what the rest of the game sees ----
 export const seen = () => traffic.active.filter((a) => a.shown);
-export const shownName = (a) => (a.v.ident ? a.v.name : 'Unidentified surface contact');
+/** Contacts with a position the player may use (AIS, a fix, or seen by eye). */
+export const plotted = () => traffic.active.filter((a) => a.shown && a.pos);
+export const shownName = (a) => (a.v.ident ? a.v.name : 'Unidentified contact');
 /** Vessels in the bubble that can be hailed on VHF (for the Comms scan and hail). */
 export const hailContacts = () => traffic.active.map((a) => ({ id: 'ship-' + a.v.id, kind: 'ship', name: a.v.name, band: 'VHF', mhz: a.v.mhz, lat: a.lat, lon: a.lon, range: 30, reply: replyOf(a.v), vessel: a.v }));
 export function replyOf(v) {

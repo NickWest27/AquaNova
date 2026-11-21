@@ -60,7 +60,7 @@ export function mount(body, ctx) {
     const idle = s.wskrs.some((w) => w.mode === 'escort');
     const tagOf = Object.fromEntries(contactList().filter((c) => c.poi).map((c) => [c.poi.id, c]));
     const ships = seenShips();
-    const next = JSON.stringify([ships.map((a) => [a.v.id, a.nm.toFixed(1), Math.round(a.brg), a.v.ident]), s.selContact, s.sonar, sweeping, s.wskrs.map((w) => [w.n, w.mode, w.target]), s.docked, rows.map((r) => [r.p.id, r.nm.toFixed(1), Math.round(r.brg), s.at && s.at.id === r.p.id, scanned(r.p)])]);
+    const next = JSON.stringify([ships.map((a) => [a.v.id, a.pos ? a.pos.lat.toFixed(3) + a.pos.lon.toFixed(3) : Math.round(a.ear), a.v.ident, a.ais]), s.selContact, s.sonar, sweeping, s.wskrs.map((w) => [w.n, w.mode, w.target]), s.docked, rows.map((r) => [r.p.id, r.nm.toFixed(1), Math.round(r.brg), s.at && s.at.id === r.p.id, scanned(r.p)])]);
     if (next === sig) return;   // redraw only when something visible changed
     sig = next;
     list.replaceChildren(...(rows.length ? rows.map((r) => {
@@ -74,10 +74,12 @@ export function mount(body, ctx) {
              r.p.type !== 'dock' && (idle ? el('button', { class: 'btn chip', text: 'Send WSKR', onclick: () => { const w = sim.taskWskr(r.p); tell('sensors', `${wskrName(w)} sent to ${r.p.name}`); sig = ''; update(); } }) : !here && el('span', { style: 'color:var(--dim)', text: s.wskrs.length ? 'No free WSKR' : 'Deploy a WSKR or move closer' }))]);
     }) : [el('div', { class: 'empty', text: s.sonar ? 'No contacts in range.' : 'Sonar is off.' })]).concat(ships.map((a) => {
       const id = 'ship:' + a.v.id, picked = s.selContact === id, hot = a.v.ident && a.v.stance === 'hostile';
+      const where = a.pos ? toward(s, a.pos) : null, brg = String(Math.round(where ? where.brg : a.ear)).padStart(3, '0');
+      const how = a.ais ? 'AIS' : a.pos && a.pos.err > 0.05 ? `Fix ±${a.pos.err.toFixed(1)} nm` : a.pos ? 'Visual' : 'Sonar bearing only. A WSKR on another bearing will give a fix.';
       return el('div', { class: 'card task' + (picked ? ' sel' : '') },
-        el('div', { class: 'grow' }, el('h3', { text: shownName(a) }), el('p', { style: 'color:var(--dim)', text: `${a.v.ident ? a.v.label + ' · ' + a.v.factionName : 'Surface contact'} · ${a.nm.toFixed(1)} nm · bearing ${String(Math.round(a.brg)).padStart(3, '0')}° · ${a.v.kt.toFixed(0)} kt · hail on VHF ${a.v.mhz.toFixed(3)}` })),
+        el('div', { class: 'grow' }, el('h3', { text: shownName(a) }), el('p', { style: 'color:var(--dim)', text: `${a.v.ident ? a.v.label + ' · ' + a.v.factionName + ' · ' : ''}${where ? where.nm.toFixed(1) + ' nm · ' : ''}bearing ${brg}° · ${how}${a.v.ais && a.pos ? ' · VHF ' + a.v.mhz.toFixed(3) : ''}` })),
         hot && el('span', { style: 'color:#ff9a9a', text: 'HOSTILE' }),
-        el('button', { class: 'btn chip' + (picked ? ' on' : ''), text: picked ? 'Selected' : 'Select', onclick: () => { selectContact(id); sig = ''; update(); } }));
+        a.pos ? el('button', { class: 'btn chip' + (picked ? ' on' : ''), text: picked ? 'Selected' : 'Select', onclick: () => { selectContact(id); sig = ''; update(); } }) : null);
     })));
   }
   go('contacts');

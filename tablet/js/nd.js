@@ -168,18 +168,27 @@ export function createND(wrap, { onPick, stage = false, units = 1, contours = fa
       if (nd.range > 32 && !isSel && !isW) continue;   // zoomed far out the sites sit on top of each other: names only for the selected one and the destination
       ctx.fillStyle = '#e6f1ff'; ctx.fillText(poi.name.length > 22 ? poi.name.slice(0, 21) + '…' : poi.name, p.x, p.y + 28);
     }
-    // surface traffic that sonar can see: a small chevron pointing along its course; red when hostile, amber when wary, grey until identified
+    // surface traffic. AIS ships show where they are; a bearing-only sonar contact is a dashed line from the listener; two bearings make a fix (a ring that shows the error)
     if (!craft) for (const a of seenShips()) {
-      const q = px(a);
-      if (q.x < -20 || q.x > w + 20 || q.y < -20 || q.y > h + 20) continue;
       const v = a.v, col = !v.ident ? '#cfd8dc' : v.stance === 'hostile' ? '#ff6b6b' : v.stance === 'wary' ? '#ffb86b' : '#9bd1ff', k = 5 + v.size * 2;
-      const isSel = s.selContact === 'ship:' + v.id;
-      ctx.save(); ctx.translate(q.x, q.y); ctx.rotate(((a.hdg - (trackUp ? s.heading : 0)) * Math.PI) / 180);
-      ctx.fillStyle = col; ctx.strokeStyle = '#04101f'; ctx.lineWidth = 1.5;
-      ctx.beginPath(); ctx.moveTo(0, -k); ctx.lineTo(k * 0.7, k * 0.8); ctx.lineTo(0, k * 0.4); ctx.lineTo(-k * 0.7, k * 0.8); ctx.closePath(); ctx.fill(); ctx.stroke();
+      if (!a.pos) {
+        ctx.save(); ctx.strokeStyle = col; ctx.globalAlpha = 0.7; ctx.lineWidth = 1.5; ctx.setLineDash([6, 6]);
+        for (const ln of a.lines) { const o = px(ln.from), th = ((ln.brg - (trackUp ? s.heading : 0)) * Math.PI) / 180, len = Math.max(w, h); ctx.beginPath(); ctx.moveTo(o.x, o.y); ctx.lineTo(o.x + Math.sin(th) * len, o.y - Math.cos(th) * len); ctx.stroke(); }
+        ctx.restore(); continue;
+      }
+      const q = px(a.pos);
+      if (q.x < -20 || q.x > w + 20 || q.y < -20 || q.y > h + 20) continue;
+      const isSel = s.selContact === 'ship:' + v.id, fixOnly = !a.ais && a.pos.err > 0.05;
+      ctx.save(); ctx.translate(q.x, q.y);
+      if (a.ais || a.pos.hdg != null) {
+        ctx.rotate(((a.pos.hdg - (trackUp ? s.heading : 0)) * Math.PI) / 180);
+        ctx.fillStyle = col; ctx.strokeStyle = '#04101f'; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(0, -k); ctx.lineTo(k * 0.7, k * 0.8); ctx.lineTo(0, k * 0.4); ctx.lineTo(-k * 0.7, k * 0.8); ctx.closePath(); ctx.fill(); ctx.stroke();
+      } else { ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, 5, 0, 6.2832); ctx.stroke(); ctx.beginPath(); ctx.moveTo(-9, 0); ctx.lineTo(9, 0); ctx.moveTo(0, -9); ctx.lineTo(0, 9); ctx.stroke(); }
       ctx.restore();
+      if (fixOnly) { const r = Math.max(8, (a.pos.err / nd.range) * Math.min(w, h) / 2); ctx.save(); ctx.strokeStyle = col; ctx.globalAlpha = 0.6; ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.arc(q.x, q.y, r, 0, 6.2832); ctx.stroke(); ctx.restore(); }
       if (isSel) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(q.x, q.y, k + 8, 0, 6.2832); ctx.stroke(); }
-      if (nd.range <= 8) { ctx.fillStyle = col; ctx.font = '600 13px system-ui'; ctx.textAlign = 'left'; ctx.fillText(v.ident ? v.name : 'Unknown', q.x + k + 4, q.y + 4); }
+      if (nd.range <= 16) { ctx.fillStyle = col; ctx.font = '600 13px system-ui'; ctx.textAlign = 'left'; ctx.fillText((v.ident ? v.name : 'Unidentified') + (a.ais ? ' · AIS' : ''), q.x + k + 4, q.y + 4); }
     }
     // ship (centre), or in craft mode the craft at the centre and the ship where it is
     const mark = (x, y, hd, col, big) => {

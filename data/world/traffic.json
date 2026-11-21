@@ -1,7 +1,7 @@
 {
  "cell_nm": 20,
- "bubble_nm": 10,
- "cap": 12,
+ "bubble_nm": 20,
+ "cap": 16,
  "leg_max_nm": 45,
  "density": {
   "open": 0.12,
@@ -234,7 +234,8 @@
     "Tarquin",
     "Borealis"
    ],
-   "pre": "CNS"
+   "pre": "CNS",
+   "ais": false
   },
   "research": {
    "faction": "oera",
@@ -316,7 +317,8 @@
     "Salt Wolf",
     "Marauder"
    ],
-   "pre": ""
+   "pre": "",
+   "ais": false
   },
   "poacher": {
    "faction": "poachers",
@@ -337,7 +339,8 @@
     "Lady Luck",
     "Sparrow"
    ],
-   "pre": ""
+   "pre": "",
+   "ais": false
   }
  },
  "zone_weights": {
@@ -434,5 +437,32 @@
    "We are not fishing! We are lost. We are leaving now!",
    "Do not report us. Please. We will go."
   ]
- }
+ },
+ "ais_nm": 20,
+ "sensing": {
+  "sonar_size_factor": [
+   0.6,
+   0.8,
+   1.0,
+   1.2
+  ],
+  "wskr_sonar_nm": 3,
+  "visual_nm": [
+   0,
+   2.5,
+   3.5,
+   5
+  ],
+  "visual_max_depth_m": 15,
+  "wskr_camera_nm": 1,
+  "min_cross_deg": 20,
+  "bearing_noise_deg": 1.5
+ },
+ "draft_m": [
+  0,
+  5,
+  9,
+  14
+ ],
+ "collide_margin_m": 4
 }

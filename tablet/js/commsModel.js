@@ -4,7 +4,7 @@ import { tell } from './notify.js';
 import { sim } from './sim.js';
 import { toast } from './util.js';
 import { gameState } from './persist.js';
-import { hailContacts } from './traffic.js';
+import { hailContacts, gates } from './traffic.js';
 
 const RE = 6371, rad = Math.PI / 180;
 export const HOME = { name: 'NAVSTA WOODS HOLE', lat: 41.5223, lon: -70.6709 };
@@ -103,6 +103,7 @@ export const isActive = (c) => !c.hidden || activated().includes(c.id);
 export const authCode = (id) => { let h = 7; for (const ch of id) h = (h * 31 + ch.charCodeAt(0)) % 9000; return `${String(h + 1000).slice(0, 2)}-${String(h + 1000).slice(2)}`; };
 export const tune = (band, mhz) => { const d = DIAL[band]; cm.band = band; cm.mhz = +Math.max(d.min, Math.min(d.max, mhz)).toFixed(3); };
 const bandOpen = (id) => { const b = BANDS.find((x) => x.id === id); return antDepth(b.ant) <= b.max; };
+gates.ais = () => bandOpen('VHF');   // AIS is heard on the VHF mast
 const sig = (c, s = sim.s) => Math.max(1, Math.round(44 - 16 * Math.log10(1 + distNm(s, c) / 5)));
 
 export function scan() {
@@ -121,8 +122,7 @@ export function hail() {
   if (distNm(s, c) > c.range) return { ok: false, msg: `A faint carrier, but too far to answer (${Math.round(distNm(s, c))} nm).` };
   const entry = { at: s.clock, id: c.id, name: c.name, text: c.reply, secure: cm.secure, band: c.band, mhz: c.mhz, route: c.band === 'UHF' ? 'NORPAC CH 26-H' : `${c.band} DIRECT`, dist: Math.round(distNm(s, c)), distress: !!c.distress };
   cm.log = [entry, ...cm.log].slice(0, 6);
-  if (c.vessel) c.vessel.ident = true;   // a hailed ship is identified
-  else if (!hailed().includes(c.id)) gameState.updateProperty('mission.comms.hailed', [...hailed(), c.id]);
+  if (!c.vessel && !hailed().includes(c.id)) gameState.updateProperty('mission.comms.hailed', [...hailed(), c.id]);
   document.dispatchEvent(new CustomEvent('comms-hail', { detail: { id: c.id, name: c.name, secure: cm.secure } }));
   return { ok: true, msg: `${c.name} answers.`, entry };
 }
