@@ -53,10 +53,10 @@ def main():
             ph = js("return tr.xfer.job && tr.xfer.job.phase"); seen.add(ph)
             if ph in (None, "done"): break
             page.wait_for_timeout(500)
-        check("went through up, wait and down", {"up", "wait", "down"} <= seen, str(seen))
+        check("goes up, then is done: no waiting for a receipt", "up" in seen and not ({"wait", "down"} & seen), str(seen))
         r = js("const g=(await import('./js/persist.js')).gameState; const ib=g.getProperty('mission.inbox')||[]; return {out:g.getProperty('mission.outbox').length, reply: ib.filter(m=>m.id.startsWith('report-ack')).length}")
         check("report logged in the outbox", r["out"] == 1, str(r))
-        check("OERA reply arrived in the inbox", r["reply"] == 1, str(r))
+        check("no generic read receipt in the inbox", r["reply"] == 0, str(r))
         page.wait_for_timeout(4500)
         r = js("return {job: tr.xfer.job, vis: !!document.querySelector('#stage .xfer')}")
         check("bar clears afterwards", r["job"] is None and not r["vis"], str(r))

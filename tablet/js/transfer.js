@@ -24,10 +24,10 @@ function paint() {
   const j = xfer.job; if (!j || !bar) return;
   const pct = Math.round(j.p * 100);
   bar.className = `xfer ${j.phase}${j.stalled ? ' stalled' : ''}`;
-  bar.querySelector('.xf-title').textContent = j.phase === 'up' ? `UPLINK · ${j.label}` : j.phase === 'wait' ? `AWAITING OERA · ${j.label}` : j.phase === 'down' ? `DOWNLINK · ${j.label}` : j.phase === 'done' ? 'REPLY RECEIVED' : 'TRANSFER FAILED';
+  bar.querySelector('.xf-title').textContent = j.phase === 'up' ? `UPLINK · ${j.label}` : j.phase === 'wait' ? `AWAITING OERA · ${j.label}` : j.phase === 'down' ? `DOWNLINK · ${j.label}` : j.phase === 'done' ? 'REPORT SENT' : 'TRANSFER FAILED';
   bar.querySelector('.xf-fill').style.width = `${j.phase === 'wait' ? 100 : pct}%`;
   const eta = j.phase === 'up' ? (1 - j.p) * j.upS / j.f : j.phase === 'down' ? (1 - j.p) * j.downS / j.f : 0;
-  bar.querySelector('.xf-note').textContent = j.stalled ? 'Signal lost. Holding.' : j.phase === 'wait' ? 'Report delivered. Waiting for an answer…' : j.phase === 'done' ? 'Message waiting at the Comms station.' : j.phase === 'fail' ? j.why : `${pct}% · ${j.dB} dB · ${secs(eta)} left`;
+  bar.querySelector('.xf-note').textContent = j.stalled ? 'Signal lost. Holding.' : j.phase === 'wait' ? 'Report delivered. Waiting for an answer…' : j.phase === 'done' ? 'Report sent.' : j.phase === 'fail' ? j.why : `${pct}% · ${j.dB} dB · ${secs(eta)} left`;
 }
 function hideSoon(ms) { clearTimeout(hideTimer); hideTimer = setTimeout(() => { if (bar) bar.remove(); xfer.job = null; emit(); }, ms); }
 
@@ -35,17 +35,9 @@ function finishUp(j) {
   const t = j.text;
   gameState.updateProperty('mission.outbox', [...(gameState.getProperty('mission.outbox') || []), { at: new Date().toISOString(), text: t }]);
   document.dispatchEvent(new CustomEvent('report-sent'));
-  j.phase = 'wait'; j.p = 0; j.waitLeft = (LATENCY_S[j.n] || 3) + 4 + Math.random() * 5; dataDone(true);
-  say('comms', 'Report is out, Captain. Waiting for O.E.R.A. to answer.');
+  j.phase = 'done'; j.p = 1; dataDone(true); paint(); emit(); hideSoon(3000);   // no read receipt: OERA answers only when it has something to say
+  say('comms', 'Report is out, Captain.');
 }
-async function deliverReply(j) {
-  const n = ++xfer.count, replies = ['Report received. Thank you, Captain. Carry on.', 'Report logged by OERA Operations. No changes to your orders.', 'Report received and filed. Good work out there.', 'OERA acknowledges your report. Stay safe.'];
-  try {
-    const m = (await import('../../game/systems/missionManager.js')).default;
-    m.sendMessage({ id: `report-ack-${Date.now()}-${n}`, from: 'OERA Operations', subject: 'Report received', text: replies[Math.floor(Math.random() * replies.length)] });
-  } catch (e) { console.warn('report reply failed', e); }
-}
-
 function step() {
   const j = xfer.job; if (!j) return;
   const now = Date.now(), dt = Math.min(1.5, (now - lastTick) / 1000); lastTick = now;
