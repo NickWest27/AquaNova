@@ -779,3 +779,9 @@ input.mix { width: 100%; height: 2.4rem; accent-color: var(--cyan); }
 .bm-info.ir .ir-bars { display: flex; flex-direction: column; gap: 9px; }
 .bm-info.ir .nav-prof .np-title { font-size: 11px; left: 6px; }
 .bc.pan .rowN { height: 100%; } .bc.pan .bbtn.sq { flex: 1; width: auto; max-width: none; height: 100%; font-size: 40px; }
+/* mini station screens on the bridge */
+.bstn { align-items: stretch; justify-content: center; padding: 3px 10px; box-sizing: border-box; gap: 0; }
+.bstn h5 { margin: 0 0 1px; font: 800 12px/14px var(--mono); letter-spacing: .14em; color: var(--cyan); text-align: center; }
+.bstn div { display: flex; justify-content: space-between; gap: 6px; font: 600 11.5px/13px var(--mono); color: #cfe9f2; white-space: nowrap; }
+.bstn div b { font-size: 11.5px; letter-spacing: 0; font-weight: 700; color: #fff; } .bstn div span { font-size: 11.5px; letter-spacing: 0; color: var(--dim); }
+.bstn div.ok b { color: #7dffb0; } .bstn div.warn b { color: var(--amber); } .bstn div.bad b { color: #ff9a9a; }

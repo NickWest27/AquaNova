@@ -4,6 +4,7 @@ import { el } from './util.js';
 import { createBridgeConsole } from './bridge.js';
 import { samples, sampleName, jobs, points, research, LABS, SAMPLE_KINDS } from './science.js';
 import { rovRange } from './rov.js';
+import { LINKS, linkState, activeLink } from './commsModel.js';
 
 const box = (cls, x, y, w, h, kids) => el('div', { class: `disp ${cls}`, style: `left:${x}px;top:${y}px;width:${w}px;height:${h}px` }, kids);
 
@@ -48,8 +49,16 @@ export function createScene(stage, { onOpen }) {
 
   // The art (bridge.png, 1920x1080) has eight cut-outs; each screen sits behind its cut-out. Corners are TL, TR, BR, BL on the stage.
   // W x H is the screen's own size, with the perspective undone (flat desk panels are deeper than they look), so the picture is tilted and squeezed the way the glass is.
-  const stnL = el('div', { class: 'bstn' }, el('b', { text: 'COMMS' }), el('span', { text: 'STANDBY' }));
-  const stnR = el('div', { class: 'bstn' }, el('b', { text: 'SENSORS' }), el('span', { text: 'STANDBY' }));
+  // Station screens: a mini Links page (comms) and a mini sensor page. Four short lines each; 200 x 74 px.
+  const stnL = el('div', { class: 'bstn' }), stnR = el('div', { class: 'bstn' });
+  const mini = (node, key, html) => { if (cache.get(key) !== html) { cache.set(key, html); node.innerHTML = html; } };
+  function updateStations() {
+    const s = sim.s, act = activeLink();
+    mini(stnL, 'stnL', `<h5>COMMS · LINKS</h5>${LINKS.map((L) => { const st = linkState(L); return `<div class="${st.up ? 'ok' : st.fading ? 'warn' : 'bad'}"><span>${L === act ? '▸' : ' '}${L.n} ${L.label}</span><b>${st.status}</b></div>`; }).join('')}`);
+    const near = s.sonar ? s.pois.map((p) => ({ p, ...toward(s, p) })).sort((a, b) => a.nm - b.nm)[0] : null;
+    const inRange = s.sonar ? s.pois.filter((p) => toward(s, p).nm <= 4).length : 0, sweeping = s.clock < (s.sweepUntil || 0);
+    mini(stnR, 'stnR', `<h5>SENSORS</h5><div class="${s.sonar ? 'ok' : 'bad'}"><span>SONAR</span><b>${sweeping ? 'SWEEPING' : s.sonar ? 'ACTIVE' : 'OFF'}</b></div><div><span>CONTACTS</span><b>${s.sonar ? inRange + ' in 4 nm' : '—'}</b></div><div><span>WSKRS</span><b>${s.wskrs.length} of 4 out</b></div><div><span>NEAREST</span><b>${near ? near.p.name.slice(0, 11) + ' ' + near.nm.toFixed(1) : '—'}</b></div>`);
+  }
   topD.classList.add('compact');
   bridge.append(
     box('bmainbox', 243, 168, 1433, 351, [mainD]),                                                        // the big window
@@ -192,7 +201,7 @@ export function createScene(stage, { onOpen }) {
       if (api.where === 'science') { updateScience(); return; }
       if (api.where !== 'bridge') return;
       const s = sim.s;
-      consoleApi.update();
+      consoleApi.update(); updateStations();
     },
     console: consoleApi,
     showItems({ pin, ped }) { pinVis.hidden = pinGrab.hidden = !pin; pedVis.hidden = pedGrab.hidden = !ped; },
