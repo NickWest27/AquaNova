@@ -271,11 +271,11 @@ function showSystemDialogue(id) {
 document.addEventListener('show-dialogue', (e) => { if (e.detail.characterId === 'system') showSystemDialogue(e.detail.dialogueId); });
 document.addEventListener('comms-message', (e) => { if (boarded) say('comms', 'Captain, sorry to interrupt, but we have an incoming message.', 'mission', { notice: 'INCOMING MESSAGE', keep: `We have an incoming message from ${e.detail.from}. It is waiting at the Comms station.` }); syncUI(); });
 document.addEventListener('task-started', (e) => {   // ARIA says plainly that a new task has begun and where to find it (a little later, so other chatter does not bury it)
-  if (!boarded || !e.detail.name) return;
+  if (!boarded || !e.detail.name || e.detail.tutorial) return;   // a tutorial lesson starts quietly: the PED lists it
   setTimeout(() => say('aria', `New task, {captain}: ${e.detail.name}. The steps are in your PED, under Tasks.`, 'mission', { notice: `NEW TASK: ${e.detail.name.toUpperCase()}` }), 2500);
 });
 document.addEventListener('mission-notify', (e) => {
-  if (!boarded) return;
+  if (!boarded || e.detail.tutorial) return;   // tutorial steps are ticked off in the PED without ARIA announcing them
   if (e.detail.subtitle === 'Objective Complete') {   // ARIA keeps it short: done, and what is next
     const next = objectives().find((o) => o.status !== 'completed');
     say('aria', next ? `Objective complete. Next: ${next.description.replace(/[.\s]+$/, '')}.` : 'Objective complete.', 'mission', { hold: false }); return;

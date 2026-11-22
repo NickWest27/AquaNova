@@ -120,6 +120,22 @@ const hugTarget = () => {
   }
   return low == null ? null : Math.max(0, low - HUG_ALT);
 };
+/** Hug mode: hold HUG_ALT above the floor under the ship. The ship only looks ahead as far as it needs to: it may wait to climb until the rise is
+ *  within what it can still climb before reaching it. Also returns the steepest floor gradient (m per m) just ahead, to cap speed on slopes the helm cannot follow. */
+const hugHold = () => {
+  const s = sim.s, r = (s.heading * Math.PI) / 180, here = seafloor.depthAt(s.lat, s.lon), v = Math.max(s.speed, 0.5) * KT_MPS, climb = 0.9 * diveRate(s.speed, s.cruise);
+  if (here == null) return null;
+  let t = here - HUG_ALT, g = 0;
+  for (let d = 0.02; d <= 4 + 1e-6; d += d < 0.2 ? 0.02 : 0.1) {
+    const f = seafloor.depthAt(s.lat + (d * Math.cos(r)) / NM_PER_DEG_LAT, s.lon + (d * Math.sin(r)) / (NM_PER_DEG_LAT * Math.cos((s.lat * Math.PI) / 180)));
+    if (f == null) continue;
+    const secs = (d * 1852) / v;
+    t = Math.min(t, f - HUG_ALT + climb * secs);
+    if (d <= 0.6 && d >= 0.1) g = Math.max(g, Math.abs(f - here) / (d * 1852));
+    if (secs > 600) break;
+  }
+  return { t: Math.max(0, t), g };
+};
 /** Radius (nm) the ship charts in fine detail: sonar on 4, off 0.8 (echo sounder only), active sweep 8. */
 sim.fineNm = (s = sim.s) => (s.clock < (s.sweepUntil || 0) ? 8 : s.sonar ? 4 : 0.8);
 export const WSKR_CHART_NM = 3;
@@ -424,11 +440,14 @@ const stepOnce = (dt) => {
   // speed (smooth)
   let wantKt = s.throttle * sim.maxKt() * (s.battery > 0 ? 1 : 0);
   if (s.depth < SURFACE_M) wantKt = Math.min(wantKt, SURFACE_KT);
+  // hugging a steep floor: slow down until the climb or dive needed to follow it is one the ship can make
+  if (s.hug && s.hugG > 0.05 && (s.hugG > 0.85 * PITCH_TAN || s.hugG * KT_MPS * s.speed > 0.85 * MAX_DIVE_MPS)) wantKt = Math.min(wantKt, Math.max(1, (0.85 * (s.hugG > 0.85 * PITCH_TAN ? HOVER_MPS : MAX_DIVE_MPS)) / (s.hugG * KT_MPS)));
   if (s.wpt) wantKt = Math.min(wantKt, autopilotCap(Math.abs(turn), capDist));
   s.speed += clamp(wantKt - s.speed, -(s.speed > MAX_KT ? 6 : 2) * dt * pace(), (s.cruise ? 3 : 1.2) * dt * pace());
   // depth
   if (s.hug) {
-    const t = s.docked || !seafloor.ready ? null : hugTarget();
+    const hold = s.docked || !seafloor.ready ? null : hugHold(), t = hold ? hold.t : null;
+    s.hugG = hold ? hold.g : 0;
     if (t == null || (s.floor != null && s.floor < HUG_MIN_FLOOR)) { s.hug = false; sim.emit('hug-off', { why: s.docked ? 'docked' : 'shallow' }); }
     else s.targetDepth = Math.round(t);
   }

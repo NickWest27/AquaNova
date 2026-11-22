@@ -1,5 +1,6 @@
 {
   "id": "meetTheCrew",
+  "tutorial": true,
   "name": "First Contact",
   "description": "Locate your personal communicator and establish contact with ARIA, your executive officer.",
   "category": "tutorial",
@@ -51,7 +52,8 @@
           "characterId": "system",
           "dialogueId": "communicator_tutorial"
         }
-      ]
+      ],
+      "after": "find_communicator"
     },
     {
       "id": "learn_communicator",
@@ -69,7 +71,8 @@
           "type": "unlock_crew",
           "crewId": "executiveOfficer"
         }
-      ]
+      ],
+      "after": "pickup_communicator"
     },
     {
       "id": "contact_area",
@@ -96,7 +99,8 @@
           "type": "unlock_crew",
           "crewId": "engineering"
         }
-      ]
+      ],
+      "after": "learn_communicator"
     }
   ],
   "onComplete": [

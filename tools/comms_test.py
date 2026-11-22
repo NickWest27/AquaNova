@@ -48,6 +48,9 @@ def main():
         # contacts: tune to Woods Hole on HF, needs the mast raised
         page.evaluate("(async()=>{const m=await import('./js/sim.js'); m.sim.s.depth=0; m.sim.s.targetDepth=0;})()"); page.wait_for_timeout(1200)
         tab("Contacts"); page.wait_for_timeout(500)
+        # the buttons must not be rebuilt under a finger: the same nodes are still there after several screen updates
+        page.evaluate("window.__keep = [...document.querySelectorAll('.cc .tabs .chip, .cc .cp-btns .chip, .cc .cp-contact')]"); page.wait_for_timeout(1800)
+        check("contacts page buttons are not rebuilt every tick", page.evaluate("window.__keep.length > 3 && window.__keep.every(n => n.isConnected)"), page.evaluate("window.__keep.map(n => n.isConnected)"))
         page.tap(".cp-contact >> nth=0"); page.wait_for_timeout(200)
         check("tapping a contact tunes the dial", "8.145" in page.inner_text(".cp-freq"), page.inner_text(".cp-freq"))
         page.tap('button:text-is("Hail")'); page.wait_for_timeout(300)

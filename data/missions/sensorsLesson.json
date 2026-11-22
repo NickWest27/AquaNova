@@ -1,5 +1,6 @@
 {
   "id": "sensorsLesson",
+  "tutorial": true,
   "name": "Reading the Sea",
   "description": "Learn the Sensors station.",
   "category": "main",

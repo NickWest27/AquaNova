@@ -37,11 +37,13 @@ def main():
         page.locator(".comm-who", has_text="Helm").first.tap(); tap()
         if page.locator(".comm-reply", has_text="Marcus Chen").count(): page.locator(".comm-line", has_text="I need something").first.tap(); tap()
         page.locator(".comm-line", has_text="Give an order").first.tap(); tap()
+        page.locator(".comm-line", has_text="Depth").first.tap(); tap()
         page.locator(".comm-line", has_text="Hug the floor").first.tap(); tap()
         check("communicator order turns it on", js("return sim.s.hug") is True)
         check("Chen answers", "floor" in page.inner_text(".comm-reply").lower(), page.inner_text(".comm-reply"))
         page.locator(".comm-line", has_text="One more thing").first.tap(); tap()
         page.locator(".comm-line", has_text="Give an order").first.tap(); tap()
+        page.locator(".comm-line", has_text="Depth").first.tap(); tap()
         page.locator(".comm-line", has_text="Stop hugging").first.tap(); tap()
         check("stop order turns it off", js("return sim.s.hug") is False)
         r = js("sim.s.docked=true; sim.s.hug=true; sim.step(0.1); return sim.s.hug"); 

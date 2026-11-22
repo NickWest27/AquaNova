@@ -6,6 +6,10 @@ import gameStateInstance from '../state.js';
 
 import { dlog } from '../../utils/log.js';
 const PROPERTY_TRIGGERS = ['property_change', 'property_at_least', 'property_at_most'];
+// Things the player does once (go somewhere, pick something up) are remembered in progress.seen, so a lesson that starts later
+// still counts what was already done ("anything you have already done, I have already noted"). These are checked against that record, not only the moment they happen.
+const HISTORY_TRIGGERS = ['item_pickup', 'location_enter'];
+const seenKey = (type, data) => type === 'item_pickup' ? `item:${data.itemId}` : `at:${data.location}`;
 
 class MissionManager {
     constructor() {
@@ -159,7 +163,7 @@ class MissionManager {
         }
         
         // Show mission start notification
-        this.showMissionNotification(mission.name, 'New Mission Started');
+        this.showMissionNotification(mission.name, 'New Mission Started', mission);
         
         dlog(`Started mission: ${missionId}`);
         return true;
@@ -177,7 +181,7 @@ class MissionManager {
                 const entry = saved.find(o => o.id === `${missionId}_${objective.id}`);
                 if (!entry || entry.status === 'completed' || !this.objectiveUnlocked(mission, objective, saved)) continue;
                 for (const trigger of objective.triggers || []) {
-                    if (PROPERTY_TRIGGERS.includes(trigger.type) && this.checkTriggerCondition(trigger, null)) {
+                    if ((PROPERTY_TRIGGERS.includes(trigger.type) || HISTORY_TRIGGERS.includes(trigger.type)) && this.checkTriggerCondition(trigger, null)) {
                         this.completeObjective(missionId, objective.id);
                     }
                 }
@@ -189,6 +193,10 @@ class MissionManager {
 
     handleTrigger(triggerType, data) {
         dlog(`Trigger fired: ${triggerType}`, data);
+        if (HISTORY_TRIGGERS.includes(triggerType)) {
+            const seen = gameStateInstance.getProperty('progress.seen') || [], k = seenKey(triggerType, data);
+            if (!seen.includes(k)) gameStateInstance.updateProperty('progress.seen', [...seen, k].slice(-300));
+        }
         
         // Check all active missions for this trigger
         for (const missionId of this.activeMissions) {
@@ -207,6 +215,8 @@ class MissionManager {
             }
         }
     }
+
+    wasSeen(type, data) { return (gameStateInstance.getProperty('progress.seen') || []).includes(seenKey(type, data)); }
 
     // An objective with "after": "<id>" waits until that objective is done.
     objectiveUnlocked(mission, objective, saved) {
@@ -229,11 +239,11 @@ class MissionManager {
             case 'report_sent':
                 return true;
             case 'item_pickup':
-                return trigger.itemId === data.itemId;
+                return data ? trigger.itemId === data.itemId : this.wasSeen('item_pickup', { itemId: trigger.itemId });
             case 'location_enter':
-                return trigger.location === data.location;
+                return data ? trigger.location === data.location : this.wasSeen('location_enter', { location: trigger.location });
             case 'dialogue_complete':
-                return trigger.characterId === data.characterId;
+                return !!data && trigger.characterId === data.characterId && (!trigger.dialogueId || trigger.dialogueId === data.dialogueId);
             case 'decision_made':
                 return trigger.decisionId === data.decisionId && (!trigger.optionId || trigger.optionId === data.optionId);
             case 'property_change':
@@ -282,7 +292,7 @@ class MissionManager {
         }
         
         // Show completion notification
-        this.showObjectiveNotification(missionObjective.description, 'Objective Complete');
+        this.showObjectiveNotification(missionObjective.description, 'Objective Complete', mission);
         
         dlog(`Completed objective: ${fullObjectiveId}`);
     }
@@ -316,7 +326,7 @@ class MissionManager {
         }
         
         document.dispatchEvent(new CustomEvent('mission-completed', { detail: { id: missionId } }));
-        this.showMissionNotification(mission.name, 'Mission Complete!');
+        this.showMissionNotification(mission.name, 'Mission Complete!', mission);
         dlog(`Completed mission: ${missionId}`);
     }
 
@@ -356,7 +366,7 @@ class MissionManager {
                 case 'start_mission':
                     if (this.startMission(action.missionId)) {   // a lesson or follow-on that starts by itself: tell the player
                         const m = this.missions.get(action.missionId);
-                        document.dispatchEvent(new CustomEvent('task-started', { detail: { missionId: action.missionId, name: m && m.name } }));
+                        document.dispatchEvent(new CustomEvent('task-started', { detail: { missionId: action.missionId, name: m && m.name, tutorial: !!(m && m.tutorial) } }));
                     }
                     break;
                 default:
@@ -426,16 +436,16 @@ class MissionManager {
     }
 
     // UI Integration methods
-    showMissionNotification(title, subtitle) {
+    showMissionNotification(title, subtitle, mission) {
         // Integration with your existing notification system
         dlog(`Mission Notification: ${title} - ${subtitle}`);
-        document.dispatchEvent(new CustomEvent('mission-notify', { detail: { title, subtitle } }));
+        document.dispatchEvent(new CustomEvent('mission-notify', { detail: { title, subtitle, tutorial: !!(mission && mission.tutorial) } }));
         // You could integrate this with your PDA overlay system
     }
 
-    showObjectiveNotification(description, status) {
+    showObjectiveNotification(description, status, mission) {
         dlog(`Objective: ${description} - ${status}`);
-        document.dispatchEvent(new CustomEvent('mission-notify', { detail: { title: description, subtitle: status } }));
+        document.dispatchEvent(new CustomEvent('mission-notify', { detail: { title: description, subtitle: status, tutorial: !!(mission && mission.tutorial) } }));
     }
 
     // Debug and utility methods

@@ -89,7 +89,6 @@ export function mountContacts(host) {
   function update() {
     const list = (cm.contacts || []).filter((c) => c.kind === kind && isActive(c));
     const next = JSON.stringify([kind, cm.band, list.map((c) => [c.id, hailed().includes(c.id)]), cm.found, cm.log.length]);
-    kindBar.replaceChildren(...KINDS.map(([id, label]) => chip(label, kind === id, () => { kind = id; sig = ''; update(); })));
     secBtn.textContent = cm.secure ? 'Secured' : 'Unsecured'; secBtn.classList.toggle('on', cm.secure);
     freq.textContent = `${cm.mhz.toFixed(cm.band === 'HF' ? 3 : 3)} MHz`;
     const here = (cm.contacts || []).find((c) => isActive(c) && c.band === cm.band && Math.abs(c.mhz - cm.mhz) < D().fine * 0.6);
@@ -97,6 +96,7 @@ export function mountContacts(host) {
     msgLine.textContent = msg;
     if (next === sig) return;
     sig = next;
+    kindBar.replaceChildren(...KINDS.map(([id, label]) => chip(label, kind === id, () => { kind = id; sig = ''; update(); })));   // only rebuilt when something changed: a button replaced between touch down and up never gets its tap
     bandBar.replaceChildren(...Object.keys(DIAL).map((b) => chip(b, cm.band === b, () => { if (b !== cm.band) tune(b, { HF: 10, VHF: 158, UHF: 280 }[b]); sig = ''; update(); })));
     dir.replaceChildren(...(list.length ? list.map((c) => el('button', { class: 'cp-contact', onclick: () => { tune(c.band, c.mhz); msg = `Tuned to ${c.name}.`; } },
       el('b', { text: c.name }), el('span', { class: 'cl-k', text: `${c.band} ${c.mhz.toFixed(3)} MHz  ·  ${c.range > 9999 ? 'via satellite' : `range ${c.range} nm`}` }))) : [el('div', { class: 'empty', text: 'No contacts of this kind.' })]));

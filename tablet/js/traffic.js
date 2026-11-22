@@ -58,9 +58,16 @@ function buildCell(cx, cy) {
   const make = (i, kind, o = {}) => {
     const k = c.kinds[kind], fac = (sim.world.factions || {})[k.faction] || {}, group = k.faction === 'miners' && o.site ? o.site.faction : k.faction, f2 = (sim.world.factions || {})[group] || fac;
     const fish = kind === 'trawler' && z.shelf && rng() < 0.5;
-    const kt = fish ? between(rng, [2, 3.5]) : between(rng, k.kt), leg = fish ? between(rng, [2, 6]) : between(rng, k.leg), hdg = rng() * Math.PI * 2;
-    const org = o.at || { lat: lat0 + rng() * cellDegLat, lon: lon0 + rng() * cellDegLon };
-    const half = leg / 2, A = { lat: org.lat - toLat(Math.cos(hdg) * half), lon: org.lon - toLon(Math.sin(hdg) * half) }, B = { lat: org.lat + toLat(Math.cos(hdg) * half), lon: org.lon + toLon(Math.sin(hdg) * half) };
+    const kt = fish ? between(rng, [2, 3.5]) : between(rng, k.kt), leg0 = fish ? between(rng, [2, 6]) : between(rng, k.leg);
+    // the whole leg must be over water deep enough for the ship: try other spots and headings (same seed, same answer), then shorter legs
+    const minD = Math.max(10, c.draft_m[k.size] * 2 + 4);
+    let org, hdg, leg = leg0, A, B, ok = false;
+    for (let tries = 0; tries < 14 && !ok; tries++) {
+      org = o.at && tries < 8 ? o.at : { lat: lat0 + rng() * cellDegLat, lon: lon0 + rng() * cellDegLon }; hdg = rng() * Math.PI * 2; leg = tries < 8 ? leg0 : Math.max(0.6, leg0 * 0.4);
+      const half = leg / 2; A = { lat: org.lat - toLat(Math.cos(hdg) * half), lon: org.lon - toLon(Math.sin(hdg) * half) }; B = { lat: org.lat + toLat(Math.cos(hdg) * half), lon: org.lon + toLon(Math.sin(hdg) * half) };
+      ok = true; for (let q = 0; q <= 8 && ok; q++) { const dd = seafloor.depthAt(A.lat + ((B.lat - A.lat) * q) / 8, A.lon + ((B.lon - A.lon) * q) / 8); ok = dd != null && dd >= minD; }
+    }
+    if (!ok) return null;   // no water for this ship here
     const hostile = f2.stance === 'hostile', unreg = kind === 'raider' || kind === 'poacher';
     return { id: `${cx}:${cy}:${i}`, kind, faction: group, factionName: f2.name || group, stance: f2.stance || 'neutral', label: k.label, size: k.size, kt, A, B, L: Math.max(0.5, leg), phase: rng() * 2, boldness: hostile && f2.boldness ? between(rng, f2.boldness) : 0,
       ais: k.ais !== false, bias: (rng() - 0.5) * c.sensing.bearing_noise_deg * 2, name: unreg ? (kind === 'raider' ? pick(rng, k.names) : 'Unmarked trawler') : (k.pre + ' ' + pick(rng, k.names)).trim(), mhz: +(156 + 0.025 * Math.floor(rng() * 240)).toFixed(3), reply: Math.floor(rng() * 1000), ident: false, alerted: false, dyn: null, hitAt: -1e9 };
@@ -77,7 +84,7 @@ function buildCell(cx, cy) {
     else { let tot = 0; for (const v of Object.values(w)) tot += v; let r = rng() * tot; for (const [k, v] of Object.entries(w)) { r -= v; if (r <= 0) { kind = k; break; } } kind = kind || 'cargo'; }
     if ((kind === 'tender' || kind === 'rig') && !site) kind = 'trawler';
     const sp = site ? { lat: site.lat + toLat((rng() - 0.5) * 12), lon: site.lon + toLon((rng() - 0.5) * 12) } : null;
-    out.push(make(i, kind, kind === 'tender' || kind === 'rig' ? { at: sp, site } : {}));
+    const vsl = make(i, kind, kind === 'tender' || kind === 'rig' ? { at: sp, site } : {}); if (vsl) out.push(vsl);
   }
   // poachers work inside the protected zones: made in the cell that holds the zone's centre
   for (const p of sim.s.pois) if (p.type === 'sanctuary' && p.lat >= lat0 && p.lat < lat0 + cellDegLat && p.lon >= lon0 && p.lon < lon0 + cellDegLon) {
@@ -122,7 +129,9 @@ export function step() {
       if (d > 14) { v.dyn = null; p = posAt(v, now); d = dist(s, p); }
       else if (dt > 0 && dt < 120) {
         const toS = Math.atan2((s.lon - p.lon) * SK, s.lat - p.lat), a = v.boldness >= 0.5 ? toS : toS + Math.PI, nm = (v.kt * 1.2 * dt) / 3600;
-        v.dyn = { lat: p.lat + toLat(Math.cos(a) * nm), lon: p.lon + toLonS(Math.sin(a) * nm), hdg: ((a * 180) / Math.PI + 360) % 360 }; p = v.dyn; d = dist(s, p);
+        const np = { lat: p.lat + toLat(Math.cos(a) * nm), lon: p.lon + toLonS(Math.sin(a) * nm) }, wd = seafloor.depthAt(np.lat, np.lon);
+        if (wd != null && wd >= 10) v.dyn = { ...np, hdg: ((a * 180) / Math.PI + 360) % 360 }; else v.dyn = { lat: p.lat, lon: p.lon, hdg: ((a * 180) / Math.PI + 360) % 360 };   // a ship does not sail onto land
+        p = v.dyn; d = dist(s, p);
       }
     }
     if (d > c.bubble_nm) continue;

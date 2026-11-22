@@ -1,5 +1,6 @@
 {
   "id": "navLesson",
+  "tutorial": true,
   "name": "Charting a Course",
   "description": "Learn the Navigation station.",
   "category": "main",

@@ -1,5 +1,6 @@
 {
   "id": "shipTour",
+  "tutorial": true,
   "name": "Know Your Ship",
   "description": "ARIA shows you round the Aqua Nova.",
   "category": "main",
@@ -64,9 +65,18 @@
       ],
       "after": "walkway",
       "onComplete": [
-        { "type": "unlock_crew", "crewId": "sensors" },
-        { "type": "unlock_crew", "crewId": "communications" },
-        { "type": "unlock_crew", "crewId": "security" }
+        {
+          "type": "unlock_crew",
+          "crewId": "sensors"
+        },
+        {
+          "type": "unlock_crew",
+          "crewId": "communications"
+        },
+        {
+          "type": "unlock_crew",
+          "crewId": "security"
+        }
       ]
     }
   ],

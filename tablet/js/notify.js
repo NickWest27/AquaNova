@@ -12,14 +12,24 @@ export const stats = { chirps: 0, shown: 0 };
 let lastChirp = -1e9, lastPing = -1e9;
 
 // Held messages: what a crew member said that the Captain may have missed. Kept until the Captain reads it in the communicator.
-const held = new Map();   // crew id -> [{ text, at }]
+// Dialogue stays current: a held message belongs to a moment, and when that moment has passed it is dropped, never shown late and never filed as a past conversation.
+// A message can say when it stops applying: opts.valid (a function that is true while it still applies), opts.key (a newer message with the same key replaces it,
+// and retire(key) removes it, for example when the thing it described has finished), opts.ttl (seconds). Only what the Captain has actually read reaches the transcript.
+const held = new Map();   // crew id -> [{ text, at, key, valid, ttl }]
 const emitChange = () => document.dispatchEvent(new CustomEvent('inbox-change'));
 const waiting = () => ((gameState.getProperty('progress.decisions') || {}).pending || []).length;   // decisions ARIA is waiting on
-export const unreadCount = () => [...held.values()].reduce((n, l) => n + l.length, 0) + waiting();
-export const unreadFor = (id) => (held.get(id) || []).length + (id === 'executiveOfficer' ? waiting() : 0);
-/** Returns and clears the held messages for one crew member. */
-export function takeHeld(id) { const l = held.get(id) || []; held.delete(id); if (l.length) emitChange(); return l.map((m) => m.text); }
+const fresh = (m) => !(m.valid && !m.valid()) && !(m.ttl && Date.now() - m.at > m.ttl * 1000);
+function prune() { let gone = false; for (const [id, l] of held) { const k = l.filter(fresh); if (k.length !== l.length) { gone = true; if (k.length) held.set(id, k); else held.delete(id); } } if (gone) emitChange(); }
+export const unreadCount = () => { prune(); return [...held.values()].reduce((n, l) => n + l.length, 0) + waiting(); };
+export const unreadFor = (id) => { prune(); return (held.get(id) || []).length + (id === 'executiveOfficer' ? waiting() : 0); };
+/** Drop every held message with this key (what it described is over). */
+export function retire(key) { let gone = false; for (const [id, l] of held) { const k = l.filter((m) => m.key !== key); if (k.length !== l.length) { gone = true; if (k.length) held.set(id, k); else held.delete(id); } } if (gone) emitChange(); }
+/** Returns and clears the held messages for one crew member that still apply, and files them in the conversation: the Captain has now read them. */
+export function takeHeld(id) { prune(); const l = held.get(id) || []; held.delete(id); if (l.length) emitChange(); for (const m of l) logLine(id, 'crew', m.text); return l.map((m) => m.text); }
 export function clearHeld() { held.clear(); emitChange(); }
+// The crew member whose communicator page is open right now: what they say meanwhile is read as it arrives.
+let openCrew = null;
+export const setOpenCrew = (id) => { openCrew = id; };
 
 // The conversation with each crew member: what they said (including running notes such as the undocking sequence) and what the Captain said.
 // Kept in memory for the session; the communicator shows it as a transcript and updates it live.
@@ -42,12 +52,14 @@ export function say(role, text, kind = '', opts = {}) {
   if (hush.fn()) return;
   text = fill(text); if (opts.keep) opts = { ...opts, keep: fill(opts.keep) };
   const now = Date.now(), w = who(role);
+  const keepIt = (kind === 'mission' || kind === 'error') && opts.hold !== false && CREW_ID[role] !== openCrew;   // worth keeping until read, unless they are on the line with us now
   if (CREW_ID[role]) {
-    logLine(CREW_ID[role], 'crew', text);   // the running notes belong in their communicator too
+    if (!keepIt) logLine(CREW_ID[role], 'crew', text);   // the running notes belong in their communicator too. A kept message is filed when it is read.
     if (!gameState.getProperty(`contacts.crew.${CREW_ID[role]}.known`)) gameState.updateProperty(`contacts.crew.${CREW_ID[role]}.known`, true);   // someone who has spoken to the Captain stays reachable
   }
-  if ((kind === 'mission' || kind === 'error') && opts.hold !== false) {   // worth keeping until read
-    const id = CREW_ID[role] || role, l = held.get(id) || []; l.push({ text: opts.keep || text, at: now }); held.set(id, l.slice(-5)); emitChange();
+  if (keepIt) {
+    const id = CREW_ID[role] || role, l = (held.get(id) || []).filter((m) => !(opts.key && m.key === opts.key));
+    l.push({ text: opts.keep || text, at: now, key: opts.key, valid: opts.valid, ttl: opts.ttl }); held.set(id, l.slice(-5)); emitChange();
   }
   if (viewProbe.fn() && opts.notice) {   // bridge: ship-state notices go to the upper display. Voice never does; it uses the line at the foot of the screen like everywhere else.
     document.dispatchEvent(new CustomEvent('notice', { detail: { text: opts.notice, kind, who: w.name.split(' ').pop().toUpperCase() } }));
@@ -60,4 +72,4 @@ export function say(role, text, kind = '', opts = {}) {
 }
 
 /** A crew member reports on what the Captain just did. Replaces the old pop-up toast. kind 'mission' keeps it until read. */
-export const tell = (role, text, kind = '') => say(role, text, kind === 'mission' ? 'mission' : '');
+export const tell = (role, text, kind = '', opts = {}) => say(role, text, kind === 'mission' ? 'mission' : '', opts);

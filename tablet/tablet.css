@@ -233,7 +233,7 @@ body.show-labels .hs, body.show-labels .door { border-color: rgba(100,255,218,0.
 .comm-line.back { color: var(--dim); background: none; border-style: dashed; }
 .comm-who { text-align: left; justify-content: flex-start; gap: 0.9rem; } .comm-who b { display: block; font-size: 1.2rem; color: var(--text); } .comm-who small { color: var(--dim); font-size: 0.9rem; }
 .comm-you { color: var(--dim); font-style: italic; font-size: 1.05rem; }
-.comm-reply { margin: 0.4rem 0 0.8rem; max-width: 36rem; } .comm-reply small { color: var(--dim); letter-spacing: 0.1em; text-transform: uppercase; } .comm-reply p { font-size: 1.5rem; line-height: 1.4; color: #fff; }
+.comm-reply { margin: 0.4rem 0 0.8rem; max-width: 36rem; } .comm-reply small { color: var(--dim); letter-spacing: 0.1em; text-transform: uppercase; } .comm-reply p { font-size: 1.5rem; line-height: 1.4; color: #fff; white-space: pre-line; }
 .ped-panel.pda { width: min(100%, calc((100dvh - 1.6rem) * 1.7778)); height: auto; aspect-ratio: 16 / 9; }
 .ped-panel .pda-frame { width: 100cqh; height: 100cqw; left: 50%; top: 50%; right: auto; bottom: auto; transform: translate(-50%, -50%) rotate(90deg); }   /* the frame art is portrait: turned on its side */
 .ped-panel .pda-screen { left: 5.5%; right: 2.2%; top: 9.5%; bottom: 3.6%; padding: 4cqh 0 0 0; gap: 0; }

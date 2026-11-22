@@ -10,11 +10,12 @@ import { gameState } from '../persist.js';
 import { crewIcon } from '../icons.js';
 import { startReport } from '../transfer.js';
 import { topicsFor, askTopic } from '../topics.js';
+import { guidesFor, askGuide } from '../howto.js';
 import { askDepth } from '../depthPad.js';
 import { orderTern, callBackTern, ternReport, launchTern, destinations } from '../tern.js';
-import { TERN_SAFE_M } from '../bayops.js';
+import { TERN_SAFE_M, shuttle } from '../bayops.js';
 import { toggleDock } from '../dock.js';
-import { say as crewSay, takeHeld, unreadFor, unreadCount, transcript, logLine } from '../notify.js';
+import { say as crewSay, takeHeld, unreadFor, unreadCount, transcript, logLine, setOpenCrew } from '../notify.js';
 
 // First meeting with each crew member. Spoken once, saved in progress.met.<id>. {captain} = "Captain Surname".
 const INTRO = {
@@ -135,17 +136,85 @@ ORDERS['Report on the Tern'] = () => ternReport();
 PARAM['Make you speed'] = PARAM['Make your speed']; // old saves keep the typo
 const works = (t, pleasantry) => pleasantry || t in ORDERS || t in PARAM;
 
+
+// ---------- The orders menu ----------
+// Orders sit in folders by what they do, and an order is only offered when it makes sense now: Dock or Undock, never both; Hug the floor or Stop hugging it.
+// F(folder label, ...items). O(order text, show). An order that is not listed here still appears, in "Other orders", so nothing is lost.
+const F = (label, ...items) => ({ label, items });
+const O = (text, show = () => true) => ({ text, show });
+const relayOut = () => sim.s.wskrs.some((w) => w.mode === 'relay' && !w.dead);
+const ternOut = () => shuttle().state === 'out';
+const atDock = () => !!(sim.s.at && sim.s.at.type === 'dock');
+const underway = () => !sim.s.docked;
+const TREE = {
+  executiveOfficer: () => [
+    F('Ship', O('Status Report'), O('Report to my quarters')),
+    F('Getting underway', O("Let's take her to sea", () => docked()), O("Let's go home", () => underway() && !!sim.dockPoi() && !atDock())),
+  ],
+  helm: () => [
+    F('Depth', O('Make periscope depth', () => underway() && Math.abs(sim.s.depth - PERISCOPE_M) > 1.5), O('Make your depth', underway), O('Hug the floor', () => underway() && !sim.s.hug), O('Stop hugging the floor', () => !!sim.s.hug)),
+    F('Heading', O('Make your heading', underway), O('Come left', underway), O('Come right', underway)),
+    F('Speed', O('Make your speed', underway), O('All stop', () => underway() && (sim.s.speed > 0.1 || sim.s.throttle > 0)), O('Engage super cruise', () => underway() && !sim.s.cruise), O('Disengage super cruise', () => !!sim.s.cruise)),
+    F('Docking', O('Undock', docked), O('Dock', () => underway() && atDock()), O('Request departure clearance', docked)),
+    F('Navigation', O("Let's go home", () => underway() && !!sim.dockPoi() && !atDock())),
+    F('Ship', O('Status report')),
+  ],
+  sensors: () => [
+    F('Sonar', O('Full sensor sweep', underway), O('Passive listening mode', () => !!sim.s.sonar)),
+    F('WSKRs', O('Deploy sensor buoys', underway), O('Set up a relay', () => underway() && !relayOut()), O('Stand down the relay', relayOut)),
+    F('Ship', O('Status report')),
+  ],
+  engineering: () => [F('Ship', O('Engineering status report'), O('Prepare for dive', underway), O('Emergency surface', () => underway() && sim.s.depth > 1))],
+  science: () => [F('Ship', O('Status report'), O('Run crew diagnostics'))],
+  communications: () => [
+    F('Reports', O('Transmit a report')),
+    F('The Tern', O('Order the Tern to', ternOut), O('Call back the Tern', ternOut), O('Report on the Tern', ternOut)),
+    F('Ship', O('Status report')),
+  ],
+  security: () => [F('The Tern', O('Launch the Tern to', () => !ternOut() && underway())), F('Ship', O('Status report'))],
+};
+
 export function mount(body, ctx) {
   body.classList.add('comm-menu');
   const crew = knownCrew();
   let page = 'crew', cur = null, cat = null, reply = null, greeted = false, param = null;
   const mineP = () => gameState.getProperty('contacts.crew.captain.dialogueOptions.pleasantries') || ['Hello', 'Goodbye', 'Thank you'];
+  // The menu is a tree of folders. A folder is { folder: true, label, title, kids }, a leaf is { label, run, cls }.
+  const orderLeaf = (t) => ({ label: t, cls: works(t) ? '' : 'stub', run: () => speak(t) });
+  const orderKids = () => {
+    const o = (cur && cur.dialogueOptions) || {}, id = cur && cur.id;
+    const all = [...(o.commands || []), ...((EXTRA[id]) || [])];
+    const placed = new Set(), kids = [];
+    for (const f of (TREE[id] ? TREE[id]() : [])) {
+      const items = f.items.filter((i) => all.includes(i.text) || i.text in ORDERS || i.text in PARAM);
+      items.forEach((i) => placed.add(i.text));
+      const shown = items.filter((i) => i.show());
+      if (shown.length) kids.push({ folder: true, label: f.label, title: `${f.label} …`, kids: shown.map((i) => orderLeaf(i.text)) });
+    }
+    const rest = all.filter((t) => !placed.has(t) && (!(t in ORDERS || t in PARAM) || !TREE[id]));
+    const live = [...new Set(rest)].filter((t) => works(t)), stubs = [...new Set(rest)].filter((t) => !works(t));
+    if (live.length) kids.push({ folder: true, label: 'Other orders', title: 'Other orders …', kids: live.map(orderLeaf) });
+    if (stubs.length) kids.push({ folder: true, label: 'Not available yet', title: 'Not available yet …', kids: stubs.map(orderLeaf) });
+    return kids;
+  };
+  const askKids = () => {
+    const id = cur && cur.id, kids = [];
+    for (const f of guidesFor(id)) kids.push({ folder: true, label: f.label, title: `${f.label} …`, kids: f.items.map((i) => ({ label: i.label, run: () => say(`How do I … ${i.label}`, askGuide(id, i.id)) })) });
+    const topics = topicsFor(id);
+    if (topics.length) kids.push({ folder: true, label: 'Background', title: `Ask ${first(cur)} about …`, kids: topics.map((q) => ({ label: `${q.told ? '✓ ' : ''}${q.label}`, cls: q.told ? 'stub' : '', run: () => say(`Ask about ${q.label}`, askTopic(id, q.id)) })) });
+    return kids;
+  };
   const cats = () => {
     const o = (cur && cur.dialogueOptions) || {};
-    const cmds = [...(o.commands || []), ...((EXTRA[cur && cur.id]) || []).filter((c) => !(o.commands || []).includes(c))];
-    const asks = topicsFor(cur && cur.id);
-    return [['Pleasantries', mineP(), 'Make small talk'], ['Ask', asks, 'Ask about …'], ['Commands', cmds, 'Give an order'], ['Emergency', o.emergency || [], 'Report an emergency']].filter(([, l]) => l.length);
+    const top = [];
+    const pl = mineP(); if (pl.length) top.push({ folder: true, label: 'Make small talk', title: `Say to ${first(cur)}…`, kids: pl.map((t) => ({ label: t, run: () => speak(t) })) });
+    const ak = askKids(); if (ak.length) top.push({ folder: true, label: 'Ask about …', title: `Ask ${first(cur)} about…`, kids: ak });
+    const ok = orderKids(); if (ok.length) top.push({ folder: true, label: 'Give an order', title: `Order to ${first(cur)}…`, kids: ok });
+    const em = (o.emergency || []); if (em.length) top.push({ folder: true, label: 'Report an emergency', cls: 'danger', title: `Tell ${first(cur)}…`, kids: em.map((t) => ({ label: t, cls: works(t) ? '' : 'stub', run: () => speak(t) })) });
+    return top;
   };
+  let trail = [];   // labels of the folders open now, outermost first. Looked up again on every draw, so the menu follows the ship's state.
+  const openFolder = () => { let kids = cats(), f = null; for (const l of trail) { f = kids.find((k) => k.folder && k.label === l); if (!f) return null; kids = f.kids; } return f; };
   const line = (text, onclick, cls = '') => el('button', { class: `comm-line ${cls}`, text, onclick });
   const first = (c) => (c.id === 'executiveOfficer' ? 'ARIA' : c.name.replace(/^(Captain|Commander|Dr\.|Specialist|Engineer|Lieutenant) /, '').split(' ')[0]);
   const initial = (c) => c.name.replace(/^(Captain|Commander|Dr\.|Specialist|Engineer|Lieutenant) /, '')[0];
@@ -155,7 +224,7 @@ export function mount(body, ctx) {
     if (done) logLine(cur.id, 'crew', done);
     reply = { said: text, text: done };
     page = 'reply';
-    document.dispatchEvent(new CustomEvent('dialogue-complete', { detail: { characterId: cur.id, dialogueId: 'first_contact' } }));
+    if (cur.id === 'executiveOfficer') document.dispatchEvent(new CustomEvent('dialogue-complete', { detail: { characterId: cur.id, dialogueId: 'first_contact' } }));
     render();
   }
   function speak(text) {
@@ -180,6 +249,7 @@ export function mount(body, ctx) {
   document.addEventListener('crew-line', onLine);
 
   function render() {
+    setOpenCrew(!cur || page === 'crew' ? null : cur.id);   // while we are on the line with someone, what they say is read as it comes
     let kids;
     if (!crew.length) kids = [el('div', { class: 'comm-head', text: 'No one else seems to be available right now…' })];
     else if (page === 'crew') {
@@ -196,12 +266,14 @@ export function mount(body, ctx) {
         } }, el('span', { class: `avatar ${c.id === 'executiveOfficer' ? 'aria' : ''}` }, crewIcon(c.id) || initial(c)), el('span', {}, el('b', { text: c.name }), el('small', { text: c.role })), unreadFor(c.id) > 0 && el('span', { class: 'comm-badge', text: String(unreadFor(c.id)) })))];
     } else if (page === 'cat') {
       kids = [logView(5), el('div', { class: 'comm-head', text: `What is on your mind, Captain?` }), el('div', { class: 'comm-who-label', text: `${cur.name} · ${cur.role}` }),
-        ...cats().map(([n, l, label]) => line(label, () => { cat = [n, l, label]; page = 'lines'; render(); }, n === 'Emergency' ? 'danger' : '')),
+        ...cats().map((f) => line(f.label, () => { trail = [f.label]; page = 'lines'; render(); }, f.cls || '')),
         line('Actually, let me call someone else …', () => { page = 'crew'; render(); }, 'back')];
     } else if (page === 'lines') {
-      kids = [el('div', { class: 'comm-head', text: cat[0] === 'Pleasantries' ? `Say to ${first(cur)}…` : cat[0] === 'Ask' ? `Ask ${first(cur)} about…` : cat[0] === 'Commands' ? `Order to ${first(cur)}…` : `Tell ${first(cur)}…` }),
-        ...(cat[0] === 'Ask' ? topicsFor(cur.id).map((q) => line(`${q.told ? '✓ ' : ''}${q.label}`, () => say(`Ask about ${q.label}`, askTopic(cur.id, q.id)), q.told ? 'stub' : '')) : cat[1].map((t) => { const ok = works(t, cat[0] === 'Pleasantries'); return line(t, () => speak(t), ok ? (cat[0] === 'Emergency' ? 'danger' : '') : 'stub'); })),
-        line('Belay that …', () => { page = 'cat'; render(); }, 'back')];
+      const f = openFolder();
+      if (!f) { trail = []; page = 'cat'; return render(); }
+      kids = [el('div', { class: 'comm-head', text: f.title }),
+        ...f.kids.map((k) => k.folder ? line(`${k.label}  ▸`, () => { trail.push(k.label); render(); }, k.cls || '') : line(k.label, k.run, k.cls || '')),
+        line('Belay that …', () => { trail.pop(); if (!trail.length) page = 'cat'; render(); }, 'back')];
     } else if (page === 'decision') {
       const d = pendingDecisions()[0];
       if (!d) { page = 'cat'; return render(); }
@@ -224,5 +296,5 @@ export function mount(body, ctx) {
     body.replaceChildren(el('div', { class: 'comm-page' }, ...kids.filter(Boolean)));
   }
   render();
-  return { update() {}, destroy() { document.removeEventListener('crew-line', onLine); } };
+  return { update() {}, destroy() { setOpenCrew(null); document.removeEventListener('crew-line', onLine); } };
 }

@@ -14,6 +14,7 @@ import { planRoute } from './route.js';
 import { SHUTTLE_NAME } from './topics.js';
 import { research, samples } from './science.js';
 import './rov.js';
+import { retire } from './notify.js';
 
 export { SHUTTLE_NAME };
 export const BAY_SAFE_KT = 8, DOOR_DAMAGE_KT = 10, LAUNCH_S = 60, AIRLOCK_S = 10;
@@ -96,6 +97,7 @@ export const repairDoors = () => { bay().doorDmg = 0; sim.touch(); };
 
 function finishOp(op) {
   const s = sim.s, b = bay(); b.op = null; sim.touch();
+  retire('bay');   // "being readied, about 60 seconds" no longer applies
   if (op.craft === 'rov') {
     if (op.kind === 'launch') { const r = sim.launchRov(); b.base = samples().length; if (r.ok) sim.emit('bay-launched', { craft: 'rov' }); }
     else { const r = sim.recoverRov(false), cargo = (r.ok && r.cargo) || [], load = cargo.length; if (!r.ok) return; b.rearm = { t: 0, dur: REMORA_REARM_S + load * REMORA_UNLOAD_S, load, cargo }; sim.emit('remora-aboard', b.rearm); }
