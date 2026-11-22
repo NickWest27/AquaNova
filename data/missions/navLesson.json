@@ -1,12 +1,12 @@
 {
   "id": "navLesson",
   "tutorial": true,
-  "name": "Charting a Course",
-  "description": "Learn the Navigation station.",
   "category": "main",
   "priority": "high",
   "autoStart": false,
   "prerequisites": [],
+  "name": "Charting a Course",
+  "description": "Commissioning: learn Navigation and Sensors on the way to Vineyard Ledge.",
   "objectives": [
     {
       "id": "open",
@@ -22,51 +22,126 @@
     },
     {
       "id": "plot",
-      "description": "Plot a course to Mystic Reef (it is close to the dock)",
+      "description": "Plot a course to Vineyard Ledge, about 16 nm south of the dock",
       "required": true,
       "triggers": [
         {
           "type": "property_change",
-          "property": "tutorial.plotted",
+          "property": "tutorial.plotted_ledge",
           "value": true
         }
       ],
       "after": "open"
     },
     {
-      "id": "arrive",
-      "description": "Take the ship to Mystic Reef",
+      "id": "open_sensors",
+      "description": "Open the Sensors station",
       "required": true,
       "triggers": [
         {
           "type": "property_change",
-          "property": "tutorial.arrived",
+          "property": "tutorial.opened_sensors",
           "value": true
         }
       ],
       "after": "plot"
+    },
+    {
+      "id": "wskr",
+      "description": "Launch a WSKR from the WSKR page (the ship must be under 8 knots)",
+      "required": true,
+      "triggers": [
+        {
+          "type": "property_change",
+          "property": "tutorial.wskr_out",
+          "value": true
+        }
+      ],
+      "after": "open_sensors"
+    },
+    {
+      "id": "sweep",
+      "description": "Run a full sonar sweep",
+      "required": true,
+      "triggers": [
+        {
+          "type": "property_change",
+          "property": "tutorial.swept",
+          "value": true
+        }
+      ],
+      "after": "open_sensors"
+    },
+    {
+      "id": "arrive",
+      "description": "Take the ship to Vineyard Ledge",
+      "required": true,
+      "triggers": [
+        {
+          "type": "property_change",
+          "property": "tutorial.arrived_ledge",
+          "value": true
+        }
+      ],
+      "after": "plot"
+    },
+    {
+      "id": "scan",
+      "description": "Scan Vineyard Ledge (the ship must be at the ledge)",
+      "required": true,
+      "triggers": [
+        {
+          "type": "property_change",
+          "property": "tutorial.scanned_ledge",
+          "value": true
+        }
+      ],
+      "after": "arrive"
     }
   ],
   "onStart": [
-    {
-      "type": "crew_say",
-      "role": "aria",
-      "text": "Navigation is signed off, Captain. Open it and plot a course to Mystic Reef. It is only a short way from the dock. Plotting steers the ship but does not change speed, so set a speed at the Helm as well."
-    }
-  ],
-  "onComplete": [
     {
       "type": "unlock_station",
       "station": "sensors"
     },
     {
-      "type": "crew_say",
-      "role": "sensors",
-      "text": "Sensors are commissioned, Captain. We are at the reef. Open Sensors, run a full sweep and scan the site."
+      "type": "unlock_station",
+      "station": "wskr"
     },
     {
-      "type": "start_mission",
-      "missionId": "sensorsLesson"
+      "type": "crew_say",
+      "role": "aria",
+      "text": "Navigation, Sensors and the WSKR link are signed off, Captain. We will commission the rest on the way. Open Navigation and plot a course to Vineyard Ledge, about 16 nautical miles south. Plotting steers the ship but does not change speed, so set a speed at the Helm too. Super cruise will save you time. Slow below 8 knots when you launch a WSKR."
+    }
+  ],
+  "onComplete": [
+    {
+      "type": "unlock_station",
+      "station": "lab"
+    },
+    {
+      "type": "unlock_station",
+      "station": "remora"
+    },
+    {
+      "type": "unlock_station",
+      "station": "bay"
+    },
+    {
+      "type": "crew_say",
+      "role": "science",
+      "text": "Good scan, Captain. The science lab and the launch bay are commissioned now. Remora is ready when OERA gives us work."
+    },
+    {
+      "type": "send_message",
+      "delaySeconds": 60,
+      "message": {
+        "id": "oera-first-survey",
+        "from": "OERA Operations",
+        "subject": "Survey assignment: Mystic Reef and Vineyard Ledge",
+        "missionId": "firstSurvey",
+        "text": "{captain},\n\nThe Aqua Nova has passed her trials, and the Directorate has your first survey assignment. We want baseline samples from the shelf off Woods Hole before the deep work begins.\n\nUse Remora, the Science ROV, from the Science Lab or the Launch Bay. Take a water sample at Mystic Reef, right beside the dock, with the sample collector, and drill a rock core at Vineyard Ledge, 16 nautical miles south of it. Remora is slow and stays on a tether, so bring the ship close and keep Remora within a nautical mile of it.\n\nBring both samples to Dr. Patel's lab for analysis, then send us your findings from the Comms station.\n\nAccept the mission when you are ready.\n\nO.E.R.A. Operations Directorate"
+      }
     }
   ],
   "hints": [
@@ -84,15 +159,39 @@
         "objectiveId": "plot",
         "seconds": 60
       },
-      "message": "Pick Mystic Reef on the chart and plot the course. It is close to the dock."
+      "message": "Pick Vineyard Ledge on the chart and plot the course. It is south of the dock."
+    },
+    {
+      "condition": {
+        "type": "objective_active_for",
+        "objectiveId": "wskr",
+        "seconds": 90
+      },
+      "message": "The WSKR page is inside the Sensors station, {captain}. Slow below 8 knots first: the bay doors open to the sea."
+    },
+    {
+      "condition": {
+        "type": "objective_active_for",
+        "objectiveId": "sweep",
+        "seconds": 60
+      },
+      "message": "A full sonar sweep shows more of what is around us, {captain}. The button is on the Sensors station."
     },
     {
       "condition": {
         "type": "objective_active_for",
         "objectiveId": "arrive",
+        "seconds": 120
+      },
+      "message": "Set a speed and the ship will follow the plotted course. Super cruise makes the run shorter."
+    },
+    {
+      "condition": {
+        "type": "objective_active_for",
+        "objectiveId": "scan",
         "seconds": 90
       },
-      "message": "Set a speed and the ship will follow the plotted course. Mystic Reef is a short run."
+      "message": "Scanning needs the ship at the ledge, {captain}. We are not there yet."
     }
   ]
 }

@@ -23,7 +23,7 @@ def main():
         page.evaluate("import('./js/sim.js').then(m=>m.setTimeScale(30))"); page.wait_for_timeout(200)   # these tests were written for the old 30x pace
         if page.is_visible(".modal .btn"): page.tap(".modal .btn"); page.wait_for_timeout(300)
         # the offer arrives after Sea Trials finish
-        r = js("""M.delayScale=0; M.startMission('seaTrials'); for (const o of ['undock','dive','speed','surface','report']) M.completeObjective('seaTrials',o); await new Promise(r=>setTimeout(r,300)); for (const o of ['open','plot','arrive']) M.completeObjective('navLesson',o); await new Promise(r=>setTimeout(r,300)); for (const o of ['open','sweep','scan']) M.completeObjective('sensorsLesson',o); await new Promise(r=>setTimeout(r,300)); const m=(g.getProperty('mission.inbox')||[]).find(x=>x.id==='oera-first-survey'); return {done:M.completedMissions.has('seaTrials'), msg:!!m, mid:m&&m.missionId}""")
+        r = js("""M.delayScale=0; M.startMission('seaTrials'); for (const o of ['undock','dive','speed','surface','report']) M.completeObjective('seaTrials',o); await new Promise(r=>setTimeout(r,300)); for (const o of ['open','plot','open_sensors','wskr','sweep','arrive','scan']) M.completeObjective('navLesson',o); await new Promise(r=>setTimeout(r,300)); const m=(g.getProperty('mission.inbox')||[]).find(x=>x.id==='oera-first-survey'); return {done:M.completedMissions.has('seaTrials'), msg:!!m, mid:m&&m.missionId}""")
         check("Sea Trials completes and the survey offer arrives", r["done"] and r["msg"] and r["mid"] == "firstSurvey", r)
         js("M.startMission('firstSurvey'); return 1")
         st = lambda: js("return (g.getProperty('mission.objectives')||[]).filter(o=>o.missionId==='firstSurvey').map(o=>o.status)")

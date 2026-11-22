@@ -294,11 +294,13 @@ function firstVisit(poi) {
 
 // ---------- boot ----------
 /** Lesson steps that watch a flag are re-checked now and then, so a step the Captain has already done (or that was missed) still counts.
- *  Charting a Course: a ship already at Mystic Reef has, in effect, plotted and arrived. */
+ *  Charting a Course (to Vineyard Ledge): the flags below come from the ship's own state, so being there already counts. */
 function lessonNudge() {
   if (!missions) return;
-  const at = sim.s.at;
-  if (at && at.name === 'Mystic Reef' && objStatus('navLesson_open') === 'completed' && objStatus('navLesson_arrive') && objStatus('navLesson_arrive') !== 'completed') { flag('plotted'); flag('arrived'); }
+  const s = sim.s, ledge = (p) => p && p.name === 'Vineyard Ledge';
+  if (ledge(s.wpt) || (ledge(s.at) && objStatus('navLesson_plot'))) flag('plotted_ledge');
+  if (ledge(s.at) && objStatus('navLesson_arrive') === 'active') flag('arrived_ledge');
+  if (s.wskrs && s.wskrs.length) flag('wskr_out');
   missions.checkTriggers();
 }
 async function boot() {

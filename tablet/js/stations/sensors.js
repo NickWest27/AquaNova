@@ -43,7 +43,7 @@ export function mount(body, ctx) {
 
   const scan = (p) => {
     if (!fileScan(p)) { tell('sensors', 'Already scanned'); return; }
-    ctx.flag('scanned'); tell('sensors', `Scan filed: ${p.name}`, 'mission'); sig = ''; update();
+    ctx.flag('scanned'); if (p.name === 'Vineyard Ledge') ctx.flag('scanned_ledge'); tell('sensors', `Scan filed: ${p.name}`, 'mission'); sig = ''; update();
   };
   const wText = (w, s) => ({ escort: 'holding formation', recall: 'returning', manual: 'manual control', search: 'searching', relay: 'relay' })[w.mode] || `investigating ${(s.pois.find((p) => p.id === w.target) || {}).name || 'a contact'}`;
 

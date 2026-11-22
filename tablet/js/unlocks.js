@@ -15,7 +15,7 @@ export const EXCUSES = {
   helm: 'The helm has not been commissioned yet. Finish the ship tour with ARIA first.',
   nav: 'Navigation has not been commissioned yet. Finish your sea trials first.',
   sys: 'Systems monitoring has not been commissioned yet. Finish the ship tour first.',
-  sensors: 'The sensor suite has not been commissioned yet. Learn to chart a course first.',
+  sensors: 'The sensor suite has not been commissioned yet. Finish your sea trials first.',
   comms: 'The communications console has not been commissioned yet. Use the communicator for now.',
   lab: 'The science lab has not been commissioned yet. The equipment is still in crates.',
   remora: 'Remora is still in its cradle and has not been commissioned yet.',
