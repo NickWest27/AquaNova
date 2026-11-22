@@ -3,6 +3,7 @@ import { sim, toward, WSKR_CODES } from './sim.js';
 import { frameThrottle } from './util.js';
 import { seafloor } from './seafloor.js';
 import { seen as seenShips } from './traffic.js';
+import { shuttle } from './bayops.js';
 import { affiliation, frameColour, drawContact, placeAffiliation } from './contactIcons.js';
 
 const RANGES = [0.5, 1, 2, 4, 8, 16, 32, 64, 128, 256];   // the chart is about 216 nm across, so 128 and 256 show all of it
@@ -162,6 +163,16 @@ export function createND(wrap, { onPick, stage = false, units = 1, contours = fa
       ctx.beginPath(); ctx.roundRect(x - k, y - k * 0.75, k * 2, k * 1.5, 5); ctx.fill(); ctx.stroke();
       ctx.fillStyle = '#e9d8ff'; ctx.font = `800 ${bigWskr ? 14 : 12}px system-ui`; ctx.textAlign = 'center'; ctx.fillText('Rm', x, y + 4.5); ctx.restore();
     }
+    // Tern (the shuttle): a pink arrowhead marked Tn, pointing along her heading, while she is out of the bay
+    { const sh = shuttle();
+      if (sh && sh.state === 'out' && sh.lat != null && !craft) {
+        const scale = R / nd.range, tt = turn(toward(c, sh)), x = w / 2 + tt.dx * scale, y = h / 2 - tt.dy * scale;
+        if (x > -20 && x < w + 20 && y > -20 && y < h + 20) {
+          const k = bigWskr ? 15 : 12, a = (((sh.heading || 0) - (trackUp ? c.heading : 0)) * Math.PI) / 180;
+          ctx.save(); ctx.translate(x, y); ctx.rotate(a); ctx.fillStyle = sh.dead ? '#5a2a3a' : '#4a1d38'; ctx.strokeStyle = sh.dead ? '#ff6b6b' : '#ff7eb6'; ctx.lineWidth = 2.5;
+          ctx.beginPath(); ctx.moveTo(0, -k * 1.2); ctx.lineTo(k, k); ctx.lineTo(0, k * 0.5); ctx.lineTo(-k, k); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore();
+          ctx.fillStyle = '#ffd0e6'; ctx.font = `800 ${bigWskr ? 14 : 12}px system-ui`; ctx.textAlign = 'left'; ctx.fillText('Tn', x + k + 3, y + 4);
+        } } }
     // POIs
     ctx.font = '700 17px system-ui';
     for (const poi of s.pois) {
@@ -184,7 +195,7 @@ export function createND(wrap, { onPick, stage = false, units = 1, contours = fa
       if (!a.pos) {
         ctx.save(); ctx.strokeStyle = col; ctx.fillStyle = col; ctx.globalAlpha = 0.8; ctx.lineWidth = 1.5; ctx.setLineDash([7, 5]); ctx.font = '700 12px ui-monospace, Menlo, monospace'; ctx.textAlign = 'center';
         for (const ln of a.lines) {
-          const o = px(ln.from), th = ((ln.brg - (trackUp ? s.heading : 0)) * Math.PI) / 180, ux = Math.sin(th), uy = -Math.cos(th), len = Math.min(w, h) / 2 - 20;
+          const o = px(ln.from), th = ((ln.brg - (trackUp ? c.heading : 0)) * Math.PI) / 180, ux = Math.sin(th), uy = -Math.cos(th), len = Math.min(w, h) / 2 - 20;
           ctx.beginPath(); ctx.moveTo(o.x, o.y); ctx.lineTo(o.x + ux * len * 1.15, o.y + uy * len * 1.15); ctx.stroke();
           const lx = Math.max(24, Math.min(w - 24, o.x + ux * len * 0.8)), ly = Math.max(14, Math.min(h - 8, o.y + uy * len * 0.8));
           ctx.setLineDash([]); ctx.save(); ctx.translate(lx - 24, ly - 4); drawContact(ctx, 'unknown', 'unknown', 8); ctx.restore(); ctx.fillText(String(Math.round(ln.brg)).padStart(3, '0') + '°', lx + 6, ly); ctx.setLineDash([7, 5]);
@@ -196,7 +207,7 @@ export function createND(wrap, { onPick, stage = false, units = 1, contours = fa
       const isSel = s.selContact === 'ship:' + v.id, fixOnly = !a.ais && a.pos.err > 0.05;
       if (fixOnly) { const er = Math.max(r + 4, (a.pos.err / nd.range) * (Math.min(w, h) / 2 - 24)); ctx.save(); ctx.strokeStyle = col; ctx.globalAlpha = 0.7; ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.arc(q.x, q.y, er, 0, 6.2832); ctx.stroke(); ctx.restore(); }
       if (a.pos.hdg != null && v.kt > 0.3) {   // course vector: longer for a faster ship
-        const th = ((a.pos.hdg - (trackUp ? s.heading : 0)) * Math.PI) / 180, L = r + 6 + v.kt * 1.6;
+        const th = ((a.pos.hdg - (trackUp ? c.heading : 0)) * Math.PI) / 180, L = r + 6 + v.kt * 1.6;
         ctx.save(); ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(q.x + Math.sin(th) * r, q.y - Math.cos(th) * r); ctx.lineTo(q.x + Math.sin(th) * L, q.y - Math.cos(th) * L); ctx.stroke(); ctx.restore();
       }
       ctx.save(); ctx.translate(q.x, q.y); drawContact(ctx, 'surface', aff, r, { faint: fixOnly }); ctx.restore();
