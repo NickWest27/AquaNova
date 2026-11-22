@@ -77,6 +77,7 @@ const ORDERS = {
     if (docked()) return 'We are already at the dock, Captain.';
     sim.setWpt(dock); sim.setDepth(0); sim.setThrottle(0.5); return `Course set for ${dock.name}. ${toward(sim.s, dock).nm.toFixed(1)} nautical miles.`;
   },
+  'XO has the con': (ctx) => { setTimeout(() => ctx.openScene('sleepAway'), 400); return 'Aye, Captain. I have the con. Choose how long I keep it.'; },
   'Report to my quarters': (ctx) => { setTimeout(() => ctx.openScene('quarters'), 500); return 'Acknowledged. Meet you there.'; },
   'Sound General Alarm': () => { toast('GENERAL ALARM', 'error'); return 'General alarm sounded. All hands to stations.'; },
   'All stop': () => { sim.stop(); return 'All stop, aye.'; },
@@ -148,7 +149,7 @@ const atDock = () => !!(sim.s.at && sim.s.at.type === 'dock');
 const underway = () => !sim.s.docked;
 const TREE = {
   executiveOfficer: () => [
-    F('Ship', O('Status Report'), O('Report to my quarters')),
+    F('Ship', O('Status Report'), O('Report to my quarters'), O('XO has the con')),
     F('Getting underway', O("Let's take her to sea", () => docked()), O("Let's go home", () => underway() && !!sim.dockPoi() && !atDock())),
   ],
   helm: () => [

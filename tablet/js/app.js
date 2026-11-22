@@ -191,6 +191,7 @@ function openScene(name) {
   else if (name === 'walkway') { closeStation(); scene.show('walkway'); }
   else if (name === 'walkway2') { closeStation(); scene.show('walkway2'); }
   else if (name === 'sleep') sleepDialog();
+  else if (name === 'sleepAway') sleepDialog('away');
   else if (name === 'science') { closeStation(); scene.show('science'); }
   else if (name === 'launchbay') { closeStation(); scene.show('launchbay'); }
   else if (name === 'medbay') { closeStation(); scene.show('medbay'); }
@@ -205,7 +206,7 @@ function openScene(name) {
 }
 
 // ---------- sleep: jump the game clock forward ----------
-function sleepDialog() {
+function sleepDialog(startMode = 'skip') {
   const s = sim.s;
   // time to the destination at the speed you are set for (so a long transit takes less of your time)
   const kt = Math.max(s.speed, s.throttle * sim.maxKt());
@@ -218,7 +219,7 @@ function sleepDialog() {
   const draw = () => chips.replaceChildren(
     ...[2, 4, 8, 12, 24].map((h) => el('button', { class: `btn chip ${!untilArrival && h === hours ? 'on primary' : ''}`, text: `${h} h`, onclick: () => { hours = h; untilArrival = false; draw(); } })),
     eta && el('button', { class: `btn chip ${untilArrival ? 'on primary' : ''}`, text: `Until arrival (${fmt(eta)})`, onclick: () => { hours = eta; untilArrival = true; draw(); } }));
-  let mode = 'skip', cap = 8;   // skip = jump the clock ahead; away = the crew have the con and the app may be closed
+  let mode = startMode, cap = 8;   // skip = jump the clock ahead; away = the crew have the con and the app may be closed
   const modes = el('div', { class: 'row' });
   const awayNote = el('p', { text: 'The crew have the con. Close the app whenever you like: when you open it again, ARIA briefs you on what happened. They keep your course and speed, hold at the Area of Operations limit, and stop on arrival, on a shoal, when supplies run low or if a craft is lost. If you are still asleep an hour after a stop, if a port is close by an away team takes the Tern for supplies (food, science equipment, mail, fresh CO2 scrubbers), and five minutes later the science team send Remora down to sample the point of interest you reached. They stand down after the limit you choose. Your iPhone shows where the ship should be.' });
   const drawAll = () => {

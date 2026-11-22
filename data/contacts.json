@@ -19,7 +19,7 @@
             "bio": "ARIA (Advanced Research and Interface Assistant) was built by O.E.R.A. on decades of deep-sea mission records, and designed to be a member of the crew, not a tool. She is calm and candid, and allowed to disagree with the Captain, on the record. She does not claim to feel anything, and the engineers who built her stopped arguing the point. She has been aboard longer than anyone, and she was in the room when Captain Voss was relieved. She has not said what she saw.",
             "image": "images/crew/AREA.png",
             "dialogueOptions": {
-                "commands": ["Report to my quarters", "Status Report", "Let's take her to sea", "Let's go home"],
+                "commands": ["Report to my quarters", "XO has the con", "Status Report", "Let's take her to sea", "Let's go home"],
                 "emergency": ["Sound General Alarm"],
                 "pleasantries": ["How may I assist you, Captain?", "How may I assist you, Commander?", "What's on your mind?", "All systems are nominal Captain.", "Yes, Captain?", "Yes, Commander?"]
             }
