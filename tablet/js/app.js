@@ -196,8 +196,8 @@ function openScene(name) {
   else if (name === 'launchbay') { closeStation(); scene.show('launchbay'); }
   else if (name === 'medbay') { closeStation(); scene.show('medbay'); }
   else if (name === 'medbay-station') say('aria', 'The medbay equipment is not commissioned yet, Captain.');
-  else if (name === 'lab-analysis' || name === 'lab-research') { ctx.labTab = name.slice(4); openStation('lab'); }
-  else if (name === 'lab') { ctx.labTab = 'samples'; openStation('lab'); }
+  else if (name === 'lab-samples' || name === 'lab-analysis' || name === 'lab-research') { ctx.labTab = name.slice(4); ctx.labOnly = true; openStation('lab'); }   // a bench shows only its own page
+  else if (name === 'lab') { ctx.labTab = 'samples'; ctx.labOnly = false; openStation('lab'); }   // the main computer offers all three
   else if (name === 'engineering') say('aria', 'Engineering is not built yet, Captain. The engineering crew are on the communicator if you need them.');
   else if (name === 'pickup-ped') { gameState.updateProperty('progress.got_ped', true); }
   else if (name === 'pickup') document.dispatchEvent(new CustomEvent('item-pickup', { detail: { itemId: 'communicator' } }));
@@ -373,6 +373,8 @@ async function boot() {
       else if (type === 'wskr-dead') say('sensors', `${wskrName(data)} has lost power and is adrift, Captain. Bring the ship alongside to recover it.`, 'mission');
       else if (type === 'wskr-search-done') say('sensors', `${wskrName(data)} has finished its search pattern and is rejoining the formation.`);
       else if (type === 'bay-launched') say(data.craft === 'shuttle' ? 'helm' : data.craft === 'rov' ? 'science' : 'sensors', data.craft === 'shuttle' ? `${SHUTTLE_NAME} is away, Captain.` : data.craft === 'rov' ? 'Remora is away. The bay doors stay open for her tether until she is back aboard, Captain.' : `${wskrName(data)} is away.`, '', { action: true });
+      else if (type === 'speed-cap') say('helm', `Captain, the outer bay doors are open. I am holding us at ${data.kt} knots to protect the ship and the doors. Tell me to override the limit, or use Systems, if you want more.`, 'mission');
+      else if (type === 'speed-override') say('helm', 'Limit overridden, Captain. Speed is yours until the doors close. Watch the bay.');
       else if (type === 'bay-warn') say('engineering', `Captain, the bay doors are open and she is taking a beating at ${Math.round(data.kt)} knots. Come below ${BAY_SAFE_KT}, if ya please.`, 'mission');
       else if (type === 'bay-door-damage') say('engineering', `Captain, ya killing the bay doors at this speed! I recommend we slow down. They are ${Math.round(data.pct)} percent gone, and only a dry dock fixes that.`, 'mission');
       else if (type === 'bay-tether') say('engineering', `${wskrName(data)} is alongside, Captain, but Remora's tether is holding the bay doors open. Get her aboard first.`);

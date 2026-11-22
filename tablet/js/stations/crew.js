@@ -13,7 +13,7 @@ import { topicsFor, askTopic } from '../topics.js';
 import { guidesFor, askGuide } from '../howto.js';
 import { askDepth } from '../depthPad.js';
 import { orderTern, callBackTern, ternReport, launchTern, destinations } from '../tern.js';
-import { TERN_SAFE_M, shuttle } from '../bayops.js';
+import { TERN_SAFE_M, shuttle, bayDoorsOpen, setBayOverride, bay as bayState } from '../bayops.js';
 import { toggleDock } from '../dock.js';
 import { say as crewSay, takeHeld, unreadFor, unreadCount, transcript, logLine, setOpenCrew } from '../notify.js';
 
@@ -106,6 +106,8 @@ const ORDERS = {
     return `No ${r.L.label} link, Captain: ${r.st.status.toLowerCase()}. The antenna must be near the surface. Raise it, or pick another source on the Comms controls.`;
   },
   'Passive listening mode': () => { sim.s.sonar = false; sim.touch(); return 'Sonar secured. Listening passively.'; },
+  'Override the bay speed limit': () => (setBayOverride(true) ? 'Aye, Captain. The bay speed limit is overridden until the doors close.' : 'The outer doors are closed, Captain. No limit to override.'),
+  'Restore the bay speed limit': () => (setBayOverride(false) ? 'Bay speed limit restored, Captain.' : 'The outer doors are closed, Captain.'),
   'Run crew diagnostics': () => 'Crew diagnostics complete. Everyone aboard is healthy, Captain.',
   'Request departure clearance': () => (docked() ? 'Woods Hole Harbor Control: you are cleared to depart at your discretion. Safe travels.' : 'Harbor Control: you are already underway, Captain.'),
 };
@@ -155,7 +157,7 @@ const TREE = {
   helm: () => [
     F('Depth', O('Make periscope depth', () => underway() && Math.abs(sim.s.depth - PERISCOPE_M) > 1.5), O('Make your depth', underway), O('Hug the floor', () => underway() && !sim.s.hug), O('Stop hugging the floor', () => !!sim.s.hug)),
     F('Heading', O('Make your heading', underway), O('Come left', underway), O('Come right', underway)),
-    F('Speed', O('Make your speed', underway), O('All stop', () => underway() && (sim.s.speed > 0.1 || sim.s.throttle > 0)), O('Engage super cruise', () => underway() && !sim.s.cruise), O('Disengage super cruise', () => !!sim.s.cruise)),
+    F('Speed', O('Make your speed', underway), O('All stop', () => underway() && (sim.s.speed > 0.1 || sim.s.throttle > 0)), O('Override the bay speed limit', () => bayDoorsOpen() && !bayState().override), O('Restore the bay speed limit', () => bayDoorsOpen() && !!bayState().override), O('Engage super cruise', () => underway() && !sim.s.cruise), O('Disengage super cruise', () => !!sim.s.cruise)),
     F('Docking', O('Undock', docked), O('Dock', () => underway() && atDock()), O('Request departure clearance', docked)),
     F('Navigation', O("Let's go home", () => underway() && !!sim.dockPoi() && !atDock())),
     F('Ship', O('Status report')),

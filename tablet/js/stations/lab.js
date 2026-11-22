@@ -12,7 +12,8 @@ export function mount(body, ctx) {
   let tab = ctx.labTab || 'samples', sig = '', screens = [], shown = {}, raf = 0, alive = true;
   const tabs = el('div', { class: 'tabs' });
   const view = el('div', { class: 'tab-body', style: 'flex:1;min-height:0' });
-  body.append(tabs, view);
+  const only = !!ctx.labOnly;   // opened from a bench, not the main computer: one page, no tabs
+  body.append(...(only ? [view] : [tabs, view]));
   const go = (t) => { tab = t; sig = ''; update(); };
 
   function update() {
@@ -29,7 +30,7 @@ export function mount(body, ctx) {
         el('div', { class: 'grow' }, el('h3', { text: sampleName(q, sm) }),
           el('p', { style: 'color:var(--dim)', text: `${q.site} · ${q.tool} · ${q.status === 'done' ? q.result : q.status === 'running' ? 'being analysed' : 'waiting for analysis'}` })),
         q.status === 'done' ? el('span', { class: 'ok', text: 'Done' }) : q.status === 'running' ? el('span', { style: 'color:var(--amber)', text: 'Running' })
-          : el('button', { class: 'btn chip', text: 'Analyse', onclick: () => go('analysis') }))) :
+          : only ? el('span', { style: 'color:var(--dim)', text: 'Waiting' }) : el('button', { class: 'btn chip', text: 'Analyse', onclick: () => go('analysis') }))) :
         [el('div', { class: 'empty', text: 'No samples yet. Launch Remora from the Science Lab and collect some.' })]));
     } else if (tab === 'analysis') {
       view.replaceChildren(...Object.entries(LABS).map(([id, lab]) => {

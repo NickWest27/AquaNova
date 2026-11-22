@@ -129,12 +129,12 @@ export function createScene(stage, { onOpen }) {
     slanted('', sci.research, 160, 172, [[1107, 345], [1265, 311], [1268, 482], [1109, 483]]),
     slanted('', sci.remora, 190, 96, [[749, 378], [936, 378], [936, 472], [750, 475]]),
     sciFrame,
-    hs('SAMPLES', 666, 620, 680, 430, () => onOpen('lab'), 'top'),                 // the island bench
+    hs('SAMPLES', 666, 620, 680, 430, () => onOpen('lab-samples'), 'top'),                 // the island bench
     hs('ANALYSIS', 1280, 540, 640, 300, () => onOpen('lab-analysis'), 'top'),     // the bench with the racks and the microscope
     hs('RESEARCH', 0, 380, 240, 260, () => onOpen('lab-research'), 'bottom'),     // the machine on the left
     hs('WALKWAY ▸', 345, 345, 255, 300, () => onOpen('walkway'), 'mid'),          // the door
-    hs('SAMPLES', 1530, 60, 330, 250, () => onOpen('lab'), 'bottom'),             // the screens
-    hs('MAIN COMPUTER', 1590, 300, 310, 200, () => onOpen('lab-analysis'), 'bottom'),
+    hs('SAMPLES', 1530, 60, 330, 250, () => onOpen('lab-samples'), 'bottom'),             // the screens
+    hs('MAIN COMPUTER', 1590, 300, 310, 200, () => onOpen('lab'), 'bottom'),
     hs('RESEARCH COMPUTER', 1100, 310, 175, 180, () => onOpen('lab-research'), 'bottom'),
     hs('ROV STATION', 745, 370, 195, 110, () => onOpen('remora'), 'bottom'));
   // medbay (concept art). Treatment and crew health are not built yet; the exam table is a locked tap area for now.

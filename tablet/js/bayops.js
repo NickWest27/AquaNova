@@ -48,7 +48,7 @@ export const dockList = docks;
 /** Range of the shuttle on its present charge, in nm, keeping the 15% reserve. */
 export const shuttleRangeNm = () => { const sh = mannedDefaults(shuttle()); return SHUTTLE_KT * Math.min(shuttleHours() * Math.max(0, sh.bat - LOW_PCT) / 100, shuttleO2Hours() * (O2_CREW / Math.max(1, aboard(sh))) * Math.max(0, sh.o2 - LOW_PCT) / 100); };
 
-function startOp(op) { const b = bay(); if (b.op) return { ok: false, why: 'busy' }; if (b.doorDmg >= 100) return { ok: false, why: 'doors' }; if (sim.s.rov && op.craft !== 'rov') return { ok: false, why: 'tether' }; b.op = { t: 0, dur: opSeconds(), air: 0, ...op }; sim.touch(); sim.emit('bay-op', b.op); return { ok: true, secs: b.op.dur + b.op.air }; }
+function startOp(op) { const b = bay(); if (b.op) return { ok: false, why: 'busy' }; if (sim.s.speed > BAY_SAFE_KT && !b.override) return { ok: false, why: 'fast' }; if (b.doorDmg >= 100) return { ok: false, why: 'doors' }; if (sim.s.rov && op.craft !== 'rov') return { ok: false, why: 'tether' }; b.op = { t: 0, dur: opSeconds(), air: 0, ...op }; sim.touch(); sim.emit('bay-op', b.op); return { ok: true, secs: b.op.dur + b.op.air }; }
 
 /** Start a one-minute WSKR launch. Picks the racked WSKR with the most charge. */
 export function launchWskr(want) {
@@ -109,6 +109,11 @@ function finishOp(op) {
   else { const sh = shuttle(); Object.assign(sh, { state: 'bay', mode: 'follow', dest: null, route: null }); sim.emit('shuttle-aboard', sh); }
 }
 
+/** The Captain overrides (or restores) the speed limit while the outer doors are open. It lapses when the doors close. */
+export const bayDoorsOpen = () => !!(bay().op || sim.s.rov);
+export function setBayOverride(on) { const b = bay(); if (!bayDoorsOpen()) return false; b.override = !!on; sim.touch(); if (on) sim.emit('speed-override', {}); return true; }
+sim.speedCaps.push((s) => (bay().op || s.rov) && !bay().override ? BAY_SAFE_KT : null);
+
 /** The doors are open for a launch or recovery, and the whole time Remora is out on its tether. */
 function stepOp(g) {
   const b = bay(), op = b.op, s = sim.s, kt = s.speed;
@@ -118,7 +123,7 @@ function stepOp(g) {
       const c = b.rearm.cargo.shift(); sim.deliverSample(c); sim.emit('remora-unloaded', { kind: c.kind, left: b.rearm.cargo.length });
     }
     if (b.rearm.t >= b.rearm.dur) { b.rearm = null; sim.emit('remora-ready'); } }
-  if (!op && !s.rov) { b.warned = b.doorSaid = false; return; }
+  if (!op && !s.rov) { b.warned = b.doorSaid = false; b.override = false; return; }
   if (kt <= BAY_SAFE_KT) b.warned = b.doorSaid = false;
   if (kt > BAY_SAFE_KT) {
     if (!b.warned) { b.warned = true; sim.emit('bay-warn', { kt }); }
@@ -227,5 +232,5 @@ function stepShuttle(g) {
 sim.hooks.push((dt) => { const g = dt * TIMESCALE; stepOp(g); receive(); chargeRack(g); stepShuttle(g); });
 
 /** What to tell the Captain about the result of launchWskr(). */
-export const launchText = (r) => r.ok ? `${wskrName({ n: r.n })} is being readied in the bay. About ${Math.round(r.secs)} seconds.` : ({ docked: 'Undock first', full: 'All four WSKRs are out', busy: 'The bay is busy with another craft', doors: 'The bay doors are too damaged to open: dry dock needed', tether: "Remora's tether is holding the bay doors open. Recover it first", charge: `${wskrName({ n: r.n })} is only at ${Math.round(r.bat || 0)} percent charge. It needs 20 percent` })[r.why] || 'Cannot launch now';
+export const launchText = (r) => r.ok ? `${wskrName({ n: r.n })} is being readied in the bay. About ${Math.round(r.secs)} seconds.` : ({ docked: 'Undock first', fast: 'Slow below 8 kt first', full: 'All four WSKRs are out', busy: 'The bay is busy with another craft', doors: 'The bay doors are too damaged to open: dry dock needed', tether: "Remora's tether is holding the bay doors open. Recover it first", charge: `${wskrName({ n: r.n })} is only at ${Math.round(r.bat || 0)} percent charge. It needs 20 percent` })[r.why] || 'Cannot launch now';
 

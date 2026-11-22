@@ -48,7 +48,7 @@ def main():
             r = js(B + "return B.launchWskr(2)")
             check("a WSKR below 20% charge cannot launch", not r["ok"] and r["why"] == "charge", str(r))
             # speed rules
-            js("sim.s.rack={}; sim.s.bay={op:null,doorDmg:0}; sim.s.damage=0; return 1")
+            js("sim.s.rack={}; sim.s.bay={op:null,doorDmg:0,override:true}; sim.s.damage=0; return 1")
             r = js(B + "const s=sim.s; s.speed=15; s.throttle=1; const d0=s.damage; B.launchWskr(); return {d0}"); page.wait_for_timeout(1000)
             r = js("const s=sim.s, b=s.bay; return {kt:s.speed, dmg:s.damage, door:b.doorDmg}")
             check("bay open above 8 kt damages the ship", r["kt"] > 8 and r["dmg"] > 0, str(r))
@@ -117,7 +117,7 @@ def main():
             page.wait_for_timeout(1500)
             check("then she is out", js("return !!sim.s.rov") is True)
             r = js(B + "return [B.launchWskr().why, B.launchShuttle().why]"); check("her tether blocks WSKR and shuttle launches", r == ["tether", "tether"], str(r))
-            js("window.__ev=[]; sim.on((t,d)=>window.__ev.push(t)); const s=sim.s; s.speed=12; s.throttle=1; return 1"); page.wait_for_timeout(800)
+            js("window.__ev=[]; sim.on((t,d)=>window.__ev.push(t)); const s=sim.s; s.bay.override=true; s.speed=12; s.throttle=1; return 1"); page.wait_for_timeout(800)
             r = js("const s=sim.s; return {door:s.bay.doorDmg, dmg:s.damage}"); check("doors open for the tether: speed over 10 kt damages them with no operation running", r["door"] > 0 and r["dmg"] > 0, str(r))
             ev = page.evaluate("window.__ev"); check("Engineering is told (bay-warn, bay-door-damage)", "bay-warn" in ev and "bay-door-damage" in ev, str(ev))
             js("const s=sim.s; s.throttle=0; s.speed=0; s.bay.doorDmg=0; return 1"); page.wait_for_timeout(400)

@@ -77,6 +77,7 @@ export function toward(a, b) {
   return { nm: Math.hypot(dx, dy), brg: norm360((Math.atan2(dx, dy) * 180) / Math.PI), dx, dy };
 }
 
+sim.speedCaps = [];   // functions (s) => fastest allowed speed (kt) or null (the bay doors while open, unless the Captain overrides)
 sim.depthCaps = [];   // functions (s) => deepest allowed depth or null (the Tern's limit while she is out)
 sim.maxKt = () => (sim.s.cruise ? SUPER_KT : MAX_KT);
 /** Engage or drop super cruise. Needs deep water under and ahead of the ship, and not docked. */
@@ -440,6 +441,7 @@ const stepOnce = (dt) => {
   // speed (smooth)
   let wantKt = s.throttle * sim.maxKt() * (s.battery > 0 ? 1 : 0);
   if (s.depth < SURFACE_M) wantKt = Math.min(wantKt, SURFACE_KT);
+  { let held = false; for (const f of sim.speedCaps) { const c = f(s); if (c != null && wantKt > c) { wantKt = c; held = true; if (!s.speedCapSaid) { s.speedCapSaid = true; sim.emit('speed-cap', { kt: c }); } } } if (!held) s.speedCapSaid = false; }   // a limit is held and the Captain told, unless overridden
   // hugging a steep floor: slow down until the climb or dive needed to follow it is one the ship can make
   if (s.hug && s.hugG > 0.05 && (s.hugG > 0.85 * PITCH_TAN || s.hugG * KT_MPS * s.speed > 0.85 * MAX_DIVE_MPS)) wantKt = Math.min(wantKt, Math.max(1, (0.85 * (s.hugG > 0.85 * PITCH_TAN ? HOVER_MPS : MAX_DIVE_MPS)) / (s.hugG * KT_MPS)));
   if (s.wpt) wantKt = Math.min(wantKt, autopilotCap(Math.abs(turn), capDist));
