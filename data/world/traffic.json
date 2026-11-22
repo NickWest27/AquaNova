@@ -7,10 +7,10 @@
   "open": 0.12,
   "shelf": 0.5,
   "lane": 1.4,
-  "port": 1.2,
+  "port": 6.0,
   "lane_width_nm": 25,
   "port_radius_nm": 45,
-  "per_cell_max": 3
+  "per_cell_max": 8
  },
  "lanes": [
   {

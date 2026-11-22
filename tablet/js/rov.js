@@ -9,6 +9,7 @@ export const ROV_NAME = 'Remora';
 export const ROV_KT = 2, SITE_NM = 0.15, NM_PER_DEG = 60;
 export const rovRange = () => (research.has('rov-range') ? 1.5 : 1);
 const MAX_ROV_DEPTH = 600;
+export const ROV_DIVE_MPS = 2;   // Remora dives and climbs at 2 m per real second (was 8: too fast)
 export const REMORA_STORE = 3;   // she is small: three samples, then she has to come home and be unloaded
 export const rovCargo = () => (sim.s.rov && sim.s.rov.cargo) || [];
 const GO_ARRIVE_NM = 0.03;
@@ -92,8 +93,8 @@ sim.hooks.push((dt) => {
   if (blocked && (r.go || r.thrSet)) { r.go = null; r.thrSet = 0; r.hdgTo = null; sim.emit('rov-blocked', r); }
   r.lat = lat; r.lon = lon;
   let d = r.depth;
-  if (!c.dive && r.depTo != null) { const step = 8 * dt; if (Math.abs(r.depTo - d) <= step) { d = r.depTo; r.depTo = null; } else d += Math.sign(r.depTo - d) * step; }
-  else d += c.dive * 8 * dt;   // m per real second
+  if (!c.dive && r.depTo != null) { const step = ROV_DIVE_MPS * dt; if (Math.abs(r.depTo - d) <= step) { d = r.depTo; r.depTo = null; } else d += Math.sign(r.depTo - d) * step; }
+  else d += c.dive * ROV_DIVE_MPS * dt;   // m per real second
   const fl = rovFloor();
   d = Math.max(0, Math.min(MAX_ROV_DEPTH, d)); if (fl != null) d = Math.min(d, fl - 0.5);
   r.depth = d;
@@ -125,7 +126,7 @@ function autoReturn(r, dt) {
     if (seafloor.ready) { const f = seafloor.depthAt(lat, lon); if (f == null || f < 2) { r.auto = false; sim.emit('rov-blocked', r); return; } }   // shoal or land in the way: she stops and waits for a pilot
     r.heading = t.brg; r.lat = lat; r.lon = lon;
   }
-  r.depth += Math.max(-8 * dt, Math.min(8 * dt, want - r.depth));
+  r.depth += Math.max(-ROV_DIVE_MPS * dt, Math.min(ROV_DIVE_MPS * dt, want - r.depth));
   if (t.nm <= HOME_NM && Math.abs(want - r.depth) < 1) { r.home = true; r.auto = false; sim.emit('rov-home', r); }   // alongside, at the ship's depth
   sim.dirty = true;
 }

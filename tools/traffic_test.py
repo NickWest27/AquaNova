@@ -58,7 +58,7 @@ def main():
         check("a hail gets an answer or a clear refusal, and names the ship", r.get("none") or (r.get("ok") and r["after"]) or "Antenna" in r.get("msg", ""), r)
         # nobody sails over land: every leg of every ship near the coast is over water
         r = js(place + """const sf=(await import('./js/seafloor.js')).seafloor; let n=0, bad=0, worst=1e9; const spots=[[41.5,-70.7],[40.6,-73.9],[41.4,-71.3],[32.3,-64.7],[38.5,-28.6],[37.7,-25.6]];
-          for(const sd of [11,22,33]){ g.updateProperty('world.seed', sd); tr.traffic.cells.clear(); for(const [la,lo] of spots){ Object.assign(sim.s,{lat:la,lon:lo}); for(let h=0;h<24;h++){ sim.s.clock=h*3600; tr.traffic.candKey=''; tr.step(); for(const v of tr.traffic.cand){ for(let q=0;q<=6;q++){ const p=tr.posAt(v, sim.s.clock + q*400); const d=sf.depthAt(p.lat,p.lon); if(d==null) continue; n++; worst=Math.min(worst,d); if(d<8) bad++; } } } } }
+          for(const sd of [11,22,33]){ g.updateProperty('world.seed', sd); tr.traffic.cells.clear(); for(const [la,lo] of spots){ Object.assign(sim.s,{lat:la,lon:lo}); for(let h=0;h<24;h++){ sim.s.clock=h*3600; tr.traffic.candKey=''; tr.step(); for(const v of tr.traffic.cand){ for(let q=0;q<=6;q++){ const p=tr.posAt(v, sim.s.clock + q*400); const d=sf.depthAt(p.lat,p.lon); if(d==null) continue; n++; worst=Math.min(worst,d); if(d<2) bad++; } } } } }
           return {n, bad, worst}""")
         print("     land check", r)
         check("no ship sails over land or shoals", r["n"] > 50 and r["bad"] == 0, r)

@@ -43,7 +43,7 @@ def main():
         e = entries(); new = e[n0:]
         check("completion writes the second mission log", len(new) == 2 and new[1]["type"] == "mission_log", [x["id"] for x in new])
         b = new[1] if len(new) > 1 else {}
-        check("outcome is the captain's account with all tasks done", "Mission complete: Sea Trials" in b.get("text", "") and "passed the Aqua Nova" in b.get("text", "") and len(b.get("done", [])) == 5 and b.get("snap"), b)
+        check("outcome is the captain's account as a summary, without the task list again", "Mission complete: Sea Trials" in b.get("text", "") and "passed the Aqua Nova" in b.get("text", "") and b.get("tasks", []) == [] and b.get("snap"), b)
         check("log numbers rise", a.get("id") != b.get("id"))
         # the logbook shows both
         page.evaluate("window.__aq.open('log')"); page.wait_for_timeout(500)

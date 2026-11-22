@@ -40,8 +40,8 @@ export function logAccepted(id) {
 function logCompleted(id) {
   const m = missionManager.missions.get(id);
   if (!m || (!logged().includes(id) && !hasLog(id, 'accepted')) || hasLog(id, 'complete')) return;
-  const t = tasksOf(m);
-  const no = write(`Mission complete: ${m.name}. ${fill(m.logOutcome || 'The orders are carried out and the results are with OERA.')}`, ['mission', 'complete', id], t, t);
+  // A summary of what happened, not the task list again (the accepted log already has it).
+  const no = write(`Mission complete: ${m.name}. ${fill(m.logOutcome || 'The orders are carried out and the results are with OERA.')}`, ['mission', 'complete', id], [], []);
   tell('aria', `Mission log ${no} saved.`);
 }
 

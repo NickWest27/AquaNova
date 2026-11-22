@@ -60,12 +60,12 @@ function buildCell(cx, cy) {
     const fish = kind === 'trawler' && z.shelf && rng() < 0.5;
     const kt = fish ? between(rng, [2, 3.5]) : between(rng, k.kt), leg0 = fish ? between(rng, [2, 6]) : between(rng, k.leg);
     // the whole leg must be over water deep enough for the ship: try other spots and headings (same seed, same answer), then shorter legs
-    const minD = Math.max(10, c.draft_m[k.size] * 2 + 4);
+    const minD = Math.max(6, c.draft_m[k.size] * 1.5 + 3);   // harbours are shallow on the chart: small craft need 6 m, big ships more
     let org, hdg, leg = leg0, A, B, ok = false;
-    for (let tries = 0; tries < 14 && !ok; tries++) {
-      org = o.at && tries < 8 ? o.at : { lat: lat0 + rng() * cellDegLat, lon: lon0 + rng() * cellDegLon }; hdg = rng() * Math.PI * 2; leg = tries < 8 ? leg0 : Math.max(0.6, leg0 * 0.4);
+    for (let tries = 0; tries < 40 && !ok; tries++) {
+      org = o.at && tries < 8 ? o.at : { lat: lat0 + rng() * cellDegLat, lon: lon0 + rng() * cellDegLon }; hdg = rng() * Math.PI * 2; leg = tries < 8 ? leg0 : Math.max(0.6, leg0 * (tries < 24 ? 0.5 : 0.25));
       const half = leg / 2; A = { lat: org.lat - toLat(Math.cos(hdg) * half), lon: org.lon - toLon(Math.sin(hdg) * half) }; B = { lat: org.lat + toLat(Math.cos(hdg) * half), lon: org.lon + toLon(Math.sin(hdg) * half) };
-      ok = true; for (let q = 0; q <= 8 && ok; q++) { const dd = seafloor.depthAt(A.lat + ((B.lat - A.lat) * q) / 8, A.lon + ((B.lon - A.lon) * q) / 8); ok = dd != null && dd >= minD; }
+      ok = true; for (let q = 0; q <= 12 && ok; q++) { const dd = seafloor.depthAt(A.lat + ((B.lat - A.lat) * q) / 12, A.lon + ((B.lon - A.lon) * q) / 12); ok = dd != null && dd >= minD; }
     }
     if (!ok) return null;   // no water for this ship here
     const hostile = f2.stance === 'hostile', unreg = kind === 'raider' || kind === 'poacher';
@@ -130,7 +130,7 @@ export function step() {
       else if (dt > 0 && dt < 120) {
         const toS = Math.atan2((s.lon - p.lon) * SK, s.lat - p.lat), a = v.boldness >= 0.5 ? toS : toS + Math.PI, nm = (v.kt * 1.2 * dt) / 3600;
         const np = { lat: p.lat + toLat(Math.cos(a) * nm), lon: p.lon + toLonS(Math.sin(a) * nm) }, wd = seafloor.depthAt(np.lat, np.lon);
-        if (wd != null && wd >= 10) v.dyn = { ...np, hdg: ((a * 180) / Math.PI + 360) % 360 }; else v.dyn = { lat: p.lat, lon: p.lon, hdg: ((a * 180) / Math.PI + 360) % 360 };   // a ship does not sail onto land
+        if (wd != null && wd >= 6) v.dyn = { ...np, hdg: ((a * 180) / Math.PI + 360) % 360 }; else v.dyn = { lat: p.lat, lon: p.lon, hdg: ((a * 180) / Math.PI + 360) % 360 };   // a ship does not sail onto land
         p = v.dyn; d = dist(s, p);
       }
     }
