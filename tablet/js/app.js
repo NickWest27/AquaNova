@@ -293,6 +293,14 @@ function firstVisit(poi) {
 }
 
 // ---------- boot ----------
+/** Lesson steps that watch a flag are re-checked now and then, so a step the Captain has already done (or that was missed) still counts.
+ *  Charting a Course: a ship already at Mystic Reef has, in effect, plotted and arrived. */
+function lessonNudge() {
+  if (!missions) return;
+  const at = sim.s.at;
+  if (at && at.name === 'Mystic Reef' && objStatus('navLesson_open') === 'completed' && objStatus('navLesson_arrive') && objStatus('navLesson_arrive') !== 'completed') { flag('plotted'); flag('arrived'); }
+  missions.checkTriggers();
+}
 async function boot() {
   const btn = $('#board-btn'), info = $('#splash-info');
   try {
@@ -335,7 +343,7 @@ async function boot() {
       if (type === 'tick') {
         const s = sim.s;
         scene.update(); updateChips(); current && current.api.update(); ped && ped.api.update(); updateHum(s.speed);
-        if (++tickN % 5 === 0) { liveNav(); if (sim.s.wpt) flag('plotted'); if (awardSurveyBonus()) say('science', 'OERA has granted a research budget for the survey, Captain: 3 research points. Check the Research tab.', 'mission'); for (const q of tickLab()) say('science', `Analysis of sample #${q.id} (${SAMPLE_KINDS[q.kind].label.toLowerCase()}) is done: ${q.result} Finding filed.`, 'mission'); }            // about once a second
+        if (++tickN % 5 === 0) { liveNav(); if (sim.s.wpt) flag('plotted'); lessonNudge(); if (awardSurveyBonus()) say('science', 'OERA has granted a research budget for the survey, Captain: 3 research points. Check the Research tab.', 'mission'); for (const q of tickLab()) say('science', `Analysis of sample #${q.id} (${SAMPLE_KINDS[q.kind].label.toLowerCase()}) is done: ${q.result} Finding filed.`, 'mission'); }            // about once a second
         const t = `${s.lat.toFixed(3)}°N ${Math.abs(s.lon).toFixed(3)}°W`;
         if (st.pos.textContent !== t) st.pos.textContent = t;
         const ck = clockText() + (s.docked ? ' · DOCKED' : ''); if (st.clock.textContent !== ck) st.clock.textContent = ck;
