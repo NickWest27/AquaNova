@@ -61,6 +61,40 @@ class MissionManager {
                 this.activeMissions.add(obj.missionId);
             }
         });
+        this.migrateSaved();
+    }
+
+    // A save made by an older build can hold steps that no longer exist or lack steps a lesson has gained
+    // (the sensors lesson was merged into Charting a Course). Without this such a lesson waits for ever.
+    migrateSaved() {
+        let objectives = gameStateInstance.getProperty('mission.objectives') || [];
+        let changed = false;
+        // 1. Steps of a mission that is gone: drop them. A save in the retired sensors lesson counts as having finished the merged lesson.
+        const orphans = objectives.filter(o => o.missionId && !this.missions.has(o.missionId));
+        let finishMerged = false;
+        if (orphans.length) {
+            finishMerged = orphans.some(o => o.missionId === 'sensorsLesson');
+            objectives = objectives.filter(o => !orphans.includes(o));
+            changed = true;
+        }
+        // 2. Active missions that gained steps since the save was made: add them.
+        for (const id of this.activeMissions) {
+            const m = this.missions.get(id);
+            for (const def of m.objectives || []) {
+                if (!objectives.some(o => o.id === `${id}_${def.id}`)) {
+                    objectives.push({ id: `${id}_${def.id}`, missionId: id, description: def.description, status: 'active', required: def.required || false });
+                    changed = true;
+                }
+            }
+        }
+        if (changed) gameStateInstance.updateProperty('mission.objectives', objectives);
+        if (finishMerged && this.missions.has('navLesson')) {
+            const done = (gameStateInstance.getProperty('mission.completedIds') || []).filter(x => x !== 'navLesson');
+            gameStateInstance.updateProperty('mission.completedIds', done);
+            this.completedMissions.delete('navLesson');
+            this.activeMissions.delete('navLesson');
+            this.completeMission('navLesson');
+        }
     }
 
     async loadMissions() {
@@ -69,13 +103,17 @@ class MissionManager {
             const response = await fetch(new URL('../../data/missions/index.json', import.meta.url));
             const missionIndex = await response.json();
             
-            // Load each mission file
+            // Load each mission file; one bad or missing file must not stop the rest loading
             for (const missionFile of missionIndex.missions) {
-                const missionResponse = await fetch(new URL(`../../data/missions/${missionFile}`, import.meta.url));
-                const mission = await missionResponse.json();
-                
-                this.missions.set(mission.id, mission);
-                dlog(`Loaded mission: ${mission.id}`);
+                try {
+                    const missionResponse = await fetch(new URL(`../../data/missions/${missionFile}`, import.meta.url));
+                    if (!missionResponse.ok) throw new Error(`HTTP ${missionResponse.status}`);
+                    const mission = await missionResponse.json();
+                    this.missions.set(mission.id, mission);
+                    dlog(`Loaded mission: ${mission.id}`);
+                } catch (err) {
+                    console.error(`Failed to load mission file ${missionFile}:`, err);
+                }
             }
         } catch (error) {
             console.error('Failed to load missions:', error);
@@ -285,14 +323,14 @@ class MissionManager {
         
         // Execute objective completion actions
         const mission = this.missions.get(missionId);
-        const missionObjective = mission.objectives.find(obj => obj.id === objectiveId);
+        const missionObjective = ((mission && mission.objectives) || []).find(obj => obj.id === objectiveId);
         
         if (missionObjective && missionObjective.onComplete) {
             this.executeActions(missionObjective.onComplete);
         }
         
         // Show completion notification
-        this.showObjectiveNotification(missionObjective.description, 'Objective Complete', mission);
+        if (missionObjective) this.showObjectiveNotification(missionObjective.description, 'Objective Complete', mission);
         
         dlog(`Completed objective: ${fullObjectiveId}`);
     }
