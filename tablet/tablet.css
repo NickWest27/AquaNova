@@ -801,3 +801,4 @@ input.mix { width: 100%; height: 2.4rem; accent-color: var(--cyan); }
 .route-row { display: flex; align-items: center; gap: 6px; padding: 6px 8px; border: 2px solid #1d6a7a; border-radius: 10px; background: rgba(3,18,28,.6); }
 .route-row .grow { flex: 1; min-width: 0; } .route-row b { display: block; } .route-row small { color: var(--dim); }
 .route-row .btn[disabled] { opacity: .35; }
+.msc .bbtn.sym { font-size: 38px; } .msc .rowN .rngbox { flex: 1 1 0; } .bbtn.blank { opacity: .22; pointer-events: none; }

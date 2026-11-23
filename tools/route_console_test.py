@@ -73,7 +73,7 @@ with sync_playwright() as p:
     pg.locator(".selector .bbtn", has_text="HLM").tap(); pg.wait_for_timeout(400)
     check("HLM shows the heading dial and both tapes", pg.locator(".bdisp .bd-helm .dial").count() == 1 and pg.locator(".bdisp .bd-helm svg.tape").count() == 2)
     check("HLM has no Dock button", pg.locator('.bbtn:visible:text-is("Dock")').count() == 0)
-    check("HLM has all ten controls", all(pg.locator(f'.bbtn:visible:text-is("{t}")').count() == 1 for t in ("Port", "Stbd", "Stop", "Slow", "Fast", "Up", "Dn", "Srfc", "Noe", "Cruise")))
+    check("HLM has all ten controls", all(pg.locator(f'.bbtn:visible:text-is("{t}")').count() == 1 for t in ("Port", "Stbd", "Stop", "Slow", "Fast", "Up", "Dn", "Srfc", "NOE", "Cruise")))
     js("sim.s.throttle=0.3"); tap("Fast"); r = st(); check("Fast adds 10%", abs(r["thr"] - 0.4) < 0.001, str(r))
     tap("Slow"); tap("Slow"); r = st(); check("Slow takes 10% off", abs(r["thr"] - 0.2) < 0.001, str(r))
     tap("Stop"); r = st(); check("Stop sets 0 kt and keeps the course", r["thr"] == 0, str(r))

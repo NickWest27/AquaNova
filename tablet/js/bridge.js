@@ -116,16 +116,16 @@ export function createBridgeConsole({ top, main, display, center, left, right, o
     const showC = el('div', { class: 'bc shw' }, el('div', { class: 'rowN' }, showSw('ships', 'Ships'), showSw('subs', 'Subs'), showSw('base', 'Base'), showSw('orgs', 'Orgs')));
     const c = el('div', { class: 'bc' }, el('div', { class: 'rowN' }, dest, fix, routeB, plot));
     // View settings (right desk): range and PAN here, DSP and SHW added by the console.
-    const v = el('div', { class: 'bc msc' }, el('div', { class: 'rowN' }, bbtn('−', () => zoom(-1), 'sq'), el('div', { class: 'rngbox' }, el('small', { text: 'RANGE' }), rangeTxt), bbtn('+', () => zoom(1), 'sq')));
+    const v = [bbtn('−', () => zoom(-1), 'sym'), el('div', { class: 'rngbox' }, el('small', { text: 'RANGE' }), rangeTxt), bbtn('+', () => zoom(1), 'sym')];   // the right desk is a bank of six: range first
     function refresh() { set(rangeTxt, nds[0] ? nds[0].range + ' nm' : ''); plot.classList.toggle('on', !!sim.s.wpt); }
     return { make, c, v, extra: showC, expand: 'nav', side: refresh, nds, show, zoom, rangeTxt, panBy, panOff, panStep: () => (nds[0] ? nds[0].range * 0.25 : 1) };
   })();
 
   // ---------- HLM ----------
   // Display: heading dial in the middle, speed tape on its left, depth tape on its right. Each tape shows the actual value in a box, an orange
-  // triangle and small number at the value that is set, and a trend vector (where the value will be in 10 seconds).
+  // triangle and small number at the value that is set, and a trend vector (where the value will be in TREND_S seconds, never past the set value).
   const NSV = 'http://www.w3.org/2000/svg', sv = (t, a = {}, text) => { const n = document.createElementNS(NSV, t); for (const k in a) n.setAttribute(k, a[k]); if (text != null) n.textContent = text; return n; };
-  const TAPE_W = 140, TAPE_H = 300, MID = TAPE_H / 2;
+  const TAPE_W = 140, TAPE_H = 300, MID = TAPE_H / 2, TREND_S = 3;   // trend vectors look this many seconds ahead
   /** A vertical tape. mirror: the tape sits on the left edge (the depth tape, with the dial on its left). up: bigger values are higher on the tape. */
   function createTape({ mirror, up }) {
     const svg = sv('svg', { viewBox: `0 0 ${TAPE_W} ${TAPE_H}`, class: 'tape' }), g = sv('g');
@@ -134,7 +134,7 @@ export function createBridgeConsole({ top, main, display, center, left, right, o
     const mono = { 'font-family': 'ui-monospace, Menlo, monospace', 'font-weight': 700 };
     return {
       svg,
-      update({ cur, set, rate, ground = null, span, step, major, fmt = (v) => String(Math.round(v)), unit = '' }) {
+      update({ cur, set, rate, ground = null, span, step, major, fmt = (v) => String(Math.round(v)), unit = '' }) {   // rate: change per second
         const k = TAPE_H / span, Y = (v) => MID + (up ? -1 : 1) * (v - cur) * k, kids = [];
         const band = [X(70), X(128)].sort((a, b) => a - b);
         kids.push(sv('rect', { x: band[0], y: 0, width: band[1] - band[0], height: TAPE_H, fill: 'rgba(6,21,35,0.85)', stroke: '#2b4a63', 'stroke-width': 2 }));
@@ -148,7 +148,8 @@ export function createBridgeConsole({ top, main, display, center, left, right, o
         if (ground != null) { const y = Y(ground); if (y < TAPE_H) { kids.push(sv('rect', { x: band[0], y: Math.max(0, y), width: band[1] - band[0], height: TAPE_H - Math.max(0, y), fill: 'rgba(255,77,77,0.28)' })); if (y > 0) kids.push(sv('line', { x1: band[0], y1: y, x2: band[1], y2: y, stroke: '#ff4d4d', 'stroke-width': 4 })); } }
         const sy = Math.max(8, Math.min(TAPE_H - 8, Y(set)));   // the set marker stays on the tape even when its value is off the scale
         kids.push(sv('polygon', { points: `${X(62)},${sy - 9} ${X(62)},${sy + 9} ${X(74)},${sy}`, fill: '#ffb020' }), sv('text', { x: X(54), y: sy + 6, 'text-anchor': anchor('end'), fill: '#ffb020', 'font-size': 15, ...mono }, fmt(set)));
-        const dv = Math.max(-110, Math.min(110, (up ? -1 : 1) * rate * 10 * k));   // 10 seconds ahead
+        let ahead = rate * TREND_S; if ((set - cur) * ahead > 0 && Math.abs(ahead) > Math.abs(set - cur)) ahead = set - cur;   // where the value will be in a moment, never past the set value
+        const dv = Math.max(-110, Math.min(110, (up ? -1 : 1) * ahead * k));
         if (Math.abs(dv) > 2) kids.push(sv('line', { x1: X(14), y1: MID, x2: X(14), y2: MID + dv, stroke: '#3ddc84', 'stroke-width': 5 }), sv('polygon', { points: `${X(14) - 7},${MID + dv - Math.sign(dv) * 1} ${X(14) + 7},${MID + dv - Math.sign(dv) * 1} ${X(14)},${MID + dv + Math.sign(dv) * 12}`, fill: '#3ddc84' }));
         kids.push(sv('line', { x1: X(6), y1: MID, x2: X(22), y2: MID, stroke: '#4c6a85', 'stroke-width': 2 }));
         kids.push(sv('rect', { x: band[0] - 4, y: MID - 19, width: band[1] - band[0] + 8, height: 38, fill: '#031018', stroke: '#64ffda', 'stroke-width': 3 }), sv('text', { x: (band[0] + band[1]) / 2, y: MID + 9, 'text-anchor': 'middle', fill: '#fff', 'font-size': 28, ...mono }, fmt(cur)));
@@ -177,7 +178,7 @@ export function createBridgeConsole({ top, main, display, center, left, right, o
     const thr = (d) => sim.setThrottle(Math.round(Math.min(1, Math.max(0, sim.s.throttle + d)) * 20) / 20);
     const dep = (d) => sim.setDepth(Math.min(6000, Math.max(0, Math.round((sim.s.targetDepth + d) / 10) * 10)));
     const turn = (d) => { sim.setHeading(sim.s.targetHeading + d); sim.cancelCourse(); };   // steering by hand: the Route is kept, Plot on NAV returns to it
-    const noeB = bbtn('Noe', () => {
+    const noeB = bbtn('NOE', () => {
       if (sim.s.hug) { sim.setHug(false); return tell('helm', `Leaving the floor, Captain. Holding ${Math.round(sim.s.depth)} metres.`); }
       const r = sim.setHug(true);
       tell('helm', r.ok ? 'Nap of the earth, Captain. Ten metres off the bottom.' : r.why === 'docked' ? 'We are docked, Captain.' : 'Not enough water here to follow the floor, Captain.');
@@ -186,7 +187,7 @@ export function createBridgeConsole({ top, main, display, center, left, right, o
     const c = el('div', { class: 'bc' },
       el('div', { class: 'rowN' }, bbtn('Port', () => turn(-10)), bbtn('Stbd', () => turn(10)), bbtn('Stop', () => sim.stop(), 'stop'), bbtn('Slow', () => thr(-0.1)), bbtn('Fast', () => thr(0.1))),
       el('div', { class: 'rowN' }, bbtn('Up', () => dep(-50)), bbtn('Dn', () => dep(50)), bbtn('Srfc', () => sim.setDepth(0)), noeB, cruiseB));
-    return { make, c, v: el('div', { class: 'bc msc' }), expand: 'helm', side() { noeB.classList.toggle('on', !!sim.s.hug); cruiseB.classList.toggle('on', !!sim.s.cruise); } };
+    return { make, c, v: [], expand: 'helm', side() { noeB.classList.toggle('on', !!sim.s.hug); cruiseB.classList.toggle('on', !!sim.s.cruise); } };
   })();
 
   // ---------- SYS ----------
@@ -212,7 +213,7 @@ export function createBridgeConsole({ top, main, display, center, left, right, o
     const banner = el('div', { class: 'sbanner ok' });
     const swL = sw('lights', 'Lights'), swS = sw('sonar', 'Sonar');
     const c = el('div', { class: 'bc' }, el('div', { class: 'rowN' }, banner, swL, swS));
-    return { make, c, v: el('div', { class: 'bc msc' }), expand: 'sys', side() {
+    return { make, c, v: [], expand: 'sys', side() {
       const s = sim.s, bad = s.battery < 15 || s.oxygen < 15 || s.hull < 40, warn = s.battery < 30 || s.oxygen < 30 || s.hull < 80;
       banner.className = 'sbanner ' + (bad ? 'bad' : warn ? 'warn' : 'ok'); set(banner, bad ? 'CRITICAL' : warn ? 'CAUTION' : 'NOMINAL');
       swL.classList.toggle('on', !!s.lights); swS.classList.toggle('on', !!s.sonar);
@@ -252,11 +253,11 @@ export function createBridgeConsole({ top, main, display, center, left, right, o
       lightsB.classList.toggle('on', !!s.lights);
       modeB.textContent = !ok ? 'SYNTHETIC: RESEARCH NEEDED' : vopt.mode === 'synth' ? 'SHOW CAMERA' : 'SHOW SYNTHETIC'; modeB.disabled = !ok;
     }
-    return { make, c, v: el('div', { class: 'bc msc' }), expand: null, side };
+    return { make, c, v: [], expand: null, side };
   })();
 
   // ---------- TAC and SNR: pages named on the left desk panel and not built yet ----------
-  const stub = (title) => ({ make: () => ({ m: el('div', { class: 'bd bd-stub' }, el('b', { text: title }), el('small', { text: 'NOT INSTALLED' })), update() {} }), c: el('div', { class: 'bc' }, el('div', { class: 'cap', text: 'NO CONTROLS' })), v: el('div', { class: 'bc msc' }), expand: null, side() {} });
+  const stub = (title) => ({ make: () => ({ m: el('div', { class: 'bd bd-stub' }, el('b', { text: title }), el('small', { text: 'NOT INSTALLED' })), update() {} }), c: el('div', { class: 'bc' }, el('div', { class: 'cap', text: 'NO CONTROLS' })), v: [], expand: null, side() {} });
   views.tac = stub('TACTICAL');
   views.snr = stub('PASSIVE SONAR');
 
@@ -282,9 +283,13 @@ export function createBridgeConsole({ top, main, display, center, left, right, o
   const dspBs = [], panBs = [], shwBs = [];
   const mkBtn = (label, list, toggle) => { const b = bbtn(label, toggle); list.push(b); return b; };
   const flip = (which) => { if (which === 'dsp') dspOn = !dspOn; else if (which === 'pan') { panOn = !panOn; shwOn = false; if (!panOn) views.nav.panOff(); } else { shwOn = !shwOn; panOn = false; views.nav.panOff(); } paint(); update(); };
+  const BANK = 6;   // the right desk is a bank of six slots (two rows of three); a page with fewer buttons leaves blank place holders
+  const blank = () => Object.assign(bbtn('', () => {}, 'blank'), { disabled: true, tabIndex: -1 });
   for (const id of order) {
-    const row = el('div', { class: 'rowN' }, mkBtn('DSP', dspBs, () => flip('dsp')), ...(id === 'nav' ? [mkBtn('PAN', panBs, () => flip('pan')), mkBtn('SHW', shwBs, () => flip('shw'))] : []));
-    views[id].v.append(row); right.append(views[id].v);
+    const items = [...views[id].v, mkBtn('DSP', dspBs, () => flip('dsp')), ...(id === 'nav' ? [mkBtn('PAN', panBs, () => flip('pan')), mkBtn('SHW', shwBs, () => flip('shw'))] : [])];
+    while (items.length < BANK) items.push(blank());
+    views[id].vc = el('div', { class: 'bc msc' }, el('div', { class: 'rowN' }, ...items.slice(0, 3)), el('div', { class: 'rowN' }, ...items.slice(3, BANK)));
+    right.append(views[id].vc);
   }
   // Pan arrows replace the controls on the centre desk while PAN is on
   const arrow = (t, dx, dy, label) => el('button', { class: 'bbtn sq', text: t, 'aria-label': label, onclick: () => { const k = views.nav.panStep(); views.nav.panBy(dx * k, dy * k); } });
@@ -296,7 +301,7 @@ export function createBridgeConsole({ top, main, display, center, left, right, o
     mainId = dspOn ? current : 'nav';
     const onNav = current === 'nav';
     for (const k of order) {
-      small[k].m.hidden = k !== current; views[k].c.hidden = k !== current || (onNav && (panOn || shwOn)); views[k].v.hidden = k !== current;
+      small[k].m.hidden = k !== current; views[k].c.hidden = k !== current || (onNav && (panOn || shwOn)); views[k].vc.hidden = k !== current;
       big[k].m.hidden = k !== mainId; btns[k].classList.toggle('on', k === current);
     }
     panC.hidden = !(onNav && panOn); views.nav.extra.hidden = !(onNav && shwOn);
