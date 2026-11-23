@@ -45,7 +45,7 @@ function shipContact(a, src, line) {
   return {
     id: 'ship:' + v.id, kind: 'ship', ref: v, from: { lat: src.lat, lon: src.lon }, by: String(src.id), byName: src.name, icon: iconOf(ident ? affiliation(v) : 'unknown', 'surface'), bearing: line.brg, range, pos, ident,
     name: ident ? v.name : 'Unidentified contact', type: ident ? v.label : `Surface vessel (${SIZE_CLASS[v.size]})`, side: ident ? (v.stance === 'hostile' ? 'Hostile' : v.stance === 'wary' ? 'Unfriendly' : v.stance === 'friendly' ? 'Friendly' : 'Neutral') + ' · ' + v.factionName : 'Unknown',
-    depth: 'Surface (screw noise)', speed: ident ? `${kt.toFixed(1)} kt` : `about ${Math.round(kt / 2) * 2} kt (blade rate)`, course: pos && pos.hdg != null ? Math.round(pos.hdg) : null,
+    depth: 'Surface', speed: ident ? `${kt.toFixed(1)} kt` : `~${Math.round(kt / 2) * 2} kt`, course: pos && pos.hdg != null ? Math.round(pos.hdg) : null,
     notes: [ident ? KIND_NOISE[v.kind] : SIZE_NOISE[v.size]], hostile: ident && v.stance === 'hostile', scanned: v.scanFixUntil > s.clock, size: v.size,
   };
 }
@@ -54,7 +54,7 @@ function instContact(e, src, line) {
   return {
     id: 'inst:' + p.id, kind: 'inst', ref: p, from: { lat: src.lat, lon: src.lon }, by: String(src.id), byName: src.name, icon: iconOf(named ? placeAffiliation(p) : 'unknown', 'installation'), bearing: line.brg, range: e.pos ? toward(src, e.pos).nm : null, pos: e.pos, ident: named,
     name: named ? p.name : 'Unidentified machinery', type: named ? k.label : 'Fixed noise source', side: named ? (p.stance ? p.stance[0].toUpperCase() + p.stance.slice(1) : 'Neutral') : 'Unknown',
-    depth: depth == null ? 'Unknown' : `${Math.round(depth)} m (seabed)`, speed: 'Stationary', course: null, notes: [k.noise], hostile: false, scanned: st.scanFixUntil > sim.s.clock, size: 3,
+    depth: depth == null ? '—' : `${Math.round(depth)} m`, speed: '0 kt', course: null, notes: [k.noise], hostile: false, scanned: st.scanFixUntil > sim.s.clock, size: 3,
   };
 }
 

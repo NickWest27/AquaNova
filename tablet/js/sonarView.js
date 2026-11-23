@@ -34,12 +34,11 @@ export function createSnrView({ bbtn }) {
     side.append(head, stat, list, info); m.append(wrap, side);
     const hits = []; let W = 0, H = 0;
 
-    // ---- the info box ----
+    // ---- the info box: short labels, six values in a grid, one line of sound. A tap on the box closes it (a second tap on the contact does too). ----
     const iName = el('b', { class: 'in-name' }), iType = el('div', { class: 'in-type' }), iNotes = el('div', { class: 'in-notes' });
     const iVals = {}, iRows = el('div', { class: 'in-rows' });
-    for (const [k, l] of [['side', 'SIDE'], ['brg', 'BEARING'], ['rng', 'RANGE'], ['dep', 'DEPTH'], ['spd', 'SPEED'], ['crs', 'COURSE'], ['age', 'TRACK']]) { iVals[k] = el('span'); iRows.append(el('div', { class: 'in-r' }, el('small', { text: l }), iVals[k])); }
-    const close = el('button', { class: 'in-x', text: '✕', 'aria-label': 'Close', onclick: () => { select(snr().sel); } });
-    info.append(close, iName, iType, iRows, el('small', { class: 'in-h', text: 'ACOUSTIC' }), iNotes);
+    for (const [k, l] of [['brg', 'BRG'], ['rng', 'RNG'], ['dep', 'DEPTH'], ['spd', 'SPEED'], ['crs', 'CRS'], ['age', 'AGE']]) { iVals[k] = el('b'); iRows.append(el('div', { class: 'in-r' }, el('small', { text: l }), iVals[k])); }
+    info.append(iName, iType, iRows, iNotes); info.addEventListener('click', () => select(snr().sel));
 
     // ---- the list ----
     const rows = new Map();
@@ -113,7 +112,7 @@ export function createSnrView({ bbtn }) {
         const dx = h.x2 - h.x1, dy = h.y2 - h.y1, L = Math.hypot(dx, dy) || 1, t = ((x - h.x1) * dx + (y - h.y1) * dy) / (L * L), dl = Math.hypot(x - (h.x1 + dx * t), y - (h.y1 + dy * t));
         if (t > 0 && t <= 1.02 && dl < 16 && dl + 8 < bd) { best = h; bd = dl + 8; }
       }
-      const st = snr(); if (best) { if (st.sel !== best.id) select(best.id); } else if (st.sel) select(st.sel);
+      const st = snr(); if (best) select(best.id); else if (st.sel) select(st.sel);   // a tap on a contact opens it, a second tap closes it
     });
 
     function update() {
@@ -125,10 +124,12 @@ export function createSnrView({ bbtn }) {
       stat.className = 'snr-stat' + (sw || st.scan ? ' act' : '');
       list.hidden = !!sel; info.hidden = !sel;
       if (sel) {
-        set(iName, sel.name); set(iType, sel.type + (sel.lost ? ' · SIGNAL LOST' : sel.scanned ? ' · SCANNED' : '')); iName.style.color = sel.hostile ? '#ff7a7a' : '';
-        set(iVals.side, sel.side); set(iVals.brg, pad3(sel.bearing) + '°' + (sel.remote ? ' from ' + sel.byName : '')); set(iVals.rng, sel.range == null ? 'NO FIX' : sel.range.toFixed(2) + ' nm'); set(iVals.dep, sel.depth); set(iVals.spd, sel.speed);
+        const tag = (sel.lost ? 'SIGNAL LOST' : sel.scanned ? 'SCANNED' : '');
+        set(iName, sel.name); iName.style.color = sel.hostile ? '#ff7a7a' : '';
+        set(iType, [sel.type, sel.side === 'Unknown' ? '' : sel.side.split(' · ')[0], tag].filter(Boolean).join(' · '));
+        set(iVals.brg, pad3(sel.bearing) + '°'); set(iVals.rng, sel.range == null ? 'NO FIX' : sel.range.toFixed(1) + ' nm'); set(iVals.dep, sel.depth); set(iVals.spd, sel.speed);
         set(iVals.crs, sel.course == null ? '—' : pad3(sel.course) + '°'); set(iVals.age, ageText(sel.age));
-        const t = sel.notes.concat(sel.inv.length ? [`${sel.inv.join(' and ')} investigating.`] : [], sel.heardBy.length ? [`Heard by ${sel.heardBy.join(', ')}.`] : [], sel.range == null ? ['No range yet: a second listener on another bearing gives a fix.'] : [], !sel.scanned && !sel.ident ? [`Scan inside ${SCAN_NM} nm for identity and a fix.`] : []).join('\n'); set(iNotes, t);
+        set(iNotes, [sel.notes[0], sel.inv.length ? `${sel.inv.join(', ')} investigating` : sel.remote ? `Heard by ${sel.byName}` : ''].filter(Boolean).join('\n'));
         return;
       }
       const keep = new Set();
