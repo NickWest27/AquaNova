@@ -17,7 +17,7 @@ export function createND(wrap, { onPick, stage = false, units = 1, contours = fa
   const ctr = () => { if (nd.pan) return { lat: nd.pan.lat, lon: nd.pan.lon, heading: sim.s.heading }; const f = focus && focus(); return f ? { lat: f.lat, lon: f.lon, heading: sim.s.heading } : (craft && craft()) || sim.s; };
   // rotate an east/north offset so the ship's heading points up (track up), or leave it north up
   const turn = (t) => { if (!trackUp) return t; const h = (ctr().heading * Math.PI) / 180, c = Math.cos(h), s = Math.sin(h); return { ...t, dx: t.dx * c - t.dy * s, dy: t.dx * s + t.dy * c }; };
-  const nd = { range: 2, sel: null, selWskr: null, show: { ships: true, subs: true, base: true, orgs: true }, w: 0, h: 0, canvas };
+  const nd = { range: 2, sel: null, selWskr: null, show: { ships: true, subs: true, base: true, orgs: true, labels: true }, w: 0, h: 0, canvas };
 
   function resize() {
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -202,14 +202,15 @@ export function createND(wrap, { onPick, stage = false, units = 1, contours = fa
     // surface traffic, drawn like a naval tactical plot: a frame for what we know (yellow clover unknown, blue circle friendly, green square neutral, amber diamond suspect, red diamond hostile), a course vector, and a label.
     // A bearing-only sonar contact is a dashed bearing line from the listener with its bearing at the end; two bearings make a fix (dashed ring = error).
     if (!craft && nd.show.ships) for (const a of seenShips()) {
-      const v = a.v, aff = affiliation(v), col = frameColour(aff), r = 9 + v.size * 1.5;
+      const ik = units > 1.5 ? 0.55 : 1, kf = ik < 1 ? 0.8 : 1;   // the big main screen draws contact symbols, vectors and text smaller
+      const v = a.v, aff = affiliation(v), col = frameColour(aff), r = (9 + v.size * 1.5) * ik;
       if (!a.pos) {
-        ctx.save(); ctx.strokeStyle = col; ctx.fillStyle = col; ctx.globalAlpha = 0.8; ctx.lineWidth = 1.5; ctx.setLineDash([7, 5]); ctx.font = '700 12px ui-monospace, Menlo, monospace'; ctx.textAlign = 'center';
+        ctx.save(); ctx.strokeStyle = col; ctx.fillStyle = col; ctx.globalAlpha = 0.8; ctx.lineWidth = 1.5; ctx.setLineDash([7, 5]); ctx.font = `700 ${12 * kf}px ui-monospace, Menlo, monospace`; ctx.textAlign = 'center';
         for (const ln of a.lines) {
           const o = px(ln.from), th = ((ln.brg - (trackUp ? c.heading : 0)) * Math.PI) / 180, ux = Math.sin(th), uy = -Math.cos(th), len = Math.min(w, h) / 2 - 20;
           ctx.beginPath(); ctx.moveTo(o.x, o.y); ctx.lineTo(o.x + ux * len * 1.15, o.y + uy * len * 1.15); ctx.stroke();
           const lx = Math.max(24, Math.min(w - 24, o.x + ux * len * 0.8)), ly = Math.max(14, Math.min(h - 8, o.y + uy * len * 0.8));
-          ctx.setLineDash([]); ctx.save(); ctx.translate(lx - 24, ly - 4); drawContact(ctx, 'unknown', 'unknown', 8); ctx.restore(); ctx.fillText(String(Math.round(ln.brg)).padStart(3, '0') + '°', lx + 6, ly); ctx.setLineDash([7, 5]);
+          ctx.setLineDash([]); ctx.save(); ctx.translate(lx - 24, ly - 4); drawContact(ctx, 'unknown', 'unknown', 8 * ik); ctx.restore(); if (nd.show.labels) ctx.fillText(String(Math.round(ln.brg)).padStart(3, '0') + '°', lx + 6, ly); ctx.setLineDash([7, 5]);
         }
         ctx.restore(); continue;
       }
@@ -218,16 +219,18 @@ export function createND(wrap, { onPick, stage = false, units = 1, contours = fa
       const isSel = s.selContact === 'ship:' + v.id, fixOnly = !a.ais && a.pos.err > 0.05;
       if (fixOnly) { const er = Math.max(r + 4, (a.pos.err / nd.range) * (Math.min(w, h) / 2 - 24)); ctx.save(); ctx.strokeStyle = col; ctx.globalAlpha = 0.7; ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.arc(q.x, q.y, er, 0, 6.2832); ctx.stroke(); ctx.restore(); }
       if (a.pos.hdg != null && v.kt > 0.3) {   // course vector: longer for a faster ship
-        const th = ((a.pos.hdg - (trackUp ? c.heading : 0)) * Math.PI) / 180, L = r + 6 + v.kt * 1.6;
+        const th = ((a.pos.hdg - (trackUp ? c.heading : 0)) * Math.PI) / 180, L = r + (6 + v.kt * 1.6) * ik;
         ctx.save(); ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(q.x + Math.sin(th) * r, q.y - Math.cos(th) * r); ctx.lineTo(q.x + Math.sin(th) * L, q.y - Math.cos(th) * L); ctx.stroke(); ctx.restore();
       }
       ctx.save(); ctx.translate(q.x, q.y); drawContact(ctx, 'surface', aff, r, { faint: fixOnly }); ctx.restore();
-      if (isSel) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(q.x, q.y, r + 7, 0, 6.2832); ctx.stroke(); }
-      if (nd.range <= 16) {
-        ctx.fillStyle = col; ctx.font = '700 12px system-ui'; ctx.textAlign = 'left';
-        ctx.fillText(v.ident ? v.name : 'UNKNOWN', q.x + r + 6, q.y - 1);
-        ctx.font = '11px ui-monospace, Menlo, monospace'; ctx.fillStyle = '#b8c9dc';
-        ctx.fillText(`${a.ais ? 'AIS ' : fixOnly ? 'FIX ' : ''}${String(Math.round(toward(s, a.pos).brg)).padStart(3, '0')}° ${a.pos.hdg != null ? Math.round(v.kt) + ' kt' : ''}`, q.x + r + 6, q.y + 12);
+      if (isSel) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(q.x, q.y, r + 7 * ik, 0, 6.2832); ctx.stroke(); }
+      if (nd.range <= 16 && nd.show.labels) {
+        // three short lines: the name; where it is from us (BRG, range); and where it is going (CRS is its course, the same as its vector, then its speed)
+        const lx = q.x + r + 6, tag = a.ais ? 'AIS ' : fixOnly ? 'FIX ' : '', t = toward(s, a.pos), pad = (n) => String(Math.round(n)).padStart(3, '0');
+        ctx.fillStyle = col; ctx.font = `700 ${12 * kf}px system-ui`; ctx.textAlign = 'left'; ctx.fillText(v.ident ? v.name : 'UNKNOWN', lx, q.y - 1);
+        ctx.font = `${11 * kf}px ui-monospace, Menlo, monospace`; ctx.fillStyle = '#b8c9dc';
+        ctx.fillText(`${tag}BRG ${pad(t.brg)}° ${t.nm.toFixed(1)}nm`, lx, q.y + 11 * kf + 1);
+        if (a.pos.hdg != null) ctx.fillText(`CRS ${pad(a.pos.hdg)}° ${Math.round(v.kt)}kt`, lx, q.y + 22 * kf + 2);
       }
     }
     // ship (centre), or in craft mode the craft at the centre and the ship where it is

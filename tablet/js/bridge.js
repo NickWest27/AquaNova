@@ -46,7 +46,7 @@ export function createBridgeConsole({ top, main, display, center, left, right, o
 
   // ---------- NAV ----------
   views.nav = (() => {
-    const nds = [], show = { ships: true, subs: true, base: true, orgs: true }; let sel = null, bigNd = null, panAt = null;
+    const nds = [], show = { ships: true, subs: true, base: true, orgs: true, labels: true }; let sel = null, bigNd = null, panAt = null;
     const syncSel = (p) => { sel = p; nds.forEach((n) => { n.sel = p; n.redraw(); }); refresh(); };
     const rangeTxt = el('span', { class: 'rng' });
     const make = (compact) => {
@@ -114,7 +114,7 @@ export function createBridgeConsole({ top, main, display, center, left, right, o
     }
     // SHW: switches for what the NAV display draws. They replace the controls while SHW is on.
     const showSw = (key, label) => { const b = bbtn(label, () => { show[key] = !show[key]; nds.forEach((n) => n.redraw()); paint(); }); const paint = () => b.classList.toggle('on', !!show[key]); paint(); return b; };
-    const showC = el('div', { class: 'bc shw' }, el('div', { class: 'rowN' }, showSw('ships', 'Ships'), showSw('subs', 'Subs'), showSw('base', 'Base'), showSw('orgs', 'Orgs')));
+    const showC = el('div', { class: 'bc shw' }, el('div', { class: 'rowN' }, showSw('ships', 'Ships'), showSw('subs', 'Subs'), showSw('base', 'Base'), showSw('orgs', 'Orgs'), showSw('labels', 'Labels')));
     const c = el('div', { class: 'bc' }, el('div', { class: 'rowN' }, dest, fix, routeB, plot));
     // View settings (right desk): range and PAN here, DSP and SHW added by the console.
     const v = [bbtn('−', () => zoom(-1), 'sym'), el('div', { class: 'rngbox' }, el('small', { text: 'RANGE' }), rangeTxt), bbtn('+', () => zoom(1), 'sym')];   // the right desk is a bank of six: range first

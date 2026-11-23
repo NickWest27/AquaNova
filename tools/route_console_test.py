@@ -65,7 +65,10 @@ with sync_playwright() as p:
     r = st(); check("the helm adds turn points where land is in the way, and they are not in the route list", r["tps"] >= 1 and r["fixes"] == ["Far side"], str(r))
     # SHW
     tap("SHW"); pg.wait_for_timeout(200)
-    check("SHW puts the four switches on the controls", all(pg.locator(f'.bbtn:visible:text-is("{t}")').count() for t in ("Ships", "Subs", "Base", "Orgs")))
+    check("SHW puts the five switches on the controls", all(pg.locator(f'.bbtn:visible:text-is("{t}")').count() for t in ("Ships", "Subs", "Base", "Orgs", "Labels")))
+    tap("Labels"); pg.wait_for_timeout(100)
+    check("the Labels switch turns contact labels off on every chart", pg.evaluate("window.__aq.console().nds.every(n=>n.show.labels===false)"))
+    tap("Labels"); pg.wait_for_timeout(100)
     tap("Ships"); pg.wait_for_timeout(100)
     check("a switch turns an item off on the display", js("return 1") and pg.evaluate("window.__aq.console().nds[0].show.ships === false"))
     tap("SHW")
