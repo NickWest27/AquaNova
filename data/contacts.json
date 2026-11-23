@@ -56,7 +56,7 @@
             "bio": "Spent six years in a Navy submarine's sonar shack, listening to things that were almost always nothing, and learning to recognise the one in a hundred that was not. Quiet, thorough, and fond of the word \"probably\". He prefers to be certain before he reports a contact, which is a habit the Captain may want to discuss.",
             "image": "images/crew/alex_torres.png",
             "dialogueOptions": {
-                "commands": ["Full sensor sweep", "Passive listening mode", "Deploy sensor buoys"],
+                "commands": ["Full sensor sweep", "Passive listening mode"],
                 "emergency": ["Contact bearing unknown", "Sensor malfunction"],
                 "pleasantries": ["Sensors are clear", "What should I be looking for?", "Picking up some interesting readings", "All quiet on the scope"]
             }

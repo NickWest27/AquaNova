@@ -13,7 +13,7 @@ import { topicsFor, askTopic } from '../topics.js';
 import { guidesFor, askGuide } from '../howto.js';
 import { askDepth } from '../depthPad.js';
 import { orderTern, callBackTern, ternReport, launchTern, destinations } from '../tern.js';
-import { TERN_SAFE_M, shuttle, bayDoorsOpen, setBayOverride, bay as bayState } from '../bayops.js';
+import { TERN_SAFE_M, BAY_SAFE_KT, shuttle, bayDoorsOpen, setBayOverride, launchAllWskrs, bay as bayState } from '../bayops.js';
 import { toggleDock } from '../dock.js';
 import { say as crewSay, takeHeld, unreadFor, unreadCount, transcript, logLine, setOpenCrew } from '../notify.js';
 
@@ -86,7 +86,12 @@ const ORDERS = {
   'Emergency surfaace': () => { sim.setDepth(0); return 'Blowing ballast. Surfacing!'; },
   'Emergency dive': () => { if (docked()) return 'We are docked, Captain.'; return dive(500, 'Diving!'); },
   'Full sensor sweep': () => { sim.s.sonar = true; sim.s.sweepUntil = sim.s.clock + 1800; sim.touch(); const n = sim.s.pois.filter((p) => toward(sim.s, p).nm <= 4).length; return `Active sweep. ${n} contact${n === 1 ? '' : 's'} within four miles, and the chart shows more detail for a minute.`; },
-  'Deploy sensor buoys': () => `WSKRs launch from the Sensors station, Captain. ${sim.s.wskrs.length} of 4 are out. Once they are out they spread round us on their own, and you can send one to investigate a contact.`,
+  'Launch all WSKRs': () => {
+    const r = launchAllWskrs();
+    if (r.ok) return `Launching ${r.count === 1 ? 'the last WSKR' : `all ${r.count} WSKRs`}, aye. The bay takes a minute each, so they go out one after another.`;
+    return { docked: 'We are docked, Captain. Undock first.', fast: `We are over ${BAY_SAFE_KT} knots, Captain. Slow down and the bay will launch them.`, full: 'Every WSKR is already out, Captain.', charge: 'None of the WSKRs in the rack has the charge to launch, Captain. They need 20 percent.' }[r.why] || 'The bay cannot launch them now, Captain.';
+  },
+  'Recall all WSKRs': () => { const n = sim.recallWskrs(); return n ? `Recalling ${n === 1 ? 'the WSKR' : `all ${n} WSKRs`}, aye. The bay takes each one aboard when we are under ${BAY_SAFE_KT} knots.` : 'No WSKRs are out, Captain.'; },
   'Hug the floor': () => { const r = sim.setHug(true); return r.ok ? `Hugging the floor, aye. I will hold ${HUG_ALT} metres off the bottom and follow it.` : r.why === 'docked' ? 'We are docked, Captain.' : 'Not enough water here to hug the floor, Captain. I need at least ' + HUG_MIN_FLOOR + ' metres under us.'; },
   'Stop hugging the floor': () => { if (!sim.s.hug) return 'We are not following the floor, Captain.'; sim.setHug(false); return `Leaving the floor, aye. Holding ${Math.round(sim.s.depth)} metres.`; },
   'Engage super cruise': () => { const r = sim.setCruise(true); return r.ok ? 'Super cruise engaged. Hold on to something, Captain.' : r.why === 'docked' ? 'We are docked, Captain.' : r.why === 'power' ? 'We have no power for it, Captain.' : 'Not enough deep water ahead, Captain. We need 120 metres under us for the next nine miles.'; },
@@ -162,7 +167,7 @@ const TREE = {
   ],
   sensors: () => [
     F('Sonar', O('Full sensor sweep', underway), O('Passive listening mode', () => !!sim.s.sonar)),
-    F('WSKRs', O('Deploy sensor buoys', underway), O('Set up a relay', () => underway() && !relayOut()), O('Stand down the relay', relayOut)),
+    F('WSKRs', O('Launch all WSKRs', underway), O('Recall all WSKRs', () => sim.s.wskrs.length > 0), O('Set up a relay', () => underway() && !relayOut()), O('Stand down the relay', relayOut)),
     F('Ship', O('Status report')),
   ],
   engineering: () => [F('Ship', O('Engineering status report'), O('Prepare for dive', underway), O('Emergency surface', () => underway() && sim.s.depth > 1))],

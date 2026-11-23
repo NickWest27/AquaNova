@@ -320,7 +320,7 @@ function stepWskrs(dt) {
       const draw = wskrDraw(w);
       w.bat = Math.max(0, w.bat - (100 / (wskrBatteryHours() * 3600)) * draw * dt * TIMESCALE);
       if (w.bat <= 0) { w.dead = true; w.mode = 'recall'; w.route = null; sim.emit('wskr-dead', w); return true; }
-      if (w.bat <= WSKR_LOW_PCT && w.mode !== 'recall') { w.mode = 'recall'; w.target = null; w.route = null; w.thr = 0; sim.emit('wskr-low', w); }
+      if (w.bat <= WSKR_LOW_PCT && w.mode !== 'recall') { w.mode = 'recall'; w.target = null; w.route = null; w.thr = 0; w.low = true; sim.emit('wskr-low', w); }   // low: the bay sends it out again once it is charged
     }
     { // control link: 10 game minutes out of range and the WSKR surfaces to get comms back; back in range, it dives again
       const lk = sim.wskrLink(w);

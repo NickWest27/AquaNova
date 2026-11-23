@@ -87,6 +87,8 @@ const listener = (type, data) => {
     else if (data.kind === 'shoal') hold('floor');
   } else if (type === 'arrived') { hold('arrived'); if (a.stop) a.stop.name = a.plan && a.plan.dest; }
   else if (type === 'wskr-low') note(`${wskrName(data)} ran low on charge and was recalled.`);
+  else if (type === 'bay-slowing') note(`Marcus slowed the ship to ${data.kt} knots for the launch bay.`);
+  else if (type === 'wskr-relaunch') note(`${wskrName(data)} was fully charged and went back out.`);
   else if (type === 'wskr-link-lost') note(`${wskrName(data)} went out of link range.`);
   else if (type === 'wskr-surfaced') note(`${wskrName(data)} surfaced to call in.`);
   else if (type === 'wskr-dead') { note(`${wskrName(data)} lost power and is adrift.`); hold('craft'); if (a.stop) a.stop.name = wskrName(data); }

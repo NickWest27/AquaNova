@@ -403,6 +403,9 @@ async function boot() {
       else if (type === 'shuttle-o2-low') say('helm', `${SHUTTLE_NAME}'s air is down to her reserve, Captain. Bringing her home.`, 'mission');
       else if (type === 'shuttle-o2-out') say('helm', `${SHUTTLE_NAME} is out of air, Captain, and drifting. Take the ship to her, fast.`, 'mission');
       else if (type === 'shuttle-dead') say('helm', `${SHUTTLE_NAME} has lost power and is adrift, Captain. Take the ship to her.`, 'mission');
+      else if (type === 'wskr-relaunch') say('sensors', `${wskrName(data)} is fully charged and going back out, Captain.`);
+      else if (type === 'wskr-relaunch-wait') say('sensors', `${wskrName(data)} is charged and ready to go back out, Captain. Slow below ${BAY_SAFE_KT} knots and the bay will launch it.`);
+      else if (type === 'wskr-launchall-stop') say('sensors', data.why === 'charge' ? 'The rest of the WSKRs are still charging, Captain. I have stopped the launch.' : 'I have stopped the WSKR launch, Captain. The bay cannot send the next one.');
       else if (type === 'wskr-recovered') say('sensors', `${wskrName(data)} is back in the launch bay.`);
       else if (type === 'bump') {
         const k = data.kind;

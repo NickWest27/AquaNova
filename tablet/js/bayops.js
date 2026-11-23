@@ -31,7 +31,7 @@ export const o2HoursLeft = (sh) => (Math.max(0, (sh.o2 == null ? 100 : sh.o2)) /
 const HULL_PER_KT_S = 0.015, DOOR_PER_KT_S = 0.02;   // % per knot over the limit per game second
 
 const passable = (lat, lon) => (seafloor.depthAt(lat, lon) ?? 0) >= 3;
-export const bay = () => sim.s.bay || (sim.s.bay = { op: null, doorDmg: 0, base: 0, rearm: null });
+export const bay = () => sim.s.bay || (sim.s.bay = { op: null, doorDmg: 0, base: 0, rearm: null, relaunch: {}, launchAll: false });
 export const rack = () => sim.s.rack || (sim.s.rack = {});
 export const shuttle = () => sim.s.shuttle || (sim.s.shuttle = { state: 'bay', bat: 100, mode: 'follow' });
 const mannedDefaults = (sh) => { if (sh.depth == null) sh.depth = 0; if (sh.o2 == null) sh.o2 = 100; if (sh.pilots == null) sh.pilots = SHUTTLE_COCKPIT; if (sh.pax == null) sh.pax = 0; if (sh.ashore == null) sh.ashore = 0; return sh; };
@@ -61,6 +61,15 @@ export function launchWskr(want) {
 }
 /** Take the WSKR waiting alongside aboard even though the ship is over the safe speed (the doors will cost us). */
 export function receiveWskrNow(n) { const w = sim.s.wskrs.find((q) => q.n === n && q.arrived); if (!w) return { ok: false, why: 'none' }; return startOp({ kind: 'recover', craft: 'wskr', n }); }
+/** The Captain sends every WSKR out. The bay launches them one at a time (one minute each), as each has the charge. */
+export function launchAllWskrs() {
+  const s = sim.s, b = bay(); if (s.docked) return { ok: false, why: 'docked' };
+  if (s.speed > BAY_SAFE_KT && !sim.away) return { ok: false, why: 'fast' };
+  const free = [1, 2, 3, 4].filter((n) => !s.wskrs.some((w) => w.n === n));
+  if (!free.length) return { ok: false, why: 'full' };
+  if (free.every((n) => rackBat(n) < MIN_LAUNCH_PCT)) return { ok: false, why: 'charge' };
+  b.launchAll = true; sim.touch(); return { ok: true, count: free.length };
+}
 /** Remora leaves through the bay: one minute, then the doors stay open for its tether until it is recovered. */
 export function launchRemora() {
   const s = sim.s, b = bay(); if (s.rov) return { ok: false, why: 'out' }; if (s.docked) return { ok: false, why: 'docked' };
@@ -143,8 +152,28 @@ function receive() {
     if (s.rov && w.arrived) { if (!w.tethered) { w.tethered = true; sim.emit('bay-tether', w); } continue; }
     if (!w.arrived) continue;
     if (s.speed <= BAY_SAFE_KT) { startOp({ kind: 'recover', craft: 'wskr', n: w.n }); return; }
+    if (sim.away) { crewSlows(); return; }   // the crew have the con: Marcus brings the ship down to bay speed
     if (!w.hinted) { w.hinted = true; sim.emit('bay-wait', w); }
   }
+}
+
+/** While the crew have the con a bay job waits on speed, Marcus holds the ship at bay speed until it is done. The standing speed comes back after. */
+const crewSlows = () => { bay().slow = true; };
+sim.speedCaps.push(() => (bay().slow ? BAY_SAFE_KT : null));
+/** WSKRs that go out by themselves: the ones recalled for low charge, once they are full again, and all of them after "launch all". */
+function pumpLaunches() {
+  const s = sim.s, b = bay(); b.relaunch = b.relaunch || {};
+  for (const w of s.wskrs) if (w.low) { b.relaunch[w.n] = true; delete w.low; }   // recalled for low charge: remember it for when it is aboard
+  const free = [1, 2, 3, 4].filter((n) => !s.wskrs.some((w) => w.n === n));
+  for (const n of Object.keys(b.relaunch)) if (s.wskrs.some((w) => w.n === +n && w.mode !== 'recall')) delete b.relaunch[n];   // the Captain sent it out again by hand
+  if (b.launchAll && !free.length) b.launchAll = false;
+  const ready = b.launchAll ? free : free.filter((n) => b.relaunch[n] && rackBat(n) >= 99.9);
+  if (!ready.length || b.op || s.rov || s.docked) return;
+  if (s.speed > BAY_SAFE_KT) { if (sim.away) crewSlows(); else if (!b.waitSaid) { b.waitSaid = true; sim.emit('wskr-relaunch-wait', { n: ready[0] }); } return; }
+  b.waitSaid = false;
+  const r = launchWskr(b.launchAll ? undefined : ready[0]);
+  if (!r.ok) { if (b.launchAll) { b.launchAll = false; sim.emit('wskr-launchall-stop', { why: r.why }); } return; }
+  if (b.relaunch[r.n]) { delete b.relaunch[r.n]; sim.emit('wskr-relaunch', { n: r.n }); }
 }
 
 function chargeRack(g) { const r = rack(); for (const k of Object.keys(r)) if (r[k] < 100) r[k] = Math.min(100, r[k] + (100 / (WSKR_CHARGE_H * 3600)) * g); }
@@ -229,7 +258,11 @@ function stepShuttle(g) {
   else if ((sh.bat <= LOW_PCT || sh.o2 <= LOW_PCT) && sh.mode === 'going') { sh.mode = 'returning'; sh.route = null; sim.emit(sh.o2 <= LOW_PCT ? 'shuttle-o2-low' : 'shuttle-low', sh); }
 }
 
-sim.hooks.push((dt) => { const g = dt * TIMESCALE; stepOp(g); receive(); chargeRack(g); stepShuttle(g); });
+sim.hooks.push((dt) => {
+  const g = dt * TIMESCALE, b = bay(), held = b.slow;
+  b.slow = false; stepOp(g); receive(); pumpLaunches(); chargeRack(g); stepShuttle(g);
+  if (b.slow && !held) sim.emit('bay-slowing', { kt: BAY_SAFE_KT });   // Marcus slows us for the bay
+});
 
 /** What to tell the Captain about the result of launchWskr(). */
 export const launchText = (r) => r.ok ? `${wskrName({ n: r.n })} is being readied in the bay. About ${Math.round(r.secs)} seconds.` : ({ docked: 'Undock first', fast: 'Slow below 8 kt first', full: 'All four WSKRs are out', busy: 'The bay is busy with another craft', doors: 'The bay doors are too damaged to open: dry dock needed', tether: "Remora's tether is holding the bay doors open. Recover it first", charge: `${wskrName({ n: r.n })} is only at ${Math.round(r.bat || 0)} percent charge. It needs 20 percent` })[r.why] || 'Cannot launch now';
