@@ -9,6 +9,7 @@
 //    2 cockpit seats and 6 passenger seats. Two pilots is usual; one pilot and a radio link (ship or shore within 20 nm) is enough.
 //    It has navigation and radio but no scanning gear.
 import { sim, toward, wskrName, TIMESCALE, SURFACE_M, SURFACE_KT, WSKR_CHARGE_H, WSKR_LOW_PCT } from './sim.js';
+import { enemyDock } from './reputation.js';
 import { seafloor } from './seafloor.js';
 import { planRoute } from './route.js';
 import { SHUTTLE_NAME } from './topics.js';
@@ -94,6 +95,7 @@ export function recoverShuttle() {
 }
 /** Send the shuttle to a dock with crew and supplies: out, a 10 s airlock cycle, and home. */
 export function sendShuttle(poi, stay = false) {
+  if (enemyDock(poi)) return { ok: false, why: 'enemy' };   // no supplies from an enemy base, colony or port
   const sh = mannedDefaults(shuttle()); if (sh.state !== 'out' || sh.mode !== 'follow' || sh.dead) return { ok: false, why: 'away' };
   const trip = toward(sh, poi).nm + toward(poi, sim.s).nm, range = shuttleRangeNm();
   if (trip > range) return { ok: false, why: 'range', trip, range };

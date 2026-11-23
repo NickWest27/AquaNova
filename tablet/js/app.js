@@ -1,6 +1,8 @@
 import '../../utils/debugPanel.js';
 import * as traffic from './traffic.js';
-import './sonar.js';   // passive sonar: contacts, sweep and scan run every step
+import './sonar.js'   // passive sonar: contacts, sweep and scan run every step
+import { loadReputation } from './reputation.js';
+import { initGenerator } from './missionGen.js';
 import { dlog } from '../../utils/log.js';
 import { sim, clockText, toward, wskrName } from './sim.js';
 import { createScene } from './scene.js';
@@ -314,12 +316,13 @@ async function boot() {
     await sim.loadPois();
     seafloor.load().then((ok) => ok && sim.touch());      // sea floor data loads in the background
     await loadGame();                       // saveManager + GameState + sim restore
+    try { await loadReputation(); } catch (e) { console.warn('reputation not loaded', e); }
     try { await traffic.load(); } catch (e) { console.warn('traffic not loaded', e); }   // after the save: the world seed and the sunk ships live in it
     Object.keys(gameState.getProperty('progress.flags') || {}).forEach((k) => gameState.updateProperty('tutorial.' + k, true));   // lesson flags come back with the save
     await syncAtBoot();                     // pick up journal notes and tasks from the phone
     try {
       missions = (await import('../../game/systems/missionManager.js')).default;
-      await missions.init(); initMissionLog(); startAria();
+      await missions.init(); initMissionLog(); startAria(); try { await initGenerator(); } catch (e) { console.warn('Generator unavailable', e); }
       {   // The Captain has been on the bridge (an older save, or the tour is done): the whole bridge crew is reachable
         const un = (gameState.getProperty('progress.stationsUnlocked') || []).map((x) => String(x).toLowerCase());
         const onBridge = un.includes('helm') || un.includes('sys') || (gameState.getProperty('mission.completedIds') || []).includes('shipTour') || objStatus('shipTour_bridge') === 'completed';
@@ -374,7 +377,7 @@ async function boot() {
       else if (type === 'shuttle-onstation') say('comms', `Aqua Nova, ${SHUTTLE_NAME}. We are on station${data.mission ? ' at ' + (data.mission.dest ? data.mission.dest.name : 'the position') : ''}. Holding and waiting for orders.`, 'mission');
       else if (type === 'shuttle-blocked') say('comms', `Aqua Nova, ${SHUTTLE_NAME}. We cannot go further on this heading: shoal water or the edge of our Area of Operations. Holding position.`, 'mission');
       else if (type === 'shuttle-orders-sent') say('comms', `${SHUTTLE_NAME} has our orders, Captain. ${data.lines.join(' ')}`, 'mission');
-      else if (type === 'shuttle-mission-fail') say('security', `Captain, ${SHUTTLE_NAME} could not start her mission. She is staying alongside.`, 'error');
+      else if (type === 'shuttle-mission-fail') say('security', data.why === 'enemy' ? `Captain, I will not send ${SHUTTLE_NAME} to an enemy port for supplies. She is staying alongside.` : `Captain, ${SHUTTLE_NAME} could not start her mission. She is staying alongside.`, 'error');
       else if (type === 'supplies-delivered') say('security', `The away team is back with ${SHUTTLE_NAME}, Captain, with supplies: food, science equipment, mail and fresh CO2 scrubbers. The scrubbers are changed.`, 'mission');
       else if (type === 'shuttle-clear') say('comms', `Aqua Nova, ${SHUTTLE_NAME}. You are above 800 metres. We are closing and ready to dock.`, 'mission');
       else if (type === 'avoid-on') say('helm', `Captain, the sea floor is rising ahead. We would hit it within a minute at ${data.ordered} metres. I am holding ${data.hold} metres, ${data.margin || 10} off the bottom, and will go back to ${data.ordered} when it falls away.`, 'error', { notice: 'COLLISION AVOIDANCE', hold: false });

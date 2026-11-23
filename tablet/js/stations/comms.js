@@ -14,6 +14,7 @@ import { canTransmit } from '../commsModel.js';
 import { startReport, transferring, xferBar } from '../transfer.js';
 import missions from '../../../game/systems/missionManager.js';
 import { logAccepted } from '../missionLog.js';
+import { isGenerated, acceptOffer } from '../missionGen.js';
 
 const MISSION_OF = { 'oera-sea-trials': 'seaTrials' }; // older saves stored this message without a mission id
 const stateOf = (id) => missions.completedMissions.has(id) ? 'done' : missions.activeMissions.has(id) ? 'active' : 'new';
@@ -74,7 +75,7 @@ export function mount(body) {
     const field = (k, v) => el('div', { class: 'mail-field' }, el('span', { text: k }), el('b', { text: v }));
     const tail = el('div', { class: 'mail-tail' });
     const fillTail = () => { const st = mid ? stateOf(mid) : null; tail.replaceChildren(...(!mid ? [] : st === 'new'
-      ? [el('button', { class: 'btn primary', text: 'Accept mission', onclick: () => { if (missions.startMission(mid)) logAccepted(mid); fillTail(); render(); } })]
+      ? [el('button', { class: 'btn primary', text: 'Accept mission', onclick: () => { if (isGenerated(mid) ? acceptOffer(mid) : missions.startMission(mid)) logAccepted(mid); fillTail(); render(); } })]
       : [el('p', { class: st === 'done' ? 'ok' : 'warn', text: st === 'done' ? 'Mission complete' : 'Mission accepted. See PED → Missions.' })])); };
     fillTail();
     const win = el('div', { class: 'mail-win', style: 'visibility:hidden' },

@@ -8,6 +8,7 @@
 // Nothing random happens: only things the game can compute (sea floor, the limit, battery, air, hull, craft already launched).
 // The plan is saved in navigation.away, so a reload or a closed app still wakes up properly, and it goes to the iPhone PED with a forecast.
 import { sim, toward, clockText, wskrName, TIMESCALE } from './sim.js';
+import { enemyDock } from './reputation.js';
 import { seafloor } from './seafloor.js';
 import { gameState, checkpoint, snapshotSim } from './persist.js';
 import { requestSync } from './sync.js';
@@ -93,6 +94,7 @@ const listener = (type, data) => {
   else if (type === 'wskr-surfaced') note(`${wskrName(data)} surfaced to call in.`);
   else if (type === 'wskr-dead') { note(`${wskrName(data)} lost power and is adrift.`); hold('craft'); if (a.stop) a.stop.name = wskrName(data); }
   else if (type === 'shuttle-dead' || type === 'shuttle-o2-out') { note(`${SHUTTLE_NAME} is adrift.`); hold('craft'); if (a.stop) a.stop.name = SHUTTLE_NAME; }
+  else if (type === 'mission-offer') { note(`A mission offer arrived: ${data.name}. The XO held the ship for your decision.`); hold('offer'); }
   else if (type === 'bay-door-damage') note('The bay doors took damage.');
 };
 listener.keep = true;
@@ -105,7 +107,7 @@ function rules(a, s) {
   a.did = a.did || {};
   if (!a.did.trip) {      // a port is close by: an away team takes the Tern for supplies (she leaves first: Remora's tether holds the bay doors open)
     a.did.trip = true;
-    const sh = shuttle(), docks = dockList().map((d) => ({ d, nm: toward(s, d).nm })).sort((x, y) => x.nm - y.nm), near = docks[0];
+    const sh = shuttle(), docks = dockList().filter((d) => !enemyDock(d)).map((d) => ({ d, nm: toward(s, d).nm })).sort((x, y) => x.nm - y.nm), near = docks[0];
     if (near && !s.docked && sh.state === 'bay' && !s.rov && !bay().op && near.nm > 0.5 && near.nm <= TRIP_MAX_NM && shuttleRangeNm() >= near.nm * 2) {
       const secs = (near.nm / SHUTTLE_KT) * 3600 * 2 + TRIP_LOAD_S + 2 * 60;
       if (a.endClock - s.clock >= secs) { a.trip = { dock: near.d.name, nm: +near.nm.toFixed(1), done: s.clock + secs }; note(`An away team left in ${SHUTTLE_NAME} for ${near.d.name}, ${Math.round(near.nm)} miles away, to fetch supplies: food, science equipment, mail and CO2 scrubbers.`); }
@@ -161,10 +163,11 @@ export function catchUp() {
     while (done < elapsed) {
       const g = a.stop ? 60 : s.cruise ? 6 : 15;
       sim.step(g / TIMESCALE); done += g;
+      if (a.stop && a.stop.kind === 'offer') break;   // a mission offer pauses the game until the Captain is back
     }
   } finally { sim.muted = false; }
   sim.dirty = true; sim.emit('tick');
-  return finish(elapsed);
+  return finish(Math.min(elapsed, done));
 }
 
 function finish(elapsedS) {

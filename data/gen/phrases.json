@@ -1,0 +1,56 @@
+{
+ "note": "Phrase pools for generated missions. Tokens in {braces} are facts from data. Pools are picked at random with a memory of the last ten used. Requesters speak in their own voice.",
+ "requesters": {
+  "oera_ops": { "from": "OERA Operations", "sign": "O.E.R.A. Operations Directorate", "compulsory": true },
+  "harbour": { "from": "Harbour Master Mitchell", "sign": "Mitchell, Harbour Master", "compulsory": false },
+  "university": { "from": "Dr. Webb, Atlantic Institute", "sign": "Webb", "compulsory": false },
+  "fisheries": { "from": "Fisheries Enforcement", "sign": "Fisheries Enforcement Office", "compulsory": false }
+ },
+ "pools": {
+  "open.oera_ops": ["{captain},", "Captain {captain},", "{captain}, this is a tasking.", "{captain}, a request has come to the Directorate."],
+  "open.harbour": ["Captain {captain},", "{captain}, Mitchell here.", "Captain, I hope this reaches you in time."],
+  "open.university": ["Captain {captain},", "Dear Captain {captain},", "{captain}, forgive the short notice."],
+  "open.fisheries": ["Captain {captain},", "{captain}, this is Enforcement.", "Captain, we have a report."],
+  "situation.contact.adrift": ["A fishing boat has stopped answering and is thought to be drifting near {place}, about {nm} nm {dir} of you.", "A small trawler lost power near {place}. Her last position is {nm} nm {dir} of the Aqua Nova.", "We have a fishing vessel with no engine near {place}, {nm} nm {dir} of your position."],
+  "situation.contact.lost_survey": ["A research vessel has gone quiet near {place}, {nm} nm {dir} of you. Her last report was routine.", "One of our survey ships has missed three check-ins. She was working near {place}, {nm} nm {dir} of the Aqua Nova.", "A survey vessel lost her comms mast near {place}. She is {nm} nm {dir} of your position."],
+  "situation.contact.poaching": ["Fishing boats are working without licence inside {place}, {nm} nm {dir} of you. Nobody answers their hails.", "Reports of an unmarked trawler inside {place}, {nm} nm {dir} of the Aqua Nova.", "A trawler with no markings has been working {place} for two nights. It lies {nm} nm {dir} of you."],
+  "ask.contact.adrift": ["Find her, see what she needs and help if you can.", "Locate the boat and give her crew what they need.", "Find the vessel and stand by her."],
+  "ask.contact.lost_survey": ["Locate her, find out what happened and help her crew.", "Find her and tell us what you see. Help if she needs it.", "Reach her, identify her and render what help she needs."],
+  "ask.contact.poaching": ["Identify the vessel. We would like her to leave, but we would like a record more.", "Find her, identify her and decide what is best. A warning may be enough.", "Identify her and make it clear she has been seen."],
+  "ask.survey": ["Take a sample at {place}, analyse it in the lab and report what you find.", "Go to {place}, sample and analyse, and send us the result.", "We would like {place} sampled and the results sent in."],
+  "situation.survey": ["{place} is {nm} nm {dir} of you and has not been sampled in years.", "The records for {place}, {nm} nm {dir} of the Aqua Nova, are thin.", "{place} lies {nm} nm {dir} of you. Nobody has good data there."],
+  "time.deadline": ["There is time, but not a lot: {hours} at most.", "Please be on scene within {hours}.", "Whatever help is needed, it is needed within {hours}."],
+  "time.soft": ["There is no hurry.", "Take your time, but do not forget us.", "A few days is fine."],
+  "limit.expires": ["Please answer within {expires}.", "I need your answer within {expires}.", "Tell us within {expires} whether you can take this."],
+  "limit.optional": ["This is a request, not an order. You may decline.", "You are free to decline. We will understand.", "Nothing compels you."],
+  "limit.compulsory": ["This is an order of the Directorate.", "The Directorate expects you to take this.", "This tasking is not optional."],
+  "close.oera_ops": ["Good luck.", "Report when you are done.", "Directorate out."],
+  "close.harbour": ["Thank you, Captain.", "Fair winds.", "We will keep the kettle on."],
+  "close.university": ["Thank you in advance.", "Your results will matter to us.", "With thanks."],
+  "close.fisheries": ["Stay in touch.", "Thank you for your help.", "Enforcement out."]
+ },
+ "decisions": {
+  "adrift": { "text": "We are alongside the trawler, Captain. Her crew are cold but whole. What do we do?", "options": [
+    { "id": "assist", "label": "Help them", "outcome": "assist", "reply": "Marcus is putting a line across. I will call the harbour for a tow." },
+    { "id": "document", "label": "Log it and go", "outcome": "document", "reply": "Logged. I will pass the position to the Coast Guard." },
+    { "id": "withdraw", "label": "Withdraw", "outcome": "withdraw", "reply": "Leaving them, Captain. I will note that it was your decision." } ] },
+  "lost_survey": { "text": "She is here, Captain. Her mast is gone and her crew are signalling by lamp. What do we do?", "options": [
+    { "id": "assist", "label": "Help them", "outcome": "assist", "reply": "Dr. Patel will lend them a spare antenna. Sending a repair crew by Tern." },
+    { "id": "document", "label": "Log it and go", "outcome": "document", "reply": "Logged. I will relay their position to the Directorate." },
+    { "id": "withdraw", "label": "Withdraw", "outcome": "withdraw", "reply": "Understood. Breaking contact." } ] },
+  "poaching": { "text": "She is working the closed area, Captain, nets out. How do we handle her?", "options": [
+    { "id": "warn_off", "label": "Warn her off", "outcome": "warn_off", "reply": "Hailing, Captain. I will state our authority plainly and give her ten minutes to leave." },
+    { "id": "document", "label": "Document only", "outcome": "document", "reply": "Photographing her and the nets. Evidence for Enforcement." },
+    { "id": "withdraw", "label": "Withdraw", "outcome": "withdraw", "reply": "Breaking contact. She will not know we were here." } ] }
+ },
+ "debrief": {
+  "assist": ["The crew are safe. They asked us to pass on their thanks.", "Help was given and gratefully received."],
+  "document": ["Your record has been filed. It will be used.", "The evidence is on file. No one was hurt."],
+  "warn_off": ["The vessel left the area. Enforcement thanks you for a clean outcome.", "She ran when she heard our hail. The closed area is quiet."],
+  "withdraw": ["You withdrew. The matter stays open.", "Contact was broken. Someone else will have to take it up."],
+  "too_late": ["We arrived after the deadline. The situation resolved without us.", "By the time the Aqua Nova reached her, others had come."],
+  "quit": ["The mission was abandoned. The requester has been told."],
+  "expired": ["The offer lapsed unanswered."],
+  "survey": ["Your samples were analysed and the results filed. Thank you."]
+ }
+}

@@ -16,7 +16,7 @@ const turnDps = (kt) => (kt <= MAX_KT ? 6 - 3 * Math.max(0, kt) / MAX_KT : 3 - 1
 const PITCH_TAN = Math.tan((20 * Math.PI) / 180), HOVER_MPS = 0.5, MAX_DIVE_MPS = 3, MAX_DIVE_CRUISE_MPS = 10, KT_MPS = 0.5144;
 export const diveRate = (kt, cruise = false) => Math.min(cruise ? MAX_DIVE_CRUISE_MPS : MAX_DIVE_MPS, Math.max(HOVER_MPS, Math.abs(kt) * KT_MPS * PITCH_TAN));
 const pace = () => 1;   // handling is per real second, so turns, speed changes and dives feel the same at any time compression
-const MAX_KT = 14;
+export const MAX_KT = 14;
 export const SCRUB_DAYS = 90;   // the Aqua Nova carries scrubbers for about three months submerged
 export const CRUSH_M = 11000, DEEPEST_KNOWN_M = 10935, PERISCOPE_M = 10;   // crush depth: a little more than the Challenger Deep
 export const SURFACE_M = 3, SURFACE_KT = 7;   // above 3 m the ship is on the surface, where she is limited to 7 knots (built for sub-sea movement)

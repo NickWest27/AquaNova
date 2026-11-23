@@ -1,0 +1,164 @@
+{
+ "note": "Standing with seven groups. Numbers run -100..+100 and never drift back: what you do stays done. `relations` is the spill-over (-1..1): when a group's standing moves, related groups move by delta x relation x spill, once, never chained.",
+ "start": {
+  "oera": 10,
+  "science": 10,
+  "civil": 0,
+  "allied_navy": 0,
+  "hostile_navy": -10,
+  "pirates": -20,
+  "poachers": -20
+ },
+ "factions": {
+  "oera": {
+   "name": "O.E.R.A. and Allies",
+   "blurb": "Your employer and the countries behind it."
+  },
+  "science": {
+   "name": "Science community",
+   "blurb": "Universities, institutes and journals."
+  },
+  "civil": {
+   "name": "Civil community",
+   "blurb": "Ports, fishermen, shippers, miners and settlers."
+  },
+  "allied_navy": {
+   "name": "Allied navies",
+   "blurb": "Navies of O.E.R.A. and its friends."
+  },
+  "hostile_navy": {
+   "name": "Hostile navies",
+   "blurb": "Navies that do not like uninvited submarines."
+  },
+  "pirates": {
+   "name": "Pirates",
+   "blurb": "Raiders. They remember."
+  },
+  "poachers": {
+   "name": "Poachers",
+   "blurb": "Illegal fishers and collectors."
+  }
+ },
+ "group_of": {
+  "oera": "oera",
+  "civil": "civil",
+  "pleasure": "civil",
+  "cargo": "civil",
+  "fishing": "civil",
+  "oil": "civil",
+  "deepcut": "civil",
+  "abyssal": "civil",
+  "ridgeline": "civil",
+  "meridian": "civil",
+  "foreign": "hostile_navy",
+  "pirates": "pirates",
+  "poachers": "poachers"
+ },
+ "enemy": [
+  "hostile_navy",
+  "pirates",
+  "poachers"
+ ],
+ "spill": 0.4,
+ "max_per_event": 10,
+ "relations": {
+  "oera|science": 0.5,
+  "oera|civil": 0.3,
+  "oera|allied_navy": 0.6,
+  "oera|hostile_navy": -0.3,
+  "oera|pirates": -0.3,
+  "oera|poachers": -0.3,
+  "science|civil": 0.2,
+  "science|allied_navy": 0.1,
+  "science|poachers": -0.4,
+  "science|pirates": -0.1,
+  "civil|allied_navy": 0.3,
+  "civil|hostile_navy": -0.2,
+  "civil|pirates": -0.6,
+  "civil|poachers": -0.4,
+  "allied_navy|hostile_navy": -0.6,
+  "allied_navy|pirates": -0.5,
+  "allied_navy|poachers": -0.3,
+  "hostile_navy|pirates": 0.1,
+  "hostile_navy|poachers": 0.1,
+  "pirates|poachers": 0.4
+ },
+ "tiers": [
+  {
+   "min": -100,
+   "name": "Hostile"
+  },
+  {
+   "min": -50,
+   "name": "Cold"
+  },
+  {
+   "min": -15,
+   "name": "Neutral"
+  },
+  {
+   "min": 15,
+   "name": "Warm"
+  },
+  {
+   "min": 50,
+   "name": "Trusted"
+  }
+ ],
+ "outcomes": {
+  "assist": {
+   "oera": 3,
+   "civil": 4,
+   "science": 1,
+   "allied_navy": 1
+  },
+  "document": {
+   "oera": 2,
+   "science": 4,
+   "civil": 1
+  },
+  "warn_off": {
+   "oera": 2,
+   "civil": 2,
+   "allied_navy": 1,
+   "poachers": -2,
+   "pirates": -2
+  },
+  "withdraw": {
+   "oera": 0
+  },
+  "too_late": {
+   "oera": -1,
+   "civil": -3
+  },
+  "declined": {
+   "oera": -2
+  },
+  "quit": {
+   "oera": -4
+  },
+  "expired": {
+   "oera": -3
+  },
+  "accident": {
+   "civil": -4,
+   "oera": -1
+  },
+  "sunk_ship": {
+   "civil": -10,
+   "oera": -4,
+   "science": -2
+  },
+  "survey": {
+   "oera": 3,
+   "science": 4
+  },
+  "quit_optional": {
+   "oera": -1
+  },
+  "quit_rescue": {
+   "oera": -4,
+   "civil": -3
+  }
+ }
+}
