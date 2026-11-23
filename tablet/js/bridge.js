@@ -1,16 +1,15 @@
 // The bridge consoles, matched to the screens in the bridge art:
 //   top     : upper display. Place, latitude/longitude, game date and time, then brief notices (or ship status).
 //   main    : the large screen. Navigation map by default; the player can send the medium display's picture to it.
-//   display : the medium screen in the center. Shows what the left mini console picks (NAV, HELM, SYS, VIEW).
-//   control : the bottom center screen. Controls for the picked display.
-//   left    : bottom left mini console. Picks the display.
-//   right   : bottom right mini console. Extra data for the picked display.
+//   display : the medium screen in the center. Shows the page the left desk panel picks.
+//   control : the bottom center screen. Controls for the picked page.
+//   left    : bottom left desk panel. Picks the page: NAV, HLM, TAC, SNR, VW, SYS.
+//   right   : bottom right desk panel. The view settings of the picked page (range, DSP, PAN, what to show).
 // Sized in the 1920x1080 stage. Only the visible displays are updated.
 import { sim, toward, gameDateText, clockText } from './sim.js';
 import { createND } from './nd.js';
 import { createDial } from './ui.js';
-import { el, pad, toast } from './util.js';
-import { toggleDock } from './dock.js';
+import { el, pad, modal, toast } from './util.js';
 import { createProfile } from './profile.js';
 import { openPlotDialog } from './plot.js';
 import { createSynth } from './synth.js';
@@ -26,12 +25,12 @@ const etaText = (nm, kt) => { if (kt < 0.5) return '—'; const mins = Math.roun
 const bbtn = (text, onclick, cls = '') => el('button', { class: `bbtn ${cls}`, text, onclick });
 const rdRow = (label, valueNode) => el('div', { class: 'rdr' }, el('small', { text: label }), valueNode);
 const rd = (label, valueNode) => el('div', { class: 'rd' }, el('small', { text: label }), valueNode);
-const order = ['nav', 'helm', 'sys', 'view'];
+const order = ['nav', 'hlm', 'tac', 'snr', 'vw', 'sys'];   // the left desk panel's six pages
 // VIEW: synthetic vision (a forward window built from the charted sea floor) or the exterior camera picture.
 // With the gates on, synthetic vision comes from the research topic of that name.
 const synthOk = () => !GATES_ON || research.has('synthetic-view');
 const vopt = { mode: 'synth' };   // shared by the large and the medium copy
-const labels = { nav: 'NAV', helm: 'HELM', sys: 'SYS', view: 'VIEW' };
+const labels = { nav: 'NAV', hlm: 'HLM', tac: 'TAC', snr: 'SNR', vw: 'VW', sys: 'SYS' };
 
 export function createBridgeConsole({ top, main, display, center, left, right, onExpand }) {
   // ---------- top display ----------
@@ -46,7 +45,7 @@ export function createBridgeConsole({ top, main, display, center, left, right, o
 
   // ---------- NAV ----------
   views.nav = (() => {
-    const nds = []; let sel = null, bigNd = null, panAt = null;
+    const nds = [], show = { ships: true, subs: true, base: true, orgs: true }; let sel = null, bigNd = null, panAt = null;
     const syncSel = (p) => { sel = p; nds.forEach((n) => { n.sel = p; n.redraw(); }); refresh(); };
     const rangeTxt = el('span', { class: 'rng' });
     const make = (compact) => {
@@ -54,7 +53,7 @@ export function createBridgeConsole({ top, main, display, center, left, right, o
       const wrap = el('div', { class: 'nd-stage' }); m.append(wrap);
       const nd = createND(wrap, { stage: true, units: compact ? 1.25 : 1.7, contours: !compact, rings: compact, trackUp: compact, onPick: syncSel });   // the big main screen stays north up; the medium main display is track up
       if (nds[0]) nd.setRange(nds[0].range);
-      nd.sel = sel; nds.push(nd); if (!compact) bigNd = nd;
+      nd.sel = sel; nd.show = show; nds.push(nd); if (!compact) bigNd = nd;
       if (compact) return { m, update() { nd.redraw(); } };
       const row = (l) => { const v = el('span'); return [el('div', { class: 'nl-r' }, el('small', { text: l }), v), v]; };
       const [rT, logTime] = row('TIME'), [rP, logCur] = row('POS'), [rA, logPlace] = row('AT'), [rD, logDest] = row('DEST'), [rE, logEta] = row('');
@@ -74,43 +73,120 @@ export function createBridgeConsole({ top, main, display, center, left, right, o
       panAt = { lat: panAt.lat + dyNm / 60, lon: panAt.lon + dxNm / (60 * Math.cos((panAt.lat * Math.PI) / 180)) }; bigNd.setPan(panAt);
     };
     const panOff = () => { panAt = null; if (bigNd) bigNd.setPan(null); };
-    const zoom = (dir) => { const r = nds[0].zoom(dir); nds.forEach((n) => n.setRange(r)); refresh(); };
-    const plot = bbtn('Plot a course', () => openPlotDialog({ preselect: sel, onPlotted: refresh }), 'wide');
-    const clear = bbtn('Clear', () => { sel = null; nds.forEach((n) => { n.sel = null; }); sim.s.wpt = null; sim.touch(); refresh(); });
-    const c = el('div', { class: 'bc' }, el('div', { class: 'rowN' }, plot, clear));
-    const r = el('div', { class: 'br' }); const rA = el('small'), rB = el('b'), rC = el('div'); r.append(rA, rB, rC);
-    function refresh() {
+    const zoom = (dir) => { const r = nds[0].zoom(dir); nds.forEach((n) => n.setRange(r)); set(rangeTxt, r + ' nm'); };
+    // Controls. Dest, Fix and Route build the Route (s.fixes); Plot turns it into a course.
+    const fixDialog = (opts) => openPlotDialog({ preselect: sel, ...opts });
+    const helm = (text) => tell('helm', text);
+    const dest = bbtn('Dest', () => fixDialog({ title: 'Destination', action: 'Set destination', initial: null, onFix: (f) => { const fx = sim.s.fixes; fx.length ? fx.splice(fx.length - 1, 1, f) : fx.push(f); sim.touch(); refresh(); } }));
+    const fix = bbtn('Fix', () => fixDialog({ title: 'New fix', action: 'Add fix', onFix: (f) => { sim.s.fixes.push(f); sim.touch(); refresh(); } }));
+    const routeB = bbtn('Route', () => openRoute());
+    const plot = bbtn('Plot', () => {
       const s = sim.s;
-      set(rangeTxt, nds[0] ? nds[0].range + ' nm' : '');
-      if (sel) { const t = toward(s, sel); set(rA, sel.type.toUpperCase()); set(rB, sel.name); set(rC, `${t.nm.toFixed(1)} nm  BRG ${pad(t.brg)}°`); }
-      else if (s.wpt) { const t = toward(s, s.wpt); set(rA, 'COURSE SET'); set(rB, s.wpt.name); set(rC, `${t.nm.toFixed(1)} nm  ETA ${etaText(t.nm, s.speed)}`); }
-      else { set(rA, 'DESTINATION'); set(rB, 'None'); set(rC, 'Tap a marker'); }
+      if (s.docked) return helm('We are docked, Captain. Undock first, then plot.');
+      const r = sim.plotRoute();
+      if (!r.ok) return helm(r.why === 'empty' ? 'The route is empty, Captain. Set a destination first.' : `No safe way to ${r.fix.name}, Captain: land or shallows block every way round.`);
+      const tps = r.route.filter((q) => q.tp).length;
+      helm(`Course plotted through ${s.fixes.length} fix${s.fixes.length === 1 ? '' : 'es'}${tps ? `, ${tps} turn point${tps === 1 ? '' : 's'} to clear the land` : ''}. ${s.throttle > 0.01 ? 'Speed unchanged.' : 'We are not under way. Set a speed when you are ready.'}`);
+      refresh();
+    }, 'go');
+    // The Route list: add, edit, delete, move up, move down. Turn points are the helm's own and are not listed.
+    function openRoute() {
+      const list = el('div', { class: 'route-list' }); let close = () => {};
+      const draw = () => {
+        const fx = sim.s.fixes; let from = sim.s;
+        list.replaceChildren(...(fx.length ? fx.map((f, i) => {
+          const t = toward(from, f); from = f;
+          const mv = (d) => { const j = i + d; if (j < 0 || j >= fx.length) return; [fx[i], fx[j]] = [fx[j], fx[i]]; sim.touch(); draw(); refresh(); };
+          return el('div', { class: 'route-row' },
+            el('div', { class: 'grow' }, el('b', { text: `${i + 1}  ${f.name}${i === fx.length - 1 ? '  (DEST)' : ''}` }), el('small', { text: `${pad(t.brg)}°  ${t.nm.toFixed(1)} nm${f.depth != null ? `  ·  ${f.depth} m` : ''}` })),
+            el('button', { class: 'btn chip', text: '▲', 'aria-label': 'Move up', disabled: i === 0, onclick: () => mv(-1) }),
+            el('button', { class: 'btn chip', text: '▼', 'aria-label': 'Move down', disabled: i === fx.length - 1, onclick: () => mv(1) }),
+            f.type === 'waypoint' ? el('button', { class: 'btn chip', text: 'Edit', onclick: () => fixDialog({ title: `Edit ${f.name}`, action: 'Save fix', initial: f, onFix: (nf) => { fx[i] = nf; sim.touch(); draw(); refresh(); } }) }) : null,
+            el('button', { class: 'btn chip', text: '✕', 'aria-label': 'Delete', onclick: () => { fx.splice(i, 1); sim.touch(); draw(); refresh(); } }));
+        }) : [el('p', { class: 'empty', text: 'No fixes. Add one, or set a destination.' })]));
+      };
+      draw();
+      close = modal({ title: 'Route', body: el('div', {}, list, el('div', { class: 'row' },
+        el('button', { class: 'btn primary grow', text: 'Add fix', onclick: () => { close(); fixDialog({ title: 'New fix', action: 'Add fix', onFix: (f) => { sim.s.fixes.push(f); sim.touch(); refresh(); openRoute(); } }); } }),
+        el('button', { class: 'btn', text: 'Clear route', onclick: () => { sim.clearRoute(); draw(); refresh(); } }),
+        el('button', { class: 'btn', text: 'Close', onclick: () => close() }))), actions: [] });
     }
-    return { make, c, r, expand: 'nav', side: refresh, nds, zoom, rangeTxt, panBy, panOff, panStep: () => (nds[0] ? nds[0].range * 0.25 : 1) };
+    // SHW: switches for what the NAV display draws. They replace the controls while SHW is on.
+    const showSw = (key, label) => { const b = bbtn(label, () => { show[key] = !show[key]; nds.forEach((n) => n.redraw()); paint(); }); const paint = () => b.classList.toggle('on', !!show[key]); paint(); return b; };
+    const showC = el('div', { class: 'bc shw' }, el('div', { class: 'rowN' }, showSw('ships', 'Ships'), showSw('subs', 'Subs'), showSw('base', 'Base'), showSw('orgs', 'Orgs')));
+    const c = el('div', { class: 'bc' }, el('div', { class: 'rowN' }, dest, fix, routeB, plot));
+    // View settings (right desk): range and PAN here, DSP and SHW added by the console.
+    const v = el('div', { class: 'bc msc' }, el('div', { class: 'rowN' }, bbtn('−', () => zoom(-1), 'sq'), el('div', { class: 'rngbox' }, el('small', { text: 'RANGE' }), rangeTxt), bbtn('+', () => zoom(1), 'sq')));
+    function refresh() { set(rangeTxt, nds[0] ? nds[0].range + ' nm' : ''); plot.classList.toggle('on', !!sim.s.wpt); }
+    return { make, c, v, extra: showC, expand: 'nav', side: refresh, nds, show, zoom, rangeTxt, panBy, panOff, panStep: () => (nds[0] ? nds[0].range * 0.25 : 1) };
   })();
 
-  // ---------- HELM ----------
-  views.helm = (() => {
+  // ---------- HLM ----------
+  // Display: heading dial in the middle, speed tape on its left, depth tape on its right. Each tape shows the actual value in a box, an orange
+  // triangle and small number at the value that is set, and a trend vector (where the value will be in 10 seconds).
+  const NSV = 'http://www.w3.org/2000/svg', sv = (t, a = {}, text) => { const n = document.createElementNS(NSV, t); for (const k in a) n.setAttribute(k, a[k]); if (text != null) n.textContent = text; return n; };
+  const TAPE_W = 140, TAPE_H = 300, MID = TAPE_H / 2;
+  /** A vertical tape. mirror: the tape sits on the left edge (the depth tape, with the dial on its left). up: bigger values are higher on the tape. */
+  function createTape({ mirror, up }) {
+    const svg = sv('svg', { viewBox: `0 0 ${TAPE_W} ${TAPE_H}`, class: 'tape' }), g = sv('g');
+    svg.append(g);
+    const X = (x) => (mirror ? TAPE_W - x : x), anchor = (a) => (mirror ? (a === 'end' ? 'start' : 'end') : a);
+    const mono = { 'font-family': 'ui-monospace, Menlo, monospace', 'font-weight': 700 };
+    return {
+      svg,
+      update({ cur, set, rate, ground = null, span, step, major, fmt = (v) => String(Math.round(v)), unit = '' }) {
+        const k = TAPE_H / span, Y = (v) => MID + (up ? -1 : 1) * (v - cur) * k, kids = [];
+        const band = [X(70), X(128)].sort((a, b) => a - b);
+        kids.push(sv('rect', { x: band[0], y: 0, width: band[1] - band[0], height: TAPE_H, fill: 'rgba(6,21,35,0.85)', stroke: '#2b4a63', 'stroke-width': 2 }));
+        const lo = cur - span / 2, hi = cur + span / 2;
+        for (let v = Math.ceil(lo / step) * step; v <= hi; v += step) {
+          if (v < 0 && up) continue;
+          const y = Y(v), big = Math.round(v / step) % (major / step) === 0;
+          kids.push(sv('line', { x1: X(128), y1: y, x2: X(big ? 112 : 119), y2: y, stroke: big ? '#64ffda' : '#4c6a85', 'stroke-width': 2 }));
+          if (big) kids.push(sv('text', { x: X(106), y: y + 6, 'text-anchor': anchor('end'), fill: '#8fa6bd', 'font-size': 17, ...mono }, fmt(v)));
+        }
+        if (ground != null) { const y = Y(ground); if (y < TAPE_H) { kids.push(sv('rect', { x: band[0], y: Math.max(0, y), width: band[1] - band[0], height: TAPE_H - Math.max(0, y), fill: 'rgba(255,77,77,0.28)' })); if (y > 0) kids.push(sv('line', { x1: band[0], y1: y, x2: band[1], y2: y, stroke: '#ff4d4d', 'stroke-width': 4 })); } }
+        const sy = Math.max(8, Math.min(TAPE_H - 8, Y(set)));   // the set marker stays on the tape even when its value is off the scale
+        kids.push(sv('polygon', { points: `${X(62)},${sy - 9} ${X(62)},${sy + 9} ${X(74)},${sy}`, fill: '#ffb020' }), sv('text', { x: X(54), y: sy + 6, 'text-anchor': anchor('end'), fill: '#ffb020', 'font-size': 15, ...mono }, fmt(set)));
+        const dv = Math.max(-110, Math.min(110, (up ? -1 : 1) * rate * 10 * k));   // 10 seconds ahead
+        if (Math.abs(dv) > 2) kids.push(sv('line', { x1: X(14), y1: MID, x2: X(14), y2: MID + dv, stroke: '#3ddc84', 'stroke-width': 5 }), sv('polygon', { points: `${X(14) - 7},${MID + dv - Math.sign(dv) * 1} ${X(14) + 7},${MID + dv - Math.sign(dv) * 1} ${X(14)},${MID + dv + Math.sign(dv) * 12}`, fill: '#3ddc84' }));
+        kids.push(sv('line', { x1: X(6), y1: MID, x2: X(22), y2: MID, stroke: '#4c6a85', 'stroke-width': 2 }));
+        kids.push(sv('rect', { x: band[0] - 4, y: MID - 19, width: band[1] - band[0] + 8, height: 38, fill: '#031018', stroke: '#64ffda', 'stroke-width': 3 }), sv('text', { x: (band[0] + band[1]) / 2, y: MID + 9, 'text-anchor': 'middle', fill: '#fff', 'font-size': 28, ...mono }, fmt(cur)));
+        if (unit) kids.push(sv('text', { x: (band[0] + band[1]) / 2, y: 14, 'text-anchor': 'middle', fill: '#8fa6bd', 'font-size': 13, ...mono }, unit));
+        g.replaceChildren(...kids);
+      },
+    };
+  }
+  views.hlm = (() => {
     const make = (compact) => {
       const m = el('div', { class: 'bd bd-helm' + (compact ? ' compact' : '') });
-      const hSpd = el('b'), hDep = el('b');
-      const dial = createDial({ onInput: (h) => { sim.setHeading(h); sim.s.wpt = null; } });
-      m.append(rd('SPEED KT', hSpd), dial.root, rd('DEPTH M', hDep));
-      return { m, update() { const s = sim.s; set(hSpd, s.speed.toFixed(1)); set(hDep, String(Math.round(s.depth))); dial.update(s.heading, s.targetHeading); } };
+      const dial = createDial({ onInput: (h) => { sim.setHeading(h); sim.cancelCourse(); } });
+      const spd = createTape({ mirror: false, up: true }), dep = createTape({ mirror: true, up: false });
+      m.append(spd.svg, dial.root, dep.svg);
+      let last = null, vs = 0, as = 0;   // smoothed rates of change: speed (kt/s) and depth (m/s)
+      return { m, update() {
+        const s = sim.s, now = Date.now();
+        if (last && now - last.t > 50) { const dt = (now - last.t) / 1000; as = as * 0.8 + 0.2 * ((s.speed - last.speed) / dt); vs = vs * 0.8 + 0.2 * ((s.depth - last.depth) / dt); last = { t: now, speed: s.speed, depth: s.depth }; }
+        else if (!last) last = { t: now, speed: s.speed, depth: s.depth };
+        dial.update(s.heading, s.targetHeading);
+        spd.update({ cur: s.speed, set: s.throttle * sim.maxKt(), rate: as, span: s.cruise ? 80 : 20, step: s.cruise ? 5 : 1, major: s.cruise ? 20 : 5, fmt: (v) => (Math.abs(v - Math.round(v)) < 0.05 ? String(Math.round(v)) : v.toFixed(1)), unit: 'KT' });
+        dep.update({ cur: s.depth, set: s.targetDepth, rate: vs, ground: s.floor, span: 120, step: 10, major: 20, unit: 'M' });
+      } };
     };
-    const thr = (d) => { sim.setThrottle(Math.round(Math.min(1, Math.max(0, sim.s.throttle + d)) * 20) / 20); };
+    // Controls. Every button does one thing; Dock is a spoken order now.
+    const thr = (d) => sim.setThrottle(Math.round(Math.min(1, Math.max(0, sim.s.throttle + d)) * 20) / 20);
     const dep = (d) => sim.setDepth(Math.min(6000, Math.max(0, Math.round((sim.s.targetDepth + d) / 10) * 10)));
-    const dockB = bbtn('Dock', () => toggleDock());
-    const cruiseB = bbtn('Cruise', () => { const r = sim.setCruise(!sim.s.cruise); tell('helm', r.ok ? (sim.s.cruise ? 'Super cruise engaged, Captain.' : 'Super cruise disengaged.') : r.why === 'docked' ? 'We are docked, Captain.' : 'Not enough deep water ahead, Captain. Super cruise needs 120 m under us for the next 9 miles.', r.ok ? '' : 'error'); });
+    const turn = (d) => { sim.setHeading(sim.s.targetHeading + d); sim.cancelCourse(); };   // steering by hand: the Route is kept, Plot on NAV returns to it
+    const noeB = bbtn('Noe', () => {
+      if (sim.s.hug) { sim.setHug(false); return tell('helm', `Leaving the floor, Captain. Holding ${Math.round(sim.s.depth)} metres.`); }
+      const r = sim.setHug(true);
+      tell('helm', r.ok ? 'Nap of the earth, Captain. Ten metres off the bottom.' : r.why === 'docked' ? 'We are docked, Captain.' : 'Not enough water here to follow the floor, Captain.');
+    });
+    const cruiseB = bbtn('Cruise', () => { const r = sim.setCruise(!sim.s.cruise); tell('helm', r.ok ? (sim.s.cruise ? 'Super cruise engaged, Captain.' : 'Super cruise disengaged.') : r.why === 'docked' ? 'We are docked, Captain.' : 'Not enough deep water ahead, Captain. Super cruise needs 120 m under us for the next 9 miles.'); });
     const c = el('div', { class: 'bc' },
-      el('div', { class: 'rowN' }, bbtn('◂ Port', () => { sim.setHeading(sim.s.targetHeading - 10); sim.s.wpt = null; }), bbtn('Stbd ▸', () => { sim.setHeading(sim.s.targetHeading + 10); sim.s.wpt = null; }), bbtn('Slower', () => thr(-0.1)), bbtn('Faster', () => thr(0.1)), dockB),
-      el('div', { class: 'rowN' }, bbtn('Up 50 m', () => dep(-50)), bbtn('Down 50 m', () => dep(50)), bbtn('Surface', () => sim.setDepth(0)), cruiseB));
-    const r = el('div', { class: 'br' }); const v1 = el('b'), v2 = el('b');
-    r.append(el('small', { text: 'THROTTLE' }), v1, el('small', { text: 'ORDERED DEPTH' }), v2);
-    return { make, c, r, expand: 'helm', side() {
-      const s = sim.s; set(v1, Math.round(s.throttle * 100) + '%'); set(v2, Math.round(s.targetDepth) + ' m');
-      dockB.classList.toggle('on', !!s.docked); cruiseB.classList.toggle('on', !!s.cruise);
-    } };
+      el('div', { class: 'rowN' }, bbtn('Port', () => turn(-10)), bbtn('Stbd', () => turn(10)), bbtn('Stop', () => sim.stop(), 'stop'), bbtn('Slow', () => thr(-0.1)), bbtn('Fast', () => thr(0.1))),
+      el('div', { class: 'rowN' }, bbtn('Up', () => dep(-50)), bbtn('Dn', () => dep(50)), bbtn('Srfc', () => sim.setDepth(0)), noeB, cruiseB));
+    return { make, c, v: el('div', { class: 'bc msc' }), expand: 'helm', side() { noeB.classList.toggle('on', !!sim.s.hug); cruiseB.classList.toggle('on', !!sim.s.cruise); } };
   })();
 
   // ---------- SYS ----------
@@ -136,18 +212,15 @@ export function createBridgeConsole({ top, main, display, center, left, right, o
     const banner = el('div', { class: 'sbanner ok' });
     const swL = sw('lights', 'Lights'), swS = sw('sonar', 'Sonar');
     const c = el('div', { class: 'bc' }, el('div', { class: 'rowN' }, banner, swL, swS));
-    const r = el('div', { class: 'br' }); const tA = el('b'), tB = el('b');
-    r.append(el('small', { text: 'WATER TEMP' }), tA, el('small', { text: 'PRESSURE' }), tB);
-    return { make, c, r, expand: 'sys', side() {
+    return { make, c, v: el('div', { class: 'bc msc' }), expand: 'sys', side() {
       const s = sim.s, bad = s.battery < 15 || s.oxygen < 15 || s.hull < 40, warn = s.battery < 30 || s.oxygen < 30 || s.hull < 80;
       banner.className = 'sbanner ' + (bad ? 'bad' : warn ? 'warn' : 'ok'); set(banner, bad ? 'CRITICAL' : warn ? 'CAUTION' : 'NOMINAL');
-      set(tA, s.temp.toFixed(1) + ' °C'); set(tB, Math.round(s.depth / 10 + 1) + ' bar');
       swL.classList.toggle('on', !!s.lights); swS.classList.toggle('on', !!s.sonar);
     } };
   })();
 
   // ---------- VIEW (outside camera) ----------
-  views.view = (() => {
+  views.vw = (() => {
     const make = (compact) => {
       const water = el('div', { class: 'water' }), dark = el('div', { class: 'dark' });
       const bubbles = el('div', { class: 'bubbles' }, [1, 2, 3, 4, 5, 6, 7, 8, 9].map(() => el('i')));
@@ -174,16 +247,18 @@ export function createBridgeConsole({ top, main, display, center, left, right, o
     const lightsB = bbtn('', () => { sim.s.lights = !sim.s.lights; paint(); }); const paint = () => { lightsB.classList.toggle('on', !!sim.s.lights); }; lightsB.textContent = 'Lights'; paint();
     const modeB = bbtn('', () => { vopt.mode = vopt.mode === 'synth' ? 'camera' : 'synth'; side(); });
     const c = el('div', { class: 'bc' }, el('div', { class: 'rowN' }, el('div', { class: 'cap', text: 'FORWARD VIEW' }), lightsB, modeB));
-    const r = el('div', { class: 'br' }); const pA = el('b'), pB = el('b');
-    r.append(el('small', { text: 'PRESSURE' }), pA, el('small', { text: 'WATER TEMP' }), pB);
     function side() {
       const s = sim.s, ok = synthOk();
       lightsB.classList.toggle('on', !!s.lights);
       modeB.textContent = !ok ? 'SYNTHETIC: RESEARCH NEEDED' : vopt.mode === 'synth' ? 'SHOW CAMERA' : 'SHOW SYNTHETIC'; modeB.disabled = !ok;
-      set(pA, `${Math.round(s.depth / 10 + 1)} bar`); set(pB, `${s.temp.toFixed(1)} °C`);
     }
-    return { make, c, r, expand: null, side };
+    return { make, c, v: el('div', { class: 'bc msc' }), expand: null, side };
   })();
+
+  // ---------- TAC and SNR: pages named on the left desk panel and not built yet ----------
+  const stub = (title) => ({ make: () => ({ m: el('div', { class: 'bd bd-stub' }, el('b', { text: title }), el('small', { text: 'NOT INSTALLED' })), update() {} }), c: el('div', { class: 'bc' }, el('div', { class: 'cap', text: 'NO CONTROLS' })), v: el('div', { class: 'bc msc' }), expand: null, side() {} });
+  views.tac = stub('TACTICAL');
+  views.snr = stub('PASSIVE SONAR');
 
   // ---------- build: one large and one compact copy of each ----------
   // Info Left and Info Right are always on, either side of the main screen.
@@ -202,23 +277,30 @@ export function createBridgeConsole({ top, main, display, center, left, right, o
     btns[id] = bbtn(labels[id], () => select(id)); sel.append(btns[id]);
   }
   left.append(sel);
-  // Right desk: Main Screen Control. RANGE − +, DSP (the main screen shows the Centre Display's page, or the nav map), PAN (arrows on the Centre Desk Strip)
-  const rngBox = el('div', { class: 'rngbox' }, el('small', { text: 'RANGE' }), views.nav.rangeTxt);
-  const dspB = bbtn('DSP', () => { dspOn = !dspOn; paint(); update(); }), panB = bbtn('PAN', () => { panOn = !panOn; if (!panOn) views.nav.panOff(); paint(); update(); });
-  right.append(el('div', { class: 'bc msc' }, el('div', { class: 'rowN' }, bbtn('−', () => views.nav.zoom(-1), 'sq'), rngBox, bbtn('+', () => views.nav.zoom(1), 'sq')), el('div', { class: 'rowN' }, dspB, panB)));
-  // Pan arrows replace the controls on the Centre Desk Strip while PAN is on
+  // Right desk: the view settings of the page that is up. DSP is on every page (the main screen shows that page, or the nav map).
+  // NAV also has PAN (arrows replace the controls) and SHW (switches replace the controls).
+  const dspBs = [], panBs = [], shwBs = [];
+  const mkBtn = (label, list, toggle) => { const b = bbtn(label, toggle); list.push(b); return b; };
+  const flip = (which) => { if (which === 'dsp') dspOn = !dspOn; else if (which === 'pan') { panOn = !panOn; shwOn = false; if (!panOn) views.nav.panOff(); } else { shwOn = !shwOn; panOn = false; views.nav.panOff(); } paint(); update(); };
+  for (const id of order) {
+    const row = el('div', { class: 'rowN' }, mkBtn('DSP', dspBs, () => flip('dsp')), ...(id === 'nav' ? [mkBtn('PAN', panBs, () => flip('pan')), mkBtn('SHW', shwBs, () => flip('shw'))] : []));
+    views[id].v.append(row); right.append(views[id].v);
+  }
+  // Pan arrows replace the controls on the centre desk while PAN is on
   const arrow = (t, dx, dy, label) => el('button', { class: 'bbtn sq', text: t, 'aria-label': label, onclick: () => { const k = views.nav.panStep(); views.nav.panBy(dx * k, dy * k); } });
   const panC = el('div', { class: 'bc pan' }, el('div', { class: 'rowN' }, arrow('◀', -1, 0, 'Pan west'), arrow('▲', 0, 1, 'Pan north'), arrow('▼', 0, -1, 'Pan south'), arrow('▶', 1, 0, 'Pan east')));
-  center.append(panC);
+  center.append(panC, views.nav.extra);
 
-  let current = 'nav', mainId = 'nav', dspOn = false, panOn = false;
+  let current = 'nav', mainId = 'nav', dspOn = false, panOn = false, shwOn = false;
   function paint() {
     mainId = dspOn ? current : 'nav';
+    const onNav = current === 'nav';
     for (const k of order) {
-      small[k].m.hidden = k !== current; views[k].c.hidden = panOn || k !== current; views[k].r.hidden = k !== current;
+      small[k].m.hidden = k !== current; views[k].c.hidden = k !== current || (onNav && (panOn || shwOn)); views[k].v.hidden = k !== current;
       big[k].m.hidden = k !== mainId; btns[k].classList.toggle('on', k === current);
     }
-    panC.hidden = !panOn; dspB.classList.toggle('on', dspOn); panB.classList.toggle('on', panOn);
+    panC.hidden = !(onNav && panOn); views.nav.extra.hidden = !(onNav && shwOn);
+    dspBs.forEach((b) => b.classList.toggle('on', dspOn)); panBs.forEach((b) => b.classList.toggle('on', panOn)); shwBs.forEach((b) => b.classList.toggle('on', shwOn));
   }
   function select(id) {
     if (!views[id]) id = 'nav';

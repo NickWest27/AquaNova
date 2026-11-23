@@ -32,7 +32,8 @@ export function snapshotSim() {
     gameState.updateProperty('navigation.speed', +s.speed.toFixed(1));
     gameState.updateProperty('navigation.charted', seafloor.chartToString());
     gameState.updateProperty('navigation.destination', s.wpt ? s.wpt.name : null);
-    gameState.updateProperty('navigation.waypoint', s.wpt && s.wpt.type === 'waypoint' ? { name: s.wpt.name, lat: +s.wpt.lat.toFixed(5), lon: +s.wpt.lon.toFixed(5) } : null);
+    gameState.updateProperty('navigation.fixes', s.fixes.map((f) => (f.type === 'waypoint' ? { name: f.name, id: f.id, lat: +f.lat.toFixed(5), lon: +f.lon.toFixed(5), depth: f.depth } : { poi: f.name })));
+    gameState.updateProperty('navigation.wpN', s.wpN);
     gameState.updateProperty('navigation.docked', !!s.docked);
     gameState.updateProperty('navigation.wskrs', s.wskrs.map((w) => ({ lat: +w.lat.toFixed(5), lon: +w.lon.toFixed(5), n: w.n, name: w.name, mode: w.mode, target: w.target, bat: +(w.bat == null ? 100 : w.bat).toFixed(1), dead: w.dead || undefined, heading: w.heading == null ? undefined : Math.round(w.heading), pat: w.pat ? { lat: +w.pat.lat.toFixed(5), lon: +w.pat.lon.toFixed(5), k: w.pat.k, t: 0 } : undefined })));
     gameState.updateProperty('navigation.bay', { doorDmg: +((s.bay && s.bay.doorDmg) || 0).toFixed(2), op: s.bay && s.bay.op ? { kind: s.bay.op.kind, craft: s.bay.op.craft, n: s.bay.op.n, t: Math.round(s.bay.op.t), dur: Math.round(s.bay.op.dur), air: s.bay.op.air || 0 } : null, base: (s.bay && s.bay.base) || 0, rearm: s.bay && s.bay.rearm ? { t: Math.round(s.bay.rearm.t), dur: Math.round(s.bay.rearm.dur), load: s.bay.rearm.load } : null });
@@ -87,8 +88,9 @@ export function restoreSim() {
   s.wskrDepth = ['shallow', 'deep'].includes(nav.wskrDepth) ? nav.wskrDepth : 'auto';
   s.rov = nav.rov ? { cmd: { thr: 0, turn: 0, dive: 0 }, job: null, cargo: [], ...nav.rov } : null;
   const clk = gameState.getProperty('progress.gameClock'); if (typeof clk === 'number') s.clock = clk;
-  s.wpt = nav.destination ? s.pois.find((p) => p.name === nav.destination) || null : null;
-  if (!s.wpt && nav.destination && nav.waypoint && nav.waypoint.name === nav.destination) s.wpt = { id: 'wpt', type: 'waypoint', text: 'Plotted position', ...nav.waypoint };
+  s.wpN = nav.wpN || 0;
+  s.fixes = (nav.fixes || []).map((f) => (f.poi ? s.pois.find((p) => p.name === f.poi) : { type: 'waypoint', text: 'Plotted position', ...f })).filter(Boolean);
+  s.wpt = nav.destination && s.fixes.length ? s.fixes[s.fixes.length - 1] : null;
   dlog('persist: restored sim at', s.lat, s.lon);
 }
 

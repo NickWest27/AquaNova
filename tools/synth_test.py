@@ -27,7 +27,7 @@ def main():
             page.evaluate("window.__aq.scene('bridge')"); page.wait_for_timeout(400)
             # a spot on the shelf south of Woods Hole, facing south, ground charted around it
             js("sim.s.lat=39.9; sim.s.lon=-71.7; sim.s.heading=0; sim.s.depth=120; sim.s.docked=false; sim.s.at=null; sf.mark('t', 39.9, -71.7, 3); sf.fineFor([{lat:39.9,lon:-71.7,nm:3}]); return 1"); page.wait_for_timeout(1500)
-            page.evaluate("[...document.querySelectorAll('.selector .bbtn')].find(b=>b.textContent==='VIEW').click()"); page.wait_for_timeout(900)
+            page.evaluate("[...document.querySelectorAll('.selector .bbtn')].find(b=>b.textContent==='VW').click()"); page.wait_for_timeout(900)
             n = page.evaluate(COUNT)
             if isgated:
                 check("gated: VIEW shows the camera until researched", n is None or n["known"] + n["interp"] == 0)

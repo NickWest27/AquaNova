@@ -33,7 +33,7 @@ export const sim = {
     lat: 41.5223, lon: -70.6709, heading: 0, targetHeading: 0,
     throttle: 0, speed: 0, depth: 0, targetDepth: 0,
     battery: 100, oxygen: 100, hull: 100, co2: 0.04, temp: 4.1, power: 0,
-    ballast: 100, comms: true, sonar: true, lights: true, pois: [], wpt: null, route: [], routeSnapped: false, _routeFor: null, at: null,
+    ballast: 100, comms: true, sonar: true, lights: true, pois: [], wpt: null, fixes: [], wpN: 0, route: [], routeSnapped: false, _routeFor: null, at: null,
     clock: 6 * 3600, docked: false, damage: 0, floor: null, wskrs: [], cruise: false, hug: false, wskrForm: 'loose', wskrDepth: 'auto', sweepUntil: 0,     // clock = game seconds since Day 1 00:00
   },
   listeners: new Set(),
@@ -155,13 +155,36 @@ sim.shipPassable = (lat, lon) => {
 };
 /** Turning points to steer through to reach p without crossing land or shoals: [] = straight line, null = no safe route. */
 sim.routeTo = (p) => (seafloor.ready ? planRoute(sim.s, p, sim.shipPassable) : []);
-sim.setWpt = (p) => {
-  const s = sim.s; s.wpt = p; s.route = []; s.routeSnapped = false; s._routeFor = p;
-  if (p) { const r = sim.routeTo(p); s.route = r ? [...r] : []; s.routeSnapped = !!(r && r.snapped); s.targetHeading = toward(s, s.route[0] || p).brg; }
-  sim.touch();
+// ---------- the Route ----------
+// s.fixes is the Route: an ordered list of fixes from the ship to the destination. A fix is a charted place or a waypoint (WP1, WP2, ...).
+// Plotting turns it into s.route, which is what the helm steers through: the fixes themselves, plus turn points (tp) added where the
+// straight line between two fixes crosses land or shoals. s.wpt is the destination: the last fix, set only while a course is plotted.
+// Taking manual control clears s.wpt but keeps the fixes, so plotting again returns to the route from wherever the ship is.
+sim.newFix = ({ lat, lon, depth = null, name = '' }) => { const n = ++sim.s.wpN; return { id: 'wp' + n, type: 'waypoint', text: 'Plotted position', name: name.trim() || 'WP' + n, lat, lon, depth }; };
+/** Steering points for s.fixes from the ship: { ok, route, snapped } or { ok: false, why: 'empty' | 'blocked', fix }. */
+sim.legsFor = (fixes, from = sim.s) => {
+  if (!fixes.length) return { ok: false, why: 'empty' };
+  const route = []; let snapped = false;
+  for (const f of fixes) {
+    const r = seafloor.ready ? planRoute(from, f, sim.shipPassable) : [];
+    if (r === null) return { ok: false, why: 'blocked', fix: f };
+    for (const q of r.slice(0, -1)) route.push({ lat: q.lat, lon: q.lon, tp: true });
+    const end = r.length ? r[r.length - 1] : f; snapped = snapped || !!r.snapped;
+    route.push({ lat: end.lat, lon: end.lon, fix: f.id }); from = end;
+  }
+  return { ok: true, route, snapped };
 };
+/** Plot a course along the Route from where the ship is now. */
+sim.plotRoute = () => {
+  const s = sim.s, r = sim.legsFor(s.fixes); if (!r.ok) return r;
+  s.wpt = s.fixes[s.fixes.length - 1]; s.route = r.route; s.routeSnapped = r.snapped; s._routeFor = s.wpt; s.targetHeading = toward(s, s.route[0]).brg;
+  sim.touch(); return r;
+};
+/** Replace the Route with one destination and plot it (missions, orders and the Navigation station use this). */
+sim.setWpt = (p) => { sim.s.fixes = p ? [p] : []; if (p) sim.plotRoute(); else { sim.s.wpt = null; sim.s.route = []; sim.touch(); } };
+sim.clearRoute = () => { const s = sim.s; s.fixes = []; s.wpt = null; s.route = []; sim.touch(); };
 sim.stop = () => { sim.s.throttle = 0; sim.touch(); };   // speed only: a plotted course stays
-sim.cancelCourse = () => { sim.s.wpt = null; sim.touch(); };   // course only: speed stays
+sim.cancelCourse = () => { sim.s.wpt = null; sim.touch(); };   // steering by hand: speed stays and the Route is kept
 /** WSKRs: autonomous remote sensors. They hold a ring formation round the ship (better readings, stereoscopic data),
  *  can be sent to investigate a site, and can be recalled. Launched only from the Sensors station. Up to 4.
  *  Each: { n, lat, lon, mode: 'escort' | 'task' | 'recall', target: poi id | null, busy: game seconds spent investigating } */
@@ -430,10 +453,10 @@ const stepOnce = (dt) => {
   let capDist = Infinity;
   if (!s.wpt) { s.route = []; s._routeFor = null; }
   else {
-    if (s._routeFor !== s.wpt) { const r = sim.routeTo(s.wpt); s.route = r ? [...r] : []; s.routeSnapped = !!(r && r.snapped); s._routeFor = s.wpt; }   // after a load, or a course set elsewhere
-    while (s.route.length > 1 && toward(s, s.route[0]).nm < 0.25) s.route.shift();
+    if (s._routeFor !== s.wpt) { if (s.fixes[s.fixes.length - 1] !== s.wpt) s.fixes = [s.wpt]; if (!sim.plotRoute().ok) s.wpt = null; }   // the destination is always the last fix; after a load the steering points are rebuilt from the Route
+    while (s.route.length > 1 && toward(s, s.route[0]).nm < 0.25) { const q = s.route.shift(); if (q.fix) s.fixes = s.fixes.filter((f) => f.id !== q.fix); }   // a fix we have passed leaves the Route
     const end = s.route.length ? s.route[s.route.length - 1] : s.wpt, t = toward(s, end);
-    if (t.nm < POI_RADIUS_NM * 0.6) { s.wpt = null; s.route = []; s.throttle = 0; sim.emit('arrived'); }
+    if (t.nm < POI_RADIUS_NM * 0.6) { s.wpt = null; s.route = []; s.fixes = []; s.throttle = 0; sim.emit('arrived'); }
     else { const steer = toward(s, s.route[0] || s.wpt); s.targetHeading = steer.brg; capDist = s.route.length > 1 ? Infinity : t.nm; }
   }
   const turn = angDiff(s.targetHeading, s.heading);

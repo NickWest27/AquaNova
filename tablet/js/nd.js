@@ -17,7 +17,7 @@ export function createND(wrap, { onPick, stage = false, units = 1, contours = fa
   const ctr = () => { if (nd.pan) return { lat: nd.pan.lat, lon: nd.pan.lon, heading: sim.s.heading }; const f = focus && focus(); return f ? { lat: f.lat, lon: f.lon, heading: sim.s.heading } : (craft && craft()) || sim.s; };
   // rotate an east/north offset so the ship's heading points up (track up), or leave it north up
   const turn = (t) => { if (!trackUp) return t; const h = (ctr().heading * Math.PI) / 180, c = Math.cos(h), s = Math.sin(h); return { ...t, dx: t.dx * c - t.dy * s, dy: t.dx * s + t.dy * c }; };
-  const nd = { range: 2, sel: null, selWskr: null, w: 0, h: 0, canvas };
+  const nd = { range: 2, sel: null, selWskr: null, show: { ships: true, subs: true, base: true, orgs: true }, w: 0, h: 0, canvas };
 
   function resize() {
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -134,12 +134,22 @@ export function createND(wrap, { onPick, stage = false, units = 1, contours = fa
     if (trackUp) { const hh = (c.heading * Math.PI) / 180; ctx.fillText('N', cx - (R + 12) * Math.sin(hh), cy - (R + 12) * Math.cos(hh) + 6); } else ctx.fillText('N', cx, cy - R - 6);
     }
     if (trackUp) { ctx.fillStyle = '#8fa6bd'; ctx.font = '700 14px ui-monospace, Menlo, monospace'; ctx.textAlign = 'left'; ctx.fillText('TRACK UP', 10, 20); }
-    // waypoint line
-    if (s.wpt && !craft) {
-      const p = px(s.wpt), legs = [...(s.route || [])];
-      ctx.setLineDash([8, 8]); ctx.strokeStyle = '#ffb020'; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.moveTo(shipPt.x, shipPt.y); for (const q of legs) { const a = px(q); ctx.lineTo(a.x, a.y); } if (!legs.length || s.routeSnapped) ctx.lineTo(p.x, p.y); ctx.stroke(); ctx.setLineDash([]);
-      if (s.wpt.type === 'waypoint') { ctx.beginPath(); ctx.arc(p.x, p.y, 9, 0, 6.2832); ctx.moveTo(p.x - 14, p.y); ctx.lineTo(p.x + 14, p.y); ctx.moveTo(p.x, p.y - 14); ctx.lineTo(p.x, p.y + 14); ctx.stroke(); }
+    // The Route: a line through the fixes (amber once plotted, with the turn points the helm will steer through; a dim straight preview until then),
+    // a cross and name for each waypoint, and a small square for each turn point.
+    if (!craft && (s.fixes.length || s.wpt)) {
+      const plotted = !!s.wpt, pts = plotted ? s.route : s.fixes;
+      ctx.setLineDash([8, 8]); ctx.strokeStyle = plotted ? '#ffb020' : 'rgba(255,176,32,0.45)'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(shipPt.x, shipPt.y); for (const q of pts) { const a = px(q); ctx.lineTo(a.x, a.y); }
+      if (plotted && s.routeSnapped) { const e = px(s.wpt); ctx.lineTo(e.x, e.y); }
+      ctx.stroke(); ctx.setLineDash([]);
+      ctx.font = '700 14px ui-monospace, Menlo, monospace'; ctx.textAlign = 'center'; ctx.fillStyle = '#ffb020';
+      let n = 0;
+      if (plotted) for (const q of s.route) if (q.tp) { const a = px(q); ctx.strokeRect(a.x - 5, a.y - 5, 10, 10); ctx.fillText('TP' + ++n, a.x, a.y - 11); }
+      for (const f of s.fixes) {
+        if (f.type !== 'waypoint') continue;
+        const a = px(f); ctx.beginPath(); ctx.arc(a.x, a.y, 9, 0, 6.2832); ctx.moveTo(a.x - 14, a.y); ctx.lineTo(a.x + 14, a.y); ctx.moveTo(a.x, a.y - 14); ctx.lineTo(a.x, a.y + 14); ctx.stroke();
+        ctx.fillText(f.name, a.x, a.y + 28);
+      }
     }
     // WSKRs (deployed sensor probes): diamonds
     for (const q of s.wskrs || []) {
@@ -176,6 +186,7 @@ export function createND(wrap, { onPick, stage = false, units = 1, contours = fa
     // POIs
     ctx.font = '700 17px system-ui';
     for (const poi of s.pois) {
+      if (poi.type === 'dock' && !nd.show.base) continue;
       const p = px(poi);
       if (p.x < -40 || p.x > w + 40 || p.y < -40 || p.y > h + 40) continue;
       const isSel = nd.sel && nd.sel.id === poi.id, isW = s.wpt && s.wpt.id === poi.id;
@@ -190,7 +201,7 @@ export function createND(wrap, { onPick, stage = false, units = 1, contours = fa
     }
     // surface traffic, drawn like a naval tactical plot: a frame for what we know (yellow clover unknown, blue circle friendly, green square neutral, amber diamond suspect, red diamond hostile), a course vector, and a label.
     // A bearing-only sonar contact is a dashed bearing line from the listener with its bearing at the end; two bearings make a fix (dashed ring = error).
-    if (!craft) for (const a of seenShips()) {
+    if (!craft && nd.show.ships) for (const a of seenShips()) {
       const v = a.v, aff = affiliation(v), col = frameColour(aff), r = 9 + v.size * 1.5;
       if (!a.pos) {
         ctx.save(); ctx.strokeStyle = col; ctx.fillStyle = col; ctx.globalAlpha = 0.8; ctx.lineWidth = 1.5; ctx.setLineDash([7, 5]); ctx.font = '700 12px ui-monospace, Menlo, monospace'; ctx.textAlign = 'center';

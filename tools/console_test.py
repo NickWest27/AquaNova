@@ -38,10 +38,10 @@ def main():
         r0 = page.inner_text(".bc:visible .rng"); page.locator('.bc:visible .bbtn:text-is("+")').tap(); page.wait_for_timeout(200)
         r1 = page.inner_text(".bc:visible .rng")
         check("+ increases range on the console", float(r1.split()[0]) > float(r0.split()[0]), (r0, r1))
-        for name, sel in (("HELM", ".bdisp .bd-helm"), ("SYS", ".bdisp .bd-sys"), ("VIEW", ".bdisp .bd.view"), ("NAV", ".bdisp .bd-nav")):
+        for name, sel in (("HLM", ".bdisp .bd-helm"), ("SYS", ".bdisp .bd-sys"), ("VW", ".bdisp .bd.view"), ("NAV", ".bdisp .bd-nav")):
             page.locator(f'.selector .bbtn:text-is("{name}")').tap(); page.wait_for_timeout(300)
             check(f"{name} shows on the main screen", page.is_visible(sel))
-            if name == "HELM": page.screenshot(path=os.path.join(ROOT, "tools", "shots", "console_helm.png"))
+            if name == "HLM": page.screenshot(path=os.path.join(ROOT, "tools", "shots", "console_helm.png"))
         # plot a course by typed lat/long (docked ships are refused, so undock first)
         page.evaluate("window.__aq.scene('bridge')")
         page.locator('.bc:visible .bbtn:text-is("Plot a course")').tap(); page.wait_for_timeout(300)
@@ -62,7 +62,7 @@ def main():
         page.locator('.modal .btn:text-is("Plot course")').tap(); page.wait_for_timeout(300)
         check("place + bearing + distance plots", not page.is_visible(".modal .pc") and "Waypoint 2" in page.inner_text(".br:visible"))
         page.locator('.bc:visible .bbtn:text-is("Clear")').tap(); page.wait_for_timeout(200)
-        page.locator('.selector .bbtn:text-is("HELM")').tap(); page.wait_for_timeout(300)
+        page.locator('.selector .bbtn:text-is("HLM")').tap(); page.wait_for_timeout(300)
         page.locator('.bc:visible .bbtn:text-is("Faster")').tap(); page.wait_for_timeout(300)
         check("Faster raises throttle", "10%" in page.inner_text(".br:visible") or "%" in page.inner_text(".br:visible"))
         page.locator(".bdisp .bd-promote").tap(); page.wait_for_timeout(300)

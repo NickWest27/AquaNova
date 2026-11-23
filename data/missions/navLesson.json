@@ -10,7 +10,7 @@
   "objectives": [
     {
       "id": "plot",
-      "description": "Plot a course to Vineyard Ledge, about 16 nm south of the dock",
+      "description": "On the bridge NAV page, set Dest to Vineyard Ledge (about 16 nm south of the dock) and tap Plot",
       "required": true,
       "triggers": [
         {
@@ -138,7 +138,7 @@
         "objectiveId": "plot",
         "seconds": 60
       },
-      "message": "Tap Plot a course under the NAV display, pick Vineyard Ledge and confirm, {captain}. It is south of the dock."
+      "message": "On the NAV page, tap Dest, pick Vineyard Ledge, then tap Plot, {captain}. It is south of the dock."
     },
     {
       "condition": {
