@@ -9,16 +9,21 @@ import { el } from './util.js';
 import { drawContact, contactSvg, frameColour } from './contactIcons.js';
 import { sources, source, setSource, contactsFor, selected, select, snr, sweeping, startSweep, stopSweep, startScan, canScan, toggleInvestigate, canInvestigate, SCAN_NM } from './sonar.js';
 
-const RANGES = [1, 2, 4, 8, 16, 32, 64];
+const RANGES = [0.5, 1, 2, 4, 8, 16, 32, 64, 128, 256];   // the same steps as the NAV chart: one master range for the whole console
 const set = (node, v) => { if (node._v !== v) { node._v = v; node.textContent = v; } };
 const pad3 = (v) => String(Math.round(v) % 360).padStart(3, '0');
-const view = { range: 16 };   // shared by the large and the medium copy
+const view = { range: 8 };   // the master range: shared by the large and the medium copy, and with NAV (bridge.js links the two)
+const hooks = [];
+/** Set the range from outside (NAV zoomed). */
+export const setSnrRange = (r) => { view.range = r; };
+/** Call f(range) when the SNR range buttons change the range. */
+export const onSnrRange = (f) => hooks.push(f);
 const ageText = (s) => (s < 90 ? `${Math.round(s)} s` : `${Math.floor(s / 60)} min`);
 
 export function createSnrView({ bbtn }) {
   const copies = [];
   const rangeTxt = el('span', { class: 'rng' });
-  const zoom = (d) => { const i = Math.max(0, Math.min(RANGES.length - 1, RANGES.indexOf(view.range) + d)); view.range = RANGES[i]; sim.touch(); };
+  const zoom = (d) => { const i = Math.max(0, Math.min(RANGES.length - 1, RANGES.indexOf(view.range) + d)); view.range = RANGES[i]; hooks.forEach((f) => f(view.range)); sim.touch(); };
 
   function make(compact) {
     const m = el('div', { class: 'bd bd-snr' + (compact ? ' compact' : '') });

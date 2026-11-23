@@ -96,6 +96,14 @@ with sync_playwright() as p:
     # range buttons
     r0 = pg.inner_text(".msc:visible .rng"); tap("+"); pg.wait_for_timeout(400); r1 = pg.inner_text(".msc:visible .rng"); tap("−"); pg.wait_for_timeout(400)
     check("range + and − change the map range", r0 != r1 and pg.inner_text(".msc:visible .rng") == r0, f"{r0} {r1}")
+    nr = lambda: pg.evaluate("window.__aq.console().nds[0].range")
+    check("the SNR range is the NAV range (one master range)", f"{nr()} NM" == pg.inner_text(".msc:visible .rng"), f"{nr()} {pg.inner_text('.msc:visible .rng')}")
+    tap("+"); pg.wait_for_timeout(300); a = nr()
+    tap("NAV"); pg.wait_for_timeout(300)
+    check("zooming on SNR zooms NAV, the main screen's chart too", nr() == a and pg.evaluate("window.__aq.console().nds.every(n=>n.range===%s)" % a))
+    tap("+"); pg.wait_for_timeout(300); b2 = nr(); tap("SNR"); pg.wait_for_timeout(300)
+    check("zooming on NAV zooms SNR", pg.inner_text(".msc:visible .rng") == f"{b2} NM", pg.inner_text(".msc:visible .rng"))
+    tap("−"); tap("−"); pg.wait_for_timeout(300)
     # the Sensors station opens on the SNR page
     pg.evaluate("window.__aq.open('sensors')"); pg.wait_for_timeout(500)
     check("the Sensors station's main page is the SNR page", pg.locator(".tabs .btn.on", has_text="SNR").count() >= 1 and pg.locator(".tabs .btn", has_text="WSKRs").count() >= 1)

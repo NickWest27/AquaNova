@@ -17,7 +17,7 @@ import { seafloor } from './seafloor.js';
 import { research } from './science.js';
 import { GATES_ON } from './unlocks.js';
 import { tell } from './notify.js';
-import { createSnrView } from './sonarView.js';
+import { createSnrView, setSnrRange, onSnrRange } from './sonarView.js';
 
 const KEY = 'aquaNova_bridgeDisplay';
 const set = (node, v) => { if (node._v !== v) { node._v = v; node.textContent = v; } };
@@ -74,7 +74,7 @@ export function createBridgeConsole({ top, main, display, center, left, right, o
       panAt = { lat: panAt.lat + dyNm / 60, lon: panAt.lon + dxNm / (60 * Math.cos((panAt.lat * Math.PI) / 180)) }; bigNd.setPan(panAt);
     };
     const panOff = () => { panAt = null; if (bigNd) bigNd.setPan(null); };
-    const zoom = (dir) => { const r = nds[0].zoom(dir); nds.forEach((n) => n.setRange(r)); set(rangeTxt, r + ' nm'); };
+    const zoom = (dir) => { const r = nds[0].zoom(dir); nds.forEach((n) => n.setRange(r)); set(rangeTxt, r + ' nm'); setSnrRange(r); };   // one master range: SNR follows
     // Controls. Dest, Fix and Route build the Route (s.fixes); Plot turns it into a course.
     const fixDialog = (opts) => openPlotDialog({ preselect: sel, ...opts });
     const helm = (text) => tell('helm', text);
@@ -261,6 +261,7 @@ export function createBridgeConsole({ top, main, display, center, left, right, o
   const stub = (title) => ({ make: () => ({ m: el('div', { class: 'bd bd-stub' }, el('b', { text: title }), el('small', { text: 'NOT INSTALLED' })), update() {} }), c: el('div', { class: 'bc' }, el('div', { class: 'cap', text: 'NO CONTROLS' })), v: [], expand: null, side() {} });
   views.tac = stub('TACTICAL');
   views.snr = createSnrView({ bbtn });   // passive sonar: sonarView.js
+  onSnrRange((r) => { views.nav.nds.forEach((n) => n.setRange(r)); views.nav.side(); });   // and the SNR range buttons move NAV too
 
   // ---------- build: one large and one compact copy of each ----------
   // Info Left and Info Right are always on, either side of the main screen.
@@ -278,6 +279,7 @@ export function createBridgeConsole({ top, main, display, center, left, right, o
     viewWrap.append(big[id].m); display.append(small[id].m); center.append(views[id].c);
     btns[id] = bbtn(labels[id], () => select(id)); sel.append(btns[id]);
   }
+  views.nav.nds.forEach((n) => n.setRange(8)); setSnrRange(8);   // the master range starts at 8 nm on every page
   left.append(sel);
   // Right desk: the view settings of the page that is up. DSP is on every page (the main screen shows that page, or the nav map).
   // NAV also has PAN (arrows replace the controls) and SHW (switches replace the controls).
