@@ -2,6 +2,7 @@
 //   Left half of the display: a top-down, track-up map centred on the chosen source, with range rings. Every contact is a light bearing line from the source.
 //   With a fix the contact's symbol and name are at its place; with no fix a "?" sits at the end of the line, on the outer ring.
 //   Right half: the contacts by range (or, with no range, by age). A tap on a symbol, a line or a row opens the info box in its place.
+//   The same page is the main page of the Sensors station (mountSnr below).
 //   Centre controls: Source (a list: the ship or a WSKR), Full sweep, and with a contact picked, Scan and Clear.   Right desk: range - and +, DSP.
 import { sim, toward } from './sim.js';
 import { el } from './util.js';
@@ -76,10 +77,15 @@ export function createSnrView({ bbtn }) {
       // contacts
       hits.length = 0; const st = snr();
       for (const c of cons) {
-        const line = at(c.bearing, range), edge = at(c.bearing, range), picked = st.sel === c.id;
+        // the bearing line: from the centre, or (a contact only another listener hears) from that listener's place; it ends on the outer ring
+        let o = { x: cx, y: cy }; if (c.remote) { const t = toward(src, c.from); o = at(t.brg, t.nm); }
+        const ra = (c.bearing * Math.PI) / 180 - hd, dx = Math.sin(ra), dy = -Math.cos(ra), ox = o.x - cx, oy = o.y - cy, bq = ox * dx + oy * dy, disc = bq * bq - (ox * ox + oy * oy - R * R);
+        const tt = disc < 0 ? -1 : -bq + Math.sqrt(disc), picked = st.sel === c.id;
+        if (!c.pos && tt <= 0) continue;   // heard by a listener outside the map and pointing away: nothing to draw at this range
+        const edge = c.pos || tt > 0 ? { x: o.x + dx * Math.max(tt, 0), y: o.y + dy * Math.max(tt, 0) } : o;
         ctx.save(); if (c.lost) ctx.setLineDash([4, 6]);
-        ctx.strokeStyle = picked ? '#ffd24a' : c.lost ? 'rgba(200,225,255,.22)' : 'rgba(210,235,255,.42)'; ctx.lineWidth = picked ? 2.4 : 1.2; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(edge.x, edge.y); ctx.stroke(); ctx.restore();
-        const inside = c.pos && c.range <= range, p = c.pos ? (inside ? at(toward(src, c.pos).brg, c.range) : at(toward(src, c.pos).brg, range)) : line, rad = 11 * u;
+        ctx.strokeStyle = picked ? '#ffd24a' : c.lost ? 'rgba(200,225,255,.22)' : 'rgba(210,235,255,.42)'; ctx.lineWidth = picked ? 2.4 : 1.2; ctx.beginPath(); ctx.moveTo(o.x, o.y); ctx.lineTo(edge.x, edge.y); ctx.stroke(); ctx.restore();
+        const inside = c.pos && c.range <= range, p = c.pos ? (inside ? at(c.bearing, c.range) : at(c.bearing, range)) : edge, rad = 11 * u;
         ctx.save(); ctx.translate(p.x, p.y); ctx.globalAlpha = c.lost ? 0.4 : c.pos && !inside ? 0.7 : 1;
         if (picked) { ctx.strokeStyle = '#ffd24a'; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.arc(0, 0, rad + 7 * u, 0, 6.2832); ctx.stroke(); }
         drawContact(ctx, c.pos ? c.icon.type : 'unknown', c.pos ? c.icon.aff : 'unknown', rad);
@@ -87,7 +93,7 @@ export function createSnrView({ bbtn }) {
         ctx.font = `${12.5 * u}px system-ui`; ctx.textBaseline = 'middle'; ctx.fillStyle = c.pos ? '#e6f4ff' : '#f5e27a'; ctx.globalAlpha = c.lost ? 0.5 : 1;
         const label = c.pos ? `${c.name}  ${c.range.toFixed(1)}` : `${pad3(c.bearing)}°`, left = p.x > cx + R * 0.45;
         ctx.textAlign = left ? 'right' : 'left'; ctx.fillText(label, p.x + (left ? -rad - 5 * u : rad + 5 * u), p.y); ctx.globalAlpha = 1; ctx.textBaseline = 'alphabetic';
-        hits.push({ id: c.id, x: p.x, y: p.y, r: rad + 10 * u, x2: edge.x, y2: edge.y });
+        hits.push({ id: c.id, x: p.x, y: p.y, r: rad + 10 * u, x1: o.x, y1: o.y, x2: edge.x, y2: edge.y });
       }
       // the listener: a small arrow, heading up
       ctx.save(); ctx.translate(cx, cy); ctx.fillStyle = '#64ffda'; ctx.beginPath(); ctx.moveTo(0, -9 * u); ctx.lineTo(6 * u, 7 * u); ctx.lineTo(0, 3 * u); ctx.lineTo(-6 * u, 7 * u); ctx.closePath(); ctx.fill(); ctx.restore();
@@ -95,11 +101,11 @@ export function createSnrView({ bbtn }) {
     }
     // a tap: on a symbol, or near a bearing line
     canvas.addEventListener('click', (ev) => {
-      const r = canvas.getBoundingClientRect(), x = ((ev.clientX - r.left) * W) / r.width, y = ((ev.clientY - r.top) * H) / r.height, cx = W / 2, cy = H / 2;
+      const r = canvas.getBoundingClientRect(), x = ((ev.clientX - r.left) * W) / r.width, y = ((ev.clientY - r.top) * H) / r.height;
       let best = null, bd = 1e9;
       for (const h of hits) {
         const dI = Math.hypot(x - h.x, y - h.y); if (dI <= h.r && dI < bd) { best = h; bd = dI; }
-        const dx = h.x2 - cx, dy = h.y2 - cy, L = Math.hypot(dx, dy) || 1, t = ((x - cx) * dx + (y - cy) * dy) / (L * L), dl = Math.hypot(x - (cx + dx * t), y - (cy + dy * t));
+        const dx = h.x2 - h.x1, dy = h.y2 - h.y1, L = Math.hypot(dx, dy) || 1, t = ((x - h.x1) * dx + (y - h.y1) * dy) / (L * L), dl = Math.hypot(x - (h.x1 + dx * t), y - (h.y1 + dy * t));
         if (t > 0 && t <= 1.02 && dl < 16 && dl + 8 < bd) { best = h; bd = dl + 8; }
       }
       const st = snr(); if (best) { if (st.sel !== best.id) select(best.id); } else if (st.sel) select(st.sel);
@@ -115,9 +121,9 @@ export function createSnrView({ bbtn }) {
       list.hidden = !!sel; info.hidden = !sel;
       if (sel) {
         set(iName, sel.name); set(iType, sel.type + (sel.lost ? ' · SIGNAL LOST' : sel.scanned ? ' · SCANNED' : '')); iName.style.color = sel.hostile ? '#ff7a7a' : '';
-        set(iVals.side, sel.side); set(iVals.brg, pad3(sel.bearing) + '°'); set(iVals.rng, sel.range == null ? 'NO FIX' : sel.range.toFixed(2) + ' nm'); set(iVals.dep, sel.depth); set(iVals.spd, sel.speed);
+        set(iVals.side, sel.side); set(iVals.brg, pad3(sel.bearing) + '°' + (sel.remote ? ' from ' + sel.byName : '')); set(iVals.rng, sel.range == null ? 'NO FIX' : sel.range.toFixed(2) + ' nm'); set(iVals.dep, sel.depth); set(iVals.spd, sel.speed);
         set(iVals.crs, sel.course == null ? '—' : pad3(sel.course) + '°'); set(iVals.age, ageText(sel.age));
-        const t = sel.notes.concat(sel.inv.length ? [`${sel.inv.join(' and ')} investigating.`] : [], sel.range == null ? ['No range yet: a second listener on another bearing gives a fix.'] : [], !sel.scanned && !sel.ident ? [`Scan inside ${SCAN_NM} nm for identity and a fix.`] : []).join('\n'); set(iNotes, t);
+        const t = sel.notes.concat(sel.inv.length ? [`${sel.inv.join(' and ')} investigating.`] : [], sel.heardBy.length ? [`Heard by ${sel.heardBy.join(', ')}.`] : [], sel.range == null ? ['No range yet: a second listener on another bearing gives a fix.'] : [], !sel.scanned && !sel.ident ? [`Scan inside ${SCAN_NM} nm for identity and a fix.`] : []).join('\n'); set(iNotes, t);
         return;
       }
       const keep = new Set();
@@ -125,7 +131,7 @@ export function createSnrView({ bbtn }) {
         const r = rowFor(c); keep.add(c.id);
         const key = c.icon.type + c.icon.aff + (c.pos ? 'f' : 'u') + (c.lost ? 'l' : '');
         if (r.key !== key) { r.key = key; r.ic.innerHTML = contactSvg(c.pos ? c.icon.type : 'unknown', c.pos ? c.icon.aff : 'unknown', 34); }
-        set(r.nm, c.pos ? c.name : 'Unknown contact'); set(r.sub, `BRG ${pad3(c.bearing)}°${c.lost ? ' · LOST' : c.inv.length ? ' · WSKR' : ''}`); set(r.rg, c.range != null ? c.range.toFixed(1) + ' nm' : ageText(c.age));
+        set(r.nm, c.pos ? c.name : 'Unknown contact'); set(r.sub, `BRG ${pad3(c.bearing)}°${c.lost ? ' · LOST' : c.remote ? ' · ' + c.byName : c.inv.length ? ' · WSKR' : ''}`); set(r.rg, c.range != null ? c.range.toFixed(1) + ' nm' : ageText(c.age));
         r.b.classList.toggle('lost', c.lost); r.b.style.setProperty('--col', frameColour(c.icon.aff));
       }
       for (const [id, r] of rows) if (!keep.has(id)) { r.b.remove(); rows.delete(id); }
@@ -160,4 +166,15 @@ export function createSnrView({ bbtn }) {
     }
   }
   return { make, c, v: [bbtn('−', () => zoom(-1), 'sym'), el('div', { class: 'rngbox' }, el('small', { text: 'RANGE' }), rangeTxt), bbtn('+', () => zoom(1), 'sym')], expand: null, side };
+}
+
+/** The Sensors station's main page: the SNR display with its controls and range buttons under it, in station buttons. */
+export function mountSnr(body) {
+  const bbtn = (text, onclick, cls = '') => el('button', { class: `bbtn ${cls}`, text, onclick });
+  const v = createSnrView({ bbtn }), page = v.make(false);
+  const screen = el('div', { style: 'position:relative;flex:1;min-height:330px' }, page.m);
+  const ctl = el('div', { class: 'bc', style: 'position:relative;inset:auto;flex:none;height:120px' }, ...v.c.children);
+  const range = el('div', { class: 'rowN', style: 'flex:none;height:64px' }, ...v.v);
+  body.append(screen, el('div', { class: 'msc', style: 'flex:none;display:flex;flex-direction:column;gap:6px' }, ctl, range));
+  return { update() { page.update(); v.side(); }, el: [screen, ctl, range] };
 }

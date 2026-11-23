@@ -1,8 +1,9 @@
 // Passive sonar model for the bridge SNR page.
-// A listener (the Aqua Nova, or a deployed WSKR) hears anything noisy enough: a bearing line from the listener. A fix (two bearings that cross, AIS, a scan, or sight)
+// A listener (the Aqua Nova, or a deployed WSKR) hears anything noisy enough: a bearing line from the listener. Powered sonar needs no scan: every listener hears all the time,
+// and the page shows what ALL of them hear, whichever one is the source (the map centre). A fix (two bearings that cross, AIS, a scan, or sight)
 // puts the contact on the map. The ship traffic comes from traffic.js (it owns who hears whom). This file adds noisy installations (mines, platforms, colonies),
 // remembers contacts for a while after they fade, and runs the two things the Captain can do:
-//   Full sweep: a 360 degree sweep at 1 degree a second. Sensitivity of the sweeping listener doubles. It stops for 2 s on every contact it passes.
+//   Full sweep: a 360 degree sweep at 10 degrees a second. Sensitivity of the sweeping listener doubles. It stops for 2 s on every contact it passes.
 //   Scan: a contact the Captain picked. Sensitivity doubles on it for a few seconds; in range, the scan gives a fix, and names it.
 // State is in sim.s.snr and is not saved: a new session starts with the ship as the source and nothing selected.
 import { sim, toward, wskrName } from './sim.js';
@@ -11,7 +12,7 @@ import { seafloor } from './seafloor.js';
 import { affiliation, placeAffiliation } from './contactIcons.js';
 import { tell } from './notify.js';
 
-export const SWEEP_DPS = 1, SWEEP_PAUSE_S = 2, SCAN_S = 10, SCAN_NM = 6, LOST_S = 120;
+export const SWEEP_DPS = 10, SWEEP_PAUSE_S = 2, SCAN_S = 10, SCAN_NM = 6, LOST_S = 120;
 const SIZE_CLASS = ['small craft', 'small vessel', 'medium vessel', 'large vessel'];
 const SIZE_NOISE = ['Light, high-pitched outboard whine', 'Small diesel, single screw', 'Medium diesel, steady three-blade beat', 'Heavy slow-turning screws, deep throb'];
 const KIND_NOISE = { cargo: 'Slow single screw, heavy thrum', tanker: 'Very slow single screw, deep low throb', trawler: 'Diesel engine with winch and net noise', yacht: 'Light screws, smooth engine', patrol: 'Twin high-speed screws', navy: 'Quiet twin screws, well silenced', research: 'Steady thrusters holding position', tender: 'Diesel with crane and pump noise', rig: 'Thrusters holding station', raider: 'Fast engines, high shaft rate', poacher: 'Diesel engine with winch and net noise' };
@@ -42,7 +43,7 @@ function shipContact(a, src, line) {
   const v = a.v, s = sim.s, ident = v.ident, kt = v.dyn ? v.kt * 1.2 : v.kt;
   const pos = a.pos, range = pos ? toward(src, pos).nm : null;
   return {
-    id: 'ship:' + v.id, kind: 'ship', ref: v, icon: iconOf(ident ? affiliation(v) : 'unknown', 'surface'), bearing: line.brg, range, pos, ident,
+    id: 'ship:' + v.id, kind: 'ship', ref: v, from: { lat: src.lat, lon: src.lon }, by: String(src.id), byName: src.name, icon: iconOf(ident ? affiliation(v) : 'unknown', 'surface'), bearing: line.brg, range, pos, ident,
     name: ident ? v.name : 'Unidentified contact', type: ident ? v.label : `Surface vessel (${SIZE_CLASS[v.size]})`, side: ident ? (v.stance === 'hostile' ? 'Hostile' : v.stance === 'wary' ? 'Unfriendly' : v.stance === 'friendly' ? 'Friendly' : 'Neutral') + ' · ' + v.factionName : 'Unknown',
     depth: 'Surface (screw noise)', speed: ident ? `${kt.toFixed(1)} kt` : `about ${Math.round(kt / 2) * 2} kt (blade rate)`, course: pos && pos.hdg != null ? Math.round(pos.hdg) : null,
     notes: [ident ? KIND_NOISE[v.kind] : SIZE_NOISE[v.size]], hostile: ident && v.stance === 'hostile', scanned: v.scanFixUntil > s.clock, size: v.size,
@@ -51,16 +52,28 @@ function shipContact(a, src, line) {
 function instContact(e, src, line) {
   const p = e.p, k = INST[p.kind], st = instState.get(p.id) || {}, named = !!e.pos || st.named, depth = e.pos ? seafloor.depthAt(e.pos.lat, e.pos.lon) : null;
   return {
-    id: 'inst:' + p.id, kind: 'inst', ref: p, icon: iconOf(named ? placeAffiliation(p) : 'unknown', 'installation'), bearing: line.brg, range: e.pos ? toward(src, e.pos).nm : null, pos: e.pos, ident: named,
+    id: 'inst:' + p.id, kind: 'inst', ref: p, from: { lat: src.lat, lon: src.lon }, by: String(src.id), byName: src.name, icon: iconOf(named ? placeAffiliation(p) : 'unknown', 'installation'), bearing: line.brg, range: e.pos ? toward(src, e.pos).nm : null, pos: e.pos, ident: named,
     name: named ? p.name : 'Unidentified machinery', type: named ? k.label : 'Fixed noise source', side: named ? (p.stance ? p.stance[0].toUpperCase() + p.stance.slice(1) : 'Neutral') : 'Unknown',
     depth: depth == null ? 'Unknown' : `${Math.round(depth)} m (seabed)`, speed: 'Stationary', course: null, notes: [k.noise], hostile: false, scanned: st.scanFixUntil > sim.s.clock, size: 3,
   };
 }
 
-/** Everything the listener 'id' hears or just heard, nearest first (range where it is known, else the newest). */
+/** Everything the page shows with listener 'id' as the map centre: what ANY listener hears or just heard (the ship and every WSKR in contact), nearest first
+ *  (range where it is known, else the newest). A contact with a fix is placed from the centre. One with only bearings keeps the bearing of the listener that heard it
+ *  (`remote`, from `from`), the centre's own if it hears it too. */
 export function contactsFor(id) {
-  const s = sim.s, m = mem[id]; if (!m) return [];
-  const out = [...m.values()].map((c) => ({ ...c, lost: s.clock - c.last > 1, age: s.clock - (since.get(c.id) || c.last), inv: sim.trailing(c.kind, c.ref.id).map(wskrName) }));
+  const s = sim.s, list = sources(), src = list.find((x) => String(x.id) === String(id)) || list[0], mine = String(src.id), best = new Map(), heardBy = new Map();
+  for (const [lid, m] of Object.entries(mem)) for (const [cid, c] of m) {
+    const live = s.clock - c.last <= 1;
+    if (live) { if (!heardBy.has(cid)) heardBy.set(cid, []); heardBy.get(cid).push(c.byName); }
+    const rank = (live ? 4 : 0) + (lid === mine ? 2 : 0), cur = best.get(cid);
+    if (!cur || rank > cur.rank || (rank === cur.rank && c.last > cur.c.last)) best.set(cid, { c, rank, lid });
+  }
+  const out = [];
+  for (const [cid, { c, rank, lid }] of best) {
+    const t = c.pos ? toward(src, c.pos) : null;
+    out.push({ ...c, bearing: t ? t.brg : c.bearing, range: t ? t.nm : null, remote: !c.pos && lid !== mine, lost: rank < 4, heardBy: heardBy.get(cid) || [], age: s.clock - (since.get(cid) || c.last), inv: sim.trailing(c.kind, c.ref.id).map(wskrName) });
+  }
   out.sort((a, b) => (a.range != null && b.range != null ? a.range - b.range : a.range != null ? -1 : b.range != null ? 1 : a.age - b.age));
   return out;
 }
@@ -139,16 +152,16 @@ function step() {
   for (const id of Object.keys(mem)) if (!list.some((x) => String(x.id) === id)) delete mem[id];   // a WSKR that is gone
   const cur = list.find((x) => x.id === st.src);
   if (!cur || !cur.ok) { if (!cur) st.src = 'ship'; if (st.sweep) st.sweep = null; }
-  if (st.sel && !(mem[st.src] && mem[st.src].has(st.sel))) st.sel = null;
+  if (st.sel && !contactsFor(st.src).some((c) => c.id === st.sel)) st.sel = null;
   // the sweep
   let sw = st.sweep;
   if (sw) {
     let t = now - sw.t; sw.t = now;
-    const mine = contactsFor(sw.src).filter((c) => !c.lost);
+    const mine = contactsFor(sw.src).filter((c) => !c.lost && !c.remote);   // the ones the sweeping listener can place a line on
     const done = () => { tell('sensors', sw.found ? `Full sweep complete, Captain. ${sw.found} contact${sw.found === 1 ? '' : 's'}.` : 'Full sweep complete, Captain. Nothing out there.'); st.sweep = sw = null; };
     while (t > 0 && sw) {
       if (sw.pause > 0) { const u = Math.min(t, sw.pause); sw.pause -= u; t -= u; if (sw.pause <= 0 && sw.az >= 360) done(); continue; }
-      const a = Math.min(t, 1), a0 = sw.az; sw.az += a; t -= a;
+      const a = Math.min(t, 1), a0 = sw.az; sw.az += a * SWEEP_DPS; t -= a;
       for (const c of mine) if (!sw.seen.has(c.id) && inArc(c.bearing, a0, sw.az)) { sw.seen.add(c.id); sw.found++; sw.pause = SWEEP_PAUSE_S; break; }
       if (sw.az >= 360 && sw.pause <= 0) done();
     }

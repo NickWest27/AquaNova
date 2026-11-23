@@ -11,6 +11,7 @@ import { mountWskrPanel } from './wskr.js';
 import { isCommissioned, EXCUSES } from '../unlocks.js';
 import { seen as seenShips, shownName, sweep, canSweep } from '../traffic.js';
 import { affiliation, contactSvg } from '../contactIcons.js';
+import { mountSnr } from '../sonarView.js';
 
 const SONAR_RANGE_NM = 4, SWEEP_GAME_S = 1800;
 
@@ -31,15 +32,18 @@ export function mount(body, ctx) {
   const list = el('div', { class: 'tab-body', style: 'flex:1;min-height:0' });
   const pageA = el('div', { style: 'display:flex;flex-direction:column;flex:1;min-height:0;gap:inherit' }, head, wsk, list);
   const pageB = el('div', { style: 'display:flex;flex-direction:column;flex:1;min-height:0;overflow-y:auto;gap:0.6rem' });
+  const pageS = el('div', { style: 'display:flex;flex-direction:column;flex:1;min-height:0;gap:0.5rem' });   // the main page: SNR, the same passive sonar display as the bridge
+  let snrPage = null;
   const tabs = el('div', { class: 'tabs' });
-  let sig = '', tab = 'contacts', panel = null;
+  let sig = '', tab = 'snr', panel = null;
   const go = (t) => {
     if (t === 'wskrs' && !isCommissioned('wskr')) { tell('sensors', EXCUSES.wskr, 'error'); return; }
     tab = t; sig = ''; if (t === 'wskrs' && !panel) panel = mountWskrPanel(pageB);
-    tabs.replaceChildren(...[['contacts', 'Sonar and contacts'], ['wskrs', 'WSKRs']].map(([id, label]) => el('button', { class: 'btn chip' + (tab === id ? ' on' : ''), text: label, onclick: () => go(id) })));
-    pageA.hidden = tab !== 'contacts'; pageB.hidden = tab !== 'wskrs'; update();
+    if (t === 'snr' && !snrPage) snrPage = mountSnr(pageS);
+    tabs.replaceChildren(...[['snr', 'SNR'], ['contacts', 'Sites and scans'], ['wskrs', 'WSKRs']].map(([id, label]) => el('button', { class: 'btn chip' + (tab === id ? ' on' : ''), text: label, onclick: () => go(id) })));
+    pageS.hidden = tab !== 'snr'; pageA.hidden = tab !== 'contacts'; pageB.hidden = tab !== 'wskrs'; update();
   };
-  body.append(tabs, pageA, pageB); pageB.hidden = true;
+  body.append(tabs, pageS, pageA, pageB); pageA.hidden = pageB.hidden = true;
 
   const scan = (p) => {
     if (!fileScan(p)) { tell('sensors', 'Already scanned'); return; }
@@ -48,6 +52,7 @@ export function mount(body, ctx) {
   const wText = (w, s) => ({ escort: 'holding formation', recall: 'returning', manual: 'manual control', search: 'searching', relay: 'relay' })[w.mode] || `investigating ${(s.pois.find((p) => p.id === w.target) || {}).name || 'a contact'}`;
 
   function update() {
+    if (tab === 'snr') { if (snrPage) snrPage.update(); return; }
     if (tab === 'wskrs') { if (panel) panel.update(); return; }
     const s = sim.s, sweeping = s.clock < (s.sweepUntil || 0);
     head.children[1].textContent = sweeping ? 'SWEEPING' : s.sonar ? 'ACTIVE' : 'OFF';
@@ -84,6 +89,6 @@ export function mount(body, ctx) {
         !a.v.ident && canSweep(a) ? (a.v.sweepAt ? el('span', { style: 'color:var(--amber)', text: 'Sweeping…' }) : el('button', { class: 'btn primary', text: 'Sweep', onclick: () => { sweep(a.v); tell('sensors', 'Sensor sweep started on the contact'); sig = ''; update(); } })) : null);
     })));
   }
-  go('contacts');
+  go('snr');
   return { update, destroy() { if (panel) panel.destroy(); } };
 }

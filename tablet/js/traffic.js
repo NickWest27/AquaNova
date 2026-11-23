@@ -124,7 +124,8 @@ export function triangulate(ears) {
 }
 /** Sensitivity multiplier of one listener (the ship, or a WSKR by number): 2 during its full sweep, and 2 more while a scan is on the contact. */
 export function snrGain(src, scanUntil = 0) { const s = sim.s, w = s.snr && s.snr.sweep; return (w && w.src === src ? 2 : 1) * (scanUntil > s.clock ? 2 : 1); }
-export const sonarNm = (s) => (s.clock < (s.sweepUntil || 0) ? 8 : s.sonar ? 4 : 1);
+/** How far the ship's passive sonar hears a vessel of loudness 1: sonar powered 12 nm (the Sensors station's long sweep doubles it), off 1 nm. */
+export const sonarNm = (s) => (s.sonar ? traffic.cfg.sensing.sonar_nm * (s.clock < (s.sweepUntil || 0) ? 2 : 1) : 1);
 
 /** Called every frame from the sim. Finds the vessels in the bubble, moves the reacting ones, tests collisions, raises alerts. */
 export function step() {

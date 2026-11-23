@@ -24,13 +24,13 @@ with sync_playwright() as p:
     # a quiet sea: nothing yet. Then a big ship 2.5 nm north.
     js("traffic = T.traffic; const s=sim.s; const k=Math.cos(s.lat*Math.PI/180)*60; const at=(n,e)=>({lat:s.lat+n/60,lon:s.lon+e/k}); window.__at=at; const A=at(2.5,0); traffic.cand=[{id:'t:1',kind:'cargo',faction:'cargo',factionName:'Merchant',stance:'neutral',label:'Container ship',size:3,kt:10,A,B:A,L:1,phase:0,boldness:0,ais:false,bias:0,name:'MV Test',mhz:156,reply:0,ident:false,alerted:true,dyn:null,hitAt:-1e9}]; traffic.candKey=(()=>{const c=traffic.cfg.cell_nm;return Math.floor(s.lon/(c/(60*0.82)))+','+Math.floor(s.lat/(c/60))})()".replace("traffic = T.traffic;","const traffic=T.traffic;"))
     js("for(let i=0;i<3;i++) sim.step(1)"); pg.wait_for_timeout(200)
-    r = js("const c=S.contactsFor('ship'); return c.map(x=>({id:x.id,range:x.range,brg:Math.round(x.bearing),name:x.name}))")
+    r = js("const c=S.contactsFor('ship').filter(c=>c.id==='ship:t:1'); return c.map(x=>({id:x.id,range:x.range,brg:Math.round(x.bearing),name:x.name}))")
     check("a loud ship is heard as a bearing", len(r) == 1 and abs(r[0]["brg"] - 0) <= 3 or abs(r[0]["brg"] - 360) <= 3, str(r))
     check("with no second listener there is no range", r and r[0]["range"] is None, str(r))
     check("the list shows it as Unknown contact with its age", "Unknown contact" in pg.inner_text(".bd-snr:visible .snr-list"))
     # a WSKR 2.5 nm east crosses the bearing: a fix
     js("const s=sim.s; const p=window.__at(0,2.5); s.wskrs=[{n:1,lat:p.lat,lon:p.lon,mode:'escort',target:null,busy:0,bat:100,heading:0}]; for(let i=0;i<3;i++) sim.step(1)"); pg.wait_for_timeout(200)
-    r = js("const c=S.contactsFor('ship'); return c.map(x=>({range:x.range,pos:!!x.pos}))")
+    r = js("const c=S.contactsFor('ship').filter(c=>c.id==='ship:t:1'); return c.map(x=>({range:x.range,pos:!!x.pos}))")
     check("a WSKR on another bearing gives a fix and a range", r and r[0]["pos"] and r[0]["range"] is not None and 2 < r[0]["range"] < 3.2, str(r))
     # tap the symbol: the info box opens
     pos = js("return null"); box = pg.locator(".bd-snr:visible canvas").first.bounding_box()
@@ -66,20 +66,27 @@ with sync_playwright() as p:
     check("a contact lost for two minutes is given up", js("return sim.s.wskrs[0].mode") == "escort")
     js("T.traffic.cand.push({id:'t:1',kind:'cargo',faction:'cargo',factionName:'Merchant',stance:'neutral',label:'Container ship',size:3,kt:10,A:window.__at(2.5,0),B:window.__at(2.5,0),L:1,phase:0,boldness:0,ais:false,bias:0,name:'MV Test',mhz:156,reply:0,ident:false,alerted:true,dyn:null,hitAt:-1e9}); S.snr().sel=null; sim.s.wskrs=[]")
     # full sweep doubles the sensitivity: a ship at 6 nm (out of the 4.8 nm ear) is found
-    js("const A=window.__at(6,0); const v=T.traffic.cand[0]; v.A=A; v.B=A; v.ident=false; v.scanFixUntil=0; sim.s.wskrs=[]; for(let i=0;i<3;i++) sim.step(1)")
-    n0 = js("return S.contactsFor('ship').filter(c=>!c.lost).length")
+    js("const A=window.__at(10,0); const v=T.traffic.cand[0]; v.A=A; v.B=A; v.size=0; v.ident=false; v.scanFixUntil=0; sim.s.wskrs=[]; for(let i=0;i<3;i++) sim.step(1)")
+    n0 = js("return S.contactsFor('ship').filter(c=>c.id==='ship:t:1').filter(c=>!c.lost).length")
     tap("Full sweep"); pg.wait_for_timeout(200); js("sim.step(1)")
-    n1 = js("return S.contactsFor('ship').filter(c=>!c.lost).length")
+    n1 = js("return S.contactsFor('ship').filter(c=>c.id==='ship:t:1').filter(c=>!c.lost).length")
     check("out of range: no contact; the sweep finds it", n0 == 0 and n1 == 1, f"{n0} {n1}")
     js("for(let i=0;i<20;i++) sim.step(1)")
-    az = js("return S.snr().sweep.az"); check("the sweep turns about a degree a second", 19 <= az <= 22, str(az))
-    js("const sw=S.snr().sweep, b=S.contactsFor('ship')[0].bearing; sw.az=((b-0.5)+360)%360; sw.seen=new Set(); sw.pause=0; sw.t=sim.s.clock; sim.step(1)")
+    az = js("return S.snr().sweep.az"); check("the sweep turns ten degrees a second", 190 <= az <= 215, str(az))
+    js("const sw=S.snr().sweep, b=S.contactsFor('ship').filter(c=>c.id==='ship:t:1')[0].bearing; sw.az=((b-0.5)+360)%360; sw.seen=new Set(); sw.pause=0; sw.t=sim.s.clock; sim.step(1)")
     check("the sweep pauses on a contact for 2 s", 0 < js("return S.snr().sweep.pause") <= 2)
     js("S.snr().sweep.az=359.5")
     js("for(let i=0;i<12;i++) sim.step(1)")
     check("a finished sweep clears itself", js("return S.snr().sweep") is None)
     js("for(let i=0;i<4;i++) sim.step(1)")
-    check("the faint contact stays on the list a while, marked as faded", js("const c=S.contactsFor('ship'); return c.length===1&&c[0].lost"))
+    check("the faint contact stays on the list a while, marked as faded", js("const c=S.contactsFor('ship').filter(c=>c.id==='ship:t:1'); return c.length===1&&c[0].lost"))
+    js("T.traffic.cand[0].size=3")
+    # every listener feeds every display: with the ship's sonar off, a ship only the WSKR hears still shows, as a bearing from the WSKR
+    js("const s=sim.s, w=window.__at(0,2.5), A=window.__at(2.5,2.5), v=T.traffic.cand[0]; v.A=A; v.B=A; v.ident=false; s.sonar=false; s.wskrs=[{n:1,lat:w.lat,lon:w.lon,mode:'escort',target:null,busy:0,bat:100,heading:0}]; for(let i=0;i<3;i++) sim.step(1)")
+    r = js("const c=S.contactsFor('ship').filter(c=>c.id==='ship:t:1'); return c.map(x=>({remote:x.remote,lost:x.lost,by:x.byName,pos:!!x.pos}))")
+    check("the ship's display shows what a WSKR hears", len(r) == 1 and r[0]["remote"] and not r[0]["lost"] and not r[0]["pos"], str(r))
+    pg.wait_for_timeout(300); check("and lists it", "Unknown contact" in pg.inner_text(".bd-snr:visible .snr-list"))
+    js("sim.s.sonar=true; sim.s.wskrs=[]; sim.step(1)")
     # source: a WSKR
     js("const s=sim.s; const p=window.__at(0,2.5); s.wskrs=[{n:1,lat:p.lat,lon:p.lon,mode:'escort',target:null,busy:0,bat:100,heading:90}]; sim.step(1)")
     tap("Source"); pg.wait_for_timeout(200)
@@ -89,6 +96,10 @@ with sync_playwright() as p:
     # range buttons
     r0 = pg.inner_text(".msc:visible .rng"); tap("+"); pg.wait_for_timeout(400); r1 = pg.inner_text(".msc:visible .rng"); tap("−"); pg.wait_for_timeout(400)
     check("range + and − change the map range", r0 != r1 and pg.inner_text(".msc:visible .rng") == r0, f"{r0} {r1}")
+    # the Sensors station opens on the SNR page
+    pg.evaluate("window.__aq.open('sensors')"); pg.wait_for_timeout(500)
+    check("the Sensors station's main page is the SNR page", pg.locator(".tabs .btn.on", has_text="SNR").count() >= 1 and pg.locator(".tabs .btn", has_text="WSKRs").count() >= 1)
+    pg.screenshot(path=R + "/tools/shots/sonar_station.png")
     # DSP puts it on the main screen
     tap("DSP"); pg.wait_for_timeout(300)
     check("DSP shows the sonar page on the main screen", pg.locator(".bm-view .bd-snr:visible").count() == 1)
