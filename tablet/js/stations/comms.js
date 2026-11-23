@@ -14,10 +14,11 @@ import { canTransmit } from '../commsModel.js';
 import { startReport, transferring, xferBar } from '../transfer.js';
 import missions from '../../../game/systems/missionManager.js';
 import { logAccepted } from '../missionLog.js';
-import { isGenerated, acceptOffer } from '../missionGen.js';
+import { isGenerated, acceptOffer, declineOffer, pendingOffer, activeDef, quitMission, requestOrders } from '../missionGen.js';
+import { all as repAll } from '../reputation.js';
 
 const MISSION_OF = { 'oera-sea-trials': 'seaTrials' }; // older saves stored this message without a mission id
-const stateOf = (id) => missions.completedMissions.has(id) ? 'done' : missions.activeMissions.has(id) ? 'active' : 'new';
+const stateOf = (id) => missions.completedMissions.has(id) ? 'done' : missions.activeMissions.has(id) ? 'active' : isGenerated(id) && !(pendingOffer() && pendingOffer().id === id) ? 'closed' : 'new';
 const when = (iso) => iso ? new Date(iso).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
 
 export function mount(body) {
@@ -37,6 +38,27 @@ export function mount(body) {
   const side = el('div', { class: 'nav-side' },
     el('div', { class: 'card' }, el('div', { class: 'lbl', text: 'Satellite / laser link' }), linkNum, linkNote),
     el('div', { class: 'card' }, el('div', { class: 'lbl', text: 'Outbox' }), el('p', { style: 'margin:0.4rem 0 0.8rem;color:var(--dim)', text: 'Send a status report and your findings to OERA.' }), send, sentList));
+  // ---- orders: ask for work, see what is running, quit; and where we stand with each group ----
+  const ordersCard = el('div', { class: 'card' }), standCard = el('div', { class: 'card' });
+  let quitArmed = 0, ordersSig = '';
+  const paintOrders = () => {
+    const act = activeDef(), off = pendingOffer(), t = canTransmit(), sig = [act && act.id, off && off.id, off && off.delivered, t.ok, quitArmed].join('|');
+    if (sig === ordersSig) return; ordersSig = sig;
+    const rows = [el('div', { class: 'lbl', text: 'Orders' })];
+    if (act) {
+      rows.push(el('p', { style: 'margin:0.4rem 0', text: `Active: ${act.name}${act.gen.compulsory ? ' (ordered)' : ''}` }));
+      rows.push(el('button', { class: 'btn' + (quitArmed ? ' warn' : ''), text: quitArmed ? (act.gen.compulsory ? 'Tap again: quit and take the reprimand' : 'Tap again to quit') : 'Quit mission', onclick: () => {
+        if (!quitArmed) { quitArmed = Date.now(); ordersSig = ''; setTimeout(() => { quitArmed = 0; ordersSig = ''; paintOrders(); }, 4000); paintOrders(); return; }
+        quitMission(); quitArmed = 0; ordersSig = ''; tell('comms', 'Mission abandoned. The requester has been told.', 'warn'); render(); paintOrders(); } }));
+    } else if (off) rows.push(el('p', { style: 'margin:0.4rem 0;color:var(--dim)', text: off.delivered ? 'An offer is waiting in the inbox.' : 'Traffic from OERA is waiting for a link.' }));
+    else rows.push(el('p', { style: 'margin:0.4rem 0 0.8rem;color:var(--dim)', text: 'No orders. Ask OERA for work.' }), el('button', { class: 'btn', text: 'Request new orders', disabled: !t.ok, onclick: () => {
+      const r = requestOrders(); tell('comms', r.ok ? 'Request sent. OERA will answer when they have something.' : r.why === 'link' ? 'No link. Bring an antenna up first.' : 'Not now.', r.ok ? '' : 'warn'); ordersSig = ''; paintOrders(); } }));
+    ordersCard.replaceChildren(...rows);
+  };
+  const paintStanding = () => standCard.replaceChildren(el('div', { class: 'lbl', text: 'Standing' }), ...repAll().map((f) => el('div', { style: 'display:flex;align-items:center;gap:0.5rem;margin-top:0.35rem;font-size:0.9rem' },
+    el('span', { style: 'flex:1', text: f.name }), el('span', { style: 'color:var(--dim);min-width:4.2rem;text-align:right', text: f.tier }),
+    el('span', { style: 'width:4.5rem;height:0.5rem;background:#0003;border-radius:3px;position:relative' }, el('span', { style: `position:absolute;top:0;bottom:0;border-radius:3px;background:${f.value < 0 ? '#c66' : '#6c9'};${f.value < 0 ? `right:50%;width:${-f.value / 2}%` : `left:50%;width:${f.value / 2}%`}` })))));
+  side.append(ordersCard, standCard); side.style.overflowY = 'auto';
   const mailPane = el('div', { style: 'flex:1;min-height:0;display:flex;gap:0.9rem' }, side, list);
   const pane = () => el('div', { style: 'flex:1;min-height:0;overflow-y:auto' });
   const linkPane = pane(), ctlPane = pane(), conPane = pane();
@@ -75,8 +97,9 @@ export function mount(body) {
     const field = (k, v) => el('div', { class: 'mail-field' }, el('span', { text: k }), el('b', { text: v }));
     const tail = el('div', { class: 'mail-tail' });
     const fillTail = () => { const st = mid ? stateOf(mid) : null; tail.replaceChildren(...(!mid ? [] : st === 'new'
-      ? [el('button', { class: 'btn primary', text: 'Accept mission', onclick: () => { if (isGenerated(mid) ? acceptOffer(mid) : missions.startMission(mid)) logAccepted(mid); fillTail(); render(); } })]
-      : [el('p', { class: st === 'done' ? 'ok' : 'warn', text: st === 'done' ? 'Mission complete' : 'Mission accepted. See PED → Missions.' })])); };
+      ? [el('button', { class: 'btn primary', text: 'Accept mission', onclick: () => { if (isGenerated(mid) ? acceptOffer(mid) : missions.startMission(mid)) logAccepted(mid); fillTail(); render(); } }),
+         ...(isGenerated(mid) ? [el('button', { class: 'btn', text: m.compulsory ? 'Decline (costs standing)' : 'Decline', onclick: () => { declineOffer(mid); fillTail(); render(); } })] : [])]
+      : [el('p', { class: st === 'done' ? 'ok' : 'warn', text: st === 'done' ? 'Mission complete' : st === 'closed' ? 'This offer is closed.' : 'Mission accepted. See PED → Missions.' })])); };
     fillTail();
     const win = el('div', { class: 'mail-win', style: 'visibility:hidden' },
       field('From:', FROM_FULL[m.from] || m.from), field('To:', 'Captain of the Aqua Nova'), field('Date:', stamp(m)), field('Subject:', fill(m.subject)),
@@ -112,7 +135,7 @@ export function mount(body) {
     linkNum.className = 'num ' + (up ? 'ok' : 'bad');
     linkNum.textContent = up ? 'LINK UP' : 'NO LINK';
     linkNote.textContent = up ? `${t.L.label} link, ${t.st.dB} dB.` : `${t.L.label}: ${t.st.status.toLowerCase()}. See the Controls page.`;
-    send.disabled = !up || transferring();
+    send.disabled = !up || transferring(); paintOrders(); if (tab === 'mail') paintStanding();
     send.textContent = transferring() ? 'Transmitting…' : 'Transmit report';
     if (views[tab]) views[tab][1].update();
   }

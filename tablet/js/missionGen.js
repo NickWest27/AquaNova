@@ -8,6 +8,8 @@ import { seafloor } from './seafloor.js';
 import { traffic } from './traffic.js';
 import { gameState } from './persist.js';
 import { applyOutcome, rep } from './reputation.js';
+import { bestSource, canTransmit, LINKS, SOURCES } from './commsModel.js';
+import { say } from './notify.js';
 import { fill } from './player.js';
 import missionManager from '../../game/systems/missionManager.js';
 
@@ -114,8 +116,8 @@ export function generate(seed, { type, compulsory } = {}) {
   ];
   const def = { id, name, description: facts, category: 'generated', priority: urgency === 'priority' ? 'high' : 'normal', autoStart: false, prerequisites: [], objectives, onComplete: [],
     gen: { type, reason, urgency, compulsory: comp, requester: req, faction: req === 'fisheries' || req === 'harbour' ? 'civil' : 'oera', target: spot.p, place, routeH: +route.toFixed(2), seed } };
-  const offer = { id, expiresAt: now + expiresH * H, deadlineAt: deadlineH ? now + deadlineH * H : null, offeredAt: now };
-  const message = { id: `offer-${id}`, from: R.from, subject: `${comp ? 'Orders' : 'Request'}: ${name}`, text: text + '\n\n' + facts + (deadlineH ? `\nAnswer by ${clockText(offer.expiresAt)}. Finish by ${clockText(offer.deadlineAt)}.` : `\nAnswer by ${clockText(offer.expiresAt)}.`), missionId: id, offer: true, compulsory: comp };
+  const offer = { id, expiresH, deadlineH, delivered: false, offeredAt: null, expiresAt: null, deadlineAt: null };
+  const message = { id: `offer-${id}`, from: R.from, subject: `${comp ? 'Orders' : 'Request'}: ${name}`, text: text + '\n\n' + facts, missionId: id, offer: true, compulsory: comp };
   return { def, offer, message, vessel: type === 'contact' ? makeVessel(id, reason, spot.p, rng) : null };
 }
 
@@ -131,6 +133,7 @@ function makeVessel(id, reason, p, rng) {
 const mail = (m) => missionManager.sendMessage(m);
 const activeGen = () => { const g = st(); return g.active; };
 export const hasActive = () => !!activeGen();
+export const activeDef = () => { const g = st(); return g.active ? g.defs[g.active] : null; };
 export const pendingOffer = () => st().offer;
 export const isGenerated = (id) => !!st().defs[id];
 
@@ -138,9 +141,13 @@ export function makeOffer(opts = {}) {
   const g = st(); if (g.offer || g.active) return null;
   for (let tries = 0; tries < 8; tries++) {
     const r = generate((Math.floor(Math.random() * 2e9) ^ (g.n * 7919)) >>> 0, opts); if (!r) continue;
-    g.n++; g.defs[r.def.id] = r.def; g.offer = r.offer; g.nextAt = null; if (r.vessel) g.pendingVessel = r.vessel;
-    missionManager.missions.set(r.def.id, r.def); save(g); mail(r.message);
-    sim.emit('mission-offer', { id: r.def.id, name: r.def.name, compulsory: r.def.gen.compulsory });
+    g.n++; g.defs[r.def.id] = r.def; g.offer = r.offer; g.held = r.message; g.nextAt = null; if (r.vessel) g.pendingVessel = r.vessel;
+    missionManager.missions.set(r.def.id, r.def);
+    if (opts.distress) {   // a distress call is heard on any band: Nicole tells the Captain, and the offer arrives without a link
+      r.offer.distress = true;
+      say('comms', `Captain, I am picking up a distress call. I recommend we re-establish communications.`, 'mission', { notice: 'DISTRESS CALL' });
+      deliver(g);
+    } else save(g);
     return r;
   }
   g.nextAt = sim.s.clock + 1800; save(g);   // nothing valid here: try again in half an hour of game time
@@ -161,6 +168,22 @@ export function declineOffer(id, why = 'declined') {
   const def = g.defs[id]; g.offer = null; delete g.pendingVessel; g.done = [...g.done, { id, outcome: why, c: sim.s.clock }].slice(-40); scheduleNext(g); save(g);
   if (def.gen.compulsory) applyOutcome(why === 'expired' ? 'expired' : 'declined', {}, `${why}: ${def.name}`);
   return true;
+}
+const LATENCY_GS = { 1: 3, 2: 2, 3: 4 }, DOWN_GS = { 1: 8, 2: 3, 3: 20 };
+/** The offer reaches the Captain: its clocks start now, and the mail lands in the inbox. */
+function deliver(g) {
+  const o = g.offer, now = sim.s.clock; if (!o || o.delivered) return;
+  o.delivered = true; o.offeredAt = now; o.expiresAt = now + o.expiresH * H; o.deadlineAt = o.deadlineH ? now + o.deadlineH * H : null;
+  const m = g.held; g.held = null;
+  m.text += (o.deadlineAt ? `\nAnswer by ${clockText(o.expiresAt)}. Finish by ${clockText(o.deadlineAt)}.` : `\nAnswer by ${clockText(o.expiresAt)}.`);
+  save(g); mail(m);
+  const def = g.defs[o.id]; sim.emit('mission-offer', { id: o.id, name: def.name, compulsory: def.gen.compulsory });
+}
+/** Mail arrives only over a working link, and a weak signal is slow. Returns true when a link carries it. */
+function carry(g) {
+  const o = g.offer, best = bestSource(); if (!best) { o.carryAt = null; return false; }
+  if (o.carryAt == null) { const L = LINKS[SOURCES.find((x) => x.id === best.id).link - 1], f = Math.max(0.3, Math.min(1.15, best.dB / L.base)); o.carryAt = sim.s.clock + (LATENCY_GS[L.n] || 3) + (DOWN_GS[L.n] || 8) / f; }
+  return sim.s.clock >= o.carryAt;
 }
 function scheduleNext(g, h = null) { g.nextAt = sim.s.clock + (h == null ? Math.random() * MAX_TIMER_H : h) * H; }
 
@@ -191,7 +214,7 @@ export function quitMission(id = activeGen()) {
 
 // ---------- orders ----------
 export function requestOrders() {
-  const g = st(); if (g.active) return { ok: false, why: 'active' }; if (g.offer) return { ok: false, why: 'offer' }; if (g.nextAt && g.nextAt - sim.s.clock < 600) return { ok: true, soon: true };
+  const g = st(); if (!g.active && !g.offer && !canTransmit().ok) return { ok: false, why: 'link' }; if (g.active) return { ok: false, why: 'active' }; if (g.offer) return { ok: false, why: 'offer' }; if (g.nextAt && g.nextAt - sim.s.clock < 600) return { ok: true, soon: true };
   const oera = rep('oera');
   g.nextAt = sim.s.clock + (oera >= 30 ? 120 : 600); save(g); return { ok: true };
 }
@@ -200,6 +223,11 @@ export function requestOrders() {
 let last = 0;
 function tick() {
   if (!P) return; const g = st(), now = sim.s.clock; if (now - last < 5) return; last = now;
+  if (g.offer && !g.offer.delivered) {   // waiting for a link
+    if (carry(g)) deliver(g);
+    else if (!g.offer.told && !sim.away) { g.offer.told = true; say('comms', 'Captain, OERA has traffic waiting for us, but we have no link. Bring an antenna up and I will pull it down.', 'mission'); save(g); }
+    return;
+  }
   if (g.offer && now >= g.offer.expiresAt) { declineOffer(g.offer.id, 'expired'); return; }
   if (!g.offer && !g.active && g.nextAt != null && now >= g.nextAt) { makeOffer(); return; }
   const id = g.active; if (!id) return; const def = g.defs[id], v = g.vessels.find((x) => x.mission === id);
