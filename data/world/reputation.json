@@ -159,6 +159,17 @@
   "quit_rescue": {
    "oera": -4,
    "civil": -3
+  },
+  "quit_distress": {},
+  "assist_rescue": {
+   "oera": 4,
+   "civil": 6,
+   "science": 1,
+   "allied_navy": 2
+  },
+  "too_late_rescue": {
+   "oera": -2,
+   "civil": -5
   }
  }
 }

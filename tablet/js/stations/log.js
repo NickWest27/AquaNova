@@ -4,6 +4,7 @@ import { saveManager, gameState, addLogEntry, snapshotSim, restoreSim, restartGa
 import { sim } from '../sim.js';
 import { requestSync } from '../sync.js';
 import missionManager from '../../../game/systems/missionManager.js';
+import { all as repAll, history as repHistory, label as repLabel } from '../reputation.js';
 
 const entryText = (e) => (e.logbook ? fill(e.logbook.content) : '');
 
@@ -30,7 +31,27 @@ export function mount(body, ctx) {
   } });
   const imp = el('button', { class: 'btn', text: 'Import', onclick: () => file.click() });
   const title = el('div', { class: 'lbl grow' });
-  body.append(el('div', { class: 'row' }, add, exp, imp, file, title), list);
+  // two pages: the entries, and Standings (how the groups think of us: quiet, no numbers)
+  const entriesPane = el('div', { style: 'display:flex;flex-direction:column;flex:1;min-height:0;gap:0.7rem' }, el('div', { class: 'row' }, add, exp, imp, file, title), list);
+  const standPane = el('div', { class: 'log-list', style: 'display:none' });
+  let page = 'entries';
+  const tabs = el('div', { class: 'tabs' });
+  const paintTabs = () => {
+    tabs.replaceChildren(...[['entries', 'Entries'], ['standings', 'Standings']].map(([id, t]) => el('button', { class: 'btn chip' + (page === id ? ' on' : ''), text: t, onclick: () => { page = id; paintTabs(); if (id === 'standings') paintStandings(); } })));
+    entriesPane.style.display = page === 'entries' ? 'flex' : 'none'; standPane.style.display = page === 'standings' ? '' : 'none';
+  };
+  const WORDS = { Hostile: 'They will not deal with us.', Cold: 'They keep us at arm\'s length.', Neutral: 'No opinion either way.', Warm: 'They speak well of us.', Trusted: 'They would vouch for us.' };
+  function paintStandings() {
+    const dim = 'color:var(--dim)';
+    const hist = repHistory().filter((h) => h.why && Object.values(h.d).some((d) => Math.abs(d) >= 1.5)).slice(-8).reverse();
+    standPane.replaceChildren(
+      el('div', { class: 'card' }, el('div', { class: 'lbl', text: 'How the groups regard the Aqua Nova' }),
+        ...repAll().map((f) => el('div', { style: 'display:flex;gap:1rem;align-items:baseline;margin-top:0.6rem' },
+          el('b', { style: 'min-width:13rem', text: f.name }), el('span', { style: 'min-width:5rem', text: f.tier }), el('span', { style: dim, text: WORDS[f.tier] })))),
+      el('div', { class: 'card' }, el('div', { class: 'lbl', text: 'Recent' }),
+        ...(hist.length ? hist.map((h) => el('p', { style: 'margin-top:0.5rem;' + dim, text: `${h.why}: ` + Object.entries(h.d).filter(([, d]) => Math.abs(d) >= 1.5).map(([g, d]) => `${repLabel(g)} ${d > 0 ? 'up' : 'down'}`).join(', ') })) : [el('p', { style: 'margin-top:0.5rem;' + dim, text: 'Nothing yet.' })])));
+  }
+  body.append(tabs, entriesPane, standPane); paintTabs();
 
   function revert(entry) {
     modal({ title: 'Revert to this entry?', body: el('p', { text: 'The ship and mission return to this moment. Later entries are removed.' }),

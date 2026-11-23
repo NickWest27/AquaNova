@@ -15,7 +15,6 @@ import { startReport, transferring, xferBar } from '../transfer.js';
 import missions from '../../../game/systems/missionManager.js';
 import { logAccepted } from '../missionLog.js';
 import { isGenerated, acceptOffer, declineOffer, pendingOffer, activeDef, quitMission, requestOrders } from '../missionGen.js';
-import { all as repAll } from '../reputation.js';
 
 const MISSION_OF = { 'oera-sea-trials': 'seaTrials' }; // older saves stored this message without a mission id
 const stateOf = (id) => missions.completedMissions.has(id) ? 'done' : missions.activeMissions.has(id) ? 'active' : isGenerated(id) && !(pendingOffer() && pendingOffer().id === id) ? 'closed' : 'new';
@@ -39,7 +38,7 @@ export function mount(body) {
     el('div', { class: 'card' }, el('div', { class: 'lbl', text: 'Satellite / laser link' }), linkNum, linkNote),
     el('div', { class: 'card' }, el('div', { class: 'lbl', text: 'Outbox' }), el('p', { style: 'margin:0.4rem 0 0.8rem;color:var(--dim)', text: 'Send a status report and your findings to OERA.' }), send, sentList));
   // ---- orders: ask for work, see what is running, quit; and where we stand with each group ----
-  const ordersCard = el('div', { class: 'card' }), standCard = el('div', { class: 'card' });
+  const ordersCard = el('div', { class: 'card' });
   let quitArmed = 0, ordersSig = '';
   const paintOrders = () => {
     const act = activeDef(), off = pendingOffer(), t = canTransmit(), sig = [act && act.id, off && off.id, off && off.delivered, t.ok, quitArmed].join('|');
@@ -55,10 +54,7 @@ export function mount(body) {
       const r = requestOrders(); tell('comms', r.ok ? 'Request sent. OERA will answer when they have something.' : r.why === 'link' ? 'No link. Bring an antenna up first.' : 'Not now.', r.ok ? '' : 'warn'); ordersSig = ''; paintOrders(); } }));
     ordersCard.replaceChildren(...rows);
   };
-  const paintStanding = () => standCard.replaceChildren(el('div', { class: 'lbl', text: 'Standing' }), ...repAll().map((f) => el('div', { style: 'display:flex;align-items:center;gap:0.5rem;margin-top:0.35rem;font-size:0.9rem' },
-    el('span', { style: 'flex:1', text: f.name }), el('span', { style: 'color:var(--dim);min-width:4.2rem;text-align:right', text: f.tier }),
-    el('span', { style: 'width:4.5rem;height:0.5rem;background:#0003;border-radius:3px;position:relative' }, el('span', { style: `position:absolute;top:0;bottom:0;border-radius:3px;background:${f.value < 0 ? '#c66' : '#6c9'};${f.value < 0 ? `right:50%;width:${-f.value / 2}%` : `left:50%;width:${f.value / 2}%`}` })))));
-  side.append(ordersCard, standCard); side.style.overflowY = 'auto';
+  side.append(ordersCard); side.style.overflowY = 'auto';
   const mailPane = el('div', { style: 'flex:1;min-height:0;display:flex;gap:0.9rem' }, side, list);
   const pane = () => el('div', { style: 'flex:1;min-height:0;overflow-y:auto' });
   const linkPane = pane(), ctlPane = pane(), conPane = pane();
@@ -135,7 +131,7 @@ export function mount(body) {
     linkNum.className = 'num ' + (up ? 'ok' : 'bad');
     linkNum.textContent = up ? 'LINK UP' : 'NO LINK';
     linkNote.textContent = up ? `${t.L.label} link, ${t.st.dB} dB.` : `${t.L.label}: ${t.st.status.toLowerCase()}. See the Controls page.`;
-    send.disabled = !up || transferring(); paintOrders(); if (tab === 'mail') paintStanding();
+    send.disabled = !up || transferring(); paintOrders();
     send.textContent = transferring() ? 'Transmitting…' : 'Transmit report';
     if (views[tab]) views[tab][1].update();
   }

@@ -58,6 +58,8 @@ const REASONS = {
   adrift: { kind: 'trawler', ais: false, minNm: 30, maxNm: 220 },
   lost_survey: { kind: 'research', ais: false, minNm: 30, maxNm: 260 },
   poaching: { kind: 'poacher', ais: false, minNm: 20, maxNm: 260, sanctuary: true },
+  sinking: { kind: 'yacht', ais: false, minNm: 40, maxNm: 300, distress: true },       // a distress call: inside 300 nm, the clock is the margin
+  survivors: { kind: 'trawler', ais: false, minNm: 40, maxNm: 300, distress: true },
 };
 /** A free sea spot: charted, deep enough, with a safe route and a travel time that fits `maxH`. */
 function findSpot(rng, { minNm, maxNm, minDepth = 40, maxH = 8 }) {
@@ -78,31 +80,31 @@ function findSite(rng, maxH) {
 }
 
 /** Build one offer from a seed. Returns { def, offer } or null when nothing valid was found. */
-export function generate(seed, { type, compulsory } = {}) {
+export function generate(seed, { type, compulsory, distress } = {}) {
   const g = st(), rng = mulberry(seed), s = sim.s, now = s.clock;
-  type = type || pick(rng, ['contact', 'survey']);
+  type = distress ? 'contact' : (type || pick(rng, ['contact', 'survey']));
   const id = `gen_${g.n + 1}`, vars = { captain: fill('{captain}') };
   let spot, poi = null, reason = null, urgency = 'routine', route = 0, req;
   if (type === 'contact') {
-    reason = pick(rng, Object.keys(REASONS)); const R = REASONS[reason]; urgency = 'priority';
+    reason = pick(rng, Object.keys(REASONS).filter((k) => !!REASONS[k].distress === !!distress)); const R = REASONS[reason]; urgency = distress ? 'distress' : 'priority';
     if (R.sanctuary) { const sa = s.pois.filter((q) => q.type === 'sanctuary'); if (!sa.length) return null; poi = pick(rng, sa); const h = routeHours(poi); if (h == null || h > 7) return null; spot = { p: { lat: poi.lat + (rng() - 0.5) * 0.04, lon: poi.lon + (rng() - 0.5) * 0.04 }, hours: h }; }
-    else spot = findSpot(rng, { ...R, maxH: 6 });
+    else spot = findSpot(rng, { ...R, maxH: distress ? 5 : 6 });
     if (!spot) return null; if (!poi) poi = nearPlace(spot.p);
-    req = reason === 'poaching' ? 'fisheries' : reason === 'adrift' ? 'harbour' : 'oera_ops';
+    req = R.distress ? 'coastguard' : reason === 'poaching' ? 'fisheries' : reason === 'adrift' ? 'harbour' : 'oera_ops';
   } else {
     const site = findSite(rng, 9); if (!site) return null; poi = site.q; spot = { p: { lat: poi.lat, lon: poi.lon }, hours: site.hours }; req = pick(rng, ['oera_ops', 'university']);
   }
   route = spot.hours; const R = P.requesters[req], comp = compulsory != null ? compulsory : (R.compulsory && type === 'survey' ? rng() < 0.5 : R.compulsory);
   const b = toward(s, spot.p), place = type === 'contact' && reason !== 'poaching' ? (poi ? `${poi.name}` : 'open water') : poi.name;
-  const expiresH = type === 'contact' ? 1 + Math.floor(rng() * 2) : 12, deadlineH = type === 'contact' ? Math.ceil((expiresH + route * 1.6 + 1) * 2) / 2 : null;
-  Object.assign(vars, { place, nm: Math.round(b.nm), dir: compass(b.brg), hours: deadlineH && `${deadlineH} hours`, expires: `${expiresH} hour${expiresH > 1 ? 's' : ''}` });
+  const expiresH = distress ? 0.5 : type === 'contact' ? 1 + Math.floor(rng() * 2) : 12, deadlineH = distress ? Math.ceil((expiresH + route * 1.25 + 0.25) * 2) / 2 : type === 'contact' ? Math.ceil((expiresH + route * 1.6 + 1) * 2) / 2 : null;
+  Object.assign(vars, { place, nm: Math.round(b.nm), dir: compass(b.brg), hours: deadlineH && `${deadlineH} hours`, expires: expiresH < 1 ? `${expiresH * 60} minutes` : `${expiresH} hour${expiresH > 1 ? 's' : ''}` });
   const text = [take(g, rng, `open.${req}`, vars), '',
     take(g, rng, type === 'contact' ? `situation.contact.${reason}` : 'situation.survey', vars),
     take(g, rng, type === 'contact' ? `ask.contact.${reason}` : 'ask.survey', vars), '',
-    take(g, rng, deadlineH ? 'time.deadline' : 'time.soft', vars), take(g, rng, 'limit.expires', vars),
-    take(g, rng, comp ? 'limit.compulsory' : 'limit.optional', vars), '', take(g, rng, `close.${req}`, vars), '', R.sign].join('\n');
+    take(g, rng, distress ? 'time.distress' : deadlineH ? 'time.deadline' : 'time.soft', vars), take(g, rng, distress ? 'limit.distress' : 'limit.expires', vars),
+    ...(distress ? [] : [take(g, rng, comp ? 'limit.compulsory' : 'limit.optional', vars)]), '', take(g, rng, `close.${req}`, vars), '', R.sign].join('\n');
   const facts = `Position: ${Math.round(b.nm)} nm, bearing ${String(Math.round(b.brg)).padStart(3, '0')}°. Travel about ${route < 1 ? Math.round(route * 60) + ' minutes' : route.toFixed(1) + ' hours'} by the planned route.`;
-  const name = type === 'contact' ? { adrift: 'Vessel in trouble', lost_survey: 'Silent survey ship', poaching: 'Poachers in the closed area' }[reason] : `Survey: ${poi.name}`;
+  const name = type === 'contact' ? { adrift: 'Vessel in trouble', lost_survey: 'Silent survey ship', poaching: 'Poachers in the closed area', sinking: 'MAYDAY: yacht sinking', survivors: 'MAYDAY: survivors in a raft' }[reason] : `Survey: ${poi.name}`;
   const objectives = type === 'contact' ? [
     { id: 'go', description: `Close on the contact near ${place} (${Math.round(b.nm)} nm ${compass(b.brg)})`, required: true, triggers: [{ type: 'property_at_least', property: `${KEY}Flags.${id}.near`, value: 1 }] },
     { id: 'identify', description: 'Identify the vessel: scan it, sweep it or hail it', required: true, after: 'go', triggers: [{ type: 'property_at_least', property: `${KEY}Flags.${id}.ident`, value: 1 }],
@@ -115,9 +117,9 @@ export function generate(seed, { type, compulsory } = {}) {
     { id: 'report', description: 'Send your findings from Comms', required: true, after: 'analyse', triggers: [{ type: 'report_sent' }] },
   ];
   const def = { id, name, description: facts, category: 'generated', priority: urgency === 'priority' ? 'high' : 'normal', autoStart: false, prerequisites: [], objectives, onComplete: [],
-    gen: { type, reason, urgency, compulsory: comp, requester: req, faction: req === 'fisheries' || req === 'harbour' ? 'civil' : 'oera', target: spot.p, place, routeH: +route.toFixed(2), seed } };
+    gen: { type, reason, urgency, compulsory: comp, requester: req, faction: req === 'fisheries' || req === 'harbour' || req === 'coastguard' ? 'civil' : 'oera', target: spot.p, place, routeH: +route.toFixed(2), seed } };
   const offer = { id, expiresH, deadlineH, delivered: false, offeredAt: null, expiresAt: null, deadlineAt: null };
-  const message = { id: `offer-${id}`, from: R.from, subject: `${comp ? 'Orders' : 'Request'}: ${name}`, text: text + '\n\n' + facts, missionId: id, offer: true, compulsory: comp };
+  const message = { id: `offer-${id}`, from: R.from, subject: distress ? name : `${comp ? 'Orders' : 'Request'}: ${name}`, text: text + '\n\n' + facts, missionId: id, offer: true, compulsory: comp };
   return { def, offer, message, vessel: type === 'contact' ? makeVessel(id, reason, spot.p, rng) : null };
 }
 
@@ -125,7 +127,7 @@ function makeVessel(id, reason, p, rng) {
   const R = REASONS[reason], k = traffic.cfg.kinds[R.kind], fac = (sim.world.factions || {})[k.faction] || {}, still = reason !== 'poaching';
   const off = { lat: p.lat + 0.004, lon: p.lon + 0.004 };
   return { id: `s:${id}`, scripted: true, mission: id, kind: R.kind, faction: k.faction, factionName: fac.name || k.faction, stance: reason === 'poaching' ? 'hostile' : 'neutral', label: k.label, size: k.size,
-    kt: still ? 0 : 2, A: { ...p }, B: still ? { ...p } : off, L: 0.4, phase: 0, boldness: 0, ais: false, bias: (rng() - 0.5) * 2, name: reason === 'poaching' ? 'Unmarked trawler' : reason === 'adrift' ? 'F/V ' + pick(rng, ['Marion K', 'Dawn Patrol', 'Two Sisters']) : 'RV ' + pick(rng, ['Calypso II', 'Meridian Star', 'Kestrel']),
+    kt: still ? 0 : 2, A: { ...p }, B: still ? { ...p } : off, L: 0.4, phase: 0, boldness: 0, ais: false, bias: (rng() - 0.5) * 2, name: reason === 'poaching' ? 'Unmarked trawler' : reason === 'sinking' ? 'MY ' + pick(rng, ['Second Wind', 'Reverie', 'Idle Hours']) : reason === 'survivors' ? 'Life raft' : reason === 'adrift' ? 'F/V ' + pick(rng, ['Marion K', 'Dawn Patrol', 'Two Sisters']) : 'RV ' + pick(rng, ['Calypso II', 'Meridian Star', 'Kestrel']),
     mhz: +(156 + 0.025 * Math.floor(rng() * 240)).toFixed(3), reply: Math.floor(rng() * 1000), ident: false, alerted: false, dyn: null, hitAt: -1e9 };
 }
 
@@ -138,9 +140,10 @@ export const pendingOffer = () => st().offer;
 export const isGenerated = (id) => !!st().defs[id];
 
 export function makeOffer(opts = {}) {
-  const g = st(); if (g.offer || g.active) return null;
+  const g = st(); if (g.offer || (g.active && !opts.distress)) return null;   // a distress call can arrive during a mission
   for (let tries = 0; tries < 8; tries++) {
     const r = generate((Math.floor(Math.random() * 2e9) ^ (g.n * 7919)) >>> 0, opts); if (!r) continue;
+    if (opts.distress) r.def.gen.distress = true;
     g.n++; g.defs[r.def.id] = r.def; g.offer = r.offer; g.held = r.message; g.nextAt = null; if (r.vessel) g.pendingVessel = r.vessel;
     missionManager.missions.set(r.def.id, r.def);
     if (opts.distress) {   // a distress call is heard on any band: Nicole tells the Captain, and the offer arrives without a link
@@ -155,7 +158,8 @@ export function makeOffer(opts = {}) {
 }
 /** Accept the pending offer: place the contact, set the survey baseline, start the mission. */
 export function acceptOffer(id) {
-  const g = st(); if (!g.offer || g.offer.id !== id || g.active) return false;
+  const g = st(); if (!g.offer || g.offer.id !== id || !g.offer.delivered) return false;
+  if (g.active) { if (!g.defs[id].gen.distress) return false; finish(g.active, 'quit', { forced: true, key: 'quit_distress' }); }   // a distress call outranks any mission: break away, no penalty
   const def = g.defs[id];
   if (def.gen.type === 'survey') { const base = Number(gameState.getProperty('mission.science.stats.analysed')) || 0; def.objectives.find((o) => o.id === 'analyse').triggers[0].value = base + 1; }
   if (g.pendingVessel) { g.vessels = [...g.vessels, g.pendingVessel]; traffic.scripted = g.vessels; delete g.pendingVessel; traffic.candKey = ''; }
@@ -189,18 +193,19 @@ function scheduleNext(g, h = null) { g.nextAt = sim.s.clock + (h == null ? Math.
 
 // ---------- ending ----------
 function removeScripted(g, id) { g.vessels = g.vessels.filter((v) => v.mission !== id); traffic.scripted = g.vessels; traffic.candKey = ''; }
+const OUTCOME_WORD = { assist: 'helped', document: 'documented', warn_off: 'warned off', withdraw: 'withdrew', too_late: 'too late', quit: 'abandoned', survey: 'surveyed', assist_rescue: 'rescued' };
 const FACTION_EXTRA = { poaching: { warn_off: { poachers: -2 } } };
 function finish(id, outcome, { forced = false, key = null } = {}) {
   const g = st(), def = g.defs[id]; if (!def || g.active !== id) return;
   const O = outcome, extra = (FACTION_EXTRA[def.gen.reason] || {})[O] || {};
-  applyOutcome(key || O, extra, `${def.name}: ${O}`);
+  applyOutcome(key || O, extra, `${def.name}, ${OUTCOME_WORD[O] || O}`);
   if (forced) {   // the manager did not finish it (quit or too late): take it down by hand
     missionManager.activeMissions.delete(id); missionManager.completedMissions.add(id);
     const done = gameState.getProperty('mission.completedIds') || []; if (!done.includes(id)) gameState.updateProperty('mission.completedIds', [...done, id]);
     gameState.updateProperty('mission.objectives', (gameState.getProperty('mission.objectives') || []).filter((o) => o.missionId !== id));
   }
   removeScripted(g, id); g.active = null; g.done = [...g.done, { id, outcome: O, c: sim.s.clock }].slice(-40); scheduleNext(g); save(g);
-  const lines = P.debrief[O] || P.debrief.document, rng = mulberry(def.gen.seed + 1);
+  const lines = P.debrief[key || O] || P.debrief[O] || P.debrief.document, rng = mulberry(def.gen.seed + 1);
   mail({ id: `debrief-${id}`, from: P.requesters[def.gen.requester].from, subject: `Re: ${def.name}`, text: `${fill('{captain}')},\n\n${pick(rng, lines)}\n\n${P.requesters[def.gen.requester].sign}` });
   sim.emit('mission-ended', { id, outcome: O });
 }
@@ -223,6 +228,7 @@ export function requestOrders() {
 let last = 0;
 function tick() {
   if (!P) return; const g = st(), now = sim.s.clock; if (now - last < 5) return; last = now;
+  if (!g.offer && g.distressAt != null && now >= g.distressAt) { g.distressAt = now + (10 + Math.random() * 30) * H; save(g); makeOffer({ distress: true }); return; }
   if (g.offer && !g.offer.delivered) {   // waiting for a link
     if (carry(g)) deliver(g);
     else if (!g.offer.told && !sim.away) { g.offer.told = true; say('comms', 'Captain, OERA has traffic waiting for us, but we have no link. Bring an antenna up and I will pull it down.', 'mission'); save(g); }
@@ -237,7 +243,8 @@ function tick() {
     if (flag(id, 'near') && v.ident && !flag(id, 'ident')) prop(id, 'ident', 1);
   }
   const dl = g.offerAccepted && g.offerAccepted.deadlineAt;
-  if (dl && now > dl && !flag(id, 'outcome')) finish(id, 'too_late', { forced: true });
+  const rescue = def.gen.distress, onScene = def.gen.type === 'contact' && flag(id, 'near');
+  if (dl && now > dl && !flag(id, 'outcome') && !onScene) finish(id, 'too_late', { forced: true, key: rescue ? 'too_late_rescue' : null });
 }
 function onEnd(e) {   // the manager completed a generated mission: record the outcome the decision set
   const id = e.detail.id, g = st(); if (g.active !== id) return;
@@ -252,5 +259,5 @@ export async function initGenerator() {
   document.addEventListener('mission-completed', onEnd);
   sim.afterStep.push(tick);
   // the first generated offer follows the first survey; after that, every report starts the timer
-  document.addEventListener('mission-completed', (e) => { const g2 = st(); if (!g2.active && !g2.offer && g2.nextAt == null && e.detail.id === 'firstSurvey') { scheduleNext(g2); save(g2); } });
+  document.addEventListener('mission-completed', (e) => { const g2 = st(); if (!g2.active && !g2.offer && g2.nextAt == null && e.detail.id === 'firstSurvey') { scheduleNext(g2); g2.distressAt = sim.s.clock + (6 + Math.random() * 30) * H; save(g2); } });
 }
