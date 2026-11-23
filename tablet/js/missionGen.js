@@ -11,6 +11,7 @@ import { applyOutcome, rep } from './reputation.js';
 import { bestSource, canTransmit, LINKS, SOURCES } from './commsModel.js';
 import { say } from './notify.js';
 import { fill } from './player.js';
+import { project } from './plotmath.js';
 import missionManager from '../../game/systems/missionManager.js';
 
 const KEY = 'mission.gen', H = 3600, MAX_TIMER_H = 12, SUPER_MIN_FLOOR = 120;
@@ -43,6 +44,20 @@ export function routeHours(to, from = sim.s) {
     }
   }
   return h * 1.15 + 0.1 + (engaged ? 0.1 : 0);    // a margin, and a few minutes to engage and drop out of super cruise
+}
+
+// ---------- where: positions are given the way a real report gives them, and the Captain plots them ----------
+const dm = (v, hemi) => { const a = Math.abs(v), d = Math.floor(a), m = Math.round((a - d) * 600) / 10; return `${String(m >= 60 ? d + 1 : d).padStart(hemi === 'N' || hemi === 'S' ? 2 : 3, '0')}°${(m >= 60 ? 0 : m).toFixed(1).padStart(4, '0')}'${hemi}`; };
+export const fmtPos = (p) => `${dm(p.lat, p.lat >= 0 ? 'N' : 'S')} ${dm(p.lon, p.lon >= 0 ? 'E' : 'W')}`;
+/** A position as lat/long, or as a bearing and distance from a known place. The target is the rounded point, so the report is exact. */
+function describeLoc(rng, p, { bearing = true } = {}) {
+  const ref = bearing ? sim.s.pois.filter((q) => q.type !== 'dock' && q.type !== 'hideout' && toward(q, p).nm <= 60 && toward(q, p).nm >= 4).sort((a, b) => toward(a, p).nm - toward(b, p).nm)[0] : null;
+  if (ref && rng() < 0.5) {
+    const t = toward(ref, p), brg = Math.round(t.brg), nm = Math.round(t.nm * 10) / 10, q = project(ref, brg, nm);
+    return { p: q, text: `on a bearing of ${String(brg).padStart(3, '0')}° true, ${nm.toFixed(1)} nm from ${ref.name}`, short: `${String(brg).padStart(3, '0')}° true, ${nm.toFixed(1)} nm from ${ref.name}`, how: 'bearing' };
+  }
+  const q = { lat: Math.round(p.lat * 600) / 600, lon: Math.round(p.lon * 600) / 600 };
+  return { p: q, text: `at ${fmtPos(q)}`, short: fmtPos(q), how: 'latlon' };
 }
 
 // ---------- briefing ----------
@@ -98,30 +113,31 @@ export function generate(seed, { type, compulsory, distress } = {}) {
     const site = findSite(rng, 9); if (!site) return null; poi = site.q; spot = { p: { lat: poi.lat, lon: poi.lon }, hours: site.hours }; req = pick(rng, ['oera_ops', 'university']);
   }
   route = spot.hours; const R = P.requesters[req], comp = compulsory != null ? compulsory : (R.compulsory && (type === 'survey' || type === 'patrol') ? rng() < 0.5 : R.compulsory);
+  const loc = type === 'contact' && reason !== 'poaching' ? describeLoc(rng, spot.p) : describeLoc(rng, spot.p, { bearing: false }); if (type === 'contact' && reason !== 'poaching') spot.p = loc.p;
   const b = toward(s, spot.p), place = type === 'contact' && reason !== 'poaching' ? (poi ? `${poi.name}` : 'open water') : poi.name;
   const durH = type === 'patrol' ? pick(rng, [12, 24]) : 0, expiresH = distress ? 0.5 : type === 'patrol' ? 3 : type === 'contact' ? 1 + Math.floor(rng() * 2) : 12, deadlineH = distress ? Math.ceil((expiresH + route * 1.25 + 0.25) * 2) / 2 : type === 'contact' ? Math.ceil((expiresH + route * 1.6 + 1) * 2) / 2 : null;
-  Object.assign(vars, { duration: `${durH} hours`, place, nm: Math.round(b.nm), dir: compass(b.brg), hours: deadlineH && `${deadlineH} hours`, expires: expiresH < 1 ? `${expiresH * 60} minutes` : `${expiresH} hour${expiresH > 1 ? 's' : ''}` });
+  Object.assign(vars, { where: loc.text, duration: `${durH} hours`, place, nm: Math.round(b.nm), dir: compass(b.brg), hours: deadlineH && `${deadlineH} hours`, expires: expiresH < 1 ? `${expiresH * 60} minutes` : `${expiresH} hour${expiresH > 1 ? 's' : ''}` });
   const text = [take(g, rng, `open.${req}`, vars), '',
     take(g, rng, type === 'contact' ? `situation.contact.${reason}` : type === 'patrol' ? 'situation.patrol' : 'situation.survey', vars),
     take(g, rng, type === 'contact' ? `ask.contact.${reason}` : type === 'patrol' ? 'ask.patrol' : 'ask.survey', vars), '',
     take(g, rng, distress ? 'time.distress' : type === 'patrol' ? 'time.patrol' : deadlineH ? 'time.deadline' : 'time.soft', vars), take(g, rng, distress ? 'limit.distress' : 'limit.expires', vars),
     ...(distress ? [] : [take(g, rng, comp ? 'limit.compulsory' : 'limit.optional', vars)]), '', take(g, rng, `close.${req}`, vars), '', R.sign].join('\n');
-  const facts = `Position: ${Math.round(b.nm)} nm, bearing ${String(Math.round(b.brg)).padStart(3, '0')}°. Travel about ${route < 1 ? Math.round(route * 60) + ' minutes' : route.toFixed(1) + ' hours'} by the planned route.`;
+  const facts = `Reported position: ${loc.short}${type === 'survey' || type === 'patrol' ? ' (centre of the area)' : ''}. ${loc.how === 'bearing' ? 'Plot it from that place with a bearing and distance on the course page' : 'Enter it as a waypoint on the course page'}, then navigate there yourself. Travel about ${route < 1 ? Math.round(route * 60) + ' minutes' : route.toFixed(1) + ' hours'} by the planned route.`;
   const name = type === 'patrol' ? `Patrol: ${poi.name}` : type === 'contact' ? { adrift: 'Vessel in trouble', lost_survey: 'Silent survey ship', poaching: 'Poachers in the closed area', patrol: `Patrol: ${poi && poi.name}`, sinking: 'MAYDAY: yacht sinking', survivors: 'MAYDAY: survivors in a raft' }[reason] : `Survey: ${poi.name}`;
   const objectives = type === 'patrol' ? [
-    { id: 'arrive', description: `Enter the patrol area at ${poi.name}`, required: true, triggers: [{ type: 'property_at_least', property: `${KEY}Flags.${id}.inside`, value: 1 }] },
+    { id: 'arrive', description: `Enter the patrol area round ${poi.name} (${fmtPos(spot.p)})`, required: true, triggers: [{ type: 'property_at_least', property: `${KEY}Flags.${id}.inside`, value: 1 }] },
     { id: 'watch', description: 'Stay on station until the window ends', required: true, after: 'arrive', triggers: [{ type: 'property_at_least', property: `${KEY}Flags.${id}.served`, value: 1 }] },
     { id: 'contact', description: 'Identify any vessel working the area (scan, sweep or hail)', required: false, triggers: [{ type: 'property_at_least', property: `${KEY}Flags.${id}.ident`, value: 1 }],
       onComplete: [{ type: 'aria_decision', id: `${id}_d`, text: P.decisions.poaching.text, options: P.decisions.poaching.options.map((o) => ({ id: o.id, label: o.label, reply: o.reply, actions: [{ type: 'set_property', property: `${KEY}Flags.${id}.outcome`, value: o.outcome }] })) }] },
     { id: 'report', description: 'Send your patrol report from Comms', required: true, after: 'watch', triggers: [{ type: 'report_sent' }] },
   ] : type === 'contact' ? [
-    { id: 'go', description: `Close on the contact near ${place} (${Math.round(b.nm)} nm ${compass(b.brg)})`, required: true, triggers: [{ type: 'property_at_least', property: `${KEY}Flags.${id}.near`, value: 1 }] },
+    { id: 'go', description: `Reach the reported position (${loc.text}) and close on the contact`, required: true, triggers: [{ type: 'property_at_least', property: `${KEY}Flags.${id}.near`, value: 1 }] },
     { id: 'identify', description: 'Identify the vessel: scan it, sweep it or hail it', required: true, after: 'go', triggers: [{ type: 'property_at_least', property: `${KEY}Flags.${id}.ident`, value: 1 }],
       onComplete: [{ type: 'aria_decision', id: `${id}_d`, text: P.decisions[reason].text, options: P.decisions[reason].options.map((o) => ({ id: o.id, label: o.label, reply: o.reply, actions: [{ type: 'set_property', property: `${KEY}Flags.${id}.outcome`, value: o.outcome }] })) }] },
     { id: 'decide', description: 'Decide how to handle the vessel', required: true, after: 'identify', triggers: [{ type: 'decision_made', decisionId: `${id}_d` }] },
     { id: 'report', description: 'Send your report to the requester from Comms', required: true, after: 'decide', triggers: [{ type: 'report_sent' }] },
   ] : [
-    { id: 'go', description: `Go to ${poi.name} (${Math.round(b.nm)} nm ${compass(b.brg)})`, required: true, triggers: [{ type: 'location_enter', location: poi.name.toLowerCase() }] },
+    { id: 'go', description: `Go to ${poi.name} (${fmtPos(spot.p)})`, required: true, triggers: [{ type: 'location_enter', location: poi.name.toLowerCase() }] },
     { id: 'analyse', description: 'Take a sample there and analyse it in the Science Lab', required: true, after: 'go', triggers: [{ type: 'property_at_least', property: 'mission.science.stats.analysed', value: 99999 }] },   // value set at acceptance (baseline + 1)
     { id: 'report', description: 'Send your findings from Comms', required: true, after: 'analyse', triggers: [{ type: 'report_sent' }] },
   ];

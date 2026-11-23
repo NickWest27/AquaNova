@@ -22,6 +22,9 @@ with sync_playwright() as p:
     r = js("const out=[]; for(const t of ['contact','survey']) for(let i=1;i<=6;i++){ const x=G.generate(1000+i*37,{type:t}); if(x) out.push({t, reason:x.def.gen.reason, h:x.def.gen.routeH, place:x.def.gen.place, text:x.message.text.length, dl:x.offer.deadlineH, vessel:!!x.vessel}); } return out")
     check("generator produces both types", {x["t"] for x in r} == {"contact", "survey"}, str(r[:3]))
     check("contact offers have a deadline longer than the route", all(x["dl"] > x["h"] for x in r if x["t"] == "contact"), str(r))
+    w = js("const pm=await import('./js/plotmath.js'); const out=[]; for(let i=1;i<=12;i++){ const x=G.generate(2000+i*53,{}); if(!x) continue; const txt=x.message.text; const m=txt.match(/(\\d{2}°[\\d.]+'[NS]) (\\d{3}°[\\d.]+'[EW])/); const b=txt.match(/bearing of (\\d{3})° true, ([\\d.]+) nm from/); let err=null; if(m){ const la=pm.parseCoord(m[1],true), lo=pm.parseCoord(m[2],false); err=Math.hypot((la-x.def.gen.target.lat)*60,(lo-x.def.gen.target.lon)*60*Math.cos(la*Math.PI/180)); } out.push({coords:!!m,bearing:!!b,err,of_you:/of you|of the Aqua Nova|of your position/.test(txt)}); } return out")
+    check("every briefing gives a position as lat/long or bearing and range, never 'N nm from you'", w and all((x["coords"] or x["bearing"]) and not x["of_you"] for x in w), str(w[:3]))
+    check("reported lat/long matches the real target to 0.1 nm", all(x["err"] is None or x["err"] < 0.1 for x in w), str(w))
     check("no briefing is empty", all(x["text"] > 200 for x in r))
     # a contact mission, start to end
     js("const g=gameState.getProperty('mission.gen'); if(g){g.offer=null;g.active=null;} ")
