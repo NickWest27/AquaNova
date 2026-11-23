@@ -193,6 +193,26 @@
    "Answer within {expires}, please.",
    "I need your answer within {expires}.",
    "Tell us within {expires}."
+  ],
+  "situation.contact.disabled_ship": [
+   "A freighter has lost her engines and is taking water {where}. Her crew are mustering on deck.",
+   "A cargo ship reports a fire in her engine room {where}. The fire is out but she has no power and is listing.",
+   "A coaster has lost steering and power {where}. Her crew want to leave her."
+  ],
+  "situation.contact.disabled_sub": [
+   "A submarine is on the bottom and cannot surface {where}. She reports a flooded ballast section and air for a few hours.",
+   "A research submarine lost power and is sitting on the seabed {where}. Her crew are alive and the air is running down.",
+   "A mining submersible is trapped on the bottom {where}. She has a working hatch and a limited air supply."
+  ],
+  "ask.contact.disabled_ship": [
+   "Get her crew off. The Tern can take four at a time.",
+   "Reach her and take her crew off by Tern before she goes down.",
+   "Take off the crew and ferry them to safety."
+  ],
+  "ask.contact.disabled_sub": [
+   "Find her, dive the Tern to her depth, dock at her hatch and ferry the crew out, four at a time.",
+   "Reach her, then dock the Tern at her escape hatch and bring her crew home.",
+   "Locate the submarine, dock with her and take off the crew."
   ]
  },
  "decisions": {
@@ -270,9 +290,9 @@
    "options": [
     {
      "id": "assist",
-     "label": "Take the crew aboard",
+     "label": "Launch the Tern to take them off",
      "outcome": "assist_rescue",
-     "reply": "Marcus is bringing them across. Dr. Patel is ready with blankets."
+     "reply": "Understood. Get the Tern up alongside her, surfaced. I will tell the crew to be ready."
     },
     {
      "id": "document",
@@ -293,15 +313,61 @@
    "options": [
     {
      "id": "assist",
-     "label": "Take them aboard",
+     "label": "Launch the Tern to take them off",
      "outcome": "assist_rescue",
-     "reply": "Recovering the raft alongside. The medical bay is ready."
+     "reply": "Understood. The Tern must be surfaced and alongside the raft."
     },
     {
      "id": "document",
      "label": "Mark the position and stand by",
      "outcome": "document",
      "reply": "Marking the raft and calling the cutter."
+    },
+    {
+     "id": "withdraw",
+     "label": "Withdraw",
+     "outcome": "withdraw",
+     "reply": "Understood. I will log it as your decision."
+    }
+   ]
+  },
+  "disabled_ship": {
+   "text": "She is listing and her crew are on deck, Captain. We can take them off by Tern. What do we do?",
+   "options": [
+    {
+     "id": "assist",
+     "label": "Launch the Tern to take them off",
+     "outcome": "assist_rescue",
+     "reply": "The Tern must come up alongside her, surfaced. Four at a time."
+    },
+    {
+     "id": "document",
+     "label": "Stand by and call the cutter",
+     "outcome": "document",
+     "reply": "Standing by. I will relay their position to the nearest cutter."
+    },
+    {
+     "id": "withdraw",
+     "label": "Withdraw",
+     "outcome": "withdraw",
+     "reply": "Understood. I will log it as your decision."
+    }
+   ]
+  },
+  "disabled_sub": {
+   "text": "Her hull is intact but she is on the bottom and cannot move, Captain. The Tern can mate with her hatch. What do we do?",
+   "options": [
+    {
+     "id": "assist",
+     "label": "Dive the Tern to dock with her",
+     "outcome": "assist_rescue",
+     "reply": "The Tern must dive to her depth and dock at the hatch. Four at a time."
+    },
+    {
+     "id": "document",
+     "label": "Hold position and call for help",
+     "outcome": "document",
+     "reply": "Holding. I will call the rescue vessels and relay her position."
     },
     {
      "id": "withdraw",
@@ -361,6 +427,14 @@
   "patrol_partial": [
    "You left the area for much of the window. The patrol will be repeated by someone else.",
    "Coverage was thin. We have noted what you did see."
+  ],
+  "rescue_partial": [
+   "We got some of them out. We could not reach all. Rescue Coordination knows what you did and what it cost.",
+   "Part of the crew is safe. The rest are lost. The record shows you stayed as long as the air allowed."
+  ],
+  "rescue_none": [
+   "No one could be reached in time. Rescue Coordination thanks you for trying.",
+   "The Aqua Nova reached them, but the margin ran out before anyone could be taken off."
   ]
  }
 }

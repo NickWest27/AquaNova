@@ -7,7 +7,8 @@ import { sim, toward, clockText, SUPER_KT, MAX_KT } from './sim.js';
 import { seafloor } from './seafloor.js';
 import { traffic } from './traffic.js';
 import { gameState } from './persist.js';
-import { applyOutcome, rep } from './reputation.js';
+import { applyOutcome, rep, enemyDock } from './reputation.js';
+import { shuttle, aboard, dockList, SHUTTLE_SEATS } from './bayops.js';
 import { bestSource, canTransmit, LINKS, SOURCES } from './commsModel.js';
 import { say } from './notify.js';
 import { fill } from './player.js';
@@ -73,16 +74,20 @@ const REASONS = {
   adrift: { kind: 'trawler', ais: false, minNm: 30, maxNm: 220 },
   lost_survey: { kind: 'research', ais: false, minNm: 30, maxNm: 260 },
   poaching: { kind: 'poacher', ais: false, minNm: 20, maxNm: 260, sanctuary: true },
-  sinking: { kind: 'yacht', ais: false, minNm: 40, maxNm: 300, distress: true },       // a distress call: inside 300 nm, the clock is the margin
-  survivors: { kind: 'trawler', ais: false, minNm: 40, maxNm: 300, distress: true },
+  // A distress call: inside 300 nm. `n` survivors, `win` hours they can hold once rescue starts, `mode` how the Tern reaches them:
+  // 'surface' = surfaced and alongside; 'dock' = at the submarine's depth and mated to her hatch.
+  sinking: { kind: 'yacht', ais: false, minNm: 40, maxNm: 300, distress: true, n: [3, 4], win: 1, mode: 'surface' },
+  survivors: { kind: 'trawler', ais: false, minNm: 40, maxNm: 300, distress: true, n: [3, 6], win: 2, mode: 'surface' },
+  disabled_ship: { kind: 'cargo', ais: false, minNm: 40, maxNm: 300, distress: true, n: [8, 12], win: 4, mode: 'surface' },
+  disabled_sub: { kind: 'research', ais: false, minNm: 40, maxNm: 300, distress: true, n: [6, 10], win: 3, mode: 'dock', minDepth: 80, maxDepth: 600, sub: true },
 };
 /** A free sea spot: charted, deep enough, with a safe route and a travel time that fits `maxH`. */
-function findSpot(rng, { minNm, maxNm, minDepth = 40, maxH = 8 }) {
+function findSpot(rng, { minNm, maxNm, minDepth = 40, maxDepth = 1e9, maxH = 8 }) {
   const s = sim.s;
   for (let t = 0; t < 40; t++) {
     const d = minNm + rng() * (maxNm - minNm), a = rng() * Math.PI * 2;
     const p = { lat: s.lat + (Math.cos(a) * d) / 60, lon: s.lon + (Math.sin(a) * d) / (60 * Math.cos((s.lat * Math.PI) / 180)) };
-    const fl = seafloor.depthAt(p.lat, p.lon); if (fl == null || fl < minDepth || !seafloor.inside(p.lat, p.lon)) continue;
+    const fl = seafloor.depthAt(p.lat, p.lon); if (fl == null || fl < minDepth || fl > maxDepth || !seafloor.inside(p.lat, p.lon)) continue;
     const h = routeHours(p); if (h == null || h > maxH) continue;
     return { p, hours: h };
   }
@@ -95,13 +100,13 @@ function findSite(rng, maxH) {
 }
 
 /** Build one offer from a seed. Returns { def, offer } or null when nothing valid was found. */
-export function generate(seed, { type, compulsory, distress } = {}) {
+export function generate(seed, { type, compulsory, distress, reason: forced } = {}) {
   const g = st(), rng = mulberry(seed), s = sim.s, now = s.clock;
   type = distress ? 'contact' : (type || pick(rng, ['contact', 'survey', 'patrol']));
   const id = `gen_${g.n + 1}`, vars = { captain: fill('{captain}') };
   let spot, poi = null, reason = null, urgency = 'routine', route = 0, req;
   if (type === 'contact') {
-    reason = pick(rng, Object.keys(REASONS).filter((k) => !!REASONS[k].distress === !!distress)); const R = REASONS[reason]; urgency = distress ? 'distress' : 'priority';
+    reason = forced || pick(rng, Object.keys(REASONS).filter((k) => !!REASONS[k].distress === !!distress)); const R = REASONS[reason]; urgency = distress ? 'distress' : 'priority';
     if (R.sanctuary) { const sa = s.pois.filter((q) => q.type === 'sanctuary'); if (!sa.length) return null; poi = pick(rng, sa); const h = routeHours(poi); if (h == null || h > 7) return null; spot = { p: { lat: poi.lat + (rng() - 0.5) * 0.04, lon: poi.lon + (rng() - 0.5) * 0.04 }, hours: h }; }
     else spot = findSpot(rng, { ...R, maxH: distress ? 5 : 6 });
     if (!spot) return null; if (!poi) poi = nearPlace(spot.p);
@@ -123,7 +128,7 @@ export function generate(seed, { type, compulsory, distress } = {}) {
     take(g, rng, distress ? 'time.distress' : type === 'patrol' ? 'time.patrol' : deadlineH ? 'time.deadline' : 'time.soft', vars), take(g, rng, distress ? 'limit.distress' : 'limit.expires', vars),
     ...(distress ? [] : [take(g, rng, comp ? 'limit.compulsory' : 'limit.optional', vars)]), '', take(g, rng, `close.${req}`, vars), '', R.sign].join('\n');
   const facts = `Reported position: ${loc.short}${type === 'survey' || type === 'patrol' ? ' (centre of the area)' : ''}. ${loc.how === 'bearing' ? 'Plot it from that place with a bearing and distance on the course page' : 'Enter it as a waypoint on the course page'}, then navigate there yourself. Travel about ${route < 1 ? Math.round(route * 60) + ' minutes' : route.toFixed(1) + ' hours'} by the planned route.`;
-  const name = type === 'patrol' ? `Patrol: ${poi.name}` : type === 'contact' ? { adrift: 'Vessel in trouble', lost_survey: 'Silent survey ship', poaching: 'Poachers in the closed area', patrol: `Patrol: ${poi && poi.name}`, sinking: 'MAYDAY: yacht sinking', survivors: 'MAYDAY: survivors in a raft' }[reason] : `Survey: ${poi.name}`;
+  const name = type === 'patrol' ? `Patrol: ${poi.name}` : type === 'contact' ? { adrift: 'Vessel in trouble', lost_survey: 'Silent survey ship', poaching: 'Poachers in the closed area', patrol: `Patrol: ${poi && poi.name}`, sinking: 'MAYDAY: yacht sinking', survivors: 'MAYDAY: survivors in a raft', disabled_ship: 'MAYDAY: disabled ship', disabled_sub: 'MAYDAY: submarine on the bottom' }[reason] : `Survey: ${poi.name}`;
   const objectives = type === 'patrol' ? [
     { id: 'arrive', description: `Enter the patrol area round ${poi.name} (${fmtPos(spot.p)})`, required: true, triggers: [{ type: 'property_at_least', property: `${KEY}Flags.${id}.inside`, value: 1 }] },
     { id: 'watch', description: 'Stay on station until the window ends', required: true, after: 'arrive', triggers: [{ type: 'property_at_least', property: `${KEY}Flags.${id}.served`, value: 1 }] },
@@ -133,9 +138,11 @@ export function generate(seed, { type, compulsory, distress } = {}) {
   ] : type === 'contact' ? [
     { id: 'go', description: `Reach the reported position (${loc.text}) and close on the contact`, required: true, triggers: [{ type: 'property_at_least', property: `${KEY}Flags.${id}.near`, value: 1 }] },
     { id: 'identify', description: 'Identify the vessel: scan it, sweep it or hail it', required: true, after: 'go', triggers: [{ type: 'property_at_least', property: `${KEY}Flags.${id}.ident`, value: 1 }],
-      onComplete: [{ type: 'aria_decision', id: `${id}_d`, text: P.decisions[reason].text, options: P.decisions[reason].options.map((o) => ({ id: o.id, label: o.label, reply: o.reply, actions: [{ type: 'set_property', property: `${KEY}Flags.${id}.outcome`, value: o.outcome }] })) }] },
+      onComplete: [{ type: 'aria_decision', id: `${id}_d`, text: P.decisions[reason].text, options: P.decisions[reason].options.map((o) => ({ id: o.id, label: o.label, reply: o.reply, actions: [{ type: 'set_property', property: `${KEY}Flags.${id}.outcome`, value: o.outcome },
+        ...(REASONS[reason].distress ? [{ type: 'set_property', property: `${KEY}Flags.${id}.${o.id === 'assist' ? 'rescue_start' : 'rescued'}`, value: 1 }] : [])] })) }] },
     { id: 'decide', description: 'Decide how to handle the vessel', required: true, after: 'identify', triggers: [{ type: 'decision_made', decisionId: `${id}_d` }] },
-    { id: 'report', description: 'Send your report to the requester from Comms', required: true, after: 'decide', triggers: [{ type: 'report_sent' }] },
+    ...(REASONS[reason].distress ? [{ id: 'rescue', description: REASONS[reason].mode === 'dock' ? 'Take the crew off: dive the Tern to her depth, dock at her hatch, ferry them to the Aqua Nova or a friendly dock' : 'Take the crew off: bring the Tern up alongside, surfaced, and ferry them to the Aqua Nova or a friendly dock', required: true, after: 'decide', triggers: [{ type: 'property_at_least', property: `${KEY}Flags.${id}.rescued`, value: 1 }] }] : []),
+    { id: 'report', description: 'Send your report to the requester from Comms', required: true, after: REASONS[reason].distress ? 'rescue' : 'decide', triggers: [{ type: 'report_sent' }] },
   ] : [
     { id: 'go', description: `Go to ${poi.name} (${fmtPos(spot.p)})`, required: true, triggers: [{ type: 'location_enter', location: poi.name.toLowerCase() }] },
     { id: 'analyse', description: 'Take a sample there and analyse it in the Science Lab', required: true, after: 'go', triggers: [{ type: 'property_at_least', property: 'mission.science.stats.analysed', value: 99999 }] },   // value set at acceptance (baseline + 1)
@@ -150,10 +157,10 @@ export function generate(seed, { type, compulsory, distress } = {}) {
 
 function makeVessel(id, reason, p, rng) {
   const R = REASONS[reason], k = traffic.cfg.kinds[R.kind], fac = (sim.world.factions || {})[k.faction] || {}, still = reason !== 'poaching';
-  const off = { lat: p.lat + 0.004, lon: p.lon + 0.004 };
+  const off = { lat: p.lat + 0.004, lon: p.lon + 0.004 }, nn = R.n ? R.n[0] + Math.floor(rng() * (R.n[1] - R.n[0] + 1)) : 0;
   return { id: `s:${id}`, scripted: true, mission: id, kind: R.kind, faction: k.faction, factionName: fac.name || k.faction, stance: reason === 'poaching' ? 'hostile' : 'neutral', label: k.label, size: k.size,
-    kt: still ? 0 : 2, A: { ...p }, B: still ? { ...p } : off, L: 0.4, phase: 0, boldness: 0, ais: false, bias: (rng() - 0.5) * 2, name: reason === 'poaching' ? 'Unmarked trawler' : reason === 'sinking' ? 'MY ' + pick(rng, ['Second Wind', 'Reverie', 'Idle Hours']) : reason === 'survivors' ? 'Life raft' : reason === 'adrift' ? 'F/V ' + pick(rng, ['Marion K', 'Dawn Patrol', 'Two Sisters']) : 'RV ' + pick(rng, ['Calypso II', 'Meridian Star', 'Kestrel']),
-    mhz: +(156 + 0.025 * Math.floor(rng() * 240)).toFixed(3), reply: Math.floor(rng() * 1000), ident: false, alerted: false, dyn: null, hitAt: -1e9 };
+    kt: still ? 0 : 2, A: { ...p }, B: still ? { ...p } : off, L: 0.4, phase: 0, boldness: 0, ais: false, bias: (rng() - 0.5) * 2, name: reason === 'poaching' ? 'Unmarked trawler' : reason === 'sinking' ? 'MY ' + pick(rng, ['Second Wind', 'Reverie', 'Idle Hours']) : reason === 'survivors' ? 'Life raft' : reason === 'disabled_ship' ? 'MV ' + pick(rng, ['Northern Light', 'Cape Resolve', 'Tidewater Spirit']) : reason === 'disabled_sub' ? 'DSV ' + pick(rng, ['Nautilus II', 'Deepwatch', 'Pelagia']) : reason === 'adrift' ? 'F/V ' + pick(rng, ['Marion K', 'Dawn Patrol', 'Two Sisters']) : 'RV ' + pick(rng, ['Calypso II', 'Meridian Star', 'Kestrel']),
+    casualty: R.distress ? { n: nn, mode: R.mode, depth: R.sub ? Math.round(seafloor.depthAt(p.lat, p.lon) || 0) : 0, winH: R.win, waiting: nn, aboard: 0, saved: 0, lost: 0, started: false, endsAt: null, alongside: 0, last: null } : null, mhz: +(156 + 0.025 * Math.floor(rng() * 240)).toFixed(3), reply: Math.floor(rng() * 1000), ident: false, alerted: false, dyn: null, hitAt: -1e9 };
 }
 
 // ---------- offers ----------
@@ -166,7 +173,7 @@ export const isGenerated = (id) => !!st().defs[id];
 
 export function makeOffer(opts = {}) {
   const g = st(); if (g.offer || (g.active && !opts.distress)) return null;   // a distress call can arrive during a mission
-  for (let tries = 0; tries < 8; tries++) {
+  for (let tries = 0; tries < 16; tries++) {
     const r = generate((Math.floor(Math.random() * 2e9) ^ (g.n * 7919)) >>> 0, opts); if (!r) continue;
     if (opts.distress) r.def.gen.distress = true;
     g.n++; g.defs[r.def.id] = r.def; g.offer = r.offer; g.held = r.message; g.nextAt = null; if (r.vessel) g.pendingVessel = r.vessel;
@@ -237,8 +244,8 @@ function finish(id, outcome, { forced = false, key = null } = {}) {
     gameState.updateProperty('mission.objectives', (gameState.getProperty('mission.objectives') || []).filter((o) => o.missionId !== id));
   }
   removeScripted(g, id); g.patrol = null; sim.tempAOs = []; g.active = null; g.done = [...g.done, { id, outcome: O, c: sim.s.clock }].slice(-40); scheduleNext(g); save(g);
-  const lines = P.debrief[key || O] || P.debrief[O] || P.debrief.document, rng = mulberry(def.gen.seed + 1);
-  mail({ id: `debrief-${id}`, from: P.requesters[def.gen.requester].from, subject: `Re: ${def.name}`, text: `${fill('{captain}')},\n\n${pick(rng, lines)}\n\n${P.requesters[def.gen.requester].sign}` });
+  const cas = (g.vessels.find((x) => x.mission === id) || {}).casualty, lines = P.debrief[key || O] || P.debrief[O] || P.debrief.document, rng = mulberry(def.gen.seed + 1);
+  mail({ id: `debrief-${id}`, from: P.requesters[def.gen.requester].from, subject: `Re: ${def.name}`, text: `${fill('{captain}')},\n\n${pick(rng, lines)}${cas && cas.started ? ` Saved: ${cas.saved} of ${cas.n}.` : ''}\n\n${P.requesters[def.gen.requester].sign}` });
   sim.emit('mission-ended', { id, outcome: O });
 }
 /** The Captain quits an accepted mission. Compulsory costs more; a started rescue costs the most. */
@@ -275,9 +282,40 @@ function tick() {
     if (flag(id, 'near') && v.ident && !flag(id, 'ident')) prop(id, 'ident', 1);
   }
   if (def.gen.type === 'patrol' && g.patrol) patrolTick(g, id, now);
+  if (v && v.casualty) rescueTick(g, id, v, now);
   const dl = g.offerAccepted && g.offerAccepted.deadlineAt;
   const rescue = def.gen.distress, onScene = def.gen.type === 'contact' && flag(id, 'near');
   if (dl && now > dl && !flag(id, 'outcome') && !onScene) finish(id, 'too_late', { forced: true, key: rescue ? 'too_late_rescue' : null });
+}
+// ---------- rescue: the Tern does it ----------
+const clockWords = (sec) => { const m = Math.round(sec / 60); return m >= 90 ? `${Math.floor(m / 60)} h ${m % 60} min` : `${m} minutes`; };
+function startRescue(id, v, now) {
+  const c = v.casualty; c.started = true; c.endsAt = now + c.winH * H; c.last = now; c.alongside = 0;
+  say('science', c.mode === 'dock'
+    ? `Captain, ${c.n} people aboard and air for about ${clockWords(c.endsAt - now)}. The Tern must dive to ${c.depth} m, hold still beside her and dock at her hatch. She carries four at a time.`
+    : `Captain, ${c.n} people to take off and about ${clockWords(c.endsAt - now)} to do it. The Tern must be surfaced and alongside, holding still. She carries four at a time.`, 'mission');
+}
+/** Pick-up: surface casualty = Tern surfaced and within 0.2 nm, still; submarine = at her depth (±15 m), within 0.12 nm, still. Drop-off: the bay, or a friendly dock. */
+function rescueTick(g, id, v, now) {
+  const c = v.casualty; if (!c.started && flag(id, 'rescue_start')) startRescue(id, v, now); if (!c.started || c.done) return;
+  const sh = shuttle(), dt = Math.min(c.last == null ? 0 : now - c.last, 120); c.last = now;
+  if (c.waiting > 0 && now < c.endsAt && sh.state === 'out') {
+    const there = toward(sh, v.A).nm <= (c.mode === 'dock' ? 0.12 : 0.2) && !sh.moving && (c.mode === 'dock' ? Math.abs((sh.depth || 0) - c.depth) <= 15 : (sh.depth || 0) <= 3);
+    c.alongside = there ? c.alongside + dt : 0;
+    if (c.alongside >= (c.mode === 'dock' ? 90 : 60)) {
+      const free = SHUTTLE_SEATS - aboard(sh), k = Math.min(c.waiting, free); c.alongside = 0;
+      if (k > 0) { sh.pax = (sh.pax || 0) + k; c.waiting -= k; c.aboard += k; say('security', `${k} survivor${k > 1 ? 's' : ''} aboard the Tern. ${c.waiting ? c.waiting + ' still waiting. Bring them home, then come back.' : 'That is everyone. Bring them home.'}`, 'mission'); }
+      else if (!c.fullSaid) { c.fullSaid = true; say('security', 'The Tern is full. Take this load home first.', 'mission'); }
+    }
+  }
+  if (c.aboard > 0) {
+    const home = sh.state === 'bay', dock = sh.state === 'out' && dockList().some((p) => !enemyDock(p) && toward(sh, p).nm <= 0.4);
+    if (home || dock) { sh.pax = Math.max(0, (sh.pax || 0) - c.aboard); c.saved += c.aboard; say('science', `${c.aboard} survivor${c.aboard > 1 ? 's' : ''} landed${home ? ' aboard the Aqua Nova' : ' at the dock'}. Dr. Patel has them. ${c.saved} of ${c.n} saved.`, 'mission'); c.aboard = 0; c.fullSaid = false; }
+  }
+  if (now >= c.endsAt && c.waiting > 0) { c.lost = c.waiting; c.waiting = 0; say('science', `Captain, we are out of time. ${c.lost} could not be reached.`, 'mission'); }
+  if (c.waiting === 0 && c.aboard === 0) {
+    c.done = true; prop(id, 'outcome', c.saved === c.n ? 'assist_rescue' : c.saved > 0 ? 'rescue_partial' : 'rescue_none'); prop(id, 'saved', c.saved); prop(id, 'rescued', 1);
+  }
 }
 /** On station: time inside the area counts only inside the window. Poachers show up an hour or two in. 80% coverage serves the patrol. */
 function patrolTick(g, id, now) {

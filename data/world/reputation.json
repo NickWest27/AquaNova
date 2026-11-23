@@ -179,6 +179,15 @@
   "patrol_partial": {
    "oera": -2,
    "civil": -1
+  },
+  "rescue_partial": {
+   "oera": 1,
+   "civil": 2,
+   "science": 0
+  },
+  "rescue_none": {
+   "oera": -1,
+   "civil": -3
   }
  }
 }
