@@ -17,6 +17,7 @@ import { seafloor } from './seafloor.js';
 import { research } from './science.js';
 import { GATES_ON } from './unlocks.js';
 import { tell } from './notify.js';
+import { createSnrView } from './sonarView.js';
 
 const KEY = 'aquaNova_bridgeDisplay';
 const set = (node, v) => { if (node._v !== v) { node._v = v; node.textContent = v; } };
@@ -256,10 +257,10 @@ export function createBridgeConsole({ top, main, display, center, left, right, o
     return { make, c, v: [], expand: null, side };
   })();
 
-  // ---------- TAC and SNR: pages named on the left desk panel and not built yet ----------
+  // ---------- TAC: named on the left desk panel and not built yet (SNR is in sonarView.js) ----------
   const stub = (title) => ({ make: () => ({ m: el('div', { class: 'bd bd-stub' }, el('b', { text: title }), el('small', { text: 'NOT INSTALLED' })), update() {} }), c: el('div', { class: 'bc' }, el('div', { class: 'cap', text: 'NO CONTROLS' })), v: [], expand: null, side() {} });
   views.tac = stub('TACTICAL');
-  views.snr = stub('PASSIVE SONAR');
+  views.snr = createSnrView({ bbtn });   // passive sonar: sonarView.js
 
   // ---------- build: one large and one compact copy of each ----------
   // Info Left and Info Right are always on, either side of the main screen.

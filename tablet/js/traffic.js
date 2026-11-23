@@ -107,7 +107,24 @@ export function posAt(v, t) {
   const u = (((t / 3600) * v.kt) / v.L + v.phase) % 2, s = u <= 1 ? u : 2 - u;
   return { lat: v.A.lat + (v.B.lat - v.A.lat) * s, lon: v.A.lon + (v.B.lon - v.A.lon) * s, hdg: ((Math.atan2((v.B.lon - v.A.lon) * SK, v.B.lat - v.A.lat) * 180 / Math.PI + (u <= 1 ? 0 : 180)) + 360) % 360 };
 }
-const sonarNm = (s) => (s.clock < (s.sweepUntil || 0) ? 8 : s.sonar ? 4 : 1);
+
+/** A fix from bearings: two ears (each { from, brg }) at different places whose lines cross at a good angle. The best pair wins. Null when there is none. */
+export function triangulate(ears) {
+  const sn = traffic.cfg.sensing; let fix = null;
+  for (let i = 0; i < ears.length; i++) for (let j = i + 1; j < ears.length; j++) {
+    const A = ears[i], B = ears[j], a1 = (A.brg * Math.PI) / 180, a2 = (B.brg * Math.PI) / 180, sinD = Math.sin(a1 - a2);
+    if (Math.abs(sinD) < Math.sin((sn.min_cross_deg * Math.PI) / 180)) continue;
+    const bx = (B.from.lon - A.from.lon) * NM * SK, by = (B.from.lat - A.from.lat) * NM;   // from A to B
+    const t1 = (bx * Math.cos(a2) - by * Math.sin(a2)) / sinD, t2 = (bx * Math.cos(a1) - by * Math.sin(a1)) / sinD;
+    if (t1 <= 0 || t2 <= 0) continue;
+    const err = Math.max(0.05, (Math.max(t1, t2) * 0.035) / Math.abs(sinD));
+    if (!fix || err < fix.err) fix = { lat: A.from.lat + (t1 * Math.cos(a1)) / NM, lon: A.from.lon + (t1 * Math.sin(a1)) / (NM * SK), err };
+  }
+  return fix;
+}
+/** Sensitivity multiplier of one listener (the ship, or a WSKR by number): 2 during its full sweep, and 2 more while a scan is on the contact. */
+export function snrGain(src, scanUntil = 0) { const s = sim.s, w = s.snr && s.snr.sweep; return (w && w.src === src ? 2 : 1) * (scanUntil > s.clock ? 2 : 1); }
+export const sonarNm = (s) => (s.clock < (s.sweepUntil || 0) ? 8 : s.sonar ? 4 : 1);
 
 /** Called every frame from the sim. Finds the vessels in the bubble, moves the reacting ones, tests collisions, raises alerts. */
 export function step() {
@@ -150,27 +167,19 @@ export function step() {
     const loud = sn.sonar_size_factor[v.size] * (0.8 + Math.min(v.kt, 20) / 50);
     const ears = [];
     const noise = (k) => (v.bias * (k ? -0.7 : 1) + 0.8 * Math.sin(now / (37 + 16 * k) + v.phase * 3)) * Math.PI / 180;
-    const bearingFrom = (o, k) => { const dy = (p.lat - o.lat) * NM, dx = (p.lon - o.lon) * NM * SK; return { from: { lat: o.lat, lon: o.lon }, brg: ((Math.atan2(dx, dy) + noise(k)) * 180 / Math.PI + 360) % 360, nm: Math.hypot(dx, dy) }; };
-    if (d <= sonarNm(s) * loud) ears.push(bearingFrom(s, 0));
-    obs.forEach((w, i) => { if (dist(w, p) <= sn.wskr_sonar_nm * loud) ears.push(bearingFrom(w, i + 1)); });
+    const bearingFrom = (o, k, src) => { const dy = (p.lat - o.lat) * NM, dx = (p.lon - o.lon) * NM * SK; return { src, from: { lat: o.lat, lon: o.lon }, brg: ((Math.atan2(dx, dy) + noise(k)) * 180 / Math.PI + 360) % 360, nm: Math.hypot(dx, dy) }; };
+    const gain = (src) => snrGain(src, v.scanUntil);   // the SNR page: a full sweep or a scan doubles the sensitivity
+    if (d <= sonarNm(s) * loud * gain('ship')) ears.push(bearingFrom(s, 0, 'ship'));
+    obs.forEach((w, i) => { if (dist(w, p) <= sn.wskr_sonar_nm * loud * gain(w.n)) ears.push(bearingFrom(w, i + 1, w.n)); });
     // 3. a fix: two bearings from different places that cross at a good angle
-    let fix = null;
-    if (!ais) for (let i = 0; i < ears.length; i++) for (let j = i + 1; j < ears.length; j++) {
-      const A = ears[i], B = ears[j], a1 = (A.brg * Math.PI) / 180, a2 = (B.brg * Math.PI) / 180, sinD = Math.sin(a1 - a2);
-      if (Math.abs(sinD) < Math.sin((sn.min_cross_deg * Math.PI) / 180)) continue;
-      const bx = (B.from.lon - A.from.lon) * NM * SK, by = (B.from.lat - A.from.lat) * NM;   // from A to B
-      const t1 = (bx * Math.cos(a2) - by * Math.sin(a2)) / sinD, t2 = (bx * Math.cos(a1) - by * Math.sin(a1)) / sinD;
-      if (t1 <= 0 || t2 <= 0) continue;
-      const err = Math.max(0.05, (Math.max(t1, t2) * 0.035) / Math.abs(sinD));
-      if (!fix || err < fix.err) fix = { lat: A.from.lat + (t1 * Math.cos(a1)) / NM, lon: A.from.lon + (t1 * Math.sin(a1)) / (NM * SK), err };
-    }
+    const fix = ais ? null : triangulate(ears);
     // 4. identity: AIS, inside 4 nm, a WSKR within 2 nm, a hail answered on VHF, or a sensor sweep (started from Sensors, ship inside 8 nm)
     const vis = s.depth <= sn.visual_max_depth_m && d <= sn.visual_nm[v.size];
     if (v.sweepAt && now >= v.sweepAt) { if (d <= sn.sweep_nm) v.ident = true; v.sweepAt = 0; }
     if (ais || d <= sn.ident_nm || obs.some((w) => dist(w, p) <= sn.wskr_camera_nm)) v.ident = true;
     const b = toward(s, p), heard = ears.length > 0 || vis;
-    const pos = ais ? { lat: p.lat, lon: p.lon, err: 0, hdg: p.hdg } : fix ? { lat: fix.lat, lon: fix.lon, err: fix.err } : vis ? { lat: p.lat, lon: p.lon, err: 0.05, hdg: p.hdg } : null;
-    out.push({ v, lat: p.lat, lon: p.lon, hdg: p.hdg, nm: d, brg: b.brg, shown: ais || heard, ais, pos, lines: ears.map((e) => ({ from: e.from, brg: e.brg })), ear: ears.length ? ears[0].brg : null });
+    const pos = ais ? { lat: p.lat, lon: p.lon, err: 0, hdg: p.hdg } : v.scanFixUntil > now ? { lat: p.lat, lon: p.lon, err: 0.1, hdg: p.hdg } : fix ? { lat: fix.lat, lon: fix.lon, err: fix.err } : vis ? { lat: p.lat, lon: p.lon, err: 0.05, hdg: p.hdg } : null;
+    out.push({ v, lat: p.lat, lon: p.lon, hdg: p.hdg, nm: d, brg: b.brg, shown: ais || heard, ais, pos, lines: ears.map((e) => ({ src: e.src, from: e.from, brg: e.brg })), ear: ears.length ? ears[0].brg : null });
     if ((ais || heard) && (hostile || v.size >= 2 && d < 1) && !v.alerted && (hostile || v.ident)) {
       v.alerted = true; const bb = String(Math.round(ears.length ? ears[0].brg : b.brg)).padStart(3, '0');
       say('sensors', hostile ? `Captain, sonar contact bearing ${bb}. ${v.ident ? `${v.label}, ${v.factionName}. Hostile.` : 'Unidentified, no range yet, moving fast. I do not like it.'}` : `Captain, ${v.label.toLowerCase()} bearing ${bb}. Watch the traffic.`, hostile ? 'mission' : '', { notice: hostile ? 'HOSTILE CONTACT' : 'SURFACE TRAFFIC' });

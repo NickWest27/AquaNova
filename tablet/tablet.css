@@ -802,3 +802,28 @@ input.mix { width: 100%; height: 2.4rem; accent-color: var(--cyan); }
 .route-row .grow { flex: 1; min-width: 0; } .route-row b { display: block; } .route-row small { color: var(--dim); }
 .route-row .btn[disabled] { opacity: .35; }
 .msc .bbtn.sym { font-size: 38px; } .msc .rowN .rngbox { flex: 1 1 0; } .bbtn.blank { opacity: .22; pointer-events: none; }
+
+/* ---- SNR: passive sonar page ---- */
+.bd-snr { display: flex; background: #021019; }
+.bd-snr .snr-map { flex: 1 1 50%; position: relative; min-width: 0; } .bd-snr .snr-map canvas { display: block; }
+.bd-snr .snr-side { flex: 1 1 50%; min-width: 0; display: flex; flex-direction: column; padding: 10px 12px; border-left: 2px solid #12506a; color: #dff3fb; }
+.snr-head { font: 800 22px var(--font); letter-spacing: .08em; color: var(--cyan); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.snr-stat { font: 700 17px var(--font); letter-spacing: .1em; color: var(--dim); margin: 2px 0 8px; } .snr-stat.act { color: #ffd24a; }
+.snr-list { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; } .snr-list[hidden], .snr-info[hidden] { display: none; }
+.snr-row { display: flex; align-items: center; gap: 10px; text-align: left; border: 2px solid #12506a; border-left: 6px solid var(--col, #f5e27a); border-radius: 10px; background: #06202f; color: #e9f6fc; padding: 6px 10px; min-height: 56px; font-family: var(--font); }
+.snr-row:active { background: rgba(100,255,218,.25); } .snr-row.lost { opacity: .5; }
+.snr-row .sr-t { flex: 1; min-width: 0; display: flex; flex-direction: column; } .snr-row b { font-size: 22px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .snr-row small { font-size: 15px; color: var(--dim); letter-spacing: .08em; }
+.snr-row .sr-rg { font: 700 20px var(--font); color: #fff; white-space: nowrap; } .snr-row .sr-ic { display: flex; }
+.snr-empty { color: var(--dim); letter-spacing: .14em; text-align: center; margin-top: 30px; font-size: 20px; }
+.snr-info { flex: 1; min-height: 0; position: relative; overflow-y: auto; border: 2px solid #1d6a7a; border-radius: 12px; padding: 8px 14px; background: rgba(3,24,36,.8); }
+.snr-info .in-x { position: absolute; right: 6px; top: 6px; width: 52px; height: 52px; border-radius: 12px; border: 3px solid var(--cyan); background: #072236; color: var(--cyan); font-size: 26px; }
+.snr-info .in-name { display: block; font-size: 26px; padding-right: 60px; } .snr-info .in-type { color: var(--dim); font-size: 17px; letter-spacing: .06em; margin-bottom: 6px; }
+.snr-info .in-r { display: flex; justify-content: space-between; gap: 10px; border-bottom: 1px solid rgba(120,200,230,.18); padding: 2px 0; font-size: 19px; } .snr-info .in-r small { color: var(--dim); letter-spacing: .1em; align-self: center; font-size: 14px; }
+.snr-info .in-h { display: block; margin-top: 8px; color: var(--dim); letter-spacing: .12em; font-size: 14px; } .snr-info .in-notes { white-space: pre-line; font-size: 18px; color: #bfe6f2; }
+.bd-snr.compact .snr-head { font-size: 15px; } .bd-snr.compact .snr-stat { font-size: 13px; margin-bottom: 4px; } .bd-snr.compact .snr-side { padding: 6px 8px; }
+.bd-snr.compact .snr-row { min-height: 40px; padding: 3px 8px; gap: 8px; } .bd-snr.compact .snr-row b { font-size: 16px; } .bd-snr.compact .snr-row small { font-size: 12px; } .bd-snr.compact .snr-row .sr-rg { font-size: 15px; } .bd-snr.compact .sr-ic svg { width: 26px; height: 26px; }
+.bd-snr.compact .snr-info { padding: 4px 8px; } .bd-snr.compact .in-name { font-size: 18px; } .bd-snr.compact .in-type { font-size: 12px; margin-bottom: 2px; } .bd-snr.compact .in-r { font-size: 14px; padding: 1px 0; } .bd-snr.compact .in-r small { font-size: 11px; } .bd-snr.compact .in-notes { font-size: 13px; } .bd-snr.compact .in-h { font-size: 11px; margin-top: 4px; }
+.bd-snr.compact .snr-info .in-x { width: 36px; height: 36px; font-size: 18px; border-width: 2px; }
+.snr-srcs[hidden], .bc .rowN[hidden] { display: none; } .snr-srcs { display: flex; flex-direction: column; gap: 6px; flex: 1; } .snr-srcs .rowN { flex: 1; }
+.bbtn:disabled { opacity: .4; }
+.bm-view .bd-snr .snr-side { padding-right: 250px; }

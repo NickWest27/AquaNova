@@ -1,5 +1,6 @@
 import '../../utils/debugPanel.js';
 import * as traffic from './traffic.js';
+import './sonar.js';   // passive sonar: contacts, sweep and scan run every step
 import { dlog } from '../../utils/log.js';
 import { sim, clockText, toward, wskrName } from './sim.js';
 import { createScene } from './scene.js';
