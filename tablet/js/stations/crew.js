@@ -49,7 +49,6 @@ const hdgText = (h) => String(Math.round(((h % 360) + 360) % 360)).padStart(3, '
 // Orders added here show up even in old saves (a save keeps its own copy of the crew's lines).
 const unreadMail = () => (gameState.getProperty('mission.inbox') || []).filter((m) => !m.read).length;
 const reportFor = (ctx, id) => statusReport(id, { mail: unreadMail(), objective: (() => { try { const o = ctx.objectives().find((x) => !x.done); return o ? o.text : null; } catch (e) { return null; } })() });
-const EXTRA = { helm: ['Make periscope depth', 'Status report', 'Undock', 'Dock', 'Hug the floor', 'Stop hugging the floor', 'Engage super cruise', 'Disengage super cruise'], sensors: ['Status report', 'Set up a relay', 'Stand down the relay'], communications: ['Status report', 'Transmit a report', 'Call back the Tern', 'Order the Tern to', 'Report on the Tern'], science: ['Status report'], security: ['Status report', 'Launch the Tern to'] };
 const ORDERS = {
   'Undock': () => { if (!docked()) return 'We are already undocked, Captain.'; setTimeout(() => toggleDock(), 600); return 'Undocking. Disconnecting shore power and releasing the clamps.'; },
   'Dock': () => {
@@ -136,7 +135,6 @@ PARAM['Launch the Tern to'] = () => ({ title: 'Launch the Tern to …', opts: [
   ['Go to …', () => ({ title: 'Go to …', opts: destOpts((d) => launchTern({ kind: 'goto', dest: d }).text) })]] });
 ORDERS['Call back the Tern'] = () => callBackTern().text;
 ORDERS['Report on the Tern'] = () => ternReport();
-PARAM['Make you speed'] = PARAM['Make your speed']; // old saves keep the typo
 const works = (t, pleasantry) => pleasantry || t in ORDERS || t in PARAM;
 
 
@@ -186,7 +184,7 @@ export function mount(body, ctx) {
   const orderLeaf = (t) => ({ label: t, cls: works(t) ? '' : 'stub', run: () => speak(t) });
   const orderKids = () => {
     const o = (cur && cur.dialogueOptions) || {}, id = cur && cur.id;
-    const all = [...(o.commands || []), ...((EXTRA[id]) || [])];
+    const all = o.commands || [];
     const placed = new Set(), kids = [];
     for (const f of (TREE[id] ? TREE[id]() : [])) {
       const items = f.items.filter((i) => all.includes(i.text) || i.text in ORDERS || i.text in PARAM);
@@ -233,7 +231,7 @@ export function mount(body, ctx) {
   function speak(text) {
     const o = cur.dialogueOptions || {};
     logLine(cur.id, 'you', text);   // before the order runs, so the running notes it starts land after it
-    const isOrder = [...(o.commands || []), ...(EXTRA[cur.id] || []), ...(o.emergency || [])].includes(text);
+    const isOrder = works(text) || (o.commands || []).includes(text) || (o.emergency || []).includes(text);
     if (!isOrder) { say(text, chatReply(cur.id, text, { mail: (gameState.getProperty('mission.inbox') || []).filter((m) => !m.read).length }) || fill(pick(o.pleasantries || ['Aye.'])), false); return; }
     if (PARAM[text]) { const p = PARAM[text](); param = { said: text, ...p }; page = 'param'; render(); return; }
     if (ORDERS[text]) { say(text, ORDERS[text](ctx, cur.id), false); return; }
