@@ -196,6 +196,7 @@ function openScene(name) {
   else if (name === 'launchbay') { closeStation(); scene.show('launchbay'); }
   else if (name === 'medbay') { closeStation(); scene.show('medbay'); }
   else if (name === 'medbay-station') say('aria', 'The medbay equipment is not commissioned yet, Captain.');
+  else if (name === 'bay-airlock') say('engineering', 'The inner airlock is not wired up yet, Captain. Use the control console.');
   else if (name === 'lab-samples' || name === 'lab-analysis' || name === 'lab-research') { ctx.labTab = name.slice(4); ctx.labOnly = true; openStation('lab'); }   // a bench shows only its own page
   else if (name === 'lab') { ctx.labTab = 'samples'; ctx.labOnly = false; openStation('lab'); }   // the main computer offers all three
   else if (name === 'engineering') say('aria', 'Engineering is not built yet, Captain. The engineering crew are on the communicator if you need them.');
@@ -295,7 +296,8 @@ function firstVisit(poi) {
 // ---------- boot ----------
 /** Lesson steps that watch a flag are re-checked now and then, so a step the Captain has already done (or that was missed) still counts.
  *  Charting a Course (to Vineyard Ledge): the flags below come from the ship's own state, so being there already counts. */
-function lessonNudge() {
+// Lesson flags that come from ship state rather than from a button press.
+function syncLessonFlags() {
   if (!missions) return;
   const s = sim.s, ledge = (p) => p && p.name === 'Vineyard Ledge';
   if (ledge(s.wpt) || (ledge(s.at) && objStatus('navLesson_plot'))) flag('plotted_ledge');
@@ -345,7 +347,7 @@ async function boot() {
       if (type === 'tick') {
         const s = sim.s;
         scene.update(); updateChips(); current && current.api.update(); ped && ped.api.update(); updateHum(s.speed);
-        if (++tickN % 5 === 0) { liveNav(); if (sim.s.wpt) flag('plotted'); lessonNudge(); if (awardSurveyBonus()) say('science', 'OERA has granted a research budget for the survey, Captain: 3 research points. Check the Research tab.', 'mission'); for (const q of tickLab()) say('science', `Analysis of sample #${q.id} (${SAMPLE_KINDS[q.kind].label.toLowerCase()}) is done: ${q.result} Finding filed.`, 'mission'); }            // about once a second
+        if (++tickN % 5 === 0) { liveNav(); if (sim.s.wpt) flag('plotted'); syncLessonFlags(); if (awardSurveyBonus()) say('science', 'OERA has granted a research budget for the survey, Captain: 3 research points. Check the Research tab.', 'mission'); for (const q of tickLab()) say('science', `Analysis of sample #${q.id} (${SAMPLE_KINDS[q.kind].label.toLowerCase()}) is done: ${q.result} Finding filed.`, 'mission'); }            // about once a second
         const t = `${s.lat.toFixed(3)}°N ${Math.abs(s.lon).toFixed(3)}°W`;
         if (st.pos.textContent !== t) st.pos.textContent = t;
         const ck = clockText() + (s.docked ? ' · DOCKED' : ''); if (st.clock.textContent !== ck) st.clock.textContent = ck;

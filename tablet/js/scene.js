@@ -144,16 +144,14 @@ export function createScene(stage, { onOpen }) {
   medbay.append(mbView, el('img', { class: 'frame', src: 'assets/medbay.webp', alt: '', draggable: 'false', decoding: 'async' }),
     hs('EXAM TABLE', 1045, 540, 500, 290, () => onOpen('medbay-station'), 'mid', 'locked'),
     hs('WALKWAY ▸', 1516, 327, 230, 293, () => onOpen('walkway'), 'mid'));
-  // launch bay: placeholder art. Where Remora, the WSKRs and the away boats physically leave and return.
+  // launch bay (TempLaunchbay art, 1920x1080, a temporary frame): the control console is on the left, the door to the walkway beyond it,
+  // the inner airlock straight ahead, Remora and a second craft on their racks to the right. The ceiling map will show door and tether status.
   const bay = el('div', { class: 'scene bay', hidden: true });
-  bay.innerHTML = `<svg viewBox="0 0 1920 1080" preserveAspectRatio="none" aria-hidden="true"><rect width="1920" height="1080" fill="#04101f"/>
-    <rect x="0" y="700" width="1920" height="380" fill="#0a2536"/><rect x="260" y="180" width="1400" height="520" rx="30" fill="#06202e" stroke="#2f8f9d" stroke-width="4" opacity=".9"/>
-    <rect x="300" y="620" width="1320" height="40" fill="#14465a"/><g stroke="#f2d9a0" stroke-width="6" opacity=".6"><line x1="260" y1="700" x2="1660" y2="700"/></g>
-    <g fill="none" stroke="#2f8f9d" stroke-width="3" opacity=".6"><rect x="420" y="330" width="360" height="200" rx="20"/><rect x="1140" y="330" width="360" height="200" rx="20"/></g>
-    <text x="600" y="440" fill="#2f8f9d" font-size="34" font-family="sans-serif" text-anchor="middle" opacity=".7">REMORA</text><text x="1320" y="440" fill="#2f8f9d" font-size="34" font-family="sans-serif" text-anchor="middle" opacity=".7">WSKR RACK</text></svg>`;
-  bay.append(hs('BAY CONTROL', 760, 560, 400, 200, () => onOpen('bay'), 'mid'),
-    hs('◂ WALKWAY', 0, 890, 330, 190, () => onOpen('walkway2'), 'mid'),
-    el('div', { class: 'art-note', text: 'Placeholder art' }));
+  bay.append(el('img', { class: 'frame', src: 'assets/launchbay.webp', alt: '', draggable: 'false', decoding: 'async' }),
+    hs('BAY CONTROL', 0, 505, 560, 515, () => onOpen('bay'), 'mid'),                       // the console: doors, craft, charging
+    hs('◂ WALKWAY', 455, 340, 175, 330, () => onOpen('walkway2'), 'mid'),                  // the door to the walkway
+    hs('INNER AIRLOCK', 750, 365, 420, 280, () => onOpen('bay-airlock'), 'mid', 'locked'), // not built yet
+    hs('REMORA', 1250, 480, 660, 230, () => onOpen('remora'), 'mid'));                     // the craft on the racks
   stage.append(bridge, quarters, walkway, walkway2, science, medbay, bay);
   // Labels are hidden for immersion. Press and hold anywhere on the scene to show them (they stay a moment after release).
   { let t = null, off = null, shown = 0;

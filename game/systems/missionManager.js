@@ -48,53 +48,11 @@ class MissionManager {
         const done = gameStateInstance.getProperty('mission.completedIds') || [];
         done.forEach(id => this.completedMissions.add(id));
         const objectives = gameStateInstance.getProperty('mission.objectives') || [];
-        // Saved objective text can be out of date after a game update: take the wording from the mission file.
-        let refreshed = false;
-        objectives.forEach(obj => {
-            const m = obj.missionId && this.missions.get(obj.missionId);
-            const def = m && (m.objectives || []).find(o => `${obj.missionId}_${o.id}` === obj.id);
-            if (def && def.description && def.description !== obj.description) { obj.description = def.description; refreshed = true; }
-        });
-        if (refreshed) gameStateInstance.updateProperty('mission.objectives', objectives);
         objectives.forEach(obj => {
             if (obj.missionId && this.missions.has(obj.missionId) && !this.completedMissions.has(obj.missionId)) {
                 this.activeMissions.add(obj.missionId);
             }
         });
-        this.migrateSaved();
-    }
-
-    // A save made by an older build can hold steps that no longer exist or lack steps a lesson has gained
-    // (the sensors lesson was merged into Charting a Course). Without this such a lesson waits for ever.
-    migrateSaved() {
-        let objectives = gameStateInstance.getProperty('mission.objectives') || [];
-        let changed = false;
-        // 1. Steps of a mission that is gone: drop them. A save in the retired sensors lesson counts as having finished the merged lesson.
-        const orphans = objectives.filter(o => o.missionId && !this.missions.has(o.missionId));
-        let finishMerged = false;
-        if (orphans.length) {
-            finishMerged = orphans.some(o => o.missionId === 'sensorsLesson');
-            objectives = objectives.filter(o => !orphans.includes(o));
-            changed = true;
-        }
-        // 2. Active missions that gained steps since the save was made: add them.
-        for (const id of this.activeMissions) {
-            const m = this.missions.get(id);
-            for (const def of m.objectives || []) {
-                if (!objectives.some(o => o.id === `${id}_${def.id}`)) {
-                    objectives.push({ id: `${id}_${def.id}`, missionId: id, description: def.description, status: 'active', required: def.required || false });
-                    changed = true;
-                }
-            }
-        }
-        if (changed) gameStateInstance.updateProperty('mission.objectives', objectives);
-        if (finishMerged && this.missions.has('navLesson')) {
-            const done = (gameStateInstance.getProperty('mission.completedIds') || []).filter(x => x !== 'navLesson');
-            gameStateInstance.updateProperty('mission.completedIds', done);
-            this.completedMissions.delete('navLesson');
-            this.activeMissions.delete('navLesson');
-            this.completeMission('navLesson');
-        }
     }
 
     async loadMissions() {

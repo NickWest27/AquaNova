@@ -7,5 +7,8 @@
   "orientation": "portrait",
   "background_color": "#04101f",
   "theme_color": "#04101f",
-  "icons": [{ "src": "icon-180.png", "sizes": "180x180", "type": "image/png" }]
+  "icons": [
+    { "src": "icon-v2-180.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "icon-v2-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
 }
