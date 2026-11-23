@@ -21,6 +21,12 @@ with sync_playwright() as p:
     pg.evaluate("""(async()=>{const sim=(await import('./js/sim.js')).sim;sim.s.docked=false;sim.setWpt(sim.s.pois.find(p=>p.name==='Vineyard Ledge'))})()""")
     pg.wait_for_timeout(6000)
     check("plotting to Vineyard Ledge completes the plot step", "navLesson_plot:completed" in pg.evaluate(st))
+    # a WSKR scans the ledge (the ship is not there yet), then the ship arrives: the scan step still counts
+    pg.evaluate("""(async()=>{const sim=(await import('./js/sim.js')).sim;const L=sim.s.pois.find(p=>p.name==='Vineyard Ledge');sim.emit('wskr-found',{wskr:{n:1},poi:L})})()""")
+    pg.wait_for_timeout(500)
+    pg.evaluate("""(async()=>{const sim=(await import('./js/sim.js')).sim;const L=sim.s.pois.find(p=>p.name==='Vineyard Ledge');sim.s.at=L;sim.s.lat=L.lat;sim.s.lon=L.lon})()""")
+    pg.wait_for_timeout(7000)
+    check("a scan filed by a WSKR completes the scan step", "navLesson_scan:completed" in pg.evaluate(st))
     check("no page errors", not errs)
     b.close()
 srv.shutdown(); sys.exit(1 if fails else 0)

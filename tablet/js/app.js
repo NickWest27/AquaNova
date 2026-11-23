@@ -6,7 +6,7 @@ import { sim, clockText, toward, wskrName } from './sim.js';
 import { createScene } from './scene.js';
 import { say, hush, unreadCount, stats as notifyStats } from './notify.js';
 import { seafloor } from './seafloor.js';
-import { fileScan } from './findings.js';
+import { fileScan, scanned } from './findings.js';
 import './rov.js';
 import { SHUTTLE_NAME, BAY_SAFE_KT } from './bayops.js';
 import './tern.js';
@@ -304,6 +304,7 @@ function syncLessonFlags() {
   if (ledge(s.wpt) || (ledge(s.at) && objStatus('navLesson_plot'))) { flag('plotted_ledge'); }
   if (ledge(s.at) && objStatus('navLesson_arrive') === 'active') flag('arrived_ledge');
   if (s.wskrs && s.wskrs.length) flag('wskr_out');
+  const ledgePoi = s.pois.find(ledge); if (ledgePoi && scanned(ledgePoi)) { flag('scanned'); flag('scanned_ledge'); }   // a scan filed by the ship or by a WSKR
   missions.checkTriggers();
 }
 async function boot() {

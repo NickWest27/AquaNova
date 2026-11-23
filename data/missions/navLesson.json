@@ -74,7 +74,7 @@
     },
     {
       "id": "scan",
-      "description": "Scan Vineyard Ledge (the ship must be at the ledge)",
+      "description": "Scan Vineyard Ledge: from the ship at the ledge on the Sensors station, or send a WSKR to investigate it",
       "required": true,
       "triggers": [
         {
