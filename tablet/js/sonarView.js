@@ -6,7 +6,7 @@
 import { sim, toward } from './sim.js';
 import { el } from './util.js';
 import { drawContact, contactSvg, frameColour } from './contactIcons.js';
-import { sources, source, setSource, contactsFor, selected, select, snr, sweeping, startSweep, stopSweep, startScan, canScan, SCAN_NM } from './sonar.js';
+import { sources, source, setSource, contactsFor, selected, select, snr, sweeping, startSweep, stopSweep, startScan, canScan, toggleInvestigate, canInvestigate, SCAN_NM } from './sonar.js';
 
 const RANGES = [1, 2, 4, 8, 16, 32, 64];
 const set = (node, v) => { if (node._v !== v) { node._v = v; node.textContent = v; } };
@@ -117,7 +117,7 @@ export function createSnrView({ bbtn }) {
         set(iName, sel.name); set(iType, sel.type + (sel.lost ? ' · SIGNAL LOST' : sel.scanned ? ' · SCANNED' : '')); iName.style.color = sel.hostile ? '#ff7a7a' : '';
         set(iVals.side, sel.side); set(iVals.brg, pad3(sel.bearing) + '°'); set(iVals.rng, sel.range == null ? 'NO FIX' : sel.range.toFixed(2) + ' nm'); set(iVals.dep, sel.depth); set(iVals.spd, sel.speed);
         set(iVals.crs, sel.course == null ? '—' : pad3(sel.course) + '°'); set(iVals.age, ageText(sel.age));
-        const t = sel.notes.concat(sel.range == null ? ['No range yet: a second listener on another bearing gives a fix.'] : [], !sel.scanned && !sel.ident ? [`Scan inside ${SCAN_NM} nm for identity and a fix.`] : []).join('\n'); set(iNotes, t);
+        const t = sel.notes.concat(sel.inv.length ? [`${sel.inv.join(' and ')} investigating.`] : [], sel.range == null ? ['No range yet: a second listener on another bearing gives a fix.'] : [], !sel.scanned && !sel.ident ? [`Scan inside ${SCAN_NM} nm for identity and a fix.`] : []).join('\n'); set(iNotes, t);
         return;
       }
       const keep = new Set();
@@ -125,7 +125,7 @@ export function createSnrView({ bbtn }) {
         const r = rowFor(c); keep.add(c.id);
         const key = c.icon.type + c.icon.aff + (c.pos ? 'f' : 'u') + (c.lost ? 'l' : '');
         if (r.key !== key) { r.key = key; r.ic.innerHTML = contactSvg(c.pos ? c.icon.type : 'unknown', c.pos ? c.icon.aff : 'unknown', 34); }
-        set(r.nm, c.pos ? c.name : 'Unknown contact'); set(r.sub, `BRG ${pad3(c.bearing)}°${c.lost ? ' · LOST' : ''}`); set(r.rg, c.range != null ? c.range.toFixed(1) + ' nm' : ageText(c.age));
+        set(r.nm, c.pos ? c.name : 'Unknown contact'); set(r.sub, `BRG ${pad3(c.bearing)}°${c.lost ? ' · LOST' : c.inv.length ? ' · WSKR' : ''}`); set(r.rg, c.range != null ? c.range.toFixed(1) + ' nm' : ageText(c.age));
         r.b.classList.toggle('lost', c.lost); r.b.style.setProperty('--col', frameColour(c.icon.aff));
       }
       for (const [id, r] of rows) if (!keep.has(id)) { r.b.remove(); rows.delete(id); }
@@ -137,12 +137,13 @@ export function createSnrView({ bbtn }) {
     copies.push(out); return out;
   }
 
-  // ---- centre controls: Source, Full sweep; with a contact picked, Scan and Clear ----
+  // ---- centre controls: Source, Full sweep; with a contact picked, Scan, Investigate and Clear ----
   const srcB = bbtn('Source', () => { open = !open; side(); });
   const sweepB = bbtn('Full sweep', () => { if (sweeping()) stopSweep(); else if (!startSweep()) return; side(); });
   const scanB = bbtn('Scan', () => { startScan(); side(); });
   const clearB = bbtn('Clear', () => { const st = snr(); if (st.sel) select(st.sel); side(); });
-  const r1 = el('div', { class: 'rowN' }, srcB, sweepB), r2 = el('div', { class: 'rowN' }, scanB, clearB), srcList = el('div', { class: 'snr-srcs' });
+  const invB = bbtn('Investigate', () => { toggleInvestigate(); side(); sim.touch(); });
+  const r1 = el('div', { class: 'rowN' }, srcB, sweepB), r2 = el('div', { class: 'rowN' }, scanB, invB, clearB), srcList = el('div', { class: 'snr-srcs' });
   const c = el('div', { class: 'bc' }, r1, r2, srcList);
   let open = false, srcSig = '';
   function side() {
@@ -151,6 +152,7 @@ export function createSnrView({ bbtn }) {
     srcB.classList.toggle('on', open); sweepB.classList.toggle('on', !!st.sweep); sweepB.textContent = st.sweep ? 'Stop sweep' : 'Full sweep'; sweepB.disabled = !source().ok && !st.sweep;
     r2.hidden = !sel || open; r1.hidden = open; srcList.hidden = !open;
     scanB.disabled = !canScan(); scanB.textContent = st.scan ? 'Scanning' : 'Scan'; scanB.classList.toggle('on', !!st.scan);
+    invB.disabled = !canInvestigate(); invB.classList.toggle('on', !!(sel && sel.inv.length)); invB.textContent = sel && sel.inv.length ? 'Investigating' : 'Investigate';
     const sig = open + '|' + st.src + '|' + srcs.map((x) => x.id + x.name + x.ok).join();
     if (open && sig !== srcSig) {
       srcSig = sig; const bs = srcs.map((x) => { const b = bbtn(x.ok ? x.name : x.name + ' · NO LINK', () => { setSource(x.id); open = false; side(); }, x.id === st.src ? 'on' : ''); b.disabled = !x.ok; return b; });

@@ -295,6 +295,22 @@ sim.taskWskr = (poi, n) => {
   if (!w) return null;
   w.mode = 'task'; w.target = poi.id; w.busy = 0; w.route = null; sim.touch(); return w;
 };
+/** Send a WSKR to investigate a sonar contact (ref { kind: 'ship' | 'inst', id }). It closes to WSKR_TRAIL_NM (inside camera range, so it can identify), then stays with the contact
+ *  until it is released (sim.orderWskr, recall, or another task), or until the contact has been out of sight for 2 minutes. n: a particular WSKR, else the nearest free one. */
+sim.trailWskr = (ref, n) => {
+  const s = sim.s, free = s.wskrs.filter((q) => !q.dead && !q.arrived && (n ? q.n === n && q.mode !== 'recall' : q.mode === 'escort')).sort((a, b) => toward(s, a).nm - toward(s, b).nm);
+  const w = free[0]; if (!w) return null;
+  w.mode = 'trail'; w.trail = { kind: ref.kind, id: String(ref.id), last: null, seen: s.clock, said: false }; w.target = null; w.route = null; sim.touch(); return w;
+};
+const WSKR_TRAIL_NM = 1.0;   // how close a WSKR stands off a contact it investigates
+/** Where the contact a WSKR is trailing is now (it hears it, so it knows); the last place for 2 minutes after it is lost, then null. */
+function trailPoint(w) {
+  const s = sim.s, tr = w.trail; if (!tr) return null;
+  const p = tr.kind === 'ship' ? ((sim.traffic && sim.traffic.active) || []).find((a) => String(a.v.id) === tr.id) : s.pois.find((q) => String(q.id) === tr.id);
+  if (p) { tr.last = { lat: p.lat, lon: p.lon }; tr.seen = s.clock; return tr.last; }
+  return s.clock - tr.seen < 120 ? tr.last : null;
+}
+sim.trailing = (kind, id) => sim.s.wskrs.filter((w) => w.mode === 'trail' && w.trail && w.trail.kind === kind && w.trail.id === String(id));
 sim.recallWskrs = () => { sim.s.wskrs.forEach((w) => { w.mode = 'recall'; w.target = null; w.route = null; }); sim.touch(); return sim.s.wskrs.length; };
 const wskrPassable = (lat, lon) => (seafloor.depthAt(lat, lon) ?? 0) >= 3;
 /** Nearest point of water (at least 3 m deep) within about 1.5 nm, searching outward in rings. */
@@ -345,6 +361,7 @@ function stepWskrs(dt) {
     if (w.mode === 'escort') { const i = esc.indexOf(w), a = ((s.heading + (360 / esc.length) * i + (wskrPerk(esc[0]).lead ? 0 : 45)) * Math.PI) / 180; goal = { lat: s.lat + (Math.cos(a) * ring) / NM_PER_DEG_LAT, lon: s.lon + (Math.sin(a) * ring) / (NM_PER_DEG_LAT * Math.cos((s.lat * Math.PI) / 180)) }; }
     else if (w.mode === 'search') goal = searchPoint(w.pat || (w.pat = { lat: w.lat, lon: w.lon, k: 1, t: 0 }), w.pat.k);
     else if (w.mode === 'relay') goal = s;                          // follows the ship, just under the surface
+    else if (w.mode === 'trail') { goal = trailPoint(w); if (!goal) { w.mode = 'escort'; w.trail = null; w.route = null; sim.emit('wskr-trail-lost', w); return true; } }
     else if (w.mode === 'task') { goal = s.pois.find((p) => p.id === w.target); if (!goal) { w.mode = 'escort'; return true; } }
     else goal = s;
     w.super = !!s.cruise || toward(w, goal).nm > WSKR_FAR_NM;      // far to go, or the ship is in super cruise: super cruise too
@@ -377,7 +394,7 @@ function stepWskrs(dt) {
       if (onSite || w.pat.t > 1800) { w.pat.k++; w.pat.t = 0; w.route = null; if (w.pat.k > SEARCH_LEGS) { w.mode = 'escort'; w.pat = null; sim.emit('wskr-search-done', w); } return true; }
     }
     const aim = w.route[0] || goal, ta = toward(w, aim);
-    if (ta.nm > 0.02 && !(w.mode === 'escort' && t.nm < 0.05) && !(w.mode === 'relay' && t.nm < 0.1)) {
+    if (ta.nm > 0.02 && !(w.mode === 'escort' && t.nm < 0.05) && !(w.mode === 'relay' && t.nm < 0.1) && !(w.mode === 'trail' && t.nm < WSKR_TRAIL_NM)) {
       const f = Math.min(1, step / ta.nm), lat = w.lat + (aim.lat - w.lat) * f, lon = w.lon + (aim.lon - w.lon) * f;
       // walk the step in small pieces so a thin strip of land cannot be jumped; no data yet means hold still
       let clear = seafloor.ready; const pieces = Math.max(1, Math.ceil(Math.min(step, ta.nm) / 0.02));

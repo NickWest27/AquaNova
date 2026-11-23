@@ -60,12 +60,29 @@ function instContact(e, src, line) {
 /** Everything the listener 'id' hears or just heard, nearest first (range where it is known, else the newest). */
 export function contactsFor(id) {
   const s = sim.s, m = mem[id]; if (!m) return [];
-  const out = [...m.values()].map((c) => ({ ...c, lost: s.clock - c.last > 1, age: s.clock - (since.get(c.id) || c.last) }));
+  const out = [...m.values()].map((c) => ({ ...c, lost: s.clock - c.last > 1, age: s.clock - (since.get(c.id) || c.last), inv: sim.trailing(c.kind, c.ref.id).map(wskrName) }));
   out.sort((a, b) => (a.range != null && b.range != null ? a.range - b.range : a.range != null ? -1 : b.range != null ? 1 : a.age - b.age));
   return out;
 }
 export const selected = () => { const st = snr(); return st.sel ? contactsFor(st.src).find((c) => c.id === st.sel) || null : null; };
 export function select(id) { const st = snr(); st.sel = st.sel === id ? null : id; sim.touch(); return st.sel; }
+
+// ---- sending a WSKR ----
+/** Is there a WSKR that can be sent (the chosen source if it is a WSKR, else a free one in formation), or one already on this contact? */
+export function canInvestigate() {
+  const c = selected(); if (!c || c.lost) return false;
+  if (c.inv.length) return true;
+  const st = snr(), w = sim.s.wskrs.filter((q) => !q.dead && !q.arrived);
+  return st.src !== 'ship' ? w.some((q) => q.n === st.src && q.mode !== 'recall') : w.some((q) => q.mode === 'escort');
+}
+/** The Investigate button: send a WSKR to the picked contact, or, if one is on it, release it back to formation. */
+export function toggleInvestigate() {
+  const st = snr(), c = selected(); if (!c) return;
+  const on = sim.trailing(c.kind, c.ref.id);
+  if (on.length) { for (const w of on) sim.orderWskr(w.n, 'escort'); tell('sensors', `${on.map(wskrName).join(' and ')} released from the contact and back in formation, Captain.`); return; }
+  const w = sim.trailWskr({ kind: c.kind, id: c.ref.id }, st.src === 'ship' ? 0 : st.src);
+  tell('sensors', w ? `${wskrName(w)} is going to investigate, Captain. It will close to a mile and stay with the contact until you release it.` : 'No WSKR is free to send, Captain.', w ? '' : 'error');
+}
 
 // ---- the sweep and the scan ----
 export function sweeping() { return !!snr().sweep; }
@@ -135,6 +152,11 @@ function step() {
       for (const c of mine) if (!sw.seen.has(c.id) && inArc(c.bearing, a0, sw.az)) { sw.seen.add(c.id); sw.found++; sw.pause = SWEEP_PAUSE_S; break; }
       if (sw.az >= 360 && sw.pause <= 0) done();
     }
+  }
+  for (const w of s.wskrs) {   // a WSKR on a contact reports when it has identified it
+    const tr = w.mode === 'trail' && w.trail; if (!tr || tr.said || tr.kind !== 'ship') continue;
+    const a = traffic.active.find((x) => String(x.v.id) === tr.id);
+    if (a && a.v.ident) { tr.said = true; tell('sensors', `${wskrName(w)} has identified the contact, Captain: ${a.v.name}, ${a.v.label.toLowerCase()}, ${a.v.factionName}.`, a.v.stance === 'hostile' ? 'mission' : ''); }
   }
   if (st.scan && now >= st.scan.until) finishScan(st.scan, now);
 }

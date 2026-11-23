@@ -156,13 +156,13 @@ export function createND(wrap, { onPick, stage = false, units = 1, contours = fa
       const t = turn(toward(c, q)), scale = R / nd.range, x = w / 2 + t.dx * scale, y = h / 2 - t.dy * scale;
       if (x < -20 || x > w + 20 || y < -20 || y > h + 20) continue;
       if (bigWskr) {
-        const k = 17, col = q.dead ? '#ff6b6b' : q.mode === 'task' ? '#ff9f43' : '#ffd666';
+        const k = 17, col = q.dead ? '#ff6b6b' : (q.mode === 'task' || q.mode === 'trail') ? '#ff9f43' : '#ffd666';
         if (nd.selWskr === q.n) { ctx.strokeStyle = '#64ffda'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(x, y, k + 9, 0, 6.2832); ctx.stroke(); }
         ctx.fillStyle = '#1d4a2c'; ctx.strokeStyle = col; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(x, y - k); ctx.lineTo(x + k, y); ctx.lineTo(x, y + k); ctx.lineTo(x - k, y); ctx.closePath(); ctx.fill(); ctx.stroke();
         ctx.fillStyle = '#e6f1ff'; ctx.font = '800 14px system-ui'; ctx.textAlign = 'center'; ctx.fillText(WSKR_CODES[q.n - 1] || 'W' + q.n, x, y + 5);
         continue;
       }
-      ctx.fillStyle = q.mode === 'task' ? '#ff9f43' : '#ffd666'; ctx.beginPath(); ctx.moveTo(x, y - 7); ctx.lineTo(x + 6, y); ctx.lineTo(x, y + 7); ctx.lineTo(x - 6, y); ctx.fill();
+      ctx.fillStyle = (q.mode === 'task' || q.mode === 'trail') ? '#ff9f43' : '#ffd666'; ctx.beginPath(); ctx.moveTo(x, y - 7); ctx.lineTo(x + 6, y); ctx.lineTo(x, y + 7); ctx.lineTo(x - 6, y); ctx.fill();
       ctx.font = '700 14px system-ui'; ctx.textAlign = 'left'; ctx.fillText(WSKR_CODES[q.n - 1] || 'W' + q.n, x + 9, y + 5);
     }
     // Remora (tethered science ROV): a violet rounded square marked Rm, on a dashed tether to the ship (WSKRs are yellow or orange diamonds)
