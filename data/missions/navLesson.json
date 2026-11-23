@@ -9,18 +9,6 @@
   "description": "Commissioning: learn Navigation and Sensors on the way to Vineyard Ledge.",
   "objectives": [
     {
-      "id": "open",
-      "description": "Open the Navigation station on the bridge",
-      "required": true,
-      "triggers": [
-        {
-          "type": "property_change",
-          "property": "tutorial.opened_nav",
-          "value": true
-        }
-      ]
-    },
-    {
       "id": "plot",
       "description": "Plot a course to Vineyard Ledge, about 16 nm south of the dock",
       "required": true,
@@ -30,8 +18,7 @@
           "property": "tutorial.plotted_ledge",
           "value": true
         }
-      ],
-      "after": "open"
+      ]
     },
     {
       "id": "open_sensors",
@@ -148,18 +135,10 @@
     {
       "condition": {
         "type": "objective_active_for",
-        "objectiveId": "open",
-        "seconds": 45
-      },
-      "message": "Navigation is one of the stations on the bridge, {captain}."
-    },
-    {
-      "condition": {
-        "type": "objective_active_for",
         "objectiveId": "plot",
         "seconds": 60
       },
-      "message": "Pick Vineyard Ledge on the chart and plot the course. It is south of the dock."
+      "message": "Tap Plot a course under the NAV display, pick Vineyard Ledge and confirm, {captain}. It is south of the dock."
     },
     {
       "condition": {

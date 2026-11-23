@@ -300,7 +300,7 @@ function firstVisit(poi) {
 function syncLessonFlags() {
   if (!missions) return;
   const s = sim.s, ledge = (p) => p && p.name === 'Vineyard Ledge';
-  if (ledge(s.wpt) || (ledge(s.at) && objStatus('navLesson_plot'))) flag('plotted_ledge');
+  if (ledge(s.wpt) || (ledge(s.at) && objStatus('navLesson_plot'))) { flag('plotted_ledge'); }
   if (ledge(s.at) && objStatus('navLesson_arrive') === 'active') flag('arrived_ledge');
   if (s.wskrs && s.wskrs.length) flag('wskr_out');
   missions.checkTriggers();
@@ -375,7 +375,7 @@ async function boot() {
       else if (type === 'shuttle-mission-fail') say('security', `Captain, ${SHUTTLE_NAME} could not start her mission. She is staying alongside.`, 'error');
       else if (type === 'supplies-delivered') say('security', `The away team is back with ${SHUTTLE_NAME}, Captain, with supplies: food, science equipment, mail and fresh CO2 scrubbers. The scrubbers are changed.`, 'mission');
       else if (type === 'shuttle-clear') say('comms', `Aqua Nova, ${SHUTTLE_NAME}. You are above 800 metres. We are closing and ready to dock.`, 'mission');
-      else if (type === 'avoid-on') say('helm', `Captain, the sea floor is rising ahead. We would hit it within a minute at ${data.ordered} metres. I am holding ${data.hold} metres, ten off the bottom, and will go back to ${data.ordered} when it falls away.`, 'error', { notice: 'COLLISION AVOIDANCE', hold: false });
+      else if (type === 'avoid-on') say('helm', `Captain, the sea floor is rising ahead. We would hit it within a minute at ${data.ordered} metres. I am holding ${data.hold} metres, ${data.margin || 10} off the bottom, and will go back to ${data.ordered} when it falls away.`, 'error', { notice: 'COLLISION AVOIDANCE', hold: false });
       else if (type === 'avoid-off') say('helm', `The floor has dropped away, Captain. Continuing to ${data.ordered} metres.`, '', { hold: false });
       else if (type === 'cruise-off') say('helm', data.why === 'shallow' ? 'Shallow water ahead, Captain. Dropping out of super cruise.' : data.why === 'docked' ? 'Super cruise disengaged.' : 'Power is gone. Super cruise is off.', 'mission');
       else if (type === 'wskr-link-lost') say('sensors', `${wskrName(data)} has gone out of link range, Captain. If we do not regain contact in ten minutes it will surface to call us.`);

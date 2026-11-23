@@ -48,7 +48,7 @@ def main():
         check("sea trials unlock navigation and start its lesson", js("return M.activeMissions.has('navLesson')") and opens("nav")); close()
         check("the lesson commissions sensors and the WSKR link as it starts", opens("sensors") and (close() or True) and opens("wskr")); close()
         check("lab locked before the lesson ends", not opens("lab"))
-        for k in ["opened_nav", "plotted_ledge", "opened_sensors", "wskr_out", "swept", "arrived_ledge", "scanned_ledge"]: flag(k); page.wait_for_timeout(250)
+        for k in ["plotted_ledge", "opened_sensors", "wskr_out", "swept", "arrived_ledge", "scanned_ledge"]: flag(k); page.wait_for_timeout(250)
         page.wait_for_timeout(500)
         check("the combined lesson completes", "navLesson" in done(), done())
         check("the lesson unlocks lab, remora and bay", opens("lab") and (close() or True) and opens("remora") and (close() or True) and opens("bay")); close()

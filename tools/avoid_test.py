@@ -31,6 +31,8 @@ def main():
         check("an order shallower than the floor is obeyed, no override", abs(r["depth"] - 200) < 3 and not r["avoiding"], str(r))
         r = js(place + "sim.setDepth(5000); for(let i=0;i<9000;i++) sim.step(0.1); return {depth:s.depth, floor:s.floor, hull:s.hull, avoiding:s.avoiding}")
         check("stopped, ordered below the floor: holds 10 m off", s_ok(r), str(r))
+        r = js("const s=sim.s; const d=s.pois.find(p=>p.type==='dock'); Object.assign(s,{lat:d.lat-0.3/60,lon:d.lon,docked:false,at:null,wpt:null,rov:null,wskrs:[],cruise:false,hug:false,avoiding:false,speed:0,throttle:0,depth:0,targetDepth:0}); s.floor=sf.depthAt(s.lat,s.lon); sim.lastAvoid=0; window.__ev=[]; const o=sim.emit; sim.emit=(t,x)=>{window.__ev.push(t); return o.call(sim,t,x)}; sim.setDepth(50); for(let i=0;i<1200;i++) sim.step(0.1); return {depth:s.depth,floor:s.floor,hull:s.hull,ev:[...new Set(window.__ev)]}")
+        check("inside the harbour a deep order still stops above the floor, and Chen says so", r["depth"] <= r["floor"] - 2.9 and r["hull"] == 100 and "avoid-on" in r["ev"], str(r))
         page.evaluate("window.__aq.scene('bridge')"); page.wait_for_timeout(300)
         r = js("sim.s.docked=false; const n=await import('./js/notify.js'); return typeof n.say")
         check("no page errors", not errs, str(errs[:3]))

@@ -112,14 +112,15 @@ sim.setHug = (on) => {
   if (!seafloor.ready || s.floor == null || s.floor < HUG_MIN_FLOOR) return { ok: false, why: 'shallow' };
   s.hug = true; sim.touch(); return { ok: true };
 };
-const hugTarget = () => {
+const HARBOR_CLEAR = 3;     // metres under the ship the dredged channel guarantees
+const hugTarget = (alt = HUG_ALT) => {
   const s = sim.s, ahead = clamp((s.speed / 3600) * 60, 0.08, 4), r = (s.heading * Math.PI) / 180;
   let low = seafloor.depthAt(s.lat, s.lon);
   for (let d = 0.05; d <= ahead + 1e-6; d += 0.05) {
     const f = seafloor.depthAt(s.lat + (d * Math.cos(r)) / NM_PER_DEG_LAT, s.lon + (d * Math.sin(r)) / (NM_PER_DEG_LAT * Math.cos((s.lat * Math.PI) / 180)));
     if (f != null && (low == null || f < low)) low = f;
   }
-  return low == null ? null : Math.max(0, low - HUG_ALT);
+  return low == null ? null : Math.max(0, low - alt);
 };
 /** Hug mode: hold HUG_ALT above the floor under the ship. The ship only looks ahead as far as it needs to: it may wait to climb until the rise is
  *  within what it can still climb before reaching it. Also returns the steepest floor gradient (m per m) just ahead, to cap speed on slopes the helm cannot follow. */
@@ -458,10 +459,10 @@ const stepOnce = (dt) => {
   // to the ordered depth (never deeper). s.targetDepth stays the Captain's order.
   let want = s.targetDepth;
   if (!s.hug && !s.docked && s.autoAvoid !== false && seafloor.ready && seafloor.inside(s.lat, s.lon)) {
-    const dock = sim.dockPoi(), harbor = dock && toward(s, dock).nm < HARBOR_NM, lim = harbor ? null : hugTarget();
+    const dock = sim.dockPoi(), harbor = dock && toward(s, dock).nm < HARBOR_NM, lim = hugTarget(harbor ? HARBOR_CLEAR : HUG_ALT);   // in the harbour a shallower margin, but never into the floor
     if (lim != null && lim < s.targetDepth) {
       want = lim;
-      if (!s.avoiding) { s.avoiding = true; const now = Date.now(); if (now - (sim.lastAvoid || 0) > 20000) { sim.lastAvoid = now; sim.emit('avoid-on', { hold: Math.round(lim), ordered: Math.round(s.targetDepth), ahead: s.speed > 0.5 }); } }
+      if (!s.avoiding) { s.avoiding = true; const now = Date.now(); if (now - (sim.lastAvoid || 0) > 20000) { sim.lastAvoid = now; sim.emit('avoid-on', { margin: harbor ? HARBOR_CLEAR : HUG_ALT, hold: Math.round(lim), ordered: Math.round(s.targetDepth), ahead: s.speed > 0.5 }); } }
     } else if (s.avoiding) { s.avoiding = false; if (Date.now() - (sim.lastAvoid || 0) > 3000) sim.emit('avoid-off', { ordered: Math.round(s.targetDepth) }); }
   } else s.avoiding = false;
   for (const f of sim.depthCaps) { const c = f(s); if (c != null && want > c) { want = c; if (!s.capSaid) { s.capSaid = true; sim.emit('depth-cap', { depth: c }); } } }
@@ -485,10 +486,10 @@ const stepOnce = (dt) => {
       sim.aoNear = out;
     }
     if (!seafloor.inside(s.lat, s.lon)) hit = nm > 0 ? 'edge' : null;
-    else if (!harbor) {
-      const fl = seafloor.depthAt(s.lat, s.lon);
-      if (fl < KEEL) hit = nm > 0 ? 'shoal' : null;   // a ship that is not moving cannot run aground
-      else if (s.depth > fl - KEEL) { s.depth = Math.max(0, fl - KEEL); if (!sim.onBottom) hit = 'bottom'; sim.onBottom = true; }
+    else {
+      const fl = seafloor.depthAt(s.lat, s.lon), keel = harbor ? HARBOR_CLEAR : KEEL;
+      if (!harbor && fl < KEEL) hit = nm > 0 ? 'shoal' : null;   // a ship that is not moving cannot run aground
+      else if (s.depth > fl - keel) { s.depth = Math.max(0, fl - keel); if (!sim.onBottom) hit = 'bottom'; sim.onBottom = true; }
       else sim.onBottom = false;
     }
     if (hit === 'edge' || hit === 'shoal') {      // blocked: back to where we were, stopped
