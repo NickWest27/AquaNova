@@ -82,7 +82,7 @@ function findSite(rng, maxH) {
 /** Build one offer from a seed. Returns { def, offer } or null when nothing valid was found. */
 export function generate(seed, { type, compulsory, distress } = {}) {
   const g = st(), rng = mulberry(seed), s = sim.s, now = s.clock;
-  type = distress ? 'contact' : (type || pick(rng, ['contact', 'survey']));
+  type = distress ? 'contact' : (type || pick(rng, ['contact', 'survey', 'patrol']));
   const id = `gen_${g.n + 1}`, vars = { captain: fill('{captain}') };
   let spot, poi = null, reason = null, urgency = 'routine', route = 0, req;
   if (type === 'contact') {
@@ -91,21 +91,30 @@ export function generate(seed, { type, compulsory, distress } = {}) {
     else spot = findSpot(rng, { ...R, maxH: distress ? 5 : 6 });
     if (!spot) return null; if (!poi) poi = nearPlace(spot.p);
     req = R.distress ? 'coastguard' : reason === 'poaching' ? 'fisheries' : reason === 'adrift' ? 'harbour' : 'oera_ops';
+  } else if (type === 'patrol') {
+    const sa = s.pois.filter((q) => q.type === 'sanctuary'); if (!sa.length) return null; poi = pick(rng, sa); const h = routeHours(poi); if (h == null || h > 8) return null;
+    spot = { p: { lat: poi.lat, lon: poi.lon }, hours: h }; req = pick(rng, ['fisheries', 'oera_ops']); reason = 'patrol';
   } else {
     const site = findSite(rng, 9); if (!site) return null; poi = site.q; spot = { p: { lat: poi.lat, lon: poi.lon }, hours: site.hours }; req = pick(rng, ['oera_ops', 'university']);
   }
-  route = spot.hours; const R = P.requesters[req], comp = compulsory != null ? compulsory : (R.compulsory && type === 'survey' ? rng() < 0.5 : R.compulsory);
+  route = spot.hours; const R = P.requesters[req], comp = compulsory != null ? compulsory : (R.compulsory && (type === 'survey' || type === 'patrol') ? rng() < 0.5 : R.compulsory);
   const b = toward(s, spot.p), place = type === 'contact' && reason !== 'poaching' ? (poi ? `${poi.name}` : 'open water') : poi.name;
-  const expiresH = distress ? 0.5 : type === 'contact' ? 1 + Math.floor(rng() * 2) : 12, deadlineH = distress ? Math.ceil((expiresH + route * 1.25 + 0.25) * 2) / 2 : type === 'contact' ? Math.ceil((expiresH + route * 1.6 + 1) * 2) / 2 : null;
-  Object.assign(vars, { place, nm: Math.round(b.nm), dir: compass(b.brg), hours: deadlineH && `${deadlineH} hours`, expires: expiresH < 1 ? `${expiresH * 60} minutes` : `${expiresH} hour${expiresH > 1 ? 's' : ''}` });
+  const durH = type === 'patrol' ? pick(rng, [12, 24]) : 0, expiresH = distress ? 0.5 : type === 'patrol' ? 3 : type === 'contact' ? 1 + Math.floor(rng() * 2) : 12, deadlineH = distress ? Math.ceil((expiresH + route * 1.25 + 0.25) * 2) / 2 : type === 'contact' ? Math.ceil((expiresH + route * 1.6 + 1) * 2) / 2 : null;
+  Object.assign(vars, { duration: `${durH} hours`, place, nm: Math.round(b.nm), dir: compass(b.brg), hours: deadlineH && `${deadlineH} hours`, expires: expiresH < 1 ? `${expiresH * 60} minutes` : `${expiresH} hour${expiresH > 1 ? 's' : ''}` });
   const text = [take(g, rng, `open.${req}`, vars), '',
-    take(g, rng, type === 'contact' ? `situation.contact.${reason}` : 'situation.survey', vars),
-    take(g, rng, type === 'contact' ? `ask.contact.${reason}` : 'ask.survey', vars), '',
-    take(g, rng, distress ? 'time.distress' : deadlineH ? 'time.deadline' : 'time.soft', vars), take(g, rng, distress ? 'limit.distress' : 'limit.expires', vars),
+    take(g, rng, type === 'contact' ? `situation.contact.${reason}` : type === 'patrol' ? 'situation.patrol' : 'situation.survey', vars),
+    take(g, rng, type === 'contact' ? `ask.contact.${reason}` : type === 'patrol' ? 'ask.patrol' : 'ask.survey', vars), '',
+    take(g, rng, distress ? 'time.distress' : type === 'patrol' ? 'time.patrol' : deadlineH ? 'time.deadline' : 'time.soft', vars), take(g, rng, distress ? 'limit.distress' : 'limit.expires', vars),
     ...(distress ? [] : [take(g, rng, comp ? 'limit.compulsory' : 'limit.optional', vars)]), '', take(g, rng, `close.${req}`, vars), '', R.sign].join('\n');
   const facts = `Position: ${Math.round(b.nm)} nm, bearing ${String(Math.round(b.brg)).padStart(3, '0')}°. Travel about ${route < 1 ? Math.round(route * 60) + ' minutes' : route.toFixed(1) + ' hours'} by the planned route.`;
-  const name = type === 'contact' ? { adrift: 'Vessel in trouble', lost_survey: 'Silent survey ship', poaching: 'Poachers in the closed area', sinking: 'MAYDAY: yacht sinking', survivors: 'MAYDAY: survivors in a raft' }[reason] : `Survey: ${poi.name}`;
-  const objectives = type === 'contact' ? [
+  const name = type === 'patrol' ? `Patrol: ${poi.name}` : type === 'contact' ? { adrift: 'Vessel in trouble', lost_survey: 'Silent survey ship', poaching: 'Poachers in the closed area', patrol: `Patrol: ${poi && poi.name}`, sinking: 'MAYDAY: yacht sinking', survivors: 'MAYDAY: survivors in a raft' }[reason] : `Survey: ${poi.name}`;
+  const objectives = type === 'patrol' ? [
+    { id: 'arrive', description: `Enter the patrol area at ${poi.name}`, required: true, triggers: [{ type: 'property_at_least', property: `${KEY}Flags.${id}.inside`, value: 1 }] },
+    { id: 'watch', description: 'Stay on station until the window ends', required: true, after: 'arrive', triggers: [{ type: 'property_at_least', property: `${KEY}Flags.${id}.served`, value: 1 }] },
+    { id: 'contact', description: 'Identify any vessel working the area (scan, sweep or hail)', required: false, triggers: [{ type: 'property_at_least', property: `${KEY}Flags.${id}.ident`, value: 1 }],
+      onComplete: [{ type: 'aria_decision', id: `${id}_d`, text: P.decisions.poaching.text, options: P.decisions.poaching.options.map((o) => ({ id: o.id, label: o.label, reply: o.reply, actions: [{ type: 'set_property', property: `${KEY}Flags.${id}.outcome`, value: o.outcome }] })) }] },
+    { id: 'report', description: 'Send your patrol report from Comms', required: true, after: 'watch', triggers: [{ type: 'report_sent' }] },
+  ] : type === 'contact' ? [
     { id: 'go', description: `Close on the contact near ${place} (${Math.round(b.nm)} nm ${compass(b.brg)})`, required: true, triggers: [{ type: 'property_at_least', property: `${KEY}Flags.${id}.near`, value: 1 }] },
     { id: 'identify', description: 'Identify the vessel: scan it, sweep it or hail it', required: true, after: 'go', triggers: [{ type: 'property_at_least', property: `${KEY}Flags.${id}.ident`, value: 1 }],
       onComplete: [{ type: 'aria_decision', id: `${id}_d`, text: P.decisions[reason].text, options: P.decisions[reason].options.map((o) => ({ id: o.id, label: o.label, reply: o.reply, actions: [{ type: 'set_property', property: `${KEY}Flags.${id}.outcome`, value: o.outcome }] })) }] },
@@ -117,8 +126,8 @@ export function generate(seed, { type, compulsory, distress } = {}) {
     { id: 'report', description: 'Send your findings from Comms', required: true, after: 'analyse', triggers: [{ type: 'report_sent' }] },
   ];
   const def = { id, name, description: facts, category: 'generated', priority: urgency === 'priority' ? 'high' : 'normal', autoStart: false, prerequisites: [], objectives, onComplete: [],
-    gen: { type, reason, urgency, compulsory: comp, requester: req, faction: req === 'fisheries' || req === 'harbour' || req === 'coastguard' ? 'civil' : 'oera', target: spot.p, place, routeH: +route.toFixed(2), seed } };
-  const offer = { id, expiresH, deadlineH, delivered: false, offeredAt: null, expiresAt: null, deadlineAt: null };
+    gen: { type, reason, urgency, compulsory: comp, requester: req, faction: req === 'fisheries' || req === 'harbour' || req === 'coastguard' ? 'civil' : 'oera', target: spot.p, place, routeH: +route.toFixed(2), seed, durH, area: type === 'patrol' ? { name: poi.name, lat: poi.lat, lon: poi.lon, radius: poi.radius || 10 } : null } };
+  const offer = { id, expiresH, deadlineH, durH, routeH: route, delivered: false, offeredAt: null, expiresAt: null, deadlineAt: null };
   const message = { id: `offer-${id}`, from: R.from, subject: distress ? name : `${comp ? 'Orders' : 'Request'}: ${name}`, text: text + '\n\n' + facts, missionId: id, offer: true, compulsory: comp };
   return { def, offer, message, vessel: type === 'contact' ? makeVessel(id, reason, spot.p, rng) : null };
 }
@@ -163,6 +172,12 @@ export function acceptOffer(id) {
   const def = g.defs[id];
   if (def.gen.type === 'survey') { const base = Number(gameState.getProperty('mission.science.stats.analysed')) || 0; def.objectives.find((o) => o.id === 'analyse').triggers[0].value = base + 1; }
   if (g.pendingVessel) { g.vessels = [...g.vessels, g.pendingVessel]; traffic.scripted = g.vessels; delete g.pendingVessel; traffic.candKey = ''; }
+  if (def.gen.type === 'patrol') {
+    const o = g.offer, a = def.gen.area; g.patrol = { id, name: a.name, lat: a.lat, lon: a.lon, radius: a.radius, from: o.startAt, to: o.endAt, inside: 0, last: null, spawnAt: o.startAt + (1 + Math.random() * 2) * H, spawned: false };
+    def.objectives.find((x) => x.id === 'watch').description = `Stay on station in ${a.name} from ${clockText(o.startAt)} until ${clockText(o.endAt)}`;
+    def.objectives.find((x) => x.id === 'arrive').description = `Enter the patrol area (${a.radius} nm round ${a.name}) before ${clockText(o.startAt)}`;
+    sim.tempAOs = [{ id, name: a.name, lat: a.lat, lon: a.lon, radius: a.radius, from: o.startAt, to: o.endAt }];
+  }
   g.active = id; g.offerAccepted = { ...g.offer, acceptedAt: sim.s.clock }; g.offer = null; save(g);
   missionManager.missions.set(id, def);
   return missionManager.startMission(id);
@@ -179,6 +194,7 @@ function deliver(g) {
   const o = g.offer, now = sim.s.clock; if (!o || o.delivered) return;
   o.delivered = true; o.offeredAt = now; o.expiresAt = now + o.expiresH * H; o.deadlineAt = o.deadlineH ? now + o.deadlineH * H : null;
   const m = g.held; g.held = null;
+  if (o.durH) { o.startAt = Math.ceil((now + (o.expiresH + o.routeH * 1.3 + 0.5) * H) / H) * H; o.endAt = o.startAt + o.durH * H; m.text += `\nOn station from ${clockText(o.startAt)} to ${clockText(o.endAt)} (${o.durH} hours) inside the marked area.`; }
   m.text += (o.deadlineAt ? `\nAnswer by ${clockText(o.expiresAt)}. Finish by ${clockText(o.deadlineAt)}.` : `\nAnswer by ${clockText(o.expiresAt)}.`);
   save(g); mail(m);
   const def = g.defs[o.id]; sim.emit('mission-offer', { id: o.id, name: def.name, compulsory: def.gen.compulsory });
@@ -193,7 +209,7 @@ function scheduleNext(g, h = null) { g.nextAt = sim.s.clock + (h == null ? Math.
 
 // ---------- ending ----------
 function removeScripted(g, id) { g.vessels = g.vessels.filter((v) => v.mission !== id); traffic.scripted = g.vessels; traffic.candKey = ''; }
-const OUTCOME_WORD = { assist: 'helped', document: 'documented', warn_off: 'warned off', withdraw: 'withdrew', too_late: 'too late', quit: 'abandoned', survey: 'surveyed', assist_rescue: 'rescued' };
+const OUTCOME_WORD = { assist: 'helped', document: 'documented', warn_off: 'warned off', withdraw: 'withdrew', too_late: 'too late', quit: 'abandoned', survey: 'surveyed', assist_rescue: 'rescued', patrol: 'patrolled', patrol_partial: 'patrolled in part' };
 const FACTION_EXTRA = { poaching: { warn_off: { poachers: -2 } } };
 function finish(id, outcome, { forced = false, key = null } = {}) {
   const g = st(), def = g.defs[id]; if (!def || g.active !== id) return;
@@ -204,7 +220,7 @@ function finish(id, outcome, { forced = false, key = null } = {}) {
     const done = gameState.getProperty('mission.completedIds') || []; if (!done.includes(id)) gameState.updateProperty('mission.completedIds', [...done, id]);
     gameState.updateProperty('mission.objectives', (gameState.getProperty('mission.objectives') || []).filter((o) => o.missionId !== id));
   }
-  removeScripted(g, id); g.active = null; g.done = [...g.done, { id, outcome: O, c: sim.s.clock }].slice(-40); scheduleNext(g); save(g);
+  removeScripted(g, id); g.patrol = null; sim.tempAOs = []; g.active = null; g.done = [...g.done, { id, outcome: O, c: sim.s.clock }].slice(-40); scheduleNext(g); save(g);
   const lines = P.debrief[key || O] || P.debrief[O] || P.debrief.document, rng = mulberry(def.gen.seed + 1);
   mail({ id: `debrief-${id}`, from: P.requesters[def.gen.requester].from, subject: `Re: ${def.name}`, text: `${fill('{captain}')},\n\n${pick(rng, lines)}\n\n${P.requesters[def.gen.requester].sign}` });
   sim.emit('mission-ended', { id, outcome: O });
@@ -242,20 +258,40 @@ function tick() {
     if (!flag(id, 'near') && toward(sim.s, p).nm <= 3) prop(id, 'near', 1);
     if (flag(id, 'near') && v.ident && !flag(id, 'ident')) prop(id, 'ident', 1);
   }
+  if (def.gen.type === 'patrol' && g.patrol) patrolTick(g, id, now);
   const dl = g.offerAccepted && g.offerAccepted.deadlineAt;
   const rescue = def.gen.distress, onScene = def.gen.type === 'contact' && flag(id, 'near');
   if (dl && now > dl && !flag(id, 'outcome') && !onScene) finish(id, 'too_late', { forced: true, key: rescue ? 'too_late_rescue' : null });
 }
+/** On station: time inside the area counts only inside the window. Poachers show up an hour or two in. 80% coverage serves the patrol. */
+function patrolTick(g, id, now) {
+  const p = g.patrol, dt = p.last == null ? 0 : now - p.last; p.last = now;
+  const inside = toward(sim.s, p).nm <= p.radius;
+  if (inside && !flag(id, 'inside')) prop(id, 'inside', 1);
+  if (inside && now >= p.from && now <= p.to) p.inside += Math.min(dt, 120);
+  if (!p.spawned && now >= p.spawnAt && now < p.to) {
+    p.spawned = true; const rng = mulberry(g.defs[id].gen.seed + 7), n = 1 + Math.floor(rng() * 2);
+    for (let i = 0; i < n; i++) {
+      let at = null; for (let t = 0; t < 12 && !at; t++) { const a = rng() * 6.283, r = Math.sqrt(rng()) * p.radius * 0.7, q = { lat: p.lat + (Math.cos(a) * r) / 60, lon: p.lon + (Math.sin(a) * r) / (60 * Math.cos(p.lat * Math.PI / 180)) }; const fl = seafloor.depthAt(q.lat, q.lon); if (fl != null && fl >= 25) at = q; }
+      if (!at) continue; const v = makeVessel(id, 'poaching', at, rng); v.id = `s:${id}:${i}`; g.vessels = [...g.vessels, v];
+    }
+    traffic.scripted = g.vessels; traffic.candKey = '';
+  }
+  if (!flag(id, 'ident') && g.vessels.some((v) => v.mission === id && v.ident)) prop(id, 'ident', 1);
+  if (now >= p.to && !flag(id, 'served')) {
+    if (p.inside >= 0.8 * (p.to - p.from)) prop(id, 'served', 1); else finish(id, 'patrol_partial', { forced: true });
+  }
+}
 function onEnd(e) {   // the manager completed a generated mission: record the outcome the decision set
   const id = e.detail.id, g = st(); if (g.active !== id) return;
-  const def = g.defs[id]; finish(id, flag(id, 'outcome') || (def.gen.type === 'survey' ? 'survey' : 'document'));
+  const def = g.defs[id]; finish(id, flag(id, 'outcome') || (def.gen.type === 'survey' ? 'survey' : def.gen.type === 'patrol' ? 'patrol' : 'document'));
 }
 
 /** Call once after the mission manager and the reputation module are loaded. */
 export async function initGenerator() {
   await loadPhrases(); const g = st();
   for (const def of Object.values(g.defs)) missionManager.missions.set(def.id, def);
-  traffic.scripted = g.vessels || []; missionManager.restoreFromState();
+  traffic.scripted = g.vessels || []; sim.tempAOs = g.patrol ? [{ id: g.patrol.id, name: g.patrol.name, lat: g.patrol.lat, lon: g.patrol.lon, radius: g.patrol.radius, from: g.patrol.from, to: g.patrol.to }] : []; missionManager.restoreFromState();
   document.addEventListener('mission-completed', onEnd);
   sim.afterStep.push(tick);
   // the first generated offer follows the first survey; after that, every report starts the timer

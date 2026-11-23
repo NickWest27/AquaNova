@@ -170,6 +170,15 @@
   "too_late_rescue": {
    "oera": -2,
    "civil": -5
+  },
+  "patrol": {
+   "oera": 3,
+   "civil": 2,
+   "science": 1
+  },
+  "patrol_partial": {
+   "oera": -2,
+   "civil": -1
   }
  }
 }

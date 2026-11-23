@@ -183,6 +183,13 @@ export function createND(wrap, { onPick, stage = false, units = 1, contours = fa
           ctx.beginPath(); ctx.moveTo(0, -k * 1.2); ctx.lineTo(k, k); ctx.lineTo(0, k * 0.5); ctx.lineTo(-k, k); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore();
           ctx.fillStyle = '#ffd0e6'; ctx.font = `800 ${bigWskr ? 14 : 12}px system-ui`; ctx.textAlign = 'left'; ctx.fillText('Tn', x + k + 3, y + 4);
         } } }
+    // temporary Areas of Operation (a patrol area): a dashed amber ring, solid while the window is open
+    for (const ao of sim.tempAOs || []) {
+      const c0 = px(ao), r = ao.radius * ((Math.min(nd.w, nd.h) / 2 - 24) / nd.range), open = s.clock >= ao.from && s.clock <= ao.to;
+      if (c0.x + r < -20 || c0.x - r > w + 20 || c0.y + r < -20 || c0.y - r > h + 20) continue;
+      ctx.save(); ctx.strokeStyle = '#ffb020'; ctx.lineWidth = open ? 3 : 2; ctx.setLineDash(open ? [] : [10, 8]); ctx.globalAlpha = 0.85; ctx.beginPath(); ctx.arc(c0.x, c0.y, Math.max(r, 6), 0, 6.2832); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle = '#ffb020'; ctx.font = '700 15px system-ui'; ctx.textAlign = 'center'; ctx.fillText(`PATROL AREA${open ? ' · ON STATION' : ''}`, c0.x, c0.y - Math.max(r, 6) - 8); ctx.restore();
+    }
     // POIs
     ctx.font = '700 17px system-ui';
     for (const poi of s.pois) {

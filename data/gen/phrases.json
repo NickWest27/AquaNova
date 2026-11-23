@@ -173,6 +173,26 @@
    "Rescue Coordination out.",
    "Good luck, Captain.",
    "We are with you."
+  ],
+  "situation.patrol": [
+   "Poachers keep working {place}, {nm} nm {dir} of you. Patrols there are thin.",
+   "{place} lies {nm} nm {dir} of the Aqua Nova. We have reports of unlicensed boats working it at night.",
+   "Fishermen report empty nets and strange lights in {place}, {nm} nm {dir} of you."
+  ],
+  "ask.patrol": [
+   "We want a vessel on station in {place} for {duration}. Watch, identify what you find, and warn off anything that should not be there.",
+   "Patrol {place} for {duration}. Observe and identify. A warning is better than an incident.",
+   "Hold station in {place} for {duration}. Be seen, be patient and keep a record."
+  ],
+  "time.patrol": [
+   "The exact window is below. Stay inside the marked area.",
+   "The window and the area are below. Leaving the area during the window counts against the patrol.",
+   "Times are below. We have drawn the area on your chart."
+  ],
+  "limit.patrol": [
+   "Answer within {expires}, please.",
+   "I need your answer within {expires}.",
+   "Tell us within {expires}."
   ]
  },
  "decisions": {
@@ -332,6 +352,15 @@
   ],
   "quit_distress": [
    "Understood. The Directorate expected you to break away for a rescue."
+  ],
+  "patrol": [
+   "Your patrol is complete. The area was quiet while you were there, and that is what we wanted.",
+   "Thank you for the patrol. The log shows what we needed to see.",
+   "The window is closed and the record is filed. Well done."
+  ],
+  "patrol_partial": [
+   "You left the area for much of the window. The patrol will be repeated by someone else.",
+   "Coverage was thin. We have noted what you did see."
   ]
  }
 }
