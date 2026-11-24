@@ -179,17 +179,20 @@ sim.afterStep = sim.afterStep || []; sim.afterStep.push(step);
 // Every 5 game seconds: a WSKR in formation is sent to close on any unidentified ship the sonar has a fix on, nearest WSKR first, one at a time, and at least one
 // WSKR stays in the screen. When the contact is identified the WSKR is released back to its station. Off with sim.setWskrAuto(false). A contact is only chased once.
 const autoSent = new Set(); let autoAt = 0;
+/** Leash: the screen only starts a chase when the contact is within AUTO_START_NM of the ship, and breaks off if the WSKR gets beyond AUTO_LEASH_NM. Sent by hand (Investigate) there is no limit. */
+export const AUTO_START_NM = 6, AUTO_LEASH_NM = 8;
 sim.hooks.push(() => {
   const s = sim.s; if (s.clock - autoAt < 5) return; autoAt = s.clock;
   if (s.wskrAuto === false || !s.wskrs.length) return;
   const list = contactsFor('ship');
   for (const w of s.wskrs) if (w.mode === 'trail' && w.auto && w.trail) {
     const c = list.find((x) => x.id === w.trail.kind + ':' + w.trail.id);
+    if (toward(s, w).nm > AUTO_LEASH_NM) { w.auto = false; sim.orderWskr(w.n, 'escort'); tell('sensors', `${wskrName(w)} is breaking off the chase at ${AUTO_LEASH_NM} miles, Captain, and returning to the screen. Send it to investigate if you want it to go further.`); continue; }
     if (c && c.ident) { w.auto = false; sim.orderWskr(w.n, 'escort'); tell('sensors', `${wskrName(w)} has identified it as ${c.name}, Captain, and is back on the screen.`); }
   }
   const free = s.wskrs.filter((w) => w.mode === 'escort' && !w.dead && !w.arrived);
   if (free.length < 2) return;
-  const c = list.find((x) => x.kind === 'ship' && !x.ident && !x.lost && x.pos && !x.inv.length && !autoSent.has(x.id));
+  const c = list.find((x) => x.kind === 'ship' && !x.ident && !x.lost && x.pos && toward(s, x.pos).nm <= AUTO_START_NM && !x.inv.length && !autoSent.has(x.id));
   if (!c) return;
   const near = free.sort((a, b) => toward(a, c.pos).nm - toward(b, c.pos).nm)[0];
   const w = sim.trailWskr({ kind: 'ship', id: c.ref.id }, near.n); if (!w) return;
