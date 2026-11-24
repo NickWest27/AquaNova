@@ -31,6 +31,7 @@ PAGES = [
     "ui/bridge/bridge.html",
     "tablet/index.html",
     "tablet/retro/demo.html",
+    "tablet/retro/index.html",
     "ped/index.html",
 ]
 
