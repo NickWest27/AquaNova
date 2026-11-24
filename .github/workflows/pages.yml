@@ -1,0 +1,43 @@
+# Publishes two builds of the game to GitHub Pages:
+#   https://nickwest27.github.io/AquaNova/        <- branch main   (desktop)
+#   https://nickwest27.github.io/AquaNova/retro/  <- branch tablet (iPad, retro)
+# Runs on every push to either branch. Needs Settings > Pages > Source = "GitHub Actions".
+name: Publish to Pages
+on:
+  push:
+    branches: [main, tablet]
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: false
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          path: main
+      - uses: actions/checkout@v4
+        with:
+          ref: tablet
+          path: tablet-branch
+      - name: Assemble the site
+        run: |
+          mkdir -p _site/retro
+          rsync -a --exclude='.git' --exclude='temp_backup' --exclude='tools/shots' main/ _site/
+          rsync -a --exclude='.git' --exclude='temp_backup' --exclude='tools/shots' tablet-branch/ _site/retro/
+          touch _site/.nojekyll
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v4
