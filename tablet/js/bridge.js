@@ -23,7 +23,8 @@ const KEY = 'aquaNova_bridgeDisplay';
 const set = (node, v) => { if (node._v !== v) { node._v = v; node.textContent = v; } };
 const deg = (v, pos, neg, w) => { const a = Math.abs(v), d = Math.floor(a), m = (a - d) * 60; return `${String(d).padStart(w, '0')}°${m.toFixed(1).padStart(4, '0')}′${v >= 0 ? pos : neg}`; };
 const etaText = (nm, kt) => { if (kt < 0.5) return '—'; const mins = Math.round((nm / kt) * 60); return mins >= 60 ? `${Math.floor(mins / 60)} h ${String(mins % 60).padStart(2, '0')} min` : `${mins} min`; };
-const bbtn = (text, onclick, cls = '') => el('button', { class: `bbtn ${cls}`, text, onclick });
+let SHORT = null;   // the retro skin has room for three letters on a button: createBridgeConsole fills this in
+const bbtn = (text, onclick, cls = '') => el('button', { class: `bbtn ${cls}`, text: (SHORT && SHORT[text]) || text, onclick });
 const rdRow = (label, valueNode) => el('div', { class: 'rdr' }, el('small', { text: label }), valueNode);
 const rd = (label, valueNode) => el('div', { class: 'rd' }, el('small', { text: label }), valueNode);
 const order = ['nav', 'hlm', 'tac', 'snr', 'vw', 'sys'];   // the left desk panel's six pages
@@ -33,7 +34,8 @@ const synthOk = () => !GATES_ON || research.has('synthetic-view');
 const vopt = { mode: 'synth' };   // shared by the large and the medium copy
 const labels = { nav: 'NAV', hlm: 'HLM', tac: 'TAC', snr: 'SNR', vw: 'VW', sys: 'SYS' };
 
-export function createBridgeConsole({ top, main, display, center, left, right, onExpand }) {
+export function createBridgeConsole({ top, main, display, center, left, right, onExpand, retro = null }) {
+  SHORT = retro ? retro.short || null : null;   // retro: { createND } swaps in the pixel chart of the retro skin
   // ---------- top display ----------
   // Two lines, centred. Line 1: the ship's state ("Arrival at ...", "Bay door opening", "Incoming message"); line 2: position, date and time.
   // Voice from the crew never shows here (it goes to the line at the foot of the screen).
@@ -52,7 +54,7 @@ export function createBridgeConsole({ top, main, display, center, left, right, o
     const make = (compact) => {
       const m = el('div', { class: 'bd bd-nav' + (compact ? ' compact' : '') });
       const wrap = el('div', { class: 'nd-stage' }); m.append(wrap);
-      const nd = createND(wrap, { stage: true, units: compact ? 1.25 : 1.7, contours: !compact, rings: compact, trackUp: compact, onPick: syncSel });   // the big main screen stays north up; the medium main display is track up
+      const nd = (retro ? retro.createND : createND)(wrap, { stage: true, units: compact ? 1.25 : 1.7, contours: !compact, rings: compact, trackUp: compact, onPick: syncSel });   // the big main screen stays north up; the medium main display is track up
       if (nds[0]) nd.setRange(nds[0].range);
       nd.sel = sel; nd.show = show; nds.push(nd); if (!compact) bigNd = nd;
       if (compact) return { m, update() { nd.redraw(); } };
@@ -164,12 +166,14 @@ export function createBridgeConsole({ top, main, display, center, left, right, o
       const m = el('div', { class: 'bd bd-helm' + (compact ? ' compact' : '') });
       const dial = createDial({ onInput: (h) => { sim.setHeading(h); sim.cancelCourse(); } });
       const spd = createTape({ mirror: false, up: true }), dep = createTape({ mirror: true, up: false });
-      m.append(spd.svg, dial.root, dep.svg);
+      const rt = retro ? el('div', { class: 'rhelm' }) : null;   // retro: three text lines instead of the dial and tapes (the art is too small for them)
+      if (rt) m.append(rt); else m.append(spd.svg, dial.root, dep.svg);
       let last = null, vs = 0, as = 0;   // smoothed rates of change: speed (kt/s) and depth (m/s)
       return { m, update() {
         const s = sim.s, now = Date.now();
         if (last && now - last.t > 50) { const dt = (now - last.t) / 1000; as = as * 0.8 + 0.2 * ((s.speed - last.speed) / dt); vs = vs * 0.8 + 0.2 * ((s.depth - last.depth) / dt); last = { t: now, speed: s.speed, depth: s.depth }; }
         else if (!last) last = { t: now, speed: s.speed, depth: s.depth };
+        if (rt) { set(rt, `HDG ${pad(s.heading)} > ${pad(s.targetHeading)}\nSPD ${s.speed.toFixed(1)} > ${(s.throttle * sim.maxKt()).toFixed(1)}\nDEP ${Math.round(s.depth)} > ${Math.round(s.targetDepth)}`); return; }
         dial.update(s.heading, s.targetHeading);
         spd.update({ cur: s.speed, set: s.throttle * sim.maxKt(), rate: as, span: s.cruise ? 80 : 20, step: s.cruise ? 5 : 1, major: s.cruise ? 20 : 5, fmt: (v) => (Math.abs(v - Math.round(v)) < 0.05 ? String(Math.round(v)) : v.toFixed(1)), unit: 'KT' });
         dep.update({ cur: s.depth, set: s.targetDepth, rate: vs, ground: s.floor, span: 120, step: 10, major: 20, unit: 'M' });
@@ -324,7 +328,7 @@ export function createBridgeConsole({ top, main, display, center, left, right, o
     set(tPos, `${deg(s.lat, 'N', 'S', 2)}  ${deg(s.lon, 'E', 'W', 3)}  ·  ${gameDateText()}`);
     big[mainId].update(); if (current !== mainId) small[current].update(); else small[current].update();
     views[current].side();
-    const showProf = mainId === 'nav'; irWrap.hidden = showProf; profBox.hidden = !showProf;
+    const showProf = mainId === 'nav' && !retro; irWrap.hidden = showProf; profBox.hidden = !showProf;
     if (showProf) { prof.draw(s, views.nav.nds[0].range); profBox.dataset.warn = prof.warn; }
     set(ilVals.spd, s.speed.toFixed(1)); set(ilVals.dep, String(Math.round(s.depth))); set(ilVals.flr, s.floor == null ? '—' : String(Math.round(s.floor))); set(ilVals.hdg, pad(s.heading) + '°');
     const bar = (k, pct, text, bad) => { irBars[k].fill.style.width = Math.max(0, Math.min(100, pct)) + '%'; irBars[k].fill.className = bad ? 'bad' : ''; set(irBars[k].val, text); };

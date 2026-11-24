@@ -1,19 +1,60 @@
 /* Retro bridge. Colors from palette.css only. Everything is placed on the 320 x 240 pixel grid. */
 .rabs { position: absolute; }
-.rpanel { position: absolute; background: var(--c02); border: 1px solid var(--c05); }
-.rscreen { position: absolute; background: var(--c00); border: 2px solid var(--c05); }
-.rscreen canvas { position: absolute; left: 0; top: 0; }
-.rlabel { position: absolute; white-space: nowrap; overflow: hidden; }
-.rdim { color: var(--c07); }
-.rcell { position: absolute; height: 14px; background: var(--c02); border: 1px solid var(--c04); padding: 2px 0 0 4px; white-space: nowrap; overflow: hidden; }
-.rcell b { font-weight: normal; color: var(--white); }
-.rdesk { position: absolute; width: 100px; height: 26px; padding: 2px 3px; text-align: left; background: var(--c03); border: 1px solid var(--c06); color: var(--text); font: inherit; line-height: 9px; overflow: hidden; }
-.rdesk:active { background: var(--c13); border-color: var(--c10); color: var(--c00); }
-.rdesk .t { display: block; color: var(--white); }
-.rdesk .s { display: block; color: var(--c07); white-space: nowrap; overflow: hidden; }
-.rdesk.warn .s { color: var(--amber); } .rdesk.bad .s { color: var(--red); } .rdesk.ok .s { color: var(--c29); }
-.rdesk:active .t, .rdesk:active .s { color: var(--c00); }
-.rmsg { position: absolute; left: 6px; top: 206px; width: 308px; height: 32px; padding: 2px 4px; background: var(--c00); border: 1px solid var(--c04); overflow: hidden; color: var(--text); }
+.rart { position: absolute; }
+.rbox { position: absolute; overflow: hidden; background: var(--c00); }
+.rbox > div { position: absolute; inset: 0; }
+.rhs { position: absolute; background: none; border: 0; padding: 0; }
+.rhs:active { background: var(--c13); opacity: .5; }
+.rwalk { position: absolute; left: 100px; top: 196px; width: 120px; text-align: center; color: var(--c29); pointer-events: none; }
+/* top strip: one line */
+.bt { display: block; text-align: center; padding-top: 1px; background: var(--c01); }
+.bt-place { color: var(--c31); white-space: nowrap; overflow: hidden; text-overflow: clip; }
+.bt-place.mission { color: var(--amber); } .bt-place.error { color: var(--red); }
+.bt-pos, .bt-note, .bt-stack { display: none !important; }
+/* main screen: readouts at the left, the chart in the middle, bars at the right */
+.bm-info.il { position: absolute; left: 0; top: 0; width: 50px; height: 100%; background: var(--c01); border-right: 1px solid var(--c04); padding: 1px 2px; }
+.bm-info.il .ilr { height: 15px; overflow: hidden; white-space: nowrap; padding-top: 3px; }
+.bm-info.il small, .ir-bars .bar small { display: none; }
+.bm-info.il b { font-weight: normal; color: var(--white); }
+.bm-info.il b::before, .ir-bars .bar b::before { color: var(--c07); }
+.ilr:nth-child(1) b::before { content: 'SPD '; } .ilr:nth-child(2) b::before { content: 'DEP '; } .ilr:nth-child(3) b::before { content: 'FLR '; } .ilr:nth-child(4) b::before { content: 'HDG '; }
+.ir-bars .bar:nth-child(1) b::before { content: 'PRS '; } .ir-bars .bar:nth-child(2) b::before { content: 'TMP '; } .ir-bars .bar:nth-child(3) b::before { content: 'ENG '; } .ir-bars .bar:nth-child(4) b::before { content: 'O2 '; } .ir-bars .bar:nth-child(5) b::before { content: 'CO2 '; } .ir-bars .bar:nth-child(6) b::before { content: 'HUL '; }
+.bm-view { position: absolute; left: 51px; top: 0; right: 61px; bottom: 0; }
+.bm-info.ir { position: absolute; right: 0; top: 0; width: 60px; height: 100%; background: var(--c01); border-left: 1px solid var(--c04); padding: 1px 2px; }
+.ir-bars .bar { height: 10px; padding-top: 1px; overflow: hidden; white-space: nowrap; }
+.ir-bars .bar small { color: var(--c07); } .ir-bars .bar b { font-weight: normal; color: var(--white); } .ir-bars .bar i { display: none; }
+.bm-info.ir .nav-prof { display: none; }
+.bd { position: absolute; inset: 0; overflow: hidden; background: var(--c00); }
+.bd[hidden], .bc[hidden], .br[hidden] { display: none; }
+.nd-stage { position: absolute; inset: 0; background: var(--c00); }
+.nd-stage canvas { position: absolute; left: 0; top: 0; }
+.nav-log { position: absolute; left: 1px; top: 1px; width: 126px; background: var(--c00); border: 1px solid var(--c04); padding: 0 2px; color: var(--c09); pointer-events: none; white-space: nowrap; }
+.nav-log > b { display: none; }
+.nav-log .nl-r small { color: var(--c07); margin-right: 3px; }
+.nav-log .nl-r:nth-child(n+4) { display: none; } .nav-log .nl-r small { display: none; }
+.bd-expand, .bd-promote { display: none; }
+/* the small center screen */
+.bdisp .bd { }
+/* buttons (the desk panels) */
+.bbtn { height: 100%; min-height: 0; background: var(--c02); border: 0 solid var(--c29); border-width: 1px 0 0 1px; color: var(--c31); font: inherit; padding: 0; overflow: hidden; white-space: nowrap; text-align: center; line-height: 12px; }
+.bbtn.on { background: var(--c31); color: var(--c00); }
+.bbtn:active { background: var(--c29); color: var(--c00); }
+.bbtn.blank { background: var(--c01); border-color: var(--c03); }
+.bbtn.stop { border-color: var(--red); color: var(--red); }
+.selector { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(3, 18px); grid-auto-rows: 16px; }
+.selector .bbtn { width: 18px; height: 16px; }
+.bc { position: absolute; inset: 0; display: flex; flex-direction: column; }
+.rowN { display: flex; flex: 1; min-height: 0; }
+.rowN > * { flex: 1 1 0; min-width: 0; }
+.msc { display: grid; grid-template-columns: repeat(3, 18px); grid-auto-rows: 16px; }
+.msc .rowN { display: contents; }
+.msc .bbtn { width: 18px; height: 16px; }
+.rngbox { text-align: center; color: var(--white); line-height: 16px; height: 16px; background: var(--c01); }
+.rngbox small { display: none; }
+/* station screens */
+.rstn { padding: 0 1px; background: var(--c00); color: var(--c09); line-height: 8px; }
+.rstn .ok { color: var(--c14); } .rstn .bad { color: var(--red); } .rstn .warn { color: var(--amber); }
+.rmsg { position: absolute; left: 0; top: 221px; width: 320px; height: 19px; padding: 1px 3px; background: var(--c00); border-top: 1px solid var(--c04); overflow: hidden; color: var(--text); line-height: 9px; }
 .rmsg .who { color: var(--blue); }
 .rbadge { position: absolute; min-width: 8px; height: 9px; background: var(--red); color: var(--c10); padding: 0 1px; line-height: 9px; }
 /* splash */
@@ -27,3 +68,5 @@
 .rstub .head { position: absolute; left: 0; top: 0; width: 320px; height: 16px; background: var(--c03); border-bottom: 1px solid var(--c06); padding: 3px 0 0 6px; color: var(--amber); }
 .rstub .body { position: absolute; left: 8px; top: 24px; width: 304px; color: var(--text); }
 .rstub .rbtn { position: absolute; left: 6px; top: 218px; }
+.rhelm { white-space: pre; padding: 1px 2px; color: var(--c09); line-height: 9px; }
+.rstnL, .rstnR, .rtop, .rbadge { pointer-events: none; }
