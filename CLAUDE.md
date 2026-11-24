@@ -3,6 +3,13 @@
 Browser game: a deep-sea research submarine, the Aqua Nova. Plain HTML, CSS and ES modules. No build step yet.
 Read `ProjectNorms.txt` for code style and `DEVELOPMENT.md` for decisions and known problems.
 
+## Branches (set 2026-11-24)
+- `main`: the desktop version, 16:9 at 1920x1080. It started as a copy of the tablet game and will be reworked.
+- `tablet`: **the branch we work on with the owner.** 90s retro look, 4:3, 320x240 integer-scaled to the screen, only the 64 colors in `data/palette.json` (see project doc `RETRO_PALETTE.md`). Most displays will need redesigning to stay readable and usable. The owner tests on an iPad.
+- The owner does not use git. Claude does all of it: work on `tablet`, run the tests, run `python3 tools/update_sw.py`, commit, push `tablet`.
+- **Before parking** (end of a session): update the project doc `claude/HANDOFF.md` (what is done, what is half done, what is next, how to test), and make sure everything is committed and pushed.
+- **Starting a session:** read `claude/HANDOFF.md` and `claude/RETRO_SKIN_PLAN.md` first, then `git status` and `git log -5`.
+
 ## Rules
 - **Use relative paths only.** Never start a path with `/`. The game is hosted at `/AquaNova/` on GitHub Pages.
   - Imports: `../game/state.js`
