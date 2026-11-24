@@ -95,7 +95,8 @@ export function mountWskrPanel(body) {
         act(live.length && live.every((q) => q.mode === 'escort') ? 'In formation' : 'Rejoin formation', live.length > 0 && live.every((q) => q.mode === 'escort'), () => { live.forEach((q) => sim.orderWskr(q.n, 'escort')); say('All WSKRs rejoining formation'); }, !ok || !live.length || live.every((q) => q.mode === 'escort')),
         act('Search…', false, () => openSearchDialog({ craft: 'wall' }), !ok || !live.length),
         act('Set up a relay', false, () => { const r = sim.setupRelay(); say(r.ok ? `${wskrName(r.wskr)} going up as a relay` : r.why === 'already' ? 'A relay is already up' : r.why === 'none' ? 'No WSKRs are out' : 'Every WSKR is busy'); }, !ok || !s.wskrs.length),
-        el('span', { class: 'wk-sep', text: 'Formation' }), act('Loose', s.wskrForm !== 'tight', () => { sim.setWskrForm('loose'); say('Formation loose'); }, !ok), act('Tight', s.wskrForm === 'tight', () => { sim.setWskrForm('tight'); say('Formation tight'); }, !ok),
+        act(s.wskrAuto === false ? 'Auto-intercept: off' : 'Auto-intercept: on', s.wskrAuto !== false, () => { sim.setWskrAuto(s.wskrAuto === false); say(sim.s.wskrAuto ? 'Screen will intercept unidentified contacts' : 'Auto-intercept off'); }, !ok),
+        el('span', { class: 'wk-sep', text: 'Screen' }), act('Wide', s.wskrForm !== 'tight', () => { sim.setWskrForm('loose'); say('Formation loose'); }, !ok), act('Narrow', s.wskrForm === 'tight', () => { sim.setWskrForm('tight'); say('Formation tight'); }, !ok),
         el('span', { class: 'wk-sep', text: 'Depth' }), ...Object.entries(WSKR_DEPTHS).map(([k, t]) => act(t, s.wskrDepth === k, () => { sim.setWskrDepth(k); say(`WSKR depth: ${t.toLowerCase()}`); }, !ok))];
     } else if (!w) {
       const b = rackBat(sel);

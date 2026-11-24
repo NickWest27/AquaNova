@@ -35,7 +35,7 @@ export const sim = {
     throttle: 0, speed: 0, depth: 0, targetDepth: 0,
     battery: 100, oxygen: 100, hull: 100, co2: 0.04, temp: 4.1, power: 0,
     ballast: 100, comms: true, sonar: true, lights: true, pois: [], wpt: null, fixes: [], wpN: 0, route: [], routeSnapped: false, _routeFor: null, at: null,
-    clock: 6 * 3600, docked: false, damage: 0, floor: null, wskrs: [], cruise: false, hug: false, wskrForm: 'loose', wskrDepth: 'auto', sweepUntil: 0,     // clock = game seconds since Day 1 00:00
+    clock: 6 * 3600, docked: false, damage: 0, floor: null, wskrs: [], cruise: false, hug: false, wskrForm: 'loose', wskrAuto: true, wskrDepth: 'auto', sweepUntil: 0,     // clock = game seconds since Day 1 00:00
   },
   listeners: new Set(),
   dirty: true,
@@ -216,6 +216,19 @@ export const wskrMinutes = (w) => { const per = (100 / (wskrBatteryHours() * 360
 export const WSKR_BATTERY_H = 6, WSKR_CHARGE_H = 2, WSKR_LOW_PCT = 15, WSKR_STAGGER_M = 10, WSKR_RELAY_DEPTH = 4;
 /** 6 hours; research raises it to 12 and then 24 (science.js sets `sim.batteryHours`). */
 export const wskrBatteryHours = () => (sim.batteryHours ? sim.batteryHours() : WSKR_BATTERY_H);
+/** The sonar screen. Under way the WSKRs sit on bearing lines fanned across the bow (relative to the ship's heading), so anything closing the ship's track meets a
+ *  WSKR first. Loose is a wide fan, Tight a narrow one. Up to three take the inner line (the lead nearest the centre); more take the outer line, between them.
+ *  At rest there is no bow, so they picket all round. Returns { rel: degrees off the bow, ring: times the formation radius, buzz: weaves along its line }. */
+export const SCREEN_ARC = { loose: 110, tight: 45 }, SCREEN_BUZZ_DEG = 10;
+export function screenSlot(i, n, form, underway = true) {
+  if (!underway) return { rel: n > 1 ? (360 / n) * i + 45 : 0, ring: 1, buzz: false };
+  const A = SCREEN_ARC[form] ?? SCREEN_ARC.loose, m = Math.min(n, 3);
+  const main = m <= 1 ? [0] : m === 2 ? [-A / 2, A / 2] : [-A, 0, A];
+  const order = main.map((_, k) => k).sort((x, y) => Math.abs(main[x]) - Math.abs(main[y]));
+  if (i < m) return { rel: main[order[i]], ring: 1, buzz: true };
+  const mids = main.slice(1).map((a, k) => (a + main[k]) / 2), k = i - m;
+  return { rel: k < mids.length ? mids[k] : 0, ring: k < mids.length ? 1.8 : 2.6, buzz: true };
+}
 export const WSKR_OVERLAP = { loose: 0.05, tight: 0.5 };
 /** Distance between two scan-ring centres (nm) at which the rings overlap by `frac` of the SMALLER ring's area. */
 export function ringDistance(r1, r2, frac) {
@@ -265,6 +278,7 @@ sim.orderWskr = (n, order, opts = {}) => {
   sim.touch(); return true;
 };
 sim.setWskrDepth = (dep) => { if (!WSKR_DEPTHS[dep]) return false; sim.s.wskrDepth = dep; sim.touch(); return true; };
+sim.setWskrAuto = (on) => { sim.s.wskrAuto = !!on; sim.touch(); return sim.s.wskrAuto; };
 sim.setWskrForm = (f) => { if (f !== 'loose' && f !== 'tight') return false; sim.s.wskrForm = f; sim.s.wskrs.forEach((w) => { if (w.mode === 'escort') w.route = null; }); sim.touch(); return true; };
 /** Manual helm: turn -1/0/1 (held), thr 0..1 (share of top speed). */
 sim.wskrHelm = (n, { turn, thr } = {}) => { const w = sim.s.wskrs.find((q) => q.n === n); if (!w || w.mode !== 'manual') return false; if (turn != null) w.turn = turn; if (thr != null) w.thr = Math.max(0, Math.min(1, thr)); return true; };
@@ -367,7 +381,7 @@ function stepWskrs(dt) {
       }
       return true;
     }
-    if (w.mode === 'escort') { const i = esc.indexOf(w), a = ((s.heading + (360 / esc.length) * i + (wskrPerk(esc[0]).lead ? 0 : 45)) * Math.PI) / 180; goal = { lat: s.lat + (Math.cos(a) * ring) / NM_PER_DEG_LAT, lon: s.lon + (Math.sin(a) * ring) / (NM_PER_DEG_LAT * Math.cos((s.lat * Math.PI) / 180)) }; }
+    if (w.mode === 'escort') { const i = esc.indexOf(w), sl = screenSlot(i, esc.length, s.wskrForm, s.speed > 1), buzz = sl.buzz ? SCREEN_BUZZ_DEG * (s.wskrForm === 'tight' ? 0.5 : 1) * Math.sin((s.clock / 300) * 2 * Math.PI + w.n * 1.7) : 0, a = ((s.heading + sl.rel + buzz) * Math.PI) / 180, rr = ring * sl.ring; goal = { lat: s.lat + (Math.cos(a) * rr) / NM_PER_DEG_LAT, lon: s.lon + (Math.sin(a) * rr) / (NM_PER_DEG_LAT * Math.cos((s.lat * Math.PI) / 180)) }; }
     else if (w.mode === 'search') { const pts = patternPoints(w.pat || (w.pat = { lat: w.lat, lon: w.lon, k: 1, t: 0 })); goal = pts[w.pat.k - 1]; if (!goal) { w.mode = 'escort'; w.pat = null; w.route = null; sim.emit('wskr-search-done', w); return true; } }
     else if (w.mode === 'relay') goal = s;                          // follows the ship, just under the surface
     else if (w.mode === 'trail') { goal = trailPoint(w); if (!goal) { w.mode = 'escort'; w.trail = null; w.route = null; sim.emit('wskr-trail-lost', w); return true; } }

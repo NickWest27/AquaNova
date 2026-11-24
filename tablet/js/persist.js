@@ -40,6 +40,7 @@ export function snapshotSim() {
     gameState.updateProperty('navigation.rack', s.rack || {});
     gameState.updateProperty('navigation.shuttle', s.shuttle ? { state: s.shuttle.state, mode: s.shuttle.mode, bat: +s.shuttle.bat.toFixed(1), o2: +(s.shuttle.o2 == null ? 100 : s.shuttle.o2).toFixed(1), lat: s.shuttle.lat, lon: s.shuttle.lon, dest: s.shuttle.dest || null, dead: s.shuttle.dead || undefined, air: s.shuttle.air || 0, pilots: s.shuttle.pilots, pax: s.shuttle.pax, ashore: s.shuttle.ashore, stay: s.shuttle.stay || undefined, ...Object.fromEntries(['depth', 'holdDepth', 'ordKt', 'ordHdg', 'mission', 'queue', 'lost', 'missed', 'nextCheck', 'lastContact', 'supply', 'surfUntil', 'attempt', 'pending', 'pat'].filter((k) => s.shuttle[k] != null).map((k) => [k, s.shuttle[k]])), standoff: s.shuttle.standoff || undefined, boarding: s.shuttle.boarding || undefined } : null);
     gameState.updateProperty('navigation.wskrForm', s.wskrForm);
+    gameState.updateProperty('navigation.wskrAuto', s.wskrAuto !== false);
     gameState.updateProperty('navigation.selContact', s.selContact || null);
     gameState.updateProperty('navigation.away', sim.away || null);   // "crew has the con" plan (away.js)
     gameState.updateProperty('navigation.wskrDepth', s.wskrDepth);
@@ -79,7 +80,7 @@ export function restoreSim() {
   s.docked = (nav.docked == null ? (nav.depth || 0) === 0 : !!nav.docked) && !!s.at && s.at.type === 'dock';   // saves from before docking existed: parked at the dock counts as docked
   seafloor.setChart(nav.charted || '');
   s.wskrs = Array.isArray(nav.wskrs) ? nav.wskrs.map((w) => ({ busy: 0, mode: 'escort', target: null, bat: 100, ...w })) : [];
-  s.wskrForm = nav.wskrForm === 'tight' ? 'tight' : 'loose';
+  s.wskrForm = nav.wskrForm === 'tight' ? 'tight' : 'loose'; s.wskrAuto = nav.wskrAuto !== false;
   s.bay = { doorDmg: (nav.bay && nav.bay.doorDmg) || 0, op: nav.bay && nav.bay.op ? { t: 0, ...nav.bay.op } : null, base: (nav.bay && nav.bay.base) || 0, rearm: nav.bay && nav.bay.rearm ? { ...nav.bay.rearm } : null, relaunch: (nav.bay && nav.bay.relaunch) || {}, launchAll: !!(nav.bay && nav.bay.launchAll) };
   s.rack = nav.rack && typeof nav.rack === 'object' ? { ...nav.rack } : {};
   s.shuttle = nav.shuttle && nav.shuttle.state ? { state: 'bay', mode: 'follow', bat: 100, ...nav.shuttle } : { state: 'bay', mode: 'follow', bat: 100 };
