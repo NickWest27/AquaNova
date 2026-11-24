@@ -1,0 +1,24 @@
+import '../../utils/debugPanel.js';
+import { mountRetro } from './retro.js';
+const { stage } = mountRetro(document.getElementById('root'));
+const el = (tag, cls, text, style) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; if (style) n.style.cssText = style; return n; };
+stage.append(el('div', '', 'AQUA NOVA  retro stage 320x240', 'position:absolute;left:4px;top:3px;color:var(--amber)'));
+stage.append(el('div', '', 'The deep sea does not forgive mistakes.', 'position:absolute;left:4px;top:13px'));
+stage.append(el('div', '', 'Sonar: 2 contacts, bearing 045 and 270.', 'position:absolute;left:4px;top:22px;color:var(--blue)'));
+// the 64 colors, 16 x 4 swatches of 8 x 8
+const sw = el('div', '', null, 'position:absolute;left:4px;top:36px;width:128px;height:32px');
+for (let i = 0; i < 64; i++) sw.append(el('div', '', null, `position:absolute;left:${(i % 16) * 8}px;top:${Math.floor(i / 16) * 8}px;width:8px;height:8px;background:var(--c${String(i).padStart(2, '0')})`));
+stage.append(sw);
+const status = el('div', '', 'taps: 0', 'position:absolute;left:4px;top:76px;color:var(--green)'); stage.append(status);
+let taps = 0;
+const b = el('button', 'rbtn', 'TAP ME', 'position:absolute;left:4px;top:90px'); b.onclick = () => { taps++; status.textContent = 'taps: ' + taps; }; stage.append(b);
+const b2 = el('button', 'rbtn on', 'ON', 'position:absolute;left:52px;top:90px'); stage.append(b2);
+const b3 = el('button', 'rbtn', 'OFF', 'position:absolute;left:84px;top:90px'); b3.disabled = true; stage.append(b3);
+stage.append(el('div', '', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ 0123456789', 'position:absolute;left:4px;top:116px'));
+stage.append(el('div', '', 'abcdefghijklmnopqrstuvwxyz .,:;!?()-+', 'position:absolute;left:4px;top:125px'));
+stage.append(el('div', '', 'Mission: investigate the contact. Do not', 'position:absolute;left:4px;top:140px;color:var(--yellow)'));
+stage.append(el('div', '', 'let it get away. Weather is calm. Depth', 'position:absolute;left:4px;top:149px;color:var(--yellow)'));
+stage.append(el('div', '', 'ALERT: hull breach, deck 3', 'position:absolute;left:4px;top:164px;color:var(--red)'));
+stage.append(el('div', '', 'Edge test: the box below is 1 pixel wide lines', 'position:absolute;left:4px;top:178px'));
+stage.append(el('div', '', null, 'position:absolute;left:4px;top:188px;width:312px;height:48px;border:1px solid var(--c10)'));
+stage.append(el('div', '', null, 'position:absolute;left:8px;top:192px;width:16px;height:40px;background:linear-gradient(var(--c00),var(--c00))'));

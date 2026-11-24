@@ -1,0 +1,17 @@
+/* The retro stage: 320 x 240 native pixels, scaled by whole numbers only (see retro.js). Colors come from palette.css only. */
+@font-face { font-family: 'AQ Pixel'; src: url('../assets/fonts/aqpixel.ttf') format('truetype'); font-display: block; }
+html, body { margin: 0; height: 100%; background: var(--c00); overflow: hidden; overscroll-behavior: none; touch-action: manipulation; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.retro-root { position: fixed; inset: 0; background: var(--c00); overflow: hidden; }
+.retro-stage {
+  position: absolute; left: 0; top: 0; width: 320px; height: 240px; overflow: hidden; transform-origin: 0 0;
+  background: var(--c01); color: var(--text);
+  font: 8px/9px 'AQ Pixel', monospace; letter-spacing: 0; -webkit-font-smoothing: none; font-smooth: never; text-rendering: optimizeSpeed;
+  image-rendering: pixelated; image-rendering: crisp-edges;
+}
+.retro-stage * { box-sizing: border-box; margin: 0; padding: 0; border-radius: 0; box-shadow: none; text-shadow: none; }
+.retro-stage img, .retro-stage canvas { image-rendering: pixelated; image-rendering: crisp-edges; display: block; }
+/* a button is at least 16 px tall (48 points on the iPad at 3x) */
+.rbtn { display: inline-block; min-height: 16px; min-width: 16px; padding: 4px 6px 3px; background: var(--c03); color: var(--text); border: 1px solid var(--c06); cursor: pointer; font: inherit; line-height: 9px; }
+.rbtn:active, .rbtn.on { background: var(--c13); color: var(--c00); border-color: var(--c10); }
+.rbtn:disabled { color: var(--c06); border-color: var(--c04); }
+.rtext-amber { color: var(--amber); } .rtext-red { color: var(--red); } .rtext-green { color: var(--green); } .rtext-blue { color: var(--blue); }

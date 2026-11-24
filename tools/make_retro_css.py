@@ -1,0 +1,12 @@
+#!/usr/bin/env python3
+"""Writes tablet/retro/palette.css (the --c00..--c63 variables) from data/palette.json."""
+import json, os
+R = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+pal = json.load(open(R + "/data/palette.json"))["colors"]
+names = {0: 'ink', 1: 'panel', 9: 'text', 10: 'white', 11: 'yellow', 12: 'amber', 13: 'blue', 14: 'green', 15: 'red'}
+css = "/* Generated from data/palette.json by tools/make_retro_css.py. Do not edit by hand. The 64 master colors, and nothing else. */\n:root {\n"
+for i, c in enumerate(pal): css += f"  --c{i:02d}: {c};\n"
+css += "  /* meanings (keep stable): amber = mission or attention, red = error or alert, green = OK or known, blue = interpolated or water */\n"
+for i, n in names.items(): css += f"  --{n}: var(--c{i:02d});\n"
+css += "}\n"
+open(R + "/tablet/retro/palette.css", "w").write(css); print("wrote tablet/retro/palette.css")
