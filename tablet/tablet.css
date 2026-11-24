@@ -504,7 +504,10 @@ textarea.field { min-height: 6rem; resize: none; }
 /* ---- plot a course dialog ---- */
 .pc { display: flex; flex-direction: column; gap: 0.8rem; }
 .pc-box { display: flex; flex-direction: column; gap: 0.6rem; } .pc-box[hidden] { display: none; }
-.pc-row { display: flex; align-items: center; gap: 0.8rem; } .pc-row span { width: 8rem; color: var(--dim); font-size: 0.95rem; letter-spacing: .06em; }
+.pc-row { display: flex; align-items: center; gap: 0.8rem; } .sp-chips { gap: 0.4rem; } .pc.sp { display: flex; flex-direction: column; max-height: 70vh; }
+.sp-scroll { overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 0.5rem; padding-right: 0.3rem; -webkit-overflow-scrolling: touch; } .sp-foot { padding-top: 0.6rem; display: flex; flex-direction: column; gap: 0.5rem; }
+.pc.sp .lbl { margin-top: 0.4rem; } .pc.sp .pc-row span { width: 12rem; }
+.pc-row span { width: 8rem; color: var(--dim); font-size: 0.95rem; letter-spacing: .06em; }
 .pc-row input, .pc-row select { flex: 1; min-width: 0; padding: 0.7rem; border-radius: 12px; border: 2px solid var(--line); background: #061523; color: var(--text); }
 .pc-hint { font-size: 0.85rem !important; color: var(--dim); line-height: 1.35; }
 .pc-msg { min-height: 1.3rem; font-size: 0.95rem; } .pc-msg.bad { color: #ff8a8a; } .pc-msg.ok { color: var(--cyan); }

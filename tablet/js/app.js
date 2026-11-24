@@ -388,6 +388,7 @@ async function boot() {
       else if (type === 'wskr-link-back') say('sensors', `${wskrName(data)} is back in link range, Captain.`);
       else if (type === 'wskr-low') say('sensors', `${wskrName(data)} is down to its last charge, Captain. Recalling it.`, 'mission');
       else if (type === 'wskr-dead') say('sensors', `${wskrName(data)} has lost power and is adrift, Captain. Bring the ship alongside to recover it.`, 'mission');
+      else if (type === 'shuttle-search-done') say('comms', `Aqua Nova, ${SHUTTLE_NAME}. Search pattern finished. Holding position and waiting for orders.`, 'mission');
       else if (type === 'wskr-search-done') say('sensors', `${wskrName(data)} has finished its search pattern and is rejoining the formation.`);
       else if (type === 'bay-launched') say(data.craft === 'shuttle' ? 'helm' : data.craft === 'rov' ? 'science' : 'sensors', data.craft === 'shuttle' ? `${SHUTTLE_NAME} is away, Captain.` : data.craft === 'rov' ? 'Remora is away. The bay doors stay open for her tether until she is back aboard, Captain.' : `${wskrName(data)} is away.`, '', { action: true });
       else if (type === 'speed-cap') say('helm', `Captain, the outer bay doors are open. I am holding us at ${data.kt} knots to protect the ship and the doors. Tell me to override the limit, or use Systems, if you want more.`, 'mission');

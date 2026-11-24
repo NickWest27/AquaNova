@@ -13,6 +13,7 @@ import { createND } from '../nd.js';
 import { GATES_ON } from '../unlocks.js';
 import { research } from '../science.js';
 import { el } from '../util.js';
+import { openSearchDialog } from '../searchDialog.js';
 
 export const ordersOk = () => !GATES_ON || research.has('wskr-orders');
 const CODES = ['Sc', 'La', 'Dr', 'Sp'];
@@ -93,6 +94,7 @@ export function mountWskrPanel(body) {
         act('Recall all', false, () => { sim.recallWskrs(); say('WSKRs recalled'); }, !s.wskrs.length),
         act('Hold formation', false, () => { live.forEach((q) => sim.orderWskr(q.n, 'escort')); say('All WSKRs rejoining formation'); }, !ok || !live.length),
         act('Search pattern', false, () => { live.forEach((q) => sim.orderWskr(q.n, 'search')); say('All WSKRs starting a search pattern'); }, !ok || !live.length),
+        act('Pattern…', false, () => openSearchDialog({ craft: 'wall' }), !ok || !live.length),
         act('Set up a relay', false, () => { const r = sim.setupRelay(); say(r.ok ? `${wskrName(r.wskr)} going up as a relay` : r.why === 'already' ? 'A relay is already up' : r.why === 'none' ? 'No WSKRs are out' : 'Every WSKR is busy'); }, !ok || !s.wskrs.length),
         el('span', { class: 'wk-sep', text: 'Formation' }), act('Loose', s.wskrForm !== 'tight', () => { sim.setWskrForm('loose'); say('Formation loose'); }, !ok), act('Tight', s.wskrForm === 'tight', () => { sim.setWskrForm('tight'); say('Formation tight'); }, !ok),
         el('span', { class: 'wk-sep', text: 'Depth' }), ...Object.entries(WSKR_DEPTHS).map(([k, t]) => act(t, s.wskrDepth === k, () => { sim.setWskrDepth(k); say(`WSKR depth: ${t.toLowerCase()}`); }, !ok))];
@@ -104,6 +106,7 @@ export function mountWskrPanel(body) {
       list = [act('Hold formation', w.mode === 'escort', () => { sim.orderWskr(w.n, 'escort'); say(`${wskrName(w)} rejoining formation`); }, off),
         act('Manual control', w.mode === 'manual', () => { sim.orderWskr(w.n, 'manual'); say(`${wskrName(w)} is yours, Captain`); }, off),
         act('Search pattern', w.mode === 'search', () => { sim.orderWskr(w.n, 'search'); say(`${wskrName(w)} starting a search pattern`); }, off),
+        act('Pattern…', false, () => openSearchDialog({ craft: 'w' + w.n }), off),
         act('Relay', w.mode === 'relay', () => { sim.orderWskr(w.n, 'relay'); say(`${wskrName(w)} going up as a relay`); }, off),
         act(poi ? `Investigate ${c.label}` : 'Investigate (select a contact)', w.mode === 'task' && poi && w.target === poi.id, () => { sim.taskWskr(poi, w.n); say(`${wskrName(w)} sent to ${poi.name}`); }, off || !poi),
         act('Recall', w.mode === 'recall', () => { sim.recallWskr(w.n); say(`${wskrName(w)} recalled`); }, w.dead || w.arrived)];

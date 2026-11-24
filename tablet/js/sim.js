@@ -3,6 +3,7 @@ import { clamp, norm360, angDiff } from './util.js';
 import { dlog } from '../../utils/log.js';
 import { planRoute } from './route.js';
 import { seafloor } from './seafloor.js';
+import { build as buildPattern, normalize as normPattern, clip as clipPattern, lengthNm as lengthPattern } from './searchPattern.js';
 
 const TICK_MS = 200;
 export let TIMESCALE = 1;         // 1 real second = 1 game second (real time, the default). Settings can change it (5x to 120x); everything below reads this live.
@@ -182,6 +183,15 @@ sim.plotRoute = () => {
 };
 /** Replace the Route with one destination and plot it (missions, orders and the Navigation station use this). */
 sim.setWpt = (p) => { sim.s.fixes = p ? [p] : []; if (p) sim.plotRoute(); else { sim.s.wpt = null; sim.s.route = []; sim.touch(); } };
+/** Plot a search pattern as the ship's Route (fixes SP1, SP2, ...). Points on land or outside the Area of Operations are dropped.
+ *  Returns { ok, n, nm } or { ok: false, why: 'empty' | 'blocked' }. */
+sim.plotSearch = (spec, datum) => {
+  const s = sim.s, wps = clipPattern(buildPattern(spec, datum), (la, lo) => seafloor.inside(la, lo) && sim.shipPassable(la, lo));
+  if (wps.length < 2) return { ok: false, why: 'empty' };
+  const old = s.fixes; s.fixes = wps.map((p, i) => sim.newFix({ lat: p.lat, lon: p.lon, name: 'SP' + (i + 1) }));
+  const r = sim.plotRoute(); if (!r.ok) { s.fixes = old; return { ok: false, why: r.why }; }
+  return { ok: true, n: wps.length, nm: lengthPattern(wps, s) };
+};
 sim.clearRoute = () => { const s = sim.s; s.fixes = []; s.wpt = null; s.route = []; sim.touch(); };
 sim.stop = () => { sim.s.throttle = 0; sim.touch(); };   // speed only: a plotted course stays
 sim.cancelCourse = () => { sim.s.wpt = null; sim.touch(); };   // steering by hand: speed stays and the Route is kept
@@ -247,11 +257,11 @@ export function wskrDepthFor(w) {
 export const wskrCraft = (w) => ({ lat: w.lat, lon: w.lon, heading: w.heading == null ? sim.s.heading : w.heading, depth: wskrDepthFor(w), kt: w.moving ? (w.super ? WSKR_SUPER_KT * ((wskrPerk(w).kt || WSKR_KT) / WSKR_KT) : w.kt || wskrPerk(w).kt || WSKR_KT) : 0 });
 sim.recallWskr = (n) => { const w = sim.s.wskrs.find((q) => q.n === n); if (!w) return false; w.mode = 'recall'; w.target = null; w.route = null; sim.touch(); return true; };
 /** Give an order to one WSKR. order: 'escort' | 'manual' | 'search' | 'relay'. Returns false if there is no such WSKR. */
-sim.orderWskr = (n, order) => {
+sim.orderWskr = (n, order, opts = {}) => {
   const w = sim.s.wskrs.find((q) => q.n === n); if (!w || !['escort', 'manual', 'search', 'relay'].includes(order)) return false;
   w.mode = order; w.target = null; w.route = null; w.thr = 0; w.turn = 0; w.limited = false; w.cruise = false;
   if (w.heading == null) w.heading = sim.s.heading;
-  if (order === 'search') w.pat = { lat: w.lat, lon: w.lon, k: 1, t: 0 };
+  if (order === 'search') { const d = opts.datum || w; w.pat = { lat: d.lat, lon: d.lon, k: 1, t: 0, spec: normPattern(opts.spec || LEGACY_SEARCH) }; }
   sim.touch(); return true;
 };
 sim.setWskrDepth = (dep) => { if (!WSKR_DEPTHS[dep]) return false; sim.s.wskrDepth = dep; sim.touch(); return true; };
@@ -274,11 +284,10 @@ sim.setupRelay = () => {
   sim.orderWskr(free.n, 'relay'); return { ok: true, wskr: free };
 };
 sim.standDownRelay = () => { const w = sim.s.wskrs.find((q) => q.mode === 'relay'); if (!w) return { ok: false }; sim.orderWskr(w.n, 'escort'); return { ok: true, wskr: w }; };
-function searchPoint(p, k) {
-  let x = 0, y = 0; const dirs = [[0, 1], [1, 0], [0, -1], [-1, 0]];
-  for (let i = 0; i < k; i++) { const len = SEARCH_LEG_NM * (Math.floor(i / 2) + 1), d = dirs[i % 4]; x += d[0] * len; y += d[1] * len; }
-  return { lat: p.lat + y / NM_PER_DEG_LAT, lon: p.lon + x / (NM_PER_DEG_LAT * Math.cos((p.lat * Math.PI) / 180)) };
-}
+/** The old search: an expanding square of 14 legs. Saves from before the pattern generator have no spec, so they get this. */
+const LEGACY_SEARCH = { kind: 'square', space: SEARCH_LEG_NM, legs: SEARCH_LEGS, brg: 0 };
+/** The waypoints of a WSKR's search pattern (built once, kept on the pattern). Points outside the Area of Operations are dropped. */
+export const patternPoints = (pat) => pat._w || (pat._w = clipPattern(buildPattern(pat.spec || LEGACY_SEARCH, pat), (la, lo) => !seafloor.ready || seafloor.inside(la, lo)));
 export const wskrPerk = (w) => WSKR_PERKS[w.n] || {};
 export const wskrName = (w) => w.name || WSKR_NAMES[w.n - 1] || `WSKR ${w.n}`;
 /** Put a WSKR in the water at once (the bay's one-minute launch ends here). It takes the charge its rack slot has reached. */
@@ -359,7 +368,7 @@ function stepWskrs(dt) {
       return true;
     }
     if (w.mode === 'escort') { const i = esc.indexOf(w), a = ((s.heading + (360 / esc.length) * i + (wskrPerk(esc[0]).lead ? 0 : 45)) * Math.PI) / 180; goal = { lat: s.lat + (Math.cos(a) * ring) / NM_PER_DEG_LAT, lon: s.lon + (Math.sin(a) * ring) / (NM_PER_DEG_LAT * Math.cos((s.lat * Math.PI) / 180)) }; }
-    else if (w.mode === 'search') goal = searchPoint(w.pat || (w.pat = { lat: w.lat, lon: w.lon, k: 1, t: 0 }), w.pat.k);
+    else if (w.mode === 'search') { const pts = patternPoints(w.pat || (w.pat = { lat: w.lat, lon: w.lon, k: 1, t: 0 })); goal = pts[w.pat.k - 1]; if (!goal) { w.mode = 'escort'; w.pat = null; w.route = null; sim.emit('wskr-search-done', w); return true; } }
     else if (w.mode === 'relay') goal = s;                          // follows the ship, just under the surface
     else if (w.mode === 'trail') { goal = trailPoint(w); if (!goal) { w.mode = 'escort'; w.trail = null; w.route = null; sim.emit('wskr-trail-lost', w); return true; } }
     else if (w.mode === 'task') { goal = s.pois.find((p) => p.id === w.target); if (!goal) { w.mode = 'escort'; return true; } }
@@ -391,7 +400,7 @@ function stepWskrs(dt) {
     }
     if (w.mode === 'search') {                  // expanding square: next corner when this one is reached (or after 30 game minutes)
       w.pat.t += dt * TIMESCALE;
-      if (onSite || w.pat.t > 1800) { w.pat.k++; w.pat.t = 0; w.route = null; if (w.pat.k > SEARCH_LEGS) { w.mode = 'escort'; w.pat = null; sim.emit('wskr-search-done', w); } return true; }
+      if (onSite || w.pat.t > 1800) { w.pat.k++; w.pat.t = 0; w.route = null; if (w.pat.k > patternPoints(w.pat).length) { w.mode = 'escort'; w.pat = null; sim.emit('wskr-search-done', w); } return true; }
     }
     const aim = w.route[0] || goal, ta = toward(w, aim);
     if (ta.nm > 0.02 && !(w.mode === 'escort' && t.nm < 0.05) && !(w.mode === 'relay' && t.nm < 0.1) && !(w.mode === 'trail' && t.nm < WSKR_TRAIL_NM)) {

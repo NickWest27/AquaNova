@@ -31,7 +31,8 @@ export const aboard = (sh) => (sh.pilots == null ? SHUTTLE_COCKPIT : sh.pilots) 
 export const o2HoursLeft = (sh) => (Math.max(0, (sh.o2 == null ? 100 : sh.o2)) / 100) * shuttleO2Hours() * (O2_CREW / Math.max(1, aboard(sh)));
 const HULL_PER_KT_S = 0.015, DOOR_PER_KT_S = 0.02;   // % per knot over the limit per game second
 
-const passable = (lat, lon) => (seafloor.depthAt(lat, lon) ?? 0) >= 3;
+export const TERN_SEARCH_KT = 10;
+export const passable = (lat, lon) => (seafloor.depthAt(lat, lon) ?? 0) >= 3;
 export const bay = () => sim.s.bay || (sim.s.bay = { op: null, doorDmg: 0, base: 0, rearm: null, relaunch: {}, launchAll: false });
 export const rack = () => sim.s.rack || (sim.s.rack = {});
 export const shuttle = () => sim.s.shuttle || (sim.s.shuttle = { state: 'bay', bat: 100, mode: 'follow' });
@@ -190,7 +191,7 @@ function aim(sh, goal) {
   return sh.route[0] || goal;
 }
 /** Her speed: what the Captain ordered, never more than 7 knots while she is on the surface. */
-const spd = (sh) => Math.min(sh.ordKt == null ? SHUTTLE_KT : sh.ordKt, (sh.depth || 0) < SURFACE_M ? SURFACE_KT : SHUTTLE_KT);
+const spd = (sh) => Math.min(sh.ordKt == null ? (sh.mode === 'search' ? TERN_SEARCH_KT : SHUTTLE_KT) : sh.ordKt, (sh.depth || 0) < SURFACE_M ? SURFACE_KT : SHUTTLE_KT);
 /** Where she wants to be: ordered depth, the surface for a relay, the dock, or a check-in. 3 m a second. */
 function tickDepth(sh, g) {
   if (sh.mode === 'follow' && !sh.standoff) { sh.depth = sim.s.depth; return; }
@@ -215,7 +216,8 @@ function stepShuttle(g) {
   mannedDefaults(sh);
   if (sh.pilots < 2 && sh.mode === 'going' && !shuttleLink(sh)) { sh.mode = 'returning'; sh.route = null; sim.emit('shuttle-nolink', sh); }   // one pilot needs a radio link
   let goal = null;
-  if (sh.mode === 'going' || sh.mode === 'goto') goal = sh.dest; else if (sh.mode === 'returning' || sh.mode === 'follow' || sh.mode === 'relay') goal = s;
+  if (sh.mode === 'search') { goal = sh.pat && sh.pat.wps[sh.pat.k]; if (!goal) { sh.mode = 'station'; sh.pat = null; sh.route = null; sim.emit('shuttle-search-done', sh); } }
+  else if (sh.mode === 'going' || sh.mode === 'goto') goal = sh.dest; else if (sh.mode === 'returning' || sh.mode === 'follow' || sh.mode === 'relay') goal = s;
   tickDepth(sh, g);
   // The ship is below the Tern's safe depth (800 m): she formates at a safe distance and depth, and hails the ship, until it is safe to dock.
   if (!sh.dead && (sh.mode === 'follow' || sh.mode === 'returning')) {
@@ -236,10 +238,11 @@ function stepShuttle(g) {
     }
   } else if (sh.mode === 'moored') { /* waiting at the dock for the team; charging below */ } else if (goal) {
     const t = toward(sh, goal), end = sh.route && sh.route.length ? sh.route[sh.route.length - 1] : goal;
-    const arrived = t.nm < (sh.mode === 'going' ? 0.1 : 0.15) || (sh.routeSnapped && toward(sh, end).nm < 0.12);
+    const arrived = t.nm < (sh.mode === 'going' ? 0.1 : sh.mode === 'search' ? 0.05 : 0.15) || (sh.routeSnapped && toward(sh, end).nm < 0.12);
     if (arrived) {
       if (sh.mode === 'going') { sh.mode = 'exchange'; sh.air = 0; sim.emit('shuttle-arrived', sh); }
       else if (sh.mode === 'goto') { sh.mode = 'station'; sh.route = null; sim.emit('shuttle-onstation', sh); }
+      else if (sh.mode === 'search') { sh.pat.k++; sh.route = null; if (sh.pat.k >= sh.pat.wps.length) { sh.mode = 'station'; sh.holdDepth = Math.round(sh.depth || 0); sim.emit('shuttle-search-done', sh); sh.pat = null; } }
       else if (sh.mode === 'relay') { /* stays up with the ship */ }
       else { sh.mode = 'follow'; sh.lat = s.lat; sh.lon = s.lon; sh.route = null; if (s.depth <= TERN_SAFE_M) sim.emit('shuttle-alongside', sh); }
     } else {
@@ -257,7 +260,7 @@ function stepShuttle(g) {
   }
   if (sh.bat <= 0) { sh.dead = true; sim.emit('shuttle-dead', sh); }
   else if (sh.o2 <= 0) { sh.dead = true; sim.emit('shuttle-o2-out', sh); }
-  else if ((sh.bat <= LOW_PCT || sh.o2 <= LOW_PCT) && sh.mode === 'going') { sh.mode = 'returning'; sh.route = null; sim.emit(sh.o2 <= LOW_PCT ? 'shuttle-o2-low' : 'shuttle-low', sh); }
+  else if ((sh.bat <= LOW_PCT || sh.o2 <= LOW_PCT) && (sh.mode === 'going' || sh.mode === 'search')) { sh.mode = 'returning'; sh.route = null; sim.emit(sh.o2 <= LOW_PCT ? 'shuttle-o2-low' : 'shuttle-low', sh); }
 }
 
 sim.hooks.push((dt) => {

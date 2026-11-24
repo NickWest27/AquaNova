@@ -2,6 +2,7 @@ import { sim, toward } from '../sim.js';
 import { createND } from '../nd.js';
 import { el, pad } from '../util.js';
 import { openPlotDialog } from '../plot.js';
+import { openSearchDialog } from '../searchDialog.js';
 
 export function mount(body) {
   body.classList.add('nav-st');
@@ -10,10 +11,11 @@ export function mount(body) {
   const rc = (l, n, w) => el('div', { class: `card ${w || ''}` }, el('div', { class: 'lbl', text: l }), n);
   const rangeTxt = el('div', { class: 'num', text: '2 nm' });
   const plotAny = el('button', { class: 'btn primary', text: 'Plot a course', onclick: () => openPlotDialog({ preselect: sel, onPlotted: renderPick }) });
+  const searchBtn = el('button', { class: 'btn', text: 'Search pattern', onclick: () => openSearchDialog({ craft: 'ship' }) });
   const pick = el('div', { class: 'card wpt-card' });
   const side = el('div', { class: 'nav-side' },
     el('div', { class: 'readouts' }, rc('Heading', rHdg), rc('Speed', rSpd), rc('Depth', rDep), rc('Range', rangeTxt)),
-    pick);
+    pick, searchBtn);
   body.append(wrap, side);
   let nd, sel = null;
 

@@ -4,7 +4,8 @@
 // The Tern is manned: out of contact she keeps to her last mission, and once an hour she surfaces and tries to check in.
 import { sim, toward, SURFACE_M } from './sim.js';
 import { seafloor } from './seafloor.js';
-import { SHUTTLE_NAME, SHUTTLE_KT, SHUTTLE_LINK_NM, TERN_SAFE_M, TERN_CRUISE_M, shuttle, shuttleLink, shuttleRangeNm, dockList, launchShuttle, sendShuttle, recallShuttle, setManning, bay } from './bayops.js';
+import { build as buildPattern, normalize as normPattern, clip as clipPattern, lengthNm, describe as describePattern } from './searchPattern.js';
+import { SHUTTLE_NAME, SHUTTLE_KT, SHUTTLE_LINK_NM, TERN_SAFE_M, TERN_CRUISE_M, shuttle, shuttleLink, shuttleRangeNm, passable, TERN_SEARCH_KT, dockList, launchShuttle, sendShuttle, recallShuttle, setManning, bay } from './bayops.js';
 
 const CHECKIN_S = 3600, SURF_S = 120, SURF_LINK_NM = SHUTTLE_LINK_NM * 2;
 const out = (sh) => sh.state === 'out';
@@ -48,11 +49,25 @@ function apply(sh, o) {
     case 'resume': {
       const m = sh.mission;
       if (!m) { sh.mode = 'returning'; sh.route = null; return 'She has no mission left to go back to, so she is coming home.'; }
-      sh.route = null; sh.dest = m.dest; sh.mode = m.kind === 'supply' || m.kind === 'dock' ? 'going' : 'goto'; return `Back to her mission: ${m.label || (m.dest && m.dest.name) || 'her task'}.`;
+      sh.route = null; sh.dest = m.dest; if (m.kind === 'search' && sh.pat) { sh.mode = 'search'; return `Back to her search pattern, waypoint ${sh.pat.k + 1} of ${sh.pat.wps.length}.`; }
+      sh.mode = m.kind === 'supply' || m.kind === 'dock' ? 'going' : 'goto'; return `Back to her mission: ${m.label || (m.dest && m.dest.name) || 'her task'}.`;
     }
     case 'depth': if (o.m > TERN_SAFE_M) return `She is only rated for ${TERN_SAFE_M} metres. Order refused.`; sh.holdDepth = Math.max(0, Math.round(o.m)); if (sh.mode === 'follow' || sh.mode === 'relay') sh.mode = 'station'; return `Making her depth ${sh.holdDepth} metres.`;
     case 'heading': sh.ordHdg = ((o.deg % 360) + 360) % 360; if (sh.ordKt == null || sh.ordKt <= 0) sh.ordKt = 10; sh.mode = 'steer'; sh.route = null; return `Steering ${String(Math.round(sh.ordHdg)).padStart(3, '0')} at ${sh.ordKt} knots.`;
     case 'speed': sh.ordKt = Math.max(0, Math.min(SHUTTLE_KT, o.kt)); if (sh.ordKt === 0) { sh.mode = 'station'; sh.holdDepth = Math.round(sh.depth || 0); return 'All stop. Holding position.'; } if (sh.mode === 'station') { sh.mode = 'steer'; if (sh.ordHdg == null) sh.ordHdg = sh.heading || 0; } return `Speed ${sh.ordKt} knots${(sh.depth || 0) < SURFACE_M ? ' (7 at most while she is on the surface)' : ''}.`;
+    case 'search': {
+      // o.spec: a search pattern (see searchPattern.js). o.datum: where it is centred. o.depth: optional, metres.
+      if (!o.datum || !Number.isFinite(o.datum.lat) || !Number.isFinite(o.datum.lon)) return 'A search needs a datum position. Order refused.';
+      const spec = normPattern(o.spec), wps = clipPattern(buildPattern(spec, o.datum), (la, lo) => seafloor.inside(la, lo) && passable(la, lo));
+      if (wps.length < 2) return 'There is not enough open water in that pattern. Order refused.';
+      const need = lengthNm(wps, sh) / TERN_SEARCH_KT + toward(wps[wps.length - 1], s).nm / SHUTTLE_KT, have = shuttleRangeNm() / SHUTTLE_KT;
+      if (need > have) return `That pattern is ${need.toFixed(1)} hours of flying with the trip home. She has ${have.toFixed(1)} hours. Order refused.`;
+      if (o.depth != null) sh.holdDepth = Math.max(0, Math.min(TERN_SAFE_M, Math.round(o.depth)));
+      sh.pat = { spec, lat: o.datum.lat, lon: o.datum.lon, k: 0, wps };
+      sh.mission = { kind: 'search', dest: { name: o.datum.name || 'the datum', lat: o.datum.lat, lon: o.datum.lon }, label: describePattern(spec) };
+      sh.mode = 'search'; sh.route = null; sh.surfUntil = 0;
+      return `Starting a search. ${describePattern(spec)}. ${wps.length} waypoints, about ${lengthNm(wps, sh).toFixed(1)} nautical miles.`;
+    }
     case 'goto': {
       const d = o.dest;
       if (!seafloor.inside(d.lat, d.lon)) return `${d.name} is outside our Area of Operations. Order refused.`;
@@ -82,7 +97,7 @@ export const callBackTern = () => orderTern({ kind: 'home' });
 export function ternReport() {
   const sh = shuttle();
   if (!out(sh)) return `${SHUTTLE_NAME} is aboard.`;
-  const w = { follow: 'alongside', going: 'under way to a dock', goto: 'under way to a position', station: 'holding position', steer: 'on a heading', relay: 'up as a relay', returning: 'coming home', exchange: 'at the dock', moored: 'at the dock' }[sh.mode] || sh.mode;
+  const w = { follow: 'alongside', going: 'under way to a dock', goto: 'under way to a position', search: sh.pat ? `searching, waypoint ${Math.min(sh.pat.k + 1, sh.pat.wps.length)} of ${sh.pat.wps.length}` : 'searching', station: 'holding position', steer: 'on a heading', relay: 'up as a relay', returning: 'coming home', exchange: 'at the dock', moored: 'at the dock' }[sh.mode] || sh.mode;
   const link = sh.dead ? 'She is adrift and silent.' : ternLinked(sh) ? 'We have contact.' : sh.missed > 0 ? `She has missed ${sh.missed} check-in${sh.missed > 1 ? 's' : ''}. Last contact ${clk(sh.lastContact || 0)}.` : `She is out of range, ${toward(sim.s, sh).nm.toFixed(0)} miles away. Last contact ${clk(sh.lastContact || 0)}.`;
   return `${SHUTTLE_NAME} is ${w}${sh.mission ? ` (${sh.mission.label || sh.mission.dest.name})` : ''}, ${Math.round(sh.depth || 0)} metres, battery ${Math.round(sh.bat)}%, air ${Math.round(sh.o2)}%. ${link}${sh.queue && sh.queue.length ? ` ${sh.queue.length} order${sh.queue.length > 1 ? 's' : ''} waiting to be sent.` : ''}`;
 }

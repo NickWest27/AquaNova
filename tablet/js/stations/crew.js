@@ -12,6 +12,7 @@ import { startReport } from '../transfer.js';
 import { topicsFor, askTopic } from '../topics.js';
 import { guidesFor, askGuide } from '../howto.js';
 import { askDepth } from '../depthPad.js';
+import { openSearchDialog } from '../searchDialog.js';
 import { orderTern, callBackTern, ternReport, launchTern, destinations } from '../tern.js';
 import { TERN_SAFE_M, BAY_SAFE_KT, shuttle, bayDoorsOpen, setBayOverride, launchAllWskrs, bay as bayState } from '../bayops.js';
 import { toggleDock } from '../dock.js';
@@ -133,7 +134,8 @@ PARAM['Order the Tern to'] = () => ({ title: 'Order the Tern to …', opts: [
   ['Make depth …', () => ({ title: 'Make depth …', opts: [10, 50, 100, 200, 400, 600, TERN_SAFE_M].map((m) => [`${m} m`, () => orderTern({ kind: 'depth', m }).text]) })],
   ['Make heading …', () => ({ title: 'Make heading …', opts: HEADINGS.map(([l, v]) => [l, () => orderTern({ kind: 'heading', deg: v }).text]) })],
   ['Make speed …', () => ({ title: 'Make speed …', opts: [['All stop', 0], ['5 knots', 5], ['10 knots', 10], ['15 knots', 15], ['20 knots', 20]].map(([l, kt]) => [l, () => orderTern({ kind: 'speed', kt }).text]) })],
-  ['Go to …', () => ({ title: 'Go to …', opts: destOpts((d) => orderTern({ kind: 'goto', dest: d }).text) })]] });
+  ['Go to …', () => ({ title: 'Go to …', opts: destOpts((d) => orderTern({ kind: 'goto', dest: d }).text) })],
+  ['Run a search pattern …', () => { openSearchDialog({ craft: 'tern' }); return 'Set the pattern and the datum, Captain. I will pass it to her.'; }]] });
 PARAM['Launch the Tern to'] = () => ({ title: 'Launch the Tern to …', opts: [
   ['Supply run: closest dock', () => launchTern({ kind: 'supply' }).text],
   ['Search and rescue', () => launchTern({ kind: 'sar' }).text],
