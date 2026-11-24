@@ -51,7 +51,7 @@ def main():
         page.locator("#station .wk-cmds .btn", has_text="Manual control").tap(); page.wait_for_timeout(500)
         check("manual command applies to the selected WSKR only", js("return sim.s.wskrs.filter(w=>w.mode==='manual').map(w=>w.n)").__len__() == 1 and "turn left" in page.inner_text(".wk-cmds").lower())
         page.locator(".wk-big").tap(position={"x": 20, "y": 20}); page.wait_for_timeout(400)
-        page.locator("#station .wk-cmds .btn", has_text="Search pattern").tap(); page.wait_for_timeout(400)
+        page.locator("#station .wk-cmds .btn", has_text="Search…").tap(); page.wait_for_timeout(400); page.locator(".pc.sp .btn", has_text="Start search").tap(); page.wait_for_timeout(400)
         check("with none selected, search applies to all (manual one too)", js("return sim.s.wskrs.filter(w=>w.mode==='search').length") >= 1)
         check("no page errors", not errors, str(errors[:3]))
         browser.close()

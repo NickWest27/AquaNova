@@ -37,7 +37,7 @@ def main():
                 check("gated: orders unlock with the research", not page.locator("#station .wk-cmds .btn", has_text="Manual control").is_disabled())
                 page.locator("#station .wk-big").tap(position={"x": 20, "y": 20}); page.wait_for_timeout(300)
             page.locator("#station .wk-tile", has_text="Lantern").tap(); page.wait_for_timeout(400)
-            check("selecting a WSKR shows its controls", "LANTERN" in page.inner_text("#station .wk-cmds").upper() and page.locator("#station .wk-cmds .btn", has_text="Search pattern").is_visible())
+            check("selecting a WSKR shows its controls", "LANTERN" in page.inner_text("#station .wk-cmds").upper() and page.locator("#station .wk-cmds .btn", has_text="Search…").is_visible())
             page.locator("#station .wk-big").tap(position={"x": 20, "y": 20}); page.wait_for_timeout(300)
             page.locator("#station .wk-tile", has_text="Scout").tap(); page.wait_for_timeout(300)
             page.locator("#station .wk-cmds .btn", has_text="Manual control").tap(); page.wait_for_timeout(500)
