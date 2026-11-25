@@ -2,6 +2,7 @@
 // The iPhone PED (ped/ at the site root) shows the same things, kept in step through GitHub.
 import { fill } from '../player.js';
 import { el, pad, toast } from '../util.js';
+import { getQuality, setQuality } from '../art.js';
 import { sim, clockText, TIMESCALE, TIME_SCALES, setTimeScale } from '../sim.js';
 import { gameState, saveManager } from '../persist.js';
 import { syncNow, requestSync, syncState, onSyncChange } from '../sync.js';
@@ -213,7 +214,14 @@ export function mount(body, ctx) {
         el('p', { text: 'Write what you find while you play. Each note keeps the game time, the place and the build. Copy them all and paste them into the chat later.' }),
         bugBox, el('div', { class: 'row' }, el('button', { class: 'btn primary', text: 'Add note', onclick: addBug }), el('button', { class: 'btn', text: 'Copy all', onclick: copyBugs })), bugList);
 
-      return [sync, time, sound, version, el('div', { class: 'card setting' }, el('div', { class: 'lbl', text: 'Text size' }), el('div', { class: 'row' }, zoomBtn('Smaller', -0.1), zoomBtn('Reset', 0), zoomBtn('Larger', 0.1))), bugs];
+      // display: which version of the room pictures to show (the layout never changes).
+      const q = getQuality();
+      const pics = el('div', { class: 'card setting' }, el('div', { class: 'lbl', text: 'Display: pictures' }),
+        el('p', { text: q === 'original' ? 'Original: the room pictures as they were made, scaled smoothly.' : 'Retro: 320 x 240 pictures in the 64-color palette, shown in hard pixels.' }),
+        el('div', { class: 'row' }, ...[['original', 'Original (default)'], ['retro', 'Retro pixels']].map(([k, t]) => el('button', { class: 'btn' + (k === q ? ' primary' : ''), text: t, onclick: () => { setQuality(k); render(); } }))),
+        el('p', { text: 'Screens, text and tap areas stay where they are. Rooms with only one picture look the same in both.' }));
+
+      return [sync, time, pics, sound, version, el('div', { class: 'card setting' }, el('div', { class: 'lbl', text: 'Text size' }), el('div', { class: 'row' }, zoomBtn('Smaller', -0.1), zoomBtn('Reset', 0), zoomBtn('Larger', 0.1))), bugs];
     },
   };
   const TITLES = { status: 'Status', missions: 'Missions', tasks: 'Tasks', contacts: 'Contacts', findings: 'Findings', journal: 'Journal', settings: 'Settings' };

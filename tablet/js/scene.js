@@ -1,6 +1,7 @@
 // Bridge and quarters scenes on the fixed 1920x1080 stage. Updates only touch text nodes that changed.
 import { sim, toward, gameDateText } from './sim.js';
 import { el } from './util.js';
+import { artImg } from './art.js';
 import { createBridgeConsole } from './bridge.js';
 import { samples, sampleName, jobs, points, research, LABS, SAMPLE_KINDS } from './science.js';
 import { rovRange } from './rov.js';
@@ -44,7 +45,7 @@ export function createScene(stage, { onOpen }) {
 
   // Retro skin: the bridge frame is the 320x240 pixel-art picture (transparent holes for the screens), shown at 6x with hard pixels.
   // The bridge stage is 1920x1440 (4:3). Everything below is in stage pixels = art pixels x 6.
-  const frame = el('img', { class: 'frame retro', src: 'retro/assets/bridge.png', alt: '', draggable: 'false', decoding: 'async' });
+  const frame = artImg('bridge');
   const hs = (label, x, y, w, h, onclick, tagPos = 'top', extra = '') =>
     el('button', { class: `hs ${extra}`, style: `left:${x}px;top:${y}px;width:${w}px;height:${h}px`, 'aria-label': label, onclick },
       el('span', { class: `tag ${tagPos}`, text: label }));
@@ -104,7 +105,7 @@ export function createScene(stage, { onOpen }) {
   const sign = (text, corners, h = 120) => slanted('wsign-box', el('div', { class: 'wsign', style: `height:${h}px`, text }), 412, h, corners);
   const walkway = el('div', { class: 'scene walkway', hidden: true });
   walkway.append(
-    el('img', { class: 'frame retro hires', src: 'retro/assets/walkway_original.jpg', alt: '', draggable: 'false', decoding: 'async' }),
+    artImg('walkway'),
     // the owner's original picture (512x382, smooth), stretched to the 1920x1440 stage; walkway.png is the 320x240 palette-snapped copy. The BRIDGE sign is painted in the art, so the game draws no signs here
     door('SCIENCE', 150, 260, 230, 940, 'science'),
     door('MEDICAL', 380, 380, 110, 680, 'medbay'),
