@@ -36,8 +36,8 @@ jobs:
           rsync -a --exclude='.git' --exclude='temp_backup' --exclude='tools/shots' main/ _site/desktop/
           rsync -a --exclude='.git' --exclude='temp_backup' --exclude='tools/shots' tablet-branch/ _site/tablet/
           touch _site/.nojekyll
-          # /AquaNova/tablet/ opens the iPad game, which lives in the tablet/ folder of that build
-          printf '<!DOCTYPE html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Aqua Nova</title><script>location.replace("tablet/"+location.search)</script><meta http-equiv="refresh" content="0;url=tablet/"><a href="tablet/">Open Aqua Nova</a>' > _site/tablet/index.html
+          # /AquaNova/tablet/ opens the retro iPad game (the old look stays at /tablet/tablet/), which lives in the tablet/ folder of that build
+          printf '<!DOCTYPE html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Aqua Nova</title><script>location.replace("tablet/retro/"+location.search)</script><meta http-equiv="refresh" content="0;url=tablet/retro/"><a href="tablet/retro/">Open Aqua Nova</a>' > _site/tablet/index.html
           # /AquaNova/ is a small menu
           printf '<!DOCTYPE html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Aqua Nova</title><body style="font:20px sans-serif;background:#0b0f1a;color:#d8e6f2;padding:2rem"><h1>Aqua Nova</h1><p><a style="color:#29adff" href="tablet/">Tablet (retro, iPad)</a></p><p><a style="color:#29adff" href="desktop/">Desktop</a></p></body>' > _site/index.html
       - uses: actions/configure-pages@v5
