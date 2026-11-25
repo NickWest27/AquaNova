@@ -104,11 +104,12 @@ function fit() {
   const wrap = $('#scene-wrap'), stage = $('#stage');
   if (wrap && stage) { const w = wrap.clientWidth; if (w) stage.style.transform = `scale(${w / 1920})`; }
   // the station page: the largest 4:3 box inside the safe area, centred, scaled by one transform
-  const st = $('#station'); if (!st) return;
+  const boxes = ['#station', '#ped-pop', '#comm-pop', '#hud'].map((q) => $(q)).filter(Boolean); if (!boxes.length) return;
   if (!safe) { safe = document.createElement('div'); safe.style.cssText = 'position:fixed;left:0;top:0;width:0;height:0;visibility:hidden;pointer-events:none;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)'; document.body.append(safe); }
   const cs = getComputedStyle(safe), T = parseFloat(cs.paddingTop) || 0, R = parseFloat(cs.paddingRight) || 0, B = parseFloat(cs.paddingBottom) || 0, L = parseFloat(cs.paddingLeft) || 0;
   const W = window.innerWidth - L - R, H = window.innerHeight - T - B, k = Math.min(W / PAGE_W, H / PAGE_H);
-  st.style.transform = `translate(${Math.round(L + (W - PAGE_W * k) / 2)}px, ${Math.round(T + (H - PAGE_H * k) / 2)}px) scale(${k})`;
+  const tf = `translate(${Math.round(L + (W - PAGE_W * k) / 2)}px, ${Math.round(T + (H - PAGE_H * k) / 2)}px) scale(${k})`;
+  for (const b of boxes) b.style.transform = tf;   // station pages, the PED, the communicator and the corner buttons share one 4:3 box
 }
 
 // ---------- PED: a pop-up on top of the current screen, not a station ----------

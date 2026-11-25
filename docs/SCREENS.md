@@ -1,7 +1,7 @@
 # Screen names (shared vocabulary)
 
 ## Screen size and the no-scroll rule (owner, 2026-11-25)
-- **Station pages are 4:3, like the scenes, and scale with the screen.** A page is laid out once at **1024 × 768** (the stage's 1920 × 1440 divided by 1.875) and `fit()` in `tablet/js/app.js` scales it with one transform into the largest 4:3 box inside the safe area, centred; the rest of the screen is a dark letterbox. So a page looks the same on every iPad. `rem` is a fixed 16 px (times the user's zoom) for the same reason.
+- **Station pages are 4:3, like the scenes, and scale with the screen.** A page is laid out once at **1024 × 768** (the stage's 1920 × 1440 divided by 1.875) and `fit()` in `tablet/js/app.js` scales it with one transform into the largest 4:3 box inside the safe area, centred; the rest of the screen is a dark letterbox. So a page looks the same on every iPad. The **PED** and **communicator** pop-ups and the **PED button and pin** (in `#hud`) use the same box and transform (2026-11-25). `rem` is a fixed 16 px (times the user's zoom) for the same reason.
 - The owner's iPad (1180 × 820, an iPad Air in landscape) shows the page at about 1.07×. `tools/smoke.py` and `tools/fit_test.py` use that screen; `fit_test.py` also checks 1366 × 1024 and 1280 × 720.
 - **Display pages fit the 1024 × 768 page without scrolling**, in their normal busy state (for example all four WSKRs out, or one selected).
 - Code that measures the screen must allow for the page scale: use `offsetWidth`/`offsetHeight` for layout sizes and `getBoundingClientRect()` only for screen positions (see `nd.js` `resize()`, `ui.js` slider, `comms.js` `rectIn`).
