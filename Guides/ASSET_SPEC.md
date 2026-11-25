@@ -11,7 +11,7 @@ If you are an AI tool: read **all** of this before drawing. Most failures are an
 4. **Pixel art, not a filtered photo.** One pixel is one pixel: no sub-pixel lines, no rotated pixels, no mixed pixel sizes in one image.
 5. **PNG, indexed or RGB, no alpha except where stated.** Where a hole or transparent background is wanted, use fully transparent pixels (alpha 0). Never semi-transparent.
 6. **Keep text out of the art.** The game draws all words in its own pixel font. Leave blank areas for labels. The one exception: tiny painted panel markings (a few pixels) are fine.
-7. **Reserved colors (meaning):** amber (slots 11, 12, 54, 55) = mission or attention. Red (slots 15, 56-59) = alert or error. Green (slot 14) = OK or known. Blue (slots 13, 24-25) = interpolated or water. Do not use these for decoration on screens or panels, so the meanings stay clear.
+7. **Reserved colors (meaning):** amber (slots 11, 12, 54, 55) = mission or attention. Red (slots 15, 56-59) = alert or error. Green (slot 14) = known contour or OK. Blue (slot 13) = interpolated. Do not use these for decoration on screens or panels, so the meanings stay clear. The water ramp (slots 16-25) is not reserved: use it freely for water, sonar and glass.
 
 ## The 64-color master palette
 Slot number = position in the list, starting at 00. Machine-readable copy: `data/palette.json` (also published at `https://nickwest27.github.io/AquaNova/tablet/data/palette.json`).

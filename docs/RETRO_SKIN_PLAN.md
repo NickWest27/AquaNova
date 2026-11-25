@@ -25,7 +25,7 @@ Test for later decisions: does a choice make assets **more consistent** and **ch
 
 ## Notes for the work
 - Art is drawn at 320 x 240 native and scaled by whole numbers only (6x = 1920 x 1440 stage pixels; the page then scales that to fit the screen). Frames have fully transparent holes for the live screens.
-- Reserved meanings (keep stable): amber = mission, red = error or alert, green = known contour or OK, blue = interpolated. Do not use these colors for decoration on panels.
+- Reserved meanings (keep stable): amber = mission, red = error or alert, green (slot 14) = known contour or OK, blue (slot 13) = interpolated. Do not use these colors for decoration on panels. The water ramp (slots 16-25) is not reserved.
 - AI-generated art: generators cannot make true pixel grids. Generate larger at 4:3, shrink to exactly 320 x 240, snap to the palette, then clean by hand (see `Guides/ASSET_SPEC.md`). The bridge frame of 2026-11-25 came out palette-only at 320 x 240 with transparent holes.
 - Git: the owner does not use git; Claude works on `tablet`, tests, runs `tools/update_sw.py`, commits and pushes. `main` is the desktop version and is not touched unless asked.
 - Deferred ideas (not started): programmatic sound, programmatic animation and cut scenes, static crew portraits with speech boxes, more-retro info displays (pixel-native chart, small font for dense pages).
