@@ -11,7 +11,7 @@ Read `ProjectNorms.txt` for code style and `DEVELOPMENT.md` for decisions and kn
 - **Starting a session:** read `docs/HANDOFF.md` and `docs/RETRO_SKIN_PLAN.md` first, then `git status` and `git log -5`.
 
 ## Docs
-- Docs that collaborators need live in the repo, in `docs/` (handoff, retro plan, palette). Keep the Claude Project copy (`claude/...`) the same when you change one. The other Project docs (feature specs) are still only in the Project; move one into `docs/` when someone needs it.
+- All project docs live in the repo, in `docs/` (the hub is `docs/DEVELOPMENT.md`; the root `DEVELOPMENT.md` is an old stub). Keep the Claude Project copy (`claude/...`) the same when you change one. Art guide: `Guides/ASSET_SPEC.md`.
 - **Retro is a RESKIN, not a redesign.** Same game, same screens; only frames and art change. Read `docs/RETRO_SKIN_PLAN.md` before touching art.
 
 ## Rules
