@@ -125,10 +125,14 @@ export function triangulate(ears) {
   }
   return fix;
 }
-/** Sensitivity multiplier of one listener (the ship, or a WSKR by number): 2 during its full sweep, and 2 more while a scan is on the contact. */
-export function snrGain(src, scanUntil = 0) { const s = sim.s, w = s.snr && s.snr.sweep; return (w && w.src === src ? 2 : 1) * (scanUntil > s.clock ? 2 : 1); }
-/** How far the ship's passive sonar hears a vessel of loudness 1: sonar powered 12 nm (the Sensors station's long sweep doubles it), off 1 nm. */
-export const sonarNm = (s) => (s.sonar ? traffic.cfg.sensing.sonar_nm * (s.clock < (s.sweepUntil || 0) ? 2 : 1) : 1);
+/** Sensitivity multiplier of one listener (the ship, or a WSKR by number) for a contact on true bearing brg: 2 once its full sweep's beam has passed
+ *  that bearing (the sweep turns from 000 at 10 degrees a second), and 2 more while a scan is on the contact. */
+export function snrGain(src, scanUntil = 0, brg = null) {
+  const s = sim.s, w = s.snr && s.snr.sweep, passed = w && w.src === src && (brg == null || w.az >= 360 || ((brg % 360) + 360) % 360 <= w.az);
+  return (passed ? 2 : 1) * (scanUntil > s.clock ? 2 : 1);
+}
+/** How far the ship's passive sonar hears a vessel of loudness 1: sonar powered 12 nm, off 1 nm. (A full sweep doubles it bearing by bearing: snrGain.) */
+export const sonarNm = (s) => (s.sonar ? traffic.cfg.sensing.sonar_nm : 1);
 
 // ---- detection chance and tracks (docs/CONTACT_TRACKING.md) ----
 /** Own flow noise: 1 up to flow_quiet_kt, falling in a straight line to flow_min at flow_top_kt (super cruise). */
@@ -139,7 +143,8 @@ export function detectP(d, r50) { const sn = traffic.cfg.sensing; return r50 <= 
 function hears(v, src, d, r50, now) {
   const sn = traffic.cfg.sensing, P = detectP(d, r50), det = v.det || (v.det = {}), st = det[src] || (det[src] = { at: -1e12, ok: false, miss: 0 });
   if (P === 0) { st.ok = false; st.miss = 0; st.at = now; return false; }
-  if (now - st.at >= sn.check_s || now < st.at) {
+  const jump = r50 > (st.r50 || 0) * 1.4; st.r50 = r50;   // the sweep beam just passed (sensitivity doubled): check now, not at the next 5 s mark
+  if (jump || now - st.at >= sn.check_s || now < st.at) {
     st.at = now;
     if (traffic.rand() < P) { st.ok = true; st.miss = 0; } else if (st.ok && ++st.miss < sn.drop_misses) { /* one miss: still held */ } else { st.ok = false; st.miss = 0; }
   }
@@ -203,9 +208,10 @@ export function step() {
     const ears = [];
     const noise = (k) => (v.bias * (k ? -0.7 : 1) + 0.8 * Math.sin(now / (37 + 16 * k) + v.phase * 3)) * Math.PI / 180;
     const bearingFrom = (o, k, src) => { const dy = (p.lat - o.lat) * NM, dx = (p.lon - o.lon) * NM * SK; return { src, from: { lat: o.lat, lon: o.lon }, brg: ((Math.atan2(dx, dy) + noise(k)) * 180 / Math.PI + 360) % 360, nm: Math.hypot(dx, dy) }; };
-    const gain = (src) => snrGain(src, v.scanUntil);   // the SNR page: a full sweep or a scan doubles the sensitivity
-    if (hears(v, 'ship', d, sonarNm(s) * loud * gain('ship') * flowFactor(s.speed), now)) ears.push(bearingFrom(s, 0, 'ship'));
-    obs.forEach((w, i) => { if (hears(v, w.n, dist(w, p), sn.wskr_sonar_nm * loud * gain(w.n) * (w.super ? sn.flow_min : 1), now)) ears.push(bearingFrom(w, i + 1, w.n)); });
+    const brgOf = (o) => ((Math.atan2((p.lon - o.lon) * SK, p.lat - o.lat) * 180) / Math.PI + 360) % 360;
+    const gain = (src, o) => snrGain(src, v.scanUntil, brgOf(o));   // the SNR page: a full sweep (once its beam has passed the bearing) or a scan doubles the sensitivity
+    if (hears(v, 'ship', d, sonarNm(s) * loud * gain('ship', s) * flowFactor(s.speed), now)) ears.push(bearingFrom(s, 0, 'ship'));
+    obs.forEach((w, i) => { if (hears(v, w.n, dist(w, p), sn.wskr_sonar_nm * loud * gain(w.n, w) * (w.super ? sn.flow_min : 1), now)) ears.push(bearingFrom(w, i + 1, w.n)); });
     // 3. a fix: two bearings from different places that cross at a good angle
     const fix = ais ? null : triangulate(ears);
     // 4. identity: AIS, inside 4 nm, a WSKR within 2 nm, a hail answered on VHF, or a sensor sweep (started from Sensors, ship inside 8 nm)

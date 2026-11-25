@@ -2,6 +2,7 @@
 import { pendingDecisions, decide } from '../aria.js';
 import { fill } from '../player.js';
 import { reply as chatReply, statusReport } from '../chat.js';
+import { startSweep, setSource } from '../sonar.js';
 import { sim, toward, wskrName, HUG_ALT, HUG_MIN_FLOOR, PERISCOPE_M } from '../sim.js';
 import { GATES_ON } from '../unlocks.js';
 import { research } from '../science.js';
@@ -86,7 +87,7 @@ const ORDERS = {
   'Emergency surface': () => { sim.setDepth(0); return 'Blowing ballast. Surfacing!'; },
   'Emergency surfaace': () => { sim.setDepth(0); return 'Blowing ballast. Surfacing!'; },
   'Emergency dive': () => { if (docked()) return 'We are docked, Captain.'; return dive(500, 'Diving!'); },
-  'Full sensor sweep': () => { sim.s.sonar = true; sim.s.sweepUntil = sim.s.clock + 1800; sim.touch(); const n = sim.s.pois.filter((p) => toward(sim.s, p).nm <= 4).length; return `Active sweep. ${n} contact${n === 1 ? '' : 's'} within four miles, and the chart shows more detail for a minute.`; },
+  'Full sensor sweep': () => { setSource('ship'); return startSweep() ? 'Full sweep, Captain. It takes about forty seconds to go round; contacts come up as the beam passes them.' : 'Sonar cannot sweep right now, Captain.'; },
   'Launch all WSKRs': () => {
     const r = launchAllWskrs();
     if (r.ok) return `Launching ${r.count === 1 ? 'the last WSKR' : `all ${r.count} WSKRs`}, aye. The bay takes a minute each, so they go out one after another.`;

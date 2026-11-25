@@ -122,6 +122,14 @@ with sync_playwright() as p:
     done = js("const F=await import('./js/findings.js'); return F.scanned(sim.s.at)")
     check("at a site the SONAR page offers Scan site, and it files the scan", vis and done, f"{r} vis={vis} done={done}")
     check("the old Sites and scans tab is gone", pg.locator("#station .tabs .btn", has_text="Sites").count() == 0)
+    # the full sweep: a faint contact to the south comes up only when the beam passes 180, and the sweep is over in under a minute
+    r = js("""const s=sim.s; s.at=null; S.setSource('ship'); S.stopSweep(); const A=window.__at(-8,0); const v={id:'t:s',kind:'cargo',faction:'cargo',factionName:'Merchant',stance:'neutral',label:'Skiff',size:0,kt:0,A,B:A,L:1,phase:0,boldness:0,ais:false,bias:0,name:'Faint',mhz:156,reply:0,ident:false,alerted:true,dyn:null,hitAt:-1e9};
+      T.traffic.cand.push(v); for(let i=0;i<2;i++) sim.step(1); const heard=()=>S.contactsFor('ship').some(c=>c.id==='ship:t:s'&&!c.lost);
+      const before=heard(); S.startSweep(); const t0=s.clock; let at90=null, at200=null;
+      for(let i=0;i<120&&S.snr().sweep;i++){ sim.step(1); const az=S.snr().sweep?S.snr().sweep.az:999; if(at90===null&&az>=90&&az<170) at90=heard(); if(at200===null&&az>=200&&az<300) at200=heard(); }
+      const took=s.clock-t0, effectOver=s.clock>=(s.sweepUntil||0); T.traffic.cand=T.traffic.cand.filter(x=>x!==v); return {before,at90,at200,took,effectOver}""")
+    check("full sweep: a faint contact comes up only once the beam passes its bearing", r["before"] is False and r["at90"] is False and r["at200"] is True, r)
+    check("full sweep takes about 36 s (10 degrees a second) plus short pauses, then its effect ends", 36 <= r["took"] <= 60 and r["effectOver"], r)
     pg.screenshot(path=R + "/tools/shots/sonar_station.png")
     # DSP puts it on the main screen
     tap("DSP"); pg.wait_for_timeout(300)

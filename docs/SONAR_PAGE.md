@@ -4,7 +4,7 @@ Code: `tablet/js/sonar.js` (model, sweep, scan, investigate), `tablet/js/sonarVi
 
 ## Where it is
 - **Bridge:** SNR on the left desk panel.
-- **Sensors station:** two tabs, **SONAR** (first; the same display with its controls and range buttons) and **WSKRs**. The old "Sites and scans" tab was removed on 2026-11-25: **Full sweep** now also runs the 30 minute chart sweep (finer contours, longer sonar range) and raises the tutorial flag; **Scan site** appears in the controls when the ship is at a site it has not scanned; to send a WSKR to a site, tap the site on the WSKRs chart, then Investigate. A ship whose signature is on file can be scanned out to 12 nm (6 nm otherwise).
+- **Sensors station:** two tabs, **SONAR** (first; the same display with its controls and range buttons) and **WSKRs**. The old "Sites and scans" tab was removed on 2026-11-25: **Full sweep** turns once round at 10°/s (about 36 s, a short pause per contact); while it runs the chart is drawn finer round the ship (8 nm), and each bearing hears twice as far **once the beam has passed it**, so faint contacts come up one by one as the beam reaches them; it raises the tutorial flag; **Scan site** appears in the controls when the ship is at a site it has not scanned; to send a WSKR to a site, tap the site on the WSKRs chart, then Investigate. A ship whose signature is on file can be scanned out to 12 nm (6 nm otherwise).
 
 ## What the page shows
 - **Every listener feeds every display.** The source only sets the map centre and which bearings are drawn from the centre. Anything the ship or any WSKR in contact hears is on the page.
