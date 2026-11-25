@@ -43,7 +43,7 @@ export function createScene(stage, { onOpen }) {
   const dispD = el('div', { class: 'bdisp' });
   const consoleApi = createBridgeConsole({ top: topD, main: mainD, display: dispD, center: ctrD, left: leftD, right: rightD, onExpand: (id) => onOpen(id) });
 
-  // Retro skin: the bridge frame is the 320x240 pixel-art picture (transparent holes for the screens), shown at 6x with hard pixels.
+  // Retro skin: the bridge frame (Display > Pictures: the owner's smooth original or the 320x240 pixel frame), transparent holes for the screens, stretched to the 1920x1440 stage.
   // The bridge stage is 1920x1440 (4:3). Everything below is in stage pixels = art pixels x 6.
   const frame = artImg('bridge');
   const hs = (label, x, y, w, h, onclick, tagPos = 'top', extra = '') =>
