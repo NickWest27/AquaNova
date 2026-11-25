@@ -12,7 +12,7 @@ def check(n, ok, x=""):
 with sync_playwright() as p:
     b = sm.launch(p); pg = b.new_context(viewport={"width": 1180, "height": 820}, has_touch=True).new_page(); errs = []
     pg.on("pageerror", lambda e: errs.append(str(e)[:200]))
-    js = lambda code: pg.evaluate("(async()=>{const sim=(await import('./js/sim.js')).sim;const T=(await import('./js/traffic.js'));const S=await import('./js/sonar.js');" + code + "})()")
+    js = lambda code: pg.evaluate("(async()=>{const sim=(await import('./js/sim.js')).sim;const T=(await import('./js/traffic.js'));if(T.traffic.cfg&&!window.__det){window.__det=1;T.traffic.rand=()=>0.5;Object.assign(T.traffic.cfg.sensing,{check_s:0,drop_misses:1});}const S=await import('./js/sonar.js');" + code + "})()")
     pg.goto(base); pg.wait_for_function("!document.getElementById('board-btn').disabled", timeout=20000); pg.tap("#board-btn"); pg.wait_for_timeout(800)
     if pg.is_visible(".modal .btn"): pg.tap(".modal .btn"); pg.wait_for_timeout(300)
     js("const s=sim.s, c=s.pois.find(p=>p.type==='dock'); Object.assign(s,{lat:c.lat-0.3,lon:c.lon-0.1,docked:false,at:null,wpt:null,fixes:[],speed:0,throttle:0,depth:20,targetDepth:20,heading:0,targetHeading:0,wskrs:[],hull:100}); sim.setTimeScale&&sim.setTimeScale(1)")
@@ -29,7 +29,7 @@ with sync_playwright() as p:
     check("with no second listener there is no range", r and r[0]["range"] is None, str(r))
     check("the list shows it as Unknown contact with its age", "Unknown contact" in pg.inner_text(".bd-snr:visible .snr-list"))
     # a WSKR 2.5 nm east crosses the bearing: a fix
-    js("const s=sim.s; const p=window.__at(0,2.5); s.wskrs=[{n:1,lat:p.lat,lon:p.lon,mode:'escort',target:null,busy:0,bat:100,heading:0}]; for(let i=0;i<3;i++) sim.step(1)"); pg.wait_for_timeout(200)
+    js("const s=sim.s; const p=window.__at(0,2.5); s.wskrs=[{n:1,lat:p.lat,lon:p.lon,mode:'manual',thr:0,target:null,busy:0,bat:100,heading:0}]; for(let i=0;i<3;i++) sim.step(1)"); pg.wait_for_timeout(200)   # holding still: a WSKR rushing back in super cruise cannot hear (flow noise)
     r = js("const c=S.contactsFor('ship').filter(c=>c.id==='ship:t:1'); return c.map(x=>({range:x.range,pos:!!x.pos}))")
     check("a WSKR on another bearing gives a fix and a range", r and r[0]["pos"] and r[0]["range"] is not None and 2 < r[0]["range"] < 3.2, str(r))
     # tap the symbol: the info box opens

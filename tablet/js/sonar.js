@@ -7,7 +7,7 @@
 //   Scan: a contact the Captain picked. Sensitivity doubles on it for a few seconds; in range, the scan gives a fix, and names it.
 // State is in sim.s.snr and is not saved: a new session starts with the ship as the source and nothing selected.
 import { sim, toward, wskrName } from './sim.js';
-import { traffic, sonarNm, snrGain, triangulate } from './traffic.js';
+import { traffic, sonarNm, snrGain, triangulate, onFile, probName } from './traffic.js';
 import { seafloor } from './seafloor.js';
 import { affiliation, placeAffiliation } from './contactIcons.js';
 import { tell } from './notify.js';
@@ -40,13 +40,13 @@ export function setSource(id) { const st = snr(); if (st.src === id) return; st.
 
 // ---- the contacts ----
 function shipContact(a, src, line) {
-  const v = a.v, s = sim.s, ident = v.ident, kt = v.dyn ? v.kt * 1.2 : v.kt;
+  const v = a.v, s = sim.s, ident = v.ident, prob = !ident && v.prob, kt = v.dyn ? v.kt * 1.2 : v.kt;
   const pos = a.pos, range = pos ? toward(src, pos).nm : null;
   return {
     id: 'ship:' + v.id, kind: 'ship', ref: v, from: { lat: src.lat, lon: src.lon }, by: String(src.id), byName: src.name, icon: iconOf(ident ? affiliation(v) : 'unknown', 'surface'), bearing: line.brg, range, pos, ident,
-    name: ident ? v.name : 'Unidentified contact', type: ident ? v.label : `Surface vessel (${SIZE_CLASS[v.size]})`, side: ident ? (v.stance === 'hostile' ? 'Hostile' : v.stance === 'wary' ? 'Unfriendly' : v.stance === 'friendly' ? 'Friendly' : 'Neutral') + ' · ' + v.factionName : 'Unknown',
+    name: ident ? v.name : prob ? probName(v) : 'Unidentified contact', prob: prob || 0, onFile: onFile(v), type: ident ? v.label : `Surface vessel (${SIZE_CLASS[v.size]})`, side: ident ? (v.stance === 'hostile' ? 'Hostile' : v.stance === 'wary' ? 'Unfriendly' : v.stance === 'friendly' ? 'Friendly' : 'Neutral') + ' · ' + v.factionName : 'Unknown',
     depth: 'Surface', speed: ident ? `${kt.toFixed(1)} kt` : `~${Math.round(kt / 2) * 2} kt`, course: pos && pos.hdg != null ? Math.round(pos.hdg) : null,
-    notes: [ident ? KIND_NOISE[v.kind] : SIZE_NOISE[v.size]], hostile: ident && v.stance === 'hostile', scanned: v.scanFixUntil > s.clock, size: v.size,
+    notes: [ident ? KIND_NOISE[v.kind] : SIZE_NOISE[v.size], ...(onFile(v) && !ident ? ['Signature on file: a sweep reaches 12 nm'] : [])], hostile: ident && v.stance === 'hostile', scanned: v.scanFixUntil > s.clock, size: v.size,
   };
 }
 function instContact(e, src, line) {
@@ -192,7 +192,7 @@ sim.hooks.push(() => {
   }
   const free = s.wskrs.filter((w) => w.mode === 'escort' && !w.dead && !w.arrived);
   if (free.length < 2) return;
-  const c = list.find((x) => x.kind === 'ship' && !x.ident && !x.lost && x.pos && toward(s, x.pos).nm <= AUTO_START_NM && !x.inv.length && !(s.wskrChased || []).includes(x.id));
+  const c = list.find((x) => x.kind === 'ship' && !x.ident && !x.lost && x.pos && toward(s, x.pos).nm <= AUTO_START_NM && !x.inv.length && !x.onFile && !(s.wskrChased || []).includes(x.id));   // a ship on file is swept, not chased
   if (!c) return;
   const near = free.sort((a, b) => toward(a, c.pos).nm - toward(b, c.pos).nm)[0];
   const w = sim.trailWskr({ kind: 'ship', id: c.ref.id }, near.n); if (!w) return;

@@ -66,7 +66,7 @@ export function mount(body, ctx) {
     const idle = s.wskrs.some((w) => w.mode === 'escort');
     const tagOf = Object.fromEntries(contactList().filter((c) => c.poi).map((c) => [c.poi.id, c]));
     const ships = seenShips();
-    const next = JSON.stringify([ships.map((a) => [a.v.id, a.pos ? a.pos.lat.toFixed(3) + a.pos.lon.toFixed(3) : Math.round(a.ear), a.v.ident, a.ais, !!a.v.sweepAt, canSweep(a)]), s.selContact, s.sonar, sweeping, s.wskrs.map((w) => [w.n, w.mode, w.target]), s.docked, rows.map((r) => [r.p.id, r.nm.toFixed(1), Math.round(r.brg), s.at && s.at.id === r.p.id, scanned(r.p)])]);
+    const next = JSON.stringify([ships.map((a) => [a.v.id, a.pos ? a.pos.lat.toFixed(3) + a.pos.lon.toFixed(3) : Math.round(a.ear), a.v.ident, a.v.prob, a.ais, !!a.v.sweepAt, canSweep(a)]), s.selContact, s.sonar, sweeping, s.wskrs.map((w) => [w.n, w.mode, w.target]), s.docked, rows.map((r) => [r.p.id, r.nm.toFixed(1), Math.round(r.brg), s.at && s.at.id === r.p.id, scanned(r.p)])]);
     if (next === sig) return;   // redraw only when something visible changed
     sig = next;
     list.replaceChildren(...(rows.length ? rows.map((r) => {

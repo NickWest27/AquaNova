@@ -17,7 +17,7 @@ def main():
         page = browser.new_context(viewport={"width": 1180, "height": 820}, has_touch=True).new_page(); errors = []
         page.on("pageerror", lambda e: errors.append(str(e)[:200]))
         page.on("console", lambda m: errors.append(m.text[:200]) if m.type == "error" else None)
-        js = lambda code: page.evaluate("(async()=>{const sim=(await import('./js/sim.js')).sim;const tr=await import('./js/traffic.js');const cm=await import('./js/commsModel.js');const g=(await import('./js/persist.js')).gameState;" + code + "})()")
+        js = lambda code: page.evaluate("(async()=>{const sim=(await import('./js/sim.js')).sim;const tr=await import('./js/traffic.js');if(tr.traffic.cfg&&!window.__det){window.__det=1;tr.traffic.rand=()=>0.5;Object.assign(tr.traffic.cfg.sensing,{check_s:0,drop_misses:1});}const cm=await import('./js/commsModel.js');const g=(await import('./js/persist.js')).gameState;" + code + "})()")
         page.goto(base); page.wait_for_function("!document.getElementById('board-btn').disabled", timeout=20000)
         page.tap("#board-btn"); page.wait_for_timeout(800)
         if page.is_visible(".modal .btn"): page.tap(".modal .btn"); page.wait_for_timeout(300)
@@ -89,10 +89,28 @@ def main():
         print("     ident ranges", r)
         check("a ship inside 4 nm is identified", r.get("none") or r["n3"], r)
         check("a sensor sweep identifies a ship at 6 nm and is refused beyond 8 nm", r.get("none") or not r["heard6"] or (not r["before"] and r["ok6"] and r["after"] and r["refused"]), r)
+        # detection chance (docs/CONTACT_TRACKING.md): 50% at R50, about 90% at 0.7, 12% at 1.4, nothing past 2x
+        r = js("return {p07:tr.detectP(0.7,1), p1:tr.detectP(1,1), p14:tr.detectP(1.4,1), p2:tr.detectP(2,1), f10:tr.flowFactor(10), f15:tr.flowFactor(15), f50:tr.flowFactor(50), f100:tr.flowFactor(100)}")
+        print("     curve", r)
+        check("detection curve: 50% at R50, ~90% at 0.7, ~12% at 1.4, 0 at 2x", abs(r["p1"]-0.5)<1e-9 and 0.88<r["p07"]<0.91 and 0.1<r["p14"]<0.13 and r["p2"]==0, r)
+        check("flow noise: none up to 15 kt, 0.4 at 100 kt (super cruise)", r["f10"]==1 and r["f15"]==1 and 0.7<r["f50"]<0.8 and abs(r["f100"]-0.4)<1e-9, r)
+        r = js(place + setup + """const f=put(null,false); if(!f) return {none:true}; const v=f.v; const go=(dn,t)=>{ sim.s.clock=t; const p=tr.posAt(v,t); Object.assign(sim.s,{lat:p.lat+dn/60,lon:p.lon,depth:60,speed:0}); tr.traffic.candKey=''; tr.step(); return tr.traffic.active.find(a=>a.v===v); };
+          const t0=sim.s.clock; v.ident=false; v.prob=null; tr.traffic.known.delete(v.id); go(3,t0); const idd=v.ident;
+          for(let k=1;k<=10;k++) go(6,t0+k*60); const held=v.ident;
+          const sw=tr.canSweep({nm:10,v});
+          go(40,t0+660); const tl=t0+660+600; Object.assign(sim.s,{clock:tl}); const exp=tr.matchP(v,tl); const a=go(6,tl);
+          const prob=v.prob, name=tr.shownName(a);
+          go(40,tl+60); const tl2=tl+60+3*3600; Object.assign(sim.s,{clock:tl2}); const exp2=tr.matchP(v,tl2); const a2=go(6,tl2); const prob2=v.prob, name2=tr.shownName(a2);
+                    return {idd, held, sw, exp, prob, name, exp2, prob2, name2, ident:v.ident, kt:v.kt}""")
+        print("     track", r)
+        check("a track held on sonar keeps its name", r.get("none") or (r["idd"] and r["held"]), r)
+        check("a ship on file can be swept at 10 nm (12 nm on file)", r.get("none") or r["sw"], r)
+        check("picked up again 10 min later it is only probable, with the match chance", r.get("none") or (r["exp"] >= 0.25 and r["prob"] is not None and abs(r["prob"]-r["exp"])<0.02 and r["name"].startswith("Probable:")), r)
+        check("picked up again 3 h later the match is too weak: unidentified", r.get("none") or (r["exp2"] < 0.25 and r["prob2"] is None and r["name2"] == "Unidentified contact" and not r["ident"]), r)
         # a reload rebuilds every ship from the seed: the ones already identified stay identified (world.known)
         r = js(place + setup + """const f=put(null,false); if(!f) return {none:true}; Object.assign(sim.s,{lat:f.p.lat+3/60,lon:f.p.lon,depth:60}); tr.traffic.candKey=''; tr.step(); const id=f.v.id, was=f.v.ident;
-          const saved=(g.getProperty('world.known')||[]).includes(id);
-          tr.traffic.cells.clear(); tr.traffic.known=new Set(g.getProperty('world.known')||[]); Object.assign(sim.s,{lat:f.p.lat+12/60,lon:f.p.lon}); tr.traffic.candKey=''; tr.step();
+          const kn=g.getProperty('world.known')||{}, saved=!!kn[id] && kn[id].i===1;
+          tr.traffic.cells.clear(); tr.traffic.known=new Map(Object.entries(g.getProperty('world.known')||{})); Object.assign(sim.s,{lat:f.p.lat+12/60,lon:f.p.lon}); tr.traffic.candKey=''; tr.step();
           const v2=tr.traffic.cand.find(x=>x.id===id); return {was, saved, fresh: !!v2 && v2!==f.v, after: !!v2 && v2.ident}""")
         print("     reload", r)
         check("an identified ship is saved and stays identified after the traffic is rebuilt", r.get("none") or (r["was"] and r["saved"] and r["fresh"] and r["after"]), r)

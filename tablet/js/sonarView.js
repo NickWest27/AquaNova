@@ -129,7 +129,7 @@ export function createSnrView({ bbtn }) {
         set(iType, [sel.type, sel.side === 'Unknown' ? '' : sel.side.split(' · ')[0], tag].filter(Boolean).join(' · '));
         set(iVals.brg, pad3(sel.bearing) + '°'); set(iVals.rng, sel.range == null ? 'NO FIX' : sel.range.toFixed(1) + ' nm'); set(iVals.dep, sel.depth); set(iVals.spd, sel.speed);
         set(iVals.crs, sel.course == null ? '—' : pad3(sel.course) + '°'); set(iVals.age, ageText(sel.age));
-        set(iNotes, [sel.notes[0], sel.inv.length ? `${sel.inv.join(', ')} investigating` : sel.remote ? `Heard by ${sel.byName}` : ''].filter(Boolean).join('\n'));
+        set(iNotes, [...sel.notes, sel.inv.length ? `${sel.inv.join(', ')} investigating` : sel.remote ? `Heard by ${sel.byName}` : ''].filter(Boolean).join('\n'));
         return;
       }
       const keep = new Set();

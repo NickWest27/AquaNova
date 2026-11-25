@@ -1,6 +1,6 @@
 # Handoff (read this first when a session starts; update it before parking)
 
-Last updated: 2026-11-25. Branch to work on: `tablet`. Repo: NickWest27/AquaNova (GitHub Pages path `/AquaNova/`). Last change: identified ships are saved (`world.known`) and stay identified after a reload; before that one zoom direction everywhere ("+" zooms in) and round map zoom buttons; before that the bridge original picture with real transparent holes; before that the medbay on the owner's picture (after bridge, walkway A1, quarters, science lab, launch bay).
+Last updated: 2026-11-25. Branch to work on: `tablet`. Repo: NickWest27/AquaNova (GitHub Pages path `/AquaNova/`). Last change: contact tracking (detection chance, names belong to tracks, probable matches, signatures on file: `docs/CONTACT_TRACKING.md`); before that identified ships saved; before that one zoom direction everywhere ("+" zooms in) and round map zoom buttons; before that the bridge original picture with real transparent holes; before that the medbay on the owner's picture (after bridge, walkway A1, quarters, science lab, launch bay).
 
 ## Starting a Claude Code session (owner's workflow since 2026-11-25)
 The owner works from an iPad and a phone, does not use git, and wants Claude to do all of it.
@@ -24,9 +24,12 @@ The owner works from an iPad and a phone, does not use git, and wants Claude to 
 - **The bridge main screen is not tappable.** Its controls go on a desk console: the range − / + for NAV and SNR are on the right desk (`bridge.js`, `sonarView.js`).
 - Tests: `ui_test.py` (Nav), `sonar_test.py`, `remora_test.py`, `wskr_page_test.py`. `console_test.py` already failed before this change (it waits for `.nav-read`, which no longer exists); its range check was updated but is not reached.
 
-## Ship identity (2026-11-25)
-- Traffic is rebuilt from `world.seed` on every load, so a ship's identity used to reset on reload (and the WSKR auto-intercept could chase it again). Now `traffic.js` keeps the ids of identified ships in `traffic.known`, saved as `world.known` (like `world.sunk`), and reapplies them in `step()`. Scans (`sonar.js`) and hails (`commsModel.js`) are caught there too. A new game clears it (`gameState.reset()`). Test: `traffic_test.py` ("stays identified after the traffic is rebuilt"). Tests that set `ident=false` by hand also delete the id from `traffic.known`.
-- The auto-intercept "already chased" list is `sim.s.wskrChased`, saved as `navigation.wskrChased` (last 200 ids). A WSKR's `auto` flag (chasing for the screen, so leashed and released on identity) is saved with it. Test: `resume_test.py`.
+## Ship identity and tracking (2026-11-25)
+- **Spec: `docs/CONTACT_TRACKING.md`.** Sonar is a chance (`P = 1/(1+(d/R50)^6)`, checked every 5 s, dropped after 2 misses), not a hard edge. Own flow noise only above 15 kt (super cruise): 0.4 at 100 kt; a WSKR in super cruise is at 0.4 too, so a WSKR racing to its slot hears little.
+- A name belongs to a **track**: after 120 s without contact, picking the ship up again gives a **probable match** (`Probable: NAME (NN%)`, from the circle it could be in and same-size ships inside it) or, under 25%, "Unidentified contact". Probable is not identified (missions, warnings and icons ignore it).
+- **Signature on file** (`traffic.known`, saved as `world.known`: id -> { t, lat, lon, i }): sweep reaches 12 nm, and the auto-intercept does not chase it. After a reload the saved track continues (same rules).
+- The auto-intercept chased list is `sim.s.wskrChased` (`navigation.wskrChased`); a WSKR's `auto` flag is saved too.
+- **Tests:** `traffic_test.py` (curve, flow, held track, probable at 10 min, unidentified at 3 h, reload), `sonar_test.py`, `screen_test.py`, `resume_test.py`. Tests that need the old fixed edges set `traffic.rand = () => 0.5`, `check_s = 0`, `drop_misses = 1` (see the helpers at the top of those tests). `comms_test.py` fails at "link 1 has no carrier at 30 m"; it failed before this change too.
 
 ## Retro skin: the approach (decided 2026-11-25)
 **The owner's rule: RESKIN, NOT REDESIGN.** Keep the real game, screens, buttons and layout. Only the frames and art assets become retro (pixel art). The info displays (charts, text, buttons) stay as they were, and may be made more retro later, as a separate step the owner asks for. Why: see `RETRO_SKIN_PLAN.md`.

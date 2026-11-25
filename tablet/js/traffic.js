@@ -13,7 +13,7 @@ import { say } from './notify.js';
 const NM = 60, LON_K = 0.82;   // nm per degree of latitude; a fixed squash so cells are roughly square in the mid-latitudes
 /** Gates other modules set: is the VHF mast up high enough to hear AIS? */
 export const gates = { ais: () => true };
-export const traffic = { cfg: null, cells: new Map(), cand: [], scripted: [], candKey: '', active: [], sunk: new Set(), known: new Set(), ready: false, stats: { active: 0, cells: 0, ms: 0 }, lastClock: null };
+export const traffic = { cfg: null, cells: new Map(), cand: [], scripted: [], candKey: '', active: [], sunk: new Set(), known: new Map(), rand: Math.random, ready: false, stats: { active: 0, cells: 0, ms: 0 }, lastClock: null };
 const mulberry = (a) => () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
 const mix = (seed, x, y) => (Math.imul(seed ^ 0x9E3779B1, 0x85EBCA6B) ^ Math.imul(x, 73856093) ^ Math.imul(y, 19349663)) | 0;
 const pick = (rng, a) => a[Math.floor(rng() * a.length)];
@@ -29,7 +29,9 @@ const seedOf = () => { let s = gameState.getProperty('world.seed'); if (s == nul
 export async function load() {
   traffic.cfg = await (await fetch(new URL('../../data/world/traffic.json', import.meta.url))).json();
   traffic.sunk = new Set(gameState.getProperty('world.sunk') || []);
-  traffic.known = new Set(gameState.getProperty('world.known') || []);   // ships already identified: the traffic is rebuilt from the seed on load, so their identity is saved by id
+  // ships on file (identified at least once): id -> { t: last heard, lat, lon, i: 1 identified track, 0..1 probable, 0 none }. Old saves held a plain list of ids.
+  const kn = gameState.getProperty('world.known');
+  traffic.known = new Map(Array.isArray(kn) ? kn.map((id) => [id, { t: -1e12, lat: 0, lon: 0, i: 0 }]) : Object.entries(kn || {}));
   for (const w of gameState.getProperty('world.wrecks') || []) if (!sim.s.pois.some((p) => p.name === w.name)) sim.s.pois.push({ id: sim.s.pois.length, type: 'wreck', text: w.text, name: w.name, lat: w.lat, lon: w.lon, sunkId: w.id });
   traffic.cells.clear(); traffic.candKey = ''; traffic.ready = true;
 }
@@ -128,6 +130,36 @@ export function snrGain(src, scanUntil = 0) { const s = sim.s, w = s.snr && s.sn
 /** How far the ship's passive sonar hears a vessel of loudness 1: sonar powered 12 nm (the Sensors station's long sweep doubles it), off 1 nm. */
 export const sonarNm = (s) => (s.sonar ? traffic.cfg.sensing.sonar_nm * (s.clock < (s.sweepUntil || 0) ? 2 : 1) : 1);
 
+// ---- detection chance and tracks (docs/CONTACT_TRACKING.md) ----
+/** Own flow noise: 1 up to flow_quiet_kt, falling in a straight line to flow_min at flow_top_kt (super cruise). */
+export function flowFactor(kt) { const sn = traffic.cfg.sensing; return 1 - (1 - sn.flow_min) * Math.max(0, Math.min(1, (kt - sn.flow_quiet_kt) / (sn.flow_top_kt - sn.flow_quiet_kt))); }
+/** Chance that a listener hears a ship at distance d when its 50% range is r50. */
+export function detectP(d, r50) { const sn = traffic.cfg.sensing; return r50 <= 0 || d >= sn.cutoff_ratio * r50 ? 0 : 1 / (1 + (d / r50) ** sn.detect_exp); }
+/** One listener on one ship: a check every check_s; heard until drop_misses checks in a row miss (beyond the cut-off: dropped at once). */
+function hears(v, src, d, r50, now) {
+  const sn = traffic.cfg.sensing, P = detectP(d, r50), det = v.det || (v.det = {}), st = det[src] || (det[src] = { at: -1e12, ok: false, miss: 0 });
+  if (P === 0) { st.ok = false; st.miss = 0; st.at = now; return false; }
+  if (now - st.at >= sn.check_s || now < st.at) {
+    st.at = now;
+    if (traffic.rand() < P) { st.ok = true; st.miss = 0; } else if (st.ok && ++st.miss < sn.drop_misses) { /* one miss: still held */ } else { st.ok = false; st.miss = 0; }
+  }
+  return st.ok;
+}
+/** Chance that a ship heard again after its track was lost is the one on file: the circle it could be in grows with time; same-size ships inside it confuse the match. */
+export function matchP(v, now) {
+  const sn = traffic.cfg.sensing, hrs = Math.max(0, now - v.heardAt) / 3600, R = sn.match_r0_nm + v.kt * 1.2 * hrs;
+  const others = traffic.active.filter((a) => a.shown && a.v !== v && a.v.size === v.size && v.heardPos && dist(a, v.heardPos) <= R).length;
+  return (v.ident ? 1 : v.prob || 0) / (1 + (R / sn.match_ok_nm) ** 2) / (1 + others);
+}
+export const onFile = (v) => traffic.known.has(v.id);
+const sweepNm = (v) => (onFile(v) ? traffic.cfg.sensing.sweep_nm_known : traffic.cfg.sensing.sweep_nm);
+let knownWrite = -1e12;
+function fileTrack(v, now, p) {   // keep the ship's entry up to date; write the save at most every 10 game seconds unless the identity changed
+  const k = { t: now, lat: +p.lat.toFixed(4), lon: +p.lon.toFixed(4), i: v.ident ? 1 : +(v.prob || 0).toFixed(3) };
+  const old = traffic.known.get(v.id); traffic.known.set(v.id, k);
+  if (!old || old.i !== k.i || now - knownWrite >= 10 || now < knownWrite) { knownWrite = now; gameState.updateProperty('world.known', Object.fromEntries(traffic.known)); }
+}
+
 /** Called every frame from the sim. Finds the vessels in the bubble, moves the reacting ones, tests collisions, raises alerts. */
 export function step() {
   if (!traffic.ready || !sim.s.pois.length) return;
@@ -161,6 +193,7 @@ export function step() {
   const sn = c.sensing, aisUp = gates.ais(), out = [];
   const obs = s.wskrs.filter((w) => !w.dead && !w.arrived && w.lat != null && sim.wskrLink(w).raw);   // WSKRs the control link reaches add their own ears
   for (const { v, p, d } of near) {
+    if (v.kr == null) { v.kr = 1; const k = traffic.known.get(v.id); if (k) { v.heardAt = k.t; v.heardPos = { lat: k.lat, lon: k.lon }; if (k.i === 1) v.ident = true; else if (k.i > 0) v.prob = k.i; } }   // a ship rebuilt after a reload picks up its saved track
     const hostile = v.stance === 'hostile';
     if (hostile && !v.dyn && d < 6) v.dyn = { lat: p.lat, lon: p.lon, hdg: p.hdg };
     // 1. AIS: friendly and commercial traffic tells us who and where it is, if the VHF mast is up
@@ -171,19 +204,23 @@ export function step() {
     const noise = (k) => (v.bias * (k ? -0.7 : 1) + 0.8 * Math.sin(now / (37 + 16 * k) + v.phase * 3)) * Math.PI / 180;
     const bearingFrom = (o, k, src) => { const dy = (p.lat - o.lat) * NM, dx = (p.lon - o.lon) * NM * SK; return { src, from: { lat: o.lat, lon: o.lon }, brg: ((Math.atan2(dx, dy) + noise(k)) * 180 / Math.PI + 360) % 360, nm: Math.hypot(dx, dy) }; };
     const gain = (src) => snrGain(src, v.scanUntil);   // the SNR page: a full sweep or a scan doubles the sensitivity
-    if (d <= sonarNm(s) * loud * gain('ship')) ears.push(bearingFrom(s, 0, 'ship'));
-    obs.forEach((w, i) => { if (dist(w, p) <= sn.wskr_sonar_nm * loud * gain(w.n)) ears.push(bearingFrom(w, i + 1, w.n)); });
+    if (hears(v, 'ship', d, sonarNm(s) * loud * gain('ship') * flowFactor(s.speed), now)) ears.push(bearingFrom(s, 0, 'ship'));
+    obs.forEach((w, i) => { if (hears(v, w.n, dist(w, p), sn.wskr_sonar_nm * loud * gain(w.n) * (w.super ? sn.flow_min : 1), now)) ears.push(bearingFrom(w, i + 1, w.n)); });
     // 3. a fix: two bearings from different places that cross at a good angle
     const fix = ais ? null : triangulate(ears);
     // 4. identity: AIS, inside 4 nm, a WSKR within 2 nm, a hail answered on VHF, or a sensor sweep (started from Sensors, ship inside 8 nm)
     const vis = s.depth <= sn.visual_max_depth_m && d <= sn.visual_nm[v.size];
-    if (v.sweepAt && now >= v.sweepAt) { if (d <= sn.sweep_nm) v.ident = true; v.sweepAt = 0; }
+    const b = toward(s, p), heard = ears.length > 0 || vis, shown = ais || heard;
+    // the name belongs to the track: picked up again after track_hold_s without contact, it is only a probable match
+    if (shown && v.heardAt != null && now - v.heardAt > sn.track_hold_s && (v.ident || v.prob)) { const m = matchP(v, now); v.ident = false; v.prob = m >= sn.match_min ? m : null; }
+    if (v.sweepAt && now >= v.sweepAt) { if (d <= sweepNm(v)) v.ident = true; v.sweepAt = 0; }
     if (ais || d <= sn.ident_nm || obs.some((w) => dist(w, p) <= sn.wskr_camera_nm)) v.ident = true;
-    if (!v.ident && traffic.known.has(v.id)) v.ident = true;   // identified before a reload
-    if (v.ident && !traffic.known.has(v.id)) { traffic.known.add(v.id); gameState.updateProperty('world.known', [...traffic.known]); }   // also catches a scan (sonar.js) or a hail (commsModel.js)
-    const b = toward(s, p), heard = ears.length > 0 || vis;
+    if (v.ident) v.prob = null;   // a certain identification (also a scan in sonar.js or a hail in commsModel.js) clears "probable"
+    if (shown) { v.heardAt = now; v.heardPos = { lat: p.lat, lon: p.lon }; }
+    { const k = traffic.known.get(v.id), i = v.ident ? 1 : v.prob || 0;   // keep the file: a live track while it is heard; the identity state whenever it changes
+      if ((i > 0 && (shown || !k)) || (k && k.i !== +i.toFixed(3))) fileTrack(v, v.heardAt != null ? v.heardAt : now, v.heardPos || p); }
     const pos = ais ? { lat: p.lat, lon: p.lon, err: 0, hdg: p.hdg } : v.scanFixUntil > now ? { lat: p.lat, lon: p.lon, err: 0.1, hdg: p.hdg } : fix ? { lat: fix.lat, lon: fix.lon, err: fix.err } : vis ? { lat: p.lat, lon: p.lon, err: 0.05, hdg: p.hdg } : null;
-    out.push({ v, lat: p.lat, lon: p.lon, hdg: p.hdg, nm: d, brg: b.brg, shown: ais || heard, ais, pos, lines: ears.map((e) => ({ src: e.src, from: e.from, brg: e.brg })), ear: ears.length ? ears[0].brg : null });
+    out.push({ v, lat: p.lat, lon: p.lon, hdg: p.hdg, nm: d, brg: b.brg, shown, ais, pos, lines: ears.map((e) => ({ src: e.src, from: e.from, brg: e.brg })), ear: ears.length ? ears[0].brg : null });
     if ((ais || heard) && (hostile || v.size >= 2 && d < 1) && !v.alerted && (hostile || v.ident)) {
       v.alerted = true; const bb = String(Math.round(ears.length ? ears[0].brg : b.brg)).padStart(3, '0');
       say('sensors', hostile ? `Captain, sonar contact bearing ${bb}. ${v.ident ? `${v.label}, ${v.factionName}. Hostile.` : 'Unidentified, no range yet, moving fast. I do not like it.'}` : `Captain, ${v.label.toLowerCase()} bearing ${bb}. Watch the traffic.`, hostile ? 'mission' : '', { notice: hostile ? 'HOSTILE CONTACT' : 'SURFACE TRAFFIC' });
@@ -211,12 +248,13 @@ function sink(v, p) {
 
 // ---- what the rest of the game sees ----
 /** Start a sensor sweep on a ship inside the sweep range. It identifies the ship a few seconds later. */
-export function sweep(v) { const sn = traffic.cfg.sensing, a = traffic.active.find((x) => x.v === v); if (!a || a.nm > sn.sweep_nm) return false; v.sweepAt = sim.s.clock + sn.sweep_s; return true; }
-export const canSweep = (a) => a.nm <= traffic.cfg.sensing.sweep_nm;
+export function sweep(v) { const sn = traffic.cfg.sensing, a = traffic.active.find((x) => x.v === v); if (!a || a.nm > sweepNm(v)) return false; v.sweepAt = sim.s.clock + sn.sweep_s; return true; }
+export const canSweep = (a) => a.nm <= sweepNm(a.v);
 export const seen = () => traffic.active.filter((a) => a.shown);
 /** Contacts with a position the player may use (AIS, a fix, or seen by eye). */
 export const plotted = () => traffic.active.filter((a) => a.shown && a.pos);
-export const shownName = (a) => (a.v.ident ? a.v.name : 'Unidentified contact');
+export const probName = (v) => `Probable: ${v.name} (${Math.round(v.prob * 100)}%)`;
+export const shownName = (a) => (a.v.ident ? a.v.name : a.v.prob ? probName(a.v) : 'Unidentified contact');
 /** Vessels in the bubble that can be hailed on VHF (for the Comms scan and hail). */
 export const hailContacts = () => traffic.active.map((a) => ({ id: 'ship-' + a.v.id, kind: 'ship', name: a.v.name, band: 'VHF', mhz: a.v.mhz, lat: a.lat, lon: a.lon, range: 30, reply: replyOf(a.v), vessel: a.v }));
 export function replyOf(v) {

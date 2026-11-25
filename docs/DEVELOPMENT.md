@@ -6,7 +6,7 @@ Last updated: 2026-11-20 (night), with a header note added 2026-11-25. This is t
 - All the topic documents now live in the repo's `docs/` folder, and the Claude Project holds the same copies. The root `DEVELOPMENT.md` is an old stub from 2026-11-17; **this file is the real one**.
 - The branch the owner works on is **`tablet`** (it was `feature/tablet`); `main` is the desktop version. Published at `/tablet/` and `/desktop/` (see `CLAUDE.md`).
 - A **retro reskin** is under way (frames and art only, same game). Start with `HANDOFF.md`, `RETRO_SKIN_PLAN.md` and `RETRO_PALETTE.md`. The bridge is done; other rooms follow as the owner sends 320×240 frames.
-- Newer documents not in the map below: `MISSION_GENERATOR.md`, `SONAR_PAGE.md`, `BRIDGE_CONSOLE.md`, `BAY_AUTOMATION.md`, `REMORA.md`, `TERN_ORDERS.md`, `SEARCH_PATTERNS.md`, `WSKR_SCREEN.md`, `WORLD_POPULATION.md`, `AIR_AND_SCRUBBERS.md`, `SHIP_AND_PROPULSION.md`, `IPHONE_PED.md`, `SCREENS.md`, `CODE_NOTES.md`. Where they disagree with this page, they are newer.
+- Newer documents not in the map below: `MISSION_GENERATOR.md`, `SONAR_PAGE.md`, `BRIDGE_CONSOLE.md`, `BAY_AUTOMATION.md`, `REMORA.md`, `TERN_ORDERS.md`, `SEARCH_PATTERNS.md`, `WSKR_SCREEN.md`, `WORLD_POPULATION.md`, `AIR_AND_SCRUBBERS.md`, `SHIP_AND_PROPULSION.md`, `IPHONE_PED.md`, `SCREENS.md`, `CODE_NOTES.md`, `CONTACT_TRACKING.md` (detection chance, tracks, signatures on file). Where they disagree with this page, they are newer.
 - `ASSET_SPEC.md` is at `Guides/ASSET_SPEC.md`.
 
 ## Source of truth
