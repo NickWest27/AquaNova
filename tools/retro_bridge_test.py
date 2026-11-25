@@ -17,7 +17,7 @@ with sync_playwright() as p:
     pg.goto(base + "index.html"); pg.wait_for_function("!document.querySelector('.rsplash .rbtn').disabled", timeout=20000)
     check("the splash shows a Board button", "BOARD" in pg.inner_text(".rsplash"))
     pg.tap(".rsplash .rbtn"); pg.wait_for_timeout(1200)
-    check("the splash is gone and the bridge is up", pg.locator(".rsplash").count() == 0 and pg.locator(".bleft .bbtn").count() == 6 and pg.locator(".rhs").count() == 3)
+    check("the splash is gone and the bridge is up", pg.locator(".rsplash").count() == 0 and pg.locator(".bleft .bbtn").count() == 6 and pg.locator(".rhs").count() == 2)
     js = lambda code: pg.evaluate("(async()=>{const {sim}=await import('../js/sim.js');" + code + "})()")
     js("const s=sim.s; s.docked=false; s.at=null; s.speed=7.3; s.depth=640; s.targetDepth=640; s.heading=123; s.throttle=0.5; sim.step(0.1)"); pg.wait_for_timeout(600)
     t = pg.inner_text(".bm-info.il")

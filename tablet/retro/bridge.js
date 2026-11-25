@@ -20,20 +20,21 @@ export function createBridge(stage, { onOpen }) {
   // the two station screens (COMMS left, SENSORS right): two short lines each
   const stnL = el('div', 'rstn'), stnR = el('div', 'rstn');
   const hs = (label, x, y, w, h, id) => { const b = el('button', 'rhs', null, `left:${x}px;top:${y}px;width:${w}px;height:${h}px`); b.setAttribute('aria-label', label); b.onclick = () => onOpen(id); return b; };
-  const badge = el('div', 'rbadge', '', 'left:60px;top:106px;display:none');
-  root.append(
-    hs('COMMS', 14, 88, 78, 52, 'comms'), hs('SENSORS', 228, 88, 78, 52, 'sensors'), hs('WALKWAY', 100, 194, 120, 22, 'walkway'),
-    box('rtop', 90, 17, 156, 10, topD), box('rmain', 30, 47, 276, 65, mainD), box('rdisp', 120, 122, 96, 29, dispD),
-    box('rleft', 57, 157, 54, 32, leftD), box('rctl', 112, 157, 100, 32, ctrD), box('rright', 214, 157, 54, 32, rightD),
-    box('rstnL', 45, 109, 36, 16, stnL), box('rstnR', 253, 109, 26, 16, stnR), badge);
+  const badge = el('div', 'rbadge', '', 'left:60px;top:116px;display:none');
+  // layers, bottom to top: black, the live screens, the frame picture (its holes are the screens), the desk controls, tap areas
+  const art = root.firstChild; root.removeChild(art);
+  root.append(el('div', 'rbase', null, 'left:0;top:0;width:320px;height:240px'),
+    box('rtop', 106, 14, 108, 18, topD), box('rmain', 40, 36, 240, 96, mainD), box('rdisp', 116, 140, 89, 42, dispD),
+    box('rstnL', 46, 128, 19, 13, stnL), box('rstnR', 255, 128, 19, 13, stnR), box('rside', 0, 55, 9, 45), box('rside', 311, 55, 9, 45), art,
+    box('rleft deskc', 52, 190, 54, 32, leftD), box('rctl deskc', 106, 190, 108, 32, ctrD), box('rright deskc', 214, 190, 54, 32, rightD),
+    hs('COMMS', 14, 88, 78, 40, 'comms'), hs('SENSORS', 228, 88, 78, 40, 'sensors'), badge);
+  const walk = el('button', 'rbtn rwalk', 'WALK\u25b8'); walk.onclick = () => onOpen('walkway'); root.append(walk);
   const msg = el('div', 'rmsg'); msg.id = 'console-line'; root.append(msg);
-  root.append(el('div', 'rwalk', '▼ WALKWAY'));
   function updateStations() {
     const s = sim.s, act = activeLink(), st = act ? linkState(act) : null;
-    setText(stnL.firstChild || stnL.appendChild(el('div')), 'COMMS'); if (!stnL.children[1]) stnL.append(el('div'));
-    setText(stnL.children[1], st ? (st.up ? 'LINK UP' : 'NO LINK') : 'NO LINK'); setClass(stnL.children[1], st && st.up ? 'ok' : 'bad');
-    if (!stnR.firstChild) stnR.append(el('div'), el('div'));
-    setText(stnR.children[0], 'SNR'); setText(stnR.children[1], s.sonar ? 'ACT' : 'OFF'); setClass(stnR.children[1], s.sonar ? 'ok' : 'bad');
+    if (!stnL.firstChild) stnL.append(el('div')); if (!stnR.firstChild) stnR.append(el('div'));
+    setText(stnL.firstChild, 'COM'); setClass(stnL.firstChild, st && st.up ? 'ok' : 'bad');   // green: a link is up
+    setText(stnR.firstChild, 'SNR'); setClass(stnR.firstChild, s.sonar ? 'ok' : 'bad');     // green: sonar is on
     const n = unreadCount(); badge.style.display = n ? 'block' : 'none'; setText(badge, String(n));
   }
   function update() { api.update(); updateStations(); }

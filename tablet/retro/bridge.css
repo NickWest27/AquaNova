@@ -1,34 +1,42 @@
 /* Retro bridge. Colors from palette.css only. Everything is placed on the 320 x 240 pixel grid. */
 .rabs { position: absolute; }
 .rart { position: absolute; }
+.rbase { position: absolute; background: var(--c00); }
+.rside { background: var(--c18); }
+.rbox.deskc { overflow: visible; background: none; }
+.rart.frame { }
 .rbox { position: absolute; overflow: hidden; background: var(--c00); }
 .rbox > div { position: absolute; inset: 0; }
 .rhs { position: absolute; background: none; border: 0; padding: 0; }
 .rhs:active { background: var(--c13); opacity: .5; }
-.rwalk { position: absolute; left: 100px; top: 196px; width: 120px; text-align: center; color: var(--c29); pointer-events: none; }
+.rwalk { position: absolute; left: 276px; top: 222px; width: 44px; height: 18px; text-align: center; padding: 0; background: var(--c03); color: var(--c31); border-width: 1px 0 0 1px; }
 /* top strip: one line */
 .bt { display: block; text-align: center; padding-top: 1px; background: var(--c01); }
 .bt-place { color: var(--c31); white-space: nowrap; overflow: hidden; text-overflow: clip; }
 .bt-place.mission { color: var(--amber); } .bt-place.error { color: var(--red); }
 .bt-pos, .bt-note, .bt-stack { display: none !important; }
 /* main screen: readouts at the left, the chart in the middle, bars at the right */
-.bm-info.il { position: absolute; left: 0; top: 0; width: 50px; height: 100%; background: var(--c01); border-right: 1px solid var(--c04); padding: 1px 2px; }
-.bm-info.il .ilr { height: 15px; overflow: hidden; white-space: nowrap; padding-top: 3px; }
+/* readouts: one row along the top of the window */
+.bm-info.il, .bm-info.ir { z-index: 2; }
+.bm-info.il { position: absolute; left: 18px; top: 1px; width: 204px; height: 9px; background: var(--c01); display: flex; justify-content: space-between; padding: 0 2px; }
+.bm-info.il .ilr { height: 9px; overflow: hidden; white-space: nowrap; }
 .bm-info.il small, .ir-bars .bar small { display: none; }
 .bm-info.il b { font-weight: normal; color: var(--white); }
 .bm-info.il b::before, .ir-bars .bar b::before { color: var(--c07); }
 .ilr:nth-child(1) b::before { content: 'SPD '; } .ilr:nth-child(2) b::before { content: 'DEP '; } .ilr:nth-child(3) b::before { content: 'FLR '; } .ilr:nth-child(4) b::before { content: 'HDG '; }
 .ir-bars .bar:nth-child(1) b::before { content: 'PRS '; } .ir-bars .bar:nth-child(2) b::before { content: 'TMP '; } .ir-bars .bar:nth-child(3) b::before { content: 'ENG '; } .ir-bars .bar:nth-child(4) b::before { content: 'O2 '; } .ir-bars .bar:nth-child(5) b::before { content: 'CO2 '; } .ir-bars .bar:nth-child(6) b::before { content: 'HUL '; }
-.bm-view { position: absolute; left: 51px; top: 0; right: 61px; bottom: 0; }
-.bm-info.ir { position: absolute; right: 0; top: 0; width: 60px; height: 100%; background: var(--c01); border-left: 1px solid var(--c04); padding: 1px 2px; }
-.ir-bars .bar { height: 10px; padding-top: 1px; overflow: hidden; white-space: nowrap; }
+.bm-view { position: absolute; left: 0; top: 0; right: 0; bottom: 0; }
+/* system bars: one row along the bottom of the window (pressure and temperature are on the SYS page) */
+.bm-info.ir { position: absolute; left: 18px; top: 78px; width: 204px; height: 9px; background: var(--c01); padding: 0 2px; }
+.ir-bars { display: flex; justify-content: space-between; } .ir-bars .bar { height: 9px; overflow: hidden; white-space: nowrap; }
+.ir-bars .bar:nth-child(-n+2) { display: none; }
 .ir-bars .bar small { color: var(--c07); } .ir-bars .bar b { font-weight: normal; color: var(--white); } .ir-bars .bar i { display: none; }
 .bm-info.ir .nav-prof { display: none; }
 .bd { position: absolute; inset: 0; overflow: hidden; background: var(--c00); }
 .bd[hidden], .bc[hidden], .br[hidden] { display: none; }
 .nd-stage { position: absolute; inset: 0; background: var(--c00); }
 .nd-stage canvas { position: absolute; left: 0; top: 0; }
-.nav-log { position: absolute; left: 1px; top: 1px; width: 126px; background: var(--c00); border: 1px solid var(--c04); padding: 0 2px; color: var(--c09); pointer-events: none; white-space: nowrap; }
+.nav-log { position: absolute; left: 19px; top: 12px; width: 126px; background: var(--c00); border: 1px solid var(--c04); padding: 0 2px; color: var(--c09); pointer-events: none; white-space: nowrap; }
 .nav-log > b { display: none; }
 .nav-log .nl-r small { color: var(--c07); margin-right: 3px; }
 .nav-log .nl-r:nth-child(n+4) { display: none; } .nav-log .nl-r small { display: none; }
@@ -54,7 +62,7 @@
 /* station screens */
 .rstn { padding: 0 1px; background: var(--c00); color: var(--c09); line-height: 8px; }
 .rstn .ok { color: var(--c14); } .rstn .bad { color: var(--red); } .rstn .warn { color: var(--amber); }
-.rmsg { position: absolute; left: 0; top: 221px; width: 320px; height: 19px; padding: 1px 3px; background: var(--c00); border-top: 1px solid var(--c04); overflow: hidden; color: var(--text); line-height: 9px; }
+.rmsg { position: absolute; left: 0; top: 222px; width: 276px; height: 18px; padding: 1px 3px; background: var(--c00); border-top: 1px solid var(--c04); overflow: hidden; color: var(--text); line-height: 9px; }
 .rmsg .who { color: var(--blue); }
 .rbadge { position: absolute; min-width: 8px; height: 9px; background: var(--red); color: var(--c10); padding: 0 1px; line-height: 9px; }
 /* splash */
