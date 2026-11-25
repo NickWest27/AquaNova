@@ -1,6 +1,6 @@
 # Handoff (read this first when a session starts; update it before parking)
 
-Last updated: 2026-11-25. Branch to work on: `tablet`. Repo: NickWest27/AquaNova (GitHub Pages path `/AquaNova/`). Last change: one zoom direction everywhere ("+" zooms in) and round map zoom buttons; before that the bridge original picture with real transparent holes; before that the medbay on the owner's picture (after bridge, walkway A1, quarters, science lab, launch bay).
+Last updated: 2026-11-25. Branch to work on: `tablet`. Repo: NickWest27/AquaNova (GitHub Pages path `/AquaNova/`). Last change: identified ships are saved (`world.known`) and stay identified after a reload; before that one zoom direction everywhere ("+" zooms in) and round map zoom buttons; before that the bridge original picture with real transparent holes; before that the medbay on the owner's picture (after bridge, walkway A1, quarters, science lab, launch bay).
 
 ## Starting a Claude Code session (owner's workflow since 2026-11-25)
 The owner works from an iPad and a phone, does not use git, and wants Claude to do all of it.
@@ -23,6 +23,10 @@ The owner works from an iPad and a phone, does not use git, and wants Claude to 
 - **Zoomable maps** get the WSKR-page control: round − and + with the range between them, in the map's top-right corner. Use `mapZoom(step)` from `tablet/js/mapZoom.js` (class `.map-zoom`). In use: WSKR page, Nav station, Remora contour map.
 - **The bridge main screen is not tappable.** Its controls go on a desk console: the range − / + for NAV and SNR are on the right desk (`bridge.js`, `sonarView.js`).
 - Tests: `ui_test.py` (Nav), `sonar_test.py`, `remora_test.py`, `wskr_page_test.py`. `console_test.py` already failed before this change (it waits for `.nav-read`, which no longer exists); its range check was updated but is not reached.
+
+## Ship identity (2026-11-25)
+- Traffic is rebuilt from `world.seed` on every load, so a ship's identity used to reset on reload (and the WSKR auto-intercept could chase it again). Now `traffic.js` keeps the ids of identified ships in `traffic.known`, saved as `world.known` (like `world.sunk`), and reapplies them in `step()`. Scans (`sonar.js`) and hails (`commsModel.js`) are caught there too. A new game clears it (`gameState.reset()`). Test: `traffic_test.py` ("stays identified after the traffic is rebuilt"). Tests that set `ident=false` by hand also delete the id from `traffic.known`.
+- The auto-intercept "already chased" list (`autoSent` in `sonar.js`) is still not saved. With identity saved this only matters for a contact the screen gave up on at the 8 nm leash: after a reload it may be chased once more.
 
 ## Retro skin: the approach (decided 2026-11-25)
 **The owner's rule: RESKIN, NOT REDESIGN.** Keep the real game, screens, buttons and layout. Only the frames and art assets become retro (pixel art). The info displays (charts, text, buttons) stay as they were, and may be made more retro later, as a separate step the owner asks for. Why: see `RETRO_SKIN_PLAN.md`.

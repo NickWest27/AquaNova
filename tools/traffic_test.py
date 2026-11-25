@@ -67,7 +67,7 @@ def main():
           const put=(kind, ais)=>{ for(let k=0;k<600;k++){ sim.s.lat=39.8+(k%30)*0.05; sim.s.lon=-58.0-Math.floor(k/30)*0.12; tr.traffic.candKey=''; sim.s.clock=k*97; tr.step(); const v=tr.traffic.cand.find(x=>(kind?x.kind===kind:x.ais===ais)&&x.size>=1); if(v){ const p=tr.posAt(v,sim.s.clock); return {v,p}; } } return null; };"""
         r = js(place + setup + """const f=put(null,true); if(!f) return {none:true}; const at=(dn)=>{ Object.assign(sim.s,{lat:f.p.lat+dn/60,lon:f.p.lon}); tr.traffic.candKey=''; tr.step(); return tr.traffic.active.find(a=>a.v===f.v); };
           const old=tr.gates.ais; tr.gates.ais=()=>true; const near=at(4); const withAis={shown:!!near&&near.shown, pos:!!(near&&near.pos), ais:!!(near&&near.ais), ident:f.v.ident};
-          f.v.ident=false; tr.gates.ais=()=>false; const far=at(15); const noMast={pos:!!(far&&far.pos), ais:!!(far&&far.ais)}; tr.gates.ais=old; return {withAis, noMast}""")
+          f.v.ident=false; tr.traffic.known.delete(f.v.id); tr.gates.ais=()=>false; const far=at(15); const noMast={pos:!!(far&&far.pos), ais:!!(far&&far.ais)}; tr.gates.ais=old; return {withAis, noMast}""")
         print("     ais", r)
         check("AIS ships are plotted and named when the VHF mast is up", r.get("none") or (r["withAis"]["pos"] and r["withAis"]["ais"] and r["withAis"]["ident"]), r)
         check("with the mast down a distant AIS ship is not plotted", r.get("none") or not r["noMast"]["pos"], r)
@@ -75,20 +75,27 @@ def main():
           const one={shown:!!a&&a.shown, pos:!!(a&&a.pos), lines:a?a.lines.length:0, ident:f.v.ident, name:a?tr.shownName(a):''};
           const old=sim.wskrLink; sim.wskrLink=()=>({raw:true}); sim.s.wskrs=[{id:1,dead:false,arrived:false,lat:f.p.lat,lon:f.p.lon+0.04}]; tr.traffic.candKey=''; sim.s.clock+=1; tr.step(); const b=tr.traffic.active.find(x=>x.v===f.v);
           const two={pos:!!(b&&b.pos), err:b&&b.pos?b.pos.err:null, lines:b?b.lines.length:0, ident:f.v.ident};
-          sim.s.wskrs=[{id:1,dead:false,arrived:false,lat:f.p.lat+0.0005,lon:f.p.lon+0.0005}]; f.v.ident=false; sim.s.clock+=1; tr.step(); const seenBy=f.v.ident;
+          sim.s.wskrs=[{id:1,dead:false,arrived:false,lat:f.p.lat+0.0005,lon:f.p.lon+0.0005}]; f.v.ident=false; tr.traffic.known.delete(f.v.id); sim.s.clock+=1; tr.step(); const seenBy=f.v.ident;
           sim.wskrLink=old; sim.s.wskrs=[]; return {one,two,seenBy}""")
         print("     bearings", r)
         check("a non-AIS ship heard by sonar gives a bearing, no position, no name", r.get("none") or (r["one"]["shown"] and not r["one"]["pos"] and r["one"]["lines"] >= 1 and not r["one"]["ident"] and r["one"]["name"] == "Unidentified contact"), r)
         check("a WSKR on another bearing makes a fix with an error", r.get("none") or (r["two"]["pos"] and r["two"]["err"] > 0), r)
         check("a WSKR camera alongside identifies the ship", r.get("none") or r["seenBy"], r)
-        r = js(place + setup + """const f=put(null,false); if(!f) return {none:true}; Object.assign(sim.s,{lat:f.p.lat,lon:f.p.lon,depth:5}); tr.traffic.candKey=''; f.v.ident=false; tr.step(); const a=tr.traffic.active.find(x=>x.v===f.v); return {pos:!!(a&&a.pos), ident:f.v.ident}""")
+        r = js(place + setup + """const f=put(null,false); if(!f) return {none:true}; Object.assign(sim.s,{lat:f.p.lat,lon:f.p.lon,depth:5}); tr.traffic.candKey=''; f.v.ident=false; tr.traffic.known.delete(f.v.id); tr.step(); const a=tr.traffic.active.find(x=>x.v===f.v); return {pos:!!(a&&a.pos), ident:f.v.ident}""")
         check("close and near the surface a ship is seen by eye and identified", r.get("none") or (r["pos"] and r["ident"]), r)
-        r = js(place + setup + """const f=put(null,false); if(!f) return {none:true}; const at=(dn)=>{ Object.assign(sim.s,{lat:f.p.lat+dn/60,lon:f.p.lon,depth:60}); f.v.ident=false; f.v.sweepAt=0; tr.traffic.candKey=''; tr.step(); return tr.traffic.active.find(a=>a.v===f.v); };
-          const in3=at(3), n3=f.v.ident; const a6=at(6); const heard6=!!a6, before=f.v.ident; const ok6=a6?tr.sweep(f.v):false; sim.s.clock+=25; tr.traffic.candKey=''; tr.step(); const after=f.v.ident;
+        r = js(place + setup + """const f=put(null,false); if(!f) return {none:true}; const at=(dn)=>{ Object.assign(sim.s,{lat:f.p.lat+dn/60,lon:f.p.lon,depth:60}); f.v.ident=false; tr.traffic.known.delete(f.v.id); f.v.sweepAt=0; tr.traffic.candKey=''; tr.step(); return tr.traffic.active.find(a=>a.v===f.v); };
+          const in3=at(3), n3=f.v.ident; f.v.ident=false; tr.traffic.known.delete(f.v.id); const a6=at(6); const heard6=!!a6, before=f.v.ident; const ok6=a6?tr.sweep(f.v):false; sim.s.clock+=25; tr.traffic.candKey=''; tr.step(); const after=f.v.ident;
           const a10=at(10); const refused=a10?!tr.sweep(f.v):true; return {n3, heard6, before, ok6, after, refused}""")
         print("     ident ranges", r)
         check("a ship inside 4 nm is identified", r.get("none") or r["n3"], r)
         check("a sensor sweep identifies a ship at 6 nm and is refused beyond 8 nm", r.get("none") or not r["heard6"] or (not r["before"] and r["ok6"] and r["after"] and r["refused"]), r)
+        # a reload rebuilds every ship from the seed: the ones already identified stay identified (world.known)
+        r = js(place + setup + """const f=put(null,false); if(!f) return {none:true}; Object.assign(sim.s,{lat:f.p.lat+3/60,lon:f.p.lon,depth:60}); tr.traffic.candKey=''; tr.step(); const id=f.v.id, was=f.v.ident;
+          const saved=(g.getProperty('world.known')||[]).includes(id);
+          tr.traffic.cells.clear(); tr.traffic.known=new Set(g.getProperty('world.known')||[]); Object.assign(sim.s,{lat:f.p.lat+12/60,lon:f.p.lon}); tr.traffic.candKey=''; tr.step();
+          const v2=tr.traffic.cand.find(x=>x.id===id); return {was, saved, fresh: !!v2 && v2!==f.v, after: !!v2 && v2.ident}""")
+        print("     reload", r)
+        check("an identified ship is saved and stays identified after the traffic is rebuilt", r.get("none") or (r["was"] and r["saved"] and r["fresh"] and r["after"]), r)
         # the dashed bearing agrees with the chart's own geometry (within sensor noise)
         r = js(place + setup + """const f=put(null,false); if(!f) return {none:true}; Object.assign(sim.s,{lat:f.p.lat+0.06,lon:f.p.lon+0.06,depth:60}); tr.traffic.candKey=''; tr.step(); const a=tr.traffic.active.find(x=>x.v===f.v); if(!a||!a.lines.length) return {none:true}; const ln=a.lines[0]; const real=sim_toward(ln.from, a.lat!=null?{lat:a.lat,lon:a.lon}:f.p).brg; let d=Math.abs(ln.brg-real); d=Math.min(d,360-d); return {d, brg:ln.brg, real}""".replace("sim_toward","(await import('./js/sim.js')).toward"))
         print("     bearing vs chart", r)

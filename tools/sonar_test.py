@@ -56,7 +56,7 @@ with sync_playwright() as p:
     tap("Clear"); pg.wait_for_timeout(200)
     check("Clear closes the info box", js("return S.snr().sel") is None and pg.locator(".bd-snr:visible .snr-list").is_visible())
     # investigate: a WSKR goes to the picked contact, identifies it and stays with it until released
-    js("const s=sim.s, A=window.__at(2.5,0), v=T.traffic.cand[0]; v.A=A; v.B=A; v.ident=false; v.scanFixUntil=0; s.wskrs=[{n:1,lat:s.lat,lon:s.lon,mode:'escort',target:null,busy:0,bat:100,heading:0}]; for(let i=0;i<3;i++) sim.step(1); S.select('ship:t:1'); sim.step(1)"); pg.wait_for_timeout(300)
+    js("const s=sim.s, A=window.__at(2.5,0), v=T.traffic.cand[0]; v.A=A; v.B=A; v.ident=false; T.traffic.known.delete(v.id); v.scanFixUntil=0; s.wskrs=[{n:1,lat:s.lat,lon:s.lon,mode:'escort',target:null,busy:0,bat:100,heading:0}]; for(let i=0;i<3;i++) sim.step(1); S.select('ship:t:1'); sim.step(1)"); pg.wait_for_timeout(300)
     check("Investigate is offered with a WSKR out", pg.locator('.bbtn:visible:text-is("Investigate")').count() == 1 and pg.locator('.bbtn:visible:text-is("Investigate")').first.is_enabled())
     tap("Investigate"); pg.wait_for_timeout(200)
     check("the WSKR takes the task", js("return sim.s.wskrs[0].mode") == "trail")
@@ -72,7 +72,7 @@ with sync_playwright() as p:
     check("a contact lost for two minutes is given up", js("return sim.s.wskrs[0].mode") == "escort")
     js("T.traffic.cand.push({id:'t:1',kind:'cargo',faction:'cargo',factionName:'Merchant',stance:'neutral',label:'Container ship',size:3,kt:10,A:window.__at(2.5,0),B:window.__at(2.5,0),L:1,phase:0,boldness:0,ais:false,bias:0,name:'MV Test',mhz:156,reply:0,ident:false,alerted:true,dyn:null,hitAt:-1e9}); S.snr().sel=null; sim.s.wskrs=[]")
     # full sweep doubles the sensitivity: a ship at 6 nm (out of the 4.8 nm ear) is found
-    js("const A=window.__at(10,0); const v=T.traffic.cand[0]; v.A=A; v.B=A; v.size=0; v.ident=false; v.scanFixUntil=0; sim.s.wskrs=[]; for(let i=0;i<3;i++) sim.step(1)")
+    js("const A=window.__at(10,0); const v=T.traffic.cand[0]; v.A=A; v.B=A; v.size=0; v.ident=false; T.traffic.known.delete(v.id); v.scanFixUntil=0; sim.s.wskrs=[]; for(let i=0;i<3;i++) sim.step(1)")
     n0 = js("return S.contactsFor('ship').filter(c=>c.id==='ship:t:1').filter(c=>!c.lost).length")
     tap("Full sweep"); pg.wait_for_timeout(200); js("sim.step(1)")
     n1 = js("return S.contactsFor('ship').filter(c=>c.id==='ship:t:1').filter(c=>!c.lost).length")
@@ -88,7 +88,7 @@ with sync_playwright() as p:
     check("the faint contact stays on the list a while, marked as faded", js("const c=S.contactsFor('ship').filter(c=>c.id==='ship:t:1'); return c.length===1&&c[0].lost"))
     js("T.traffic.cand[0].size=3")
     # every listener feeds every display: with the ship's sonar off, a ship only the WSKR hears still shows, as a bearing from the WSKR
-    js("const s=sim.s, w=window.__at(0,2.5), A=window.__at(2.5,2.5), v=T.traffic.cand[0]; v.A=A; v.B=A; v.ident=false; s.sonar=false; s.wskrs=[{n:1,lat:w.lat,lon:w.lon,mode:'escort',target:null,busy:0,bat:100,heading:0}]; for(let i=0;i<3;i++) sim.step(1)")
+    js("const s=sim.s, w=window.__at(0,2.5), A=window.__at(2.5,2.5), v=T.traffic.cand[0]; v.A=A; v.B=A; v.ident=false; T.traffic.known.delete(v.id); s.sonar=false; s.wskrs=[{n:1,lat:w.lat,lon:w.lon,mode:'escort',target:null,busy:0,bat:100,heading:0}]; for(let i=0;i<3;i++) sim.step(1)")
     r = js("const c=S.contactsFor('ship').filter(c=>c.id==='ship:t:1'); return c.map(x=>({remote:x.remote,lost:x.lost,by:x.byName,pos:!!x.pos}))")
     check("the ship's display shows what a WSKR hears", len(r) == 1 and r[0]["remote"] and not r[0]["lost"] and not r[0]["pos"], str(r))
     pg.wait_for_timeout(300); check("and lists it", "Unknown contact" in pg.inner_text(".bd-snr:visible .snr-list"))

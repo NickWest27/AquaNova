@@ -13,7 +13,7 @@ import { say } from './notify.js';
 const NM = 60, LON_K = 0.82;   // nm per degree of latitude; a fixed squash so cells are roughly square in the mid-latitudes
 /** Gates other modules set: is the VHF mast up high enough to hear AIS? */
 export const gates = { ais: () => true };
-export const traffic = { cfg: null, cells: new Map(), cand: [], scripted: [], candKey: '', active: [], sunk: new Set(), ready: false, stats: { active: 0, cells: 0, ms: 0 }, lastClock: null };
+export const traffic = { cfg: null, cells: new Map(), cand: [], scripted: [], candKey: '', active: [], sunk: new Set(), known: new Set(), ready: false, stats: { active: 0, cells: 0, ms: 0 }, lastClock: null };
 const mulberry = (a) => () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
 const mix = (seed, x, y) => (Math.imul(seed ^ 0x9E3779B1, 0x85EBCA6B) ^ Math.imul(x, 73856093) ^ Math.imul(y, 19349663)) | 0;
 const pick = (rng, a) => a[Math.floor(rng() * a.length)];
@@ -29,6 +29,7 @@ const seedOf = () => { let s = gameState.getProperty('world.seed'); if (s == nul
 export async function load() {
   traffic.cfg = await (await fetch(new URL('../../data/world/traffic.json', import.meta.url))).json();
   traffic.sunk = new Set(gameState.getProperty('world.sunk') || []);
+  traffic.known = new Set(gameState.getProperty('world.known') || []);   // ships already identified: the traffic is rebuilt from the seed on load, so their identity is saved by id
   for (const w of gameState.getProperty('world.wrecks') || []) if (!sim.s.pois.some((p) => p.name === w.name)) sim.s.pois.push({ id: sim.s.pois.length, type: 'wreck', text: w.text, name: w.name, lat: w.lat, lon: w.lon, sunkId: w.id });
   traffic.cells.clear(); traffic.candKey = ''; traffic.ready = true;
 }
@@ -178,6 +179,8 @@ export function step() {
     const vis = s.depth <= sn.visual_max_depth_m && d <= sn.visual_nm[v.size];
     if (v.sweepAt && now >= v.sweepAt) { if (d <= sn.sweep_nm) v.ident = true; v.sweepAt = 0; }
     if (ais || d <= sn.ident_nm || obs.some((w) => dist(w, p) <= sn.wskr_camera_nm)) v.ident = true;
+    if (!v.ident && traffic.known.has(v.id)) v.ident = true;   // identified before a reload
+    if (v.ident && !traffic.known.has(v.id)) { traffic.known.add(v.id); gameState.updateProperty('world.known', [...traffic.known]); }   // also catches a scan (sonar.js) or a hail (commsModel.js)
     const b = toward(s, p), heard = ears.length > 0 || vis;
     const pos = ais ? { lat: p.lat, lon: p.lon, err: 0, hdg: p.hdg } : v.scanFixUntil > now ? { lat: p.lat, lon: p.lon, err: 0.1, hdg: p.hdg } : fix ? { lat: fix.lat, lon: fix.lon, err: fix.err } : vis ? { lat: p.lat, lon: p.lon, err: 0.05, hdg: p.hdg } : null;
     out.push({ v, lat: p.lat, lon: p.lon, hdg: p.hdg, nm: d, brg: b.brg, shown: ais || heard, ais, pos, lines: ears.map((e) => ({ src: e.src, from: e.from, brg: e.brg })), ear: ears.length ? ears[0].brg : null });
