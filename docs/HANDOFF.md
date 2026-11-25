@@ -1,0 +1,27 @@
+# Handoff (read this first when a session starts; update it before parking)
+
+Last updated: 2026-11-25. Branch to work on: `tablet`. Repo: NickWest27/AquaNova (GitHub Pages path `/AquaNova/`). Last change: the real bridge on the new retro frame, pushed and published.
+
+## Where things are
+- `main` = the desktop version to come (16:9, 1920x1080); for now the same game as `tablet` at the branch split. `tablet` = the retro-skinned tablet version (pixel-art frames, 4:3 where reskinned). Palette: `data/palette.json`, `RETRO_PALETTE.md`; art rules for other AIs: `Guides/ASSET_SPEC.md`.
+- Test before pushing: `python3 tools/smoke.py` plus the relevant `tools/*_test.py`. Known failing before the retro work: `tern_test.py`, `bay_test.py` (ROV sample), `wskr_chase_test.py`, `notices_test.py`; `bridge_test.py` fails at the "Scan" step on the old page but its first checks (stations open) pass.
+- Before each push: `python3 tools/update_sw.py`, commit, push `tablet`.
+
+## Retro skin: the approach (decided 2026-11-25)
+**The owner's rule: RESKIN, NOT REDESIGN.** Keep the real game, screens, buttons and layout. Only the frames and art assets become retro (pixel art). The info displays (charts, text, buttons) stay as they were, and may be made more retro later, as a separate step the owner asks for. Why: see `RETRO_SKIN_PLAN.md`.
+- **Done: bridge.** `tablet/js/scene.js` shows the owner's frame `tablet/retro/assets/bridge.png` (320x240 PNG, transparent holes for the screens) at 6x with hard pixels (`.frame.retro`, `image-rendering: pixelated`). The bridge stage is 1920x1440 (4:3): `body.stage-4x3` is set by `scene.show('bridge')` and changes the stage and `#scene-wrap` shape in `tablet.css`; the other scenes are still 16:9 (1920x1080). Screens sit under the frame (the holes cut their shape); the three desk panels sit on top of the frame because the pads are small slanted holes. All coordinates are art pixels x 6. WALKWAY = the bottom strip of the picture. The original console code (`js/bridge.js`, `js/nd.js`) is unchanged by the skin.
+- **Next:** reskin the other scenes the same way, one at a time: the owner sends AI-made 320x240 frames, swap the image in `scene.js`, move the screen and hotspot boxes to the new holes. Order: quarters, walkway, science lab, medbay, launch bay, then station-page frames, PED/communicator art, splash. The per-scene 16:9 to 4:3 switch (body class) is in place; add `stage-4x3` for each reskinned scene.
+- **Experiment, not in use:** `tablet/retro/` (pixel-stage app: `retro.js`, `palette.css`, `bridge.js`, `navChart.js`, font AQ Pixel) is a full 320x240 redesign. The owner did not want that. Keep it for later (a pixel-native chart or small font) but do not build on it now. Reachable at `.../tablet/tablet/retro/index.html`.
+- Tests: `tools/smoke.py`, `tools/bridge_test.py` (opens the bridge and stations). `tools/retro_test.py` and `tools/retro_bridge_test.py` test the experiment.
+- Not checked yet on the new bridge: the TAC/SNR/VW/SYS pages on the center display, and label overlap on the center chart (existing behavior).
+
+## Publishing (working since 2026-11-24)
+`.github/workflows/pages.yml` publishes both branches on every push to `main` or `tablet`:
+- `https://nickwest27.github.io/AquaNova/` = a small menu (Tablet, Desktop).
+- `https://nickwest27.github.io/AquaNova/tablet/` = branch `tablet`; it redirects to the game in that build's `tablet/` folder (game pages are `.../tablet/tablet/...`). This is the address of the owner's iPad icon.
+- `https://nickwest27.github.io/AquaNova/desktop/` = branch `main`.
+- Owner settings done: Pages source = GitHub Actions; environment `github-pages` deployment branches include `main` and `tablet`. A new branch that should publish must be added there too.
+- The workflow file must stay on both branches. Runs: `gh run list -R NickWest27/AquaNova`. A failed run cannot be re-run from here; push an empty commit to retry. The deploy step sometimes fails with "No artifacts named github-pages"; a 30 s wait before it (already in the workflow) fixed that.
+
+## Parked / backlog (game features)
+Missing-vessel rescue (needs a drifting datum), mining-colony rescue, casualty clock display, compulsory-mission calendar, bearing lines on the chart, bearing-only intercept, tier effects on tone, submarine contact display, TAC/VW/SYS page specs, marine life and traffic missions, combat and the Warn/Defend ladder. Recent feature docs: `MISSION_GENERATOR.md`, `SEARCH_PATTERNS.md`, `WSKR_SCREEN.md`, `TERN_ORDERS.md` (in the Claude Project docs).
