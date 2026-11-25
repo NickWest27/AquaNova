@@ -16,7 +16,7 @@ export function mount(body) {
   body.style.flexDirection = 'column';   // fits the screen: the view on top, status and piloting side by side below
   const head = el('div', { class: 'card' }, el('div', { class: 'lbl', text: ROV_NAME + ' (Science ROV)' }), el('div', { class: 'num' }), el('p', { style: 'color:var(--dim);margin:0.4rem 0' }));
   const row = el('div', { class: 'row' });
-  const launchBtn = el('button', { class: 'btn chip', text: 'Launch', onclick: () => { const r = launchRemora(); tell('science', r.ok ? `${ROV_NAME} is being readied in the bay. About ${Math.round(r.secs)} seconds.` : ({ docked: 'Undock first', fast: 'Slow below 8 kt first', out: 'Already out', busy: 'The bay is busy with another craft', doors: 'The bay doors are too damaged to open', rearm: `The team are still unloading and re-equipping her: about ${r.mins} min` })[r.why] || 'Cannot launch now', r.ok ? 'mission' : 'error', { key: 'bay' }); update(); } });
+  const launchBtn = el('button', { class: 'btn chip', text: 'Launch', onclick: () => { const r = launchRemora(); tell('science', r.ok ? `${ROV_NAME} is being readied in the bay. About ${Math.round(r.secs)} seconds.` : ({ docked: 'Undock first', fast: 'Slow below 8 kt first', out: 'Already out', busy: 'The bay is busy with another craft', doors: 'The bay doors are too damaged to open', rearm: `The team are still unloading and re-equipping her: about ${r.mins} min`, tetherfix: `Engineering are splicing a new tether: about ${r.mins} min`, lost: 'Remora is lost. Send the Tern to fetch her' })[r.why] || 'Cannot launch now', r.ok ? 'mission' : 'error', { key: 'bay' }); update(); } });
   const recBtn = el('button', { class: 'btn chip', text: 'Recover', onclick: () => { const r = recoverRemora(); tell('science', r.ok ? `Bringing ${ROV_NAME} aboard. About ${Math.round(r.secs)} seconds.` : r.why === 'busy' ? 'The bay is busy' : 'Bring the ROV within 0.2 nm of the ship first', r.ok ? 'mission' : 'error', { key: 'bay' }); update(); } });
   const autoBtn = el('button', { class: 'btn chip', text: 'Auto return', onclick: () => { const r = sim.rovAuto(); tell('science', r.ok ? (r.nm < 0.03 ? 'She is alongside. Matching your depth, then she is ready to come aboard.' : `${ROV_NAME} is driving home on her own, about ${Math.max(1, Math.round(r.hours * 60))} minutes at her speed. Take her aboard when she arrives.`) : r.why === 'busy' ? 'She is working a tool. Wait for it to finish.' : 'No ROV out.'); update(); } });
   row.append(launchBtn, autoBtn, recBtn); const tether = tetherBar(); head.append(row, tether);
@@ -51,10 +51,13 @@ export function mount(body) {
     head.children[1].textContent = r ? 'OUT' : 'ABOARD'; head.children[1].className = 'num ' + (r ? 'ok' : '');
     head.children[2].textContent = op ? `The bay doors are open: ${op.kind === 'launch' ? 'launching' : 'taking aboard'}, ${Math.max(0, Math.round(op.dur - op.t))} s.` : r ? 'Set her speed, yaw and depth, or send her to a site. Slow (2 kt) and on a tether: the bay doors stay open until she is back aboard, so keep the ship slow.' : rr ? `Aboard. The team are unloading ${rr.load} sample${rr.load === 1 ? '' : 's'} and re-equipping her: ${Math.max(1, Math.ceil((rr.dur - rr.t) / 60))} min.` : 'Short range, slow, and it carries the instruments the WSKRs lack. Launch it at sea.';
     tether.refresh();
-    launchBtn.disabled = !!r || s.docked || !!op || !!rr; recBtn.disabled = !r || !!op; autoBtn.disabled = !r || !!r.job || !!r.auto;
-    autoBtn.textContent = r && r.auto ? 'Driving home…' : 'Auto return'; pilot.hidden = !r; viewBox.hidden = !r;
-    pilotBtns.concat(goBtn).forEach((b) => { b.disabled = !r || !!r.job; });
-    if (!r) return;
+    const lost = !!(r && r.lost), fix = bay().tetherFix;   // tether parted: no control, no telemetry
+    if (lost) { head.children[1].textContent = 'LOST CONTACT'; head.children[1].className = 'num bad'; head.children[2].textContent = 'Tether parted. No control, no telemetry. Launch Bay: send the Tern to Fetch Remora.'; }
+    else if (!r && fix) head.children[2].textContent = `New tether being spliced: ${Math.ceil((fix.dur - fix.t) / 60)} min.`;
+    launchBtn.disabled = !!r || s.docked || !!op || !!rr || !!fix; recBtn.disabled = !r || !!op || lost; autoBtn.disabled = !r || !!r.job || !!r.auto || lost;
+    autoBtn.textContent = r && r.auto ? 'Driving home…' : 'Auto return'; pilot.hidden = !r || lost; viewBox.hidden = !r || lost;
+    pilotBtns.concat(goBtn).forEach((b) => { b.disabled = !r || !!r.job || lost; });
+    if (!r || lost) return;
     cv.update();
     const t = toward(s, r), site = rovSite(), fl = rovFloor();
     const ids = toolIds, near = fl != null && fl - r.depth <= 6;

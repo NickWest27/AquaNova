@@ -7,11 +7,11 @@ import { ROV_NAME, rovRange, REMORA_STORE } from '../rov.js';
 import { TOOLS } from '../science.js';
 import { el, modal } from '../util.js';
 import { readout } from '../readout.js';
-import { TERN_SAFE_M, launchRemora, recoverRemora, remoraRearm, o2HoursLeft, O2_CHARGE_H, setManning, SHUTTLE_SEATS, SHUTTLE_COCKPIT, bay, busy, tubeBusy, rackBat, shuttle, launchWskr, launchText, receiveWskrNow, launchShuttle, recoverShuttle, sendShuttle, recallShuttle, dockList, shuttleRangeNm, shuttleSpeed, SHUTTLE_NAME, BAY_SAFE_KT, DOOR_DAMAGE_KT, SHUTTLE_CHARGE_H, MIN_LAUNCH_PCT, LOW_PCT } from '../bayops.js';
+import { TERN_SAFE_M, launchRemora, recoverRemora, remoraRearm, o2HoursLeft, O2_CHARGE_H, setManning, SHUTTLE_SEATS, SHUTTLE_COCKPIT, bay, busy, tubeBusy, rackBat, shuttle, launchWskr, launchText, receiveWskrNow, launchShuttle, recoverShuttle, sendShuttle, recallShuttle, fetchRemora, dockList, shuttleRangeNm, shuttleSpeed, SHUTTLE_NAME, BAY_SAFE_KT, DOOR_DAMAGE_KT, SHUTTLE_CHARGE_H, MIN_LAUNCH_PCT, LOW_PCT } from '../bayops.js';
 
-const mins = (m) => (m < 1 ? '<1 min' : m < 60 ? `${Math.round(m)} min` : `${Math.floor(m / 60)} h ${Math.round(m % 60)} min`);
+const mins = (m) => { if (m < 1) return '<1 min'; const t = Math.round(m); return t < 60 ? `${t} min` : `${Math.floor(t / 60)} h ${t % 60} min`; };
 const toFull = (bat, hours) => ((100 - bat) / 100) * hours * 60;
-const TERN_STATE = { goto: 'UNDER WAY', station: 'HOLDING', steer: 'ON A HEADING', relay: 'RELAY', follow: 'ALONGSIDE', going: 'TO DOCK', exchange: 'AIRLOCK', returning: 'RETURNING', moored: 'MOORED', search: 'SEARCHING' };
+const TERN_STATE = { fetch: 'FETCHING REMORA', goto: 'UNDER WAY', station: 'HOLDING', steer: 'ON A HEADING', relay: 'RELAY', follow: 'ALONGSIDE', going: 'TO DOCK', exchange: 'AIRLOCK', returning: 'RETURNING', moored: 'MOORED', search: 'SEARCHING' };
 const SHORT = { water: 'WATER', sediment: 'SEDIM', rock: 'CORE', bio: 'BIO' };   // a sample's kind on its slot
 const CRAFT = { rov: ROV_NAME.toUpperCase(), shuttle: SHUTTLE_NAME.toUpperCase(), wskr: 'WSKR' };
 
@@ -36,14 +36,14 @@ export function mount(body) {
     const s = sim.s, w = s.wskrs, r = s.rov, b = bay(), sh = shuttle(), op = b.op, rr = remoraRearm();
     const o2 = sh.o2 == null ? 100 : sh.o2, pilots = sh.pilots == null ? 2 : sh.pilots, pax = sh.pax || 0;
     const tw = sh.state === 'out' ? toward(s, sh) : null;
-    const next = JSON.stringify([!!r, r && Math.round(toward(s, r).nm * 100), r && (r.cargo || []).map((c) => c.kind).join(), r && r.job && Math.ceil((r.job.end - s.clock) / 60), rr && (rr.cargo || []).length, w.map((q) => [q.n, q.mode, !!q.arrived, Math.round(q.bat || 0)]), s.docked, Math.round(s.speed * 2), op && [op.kind, op.craft, Math.round(op.t)],
+    const next = JSON.stringify([!!r, r && r.lost, b.tetherFix && Math.round(b.tetherFix.t / 30), !!sh.carry, r && Math.round(toward(s, r).nm * 100), r && (r.cargo || []).map((c) => c.kind).join(), r && r.job && Math.ceil((r.job.end - s.clock) / 60), rr && (rr.cargo || []).length, w.map((q) => [q.n, q.mode, !!q.arrived, Math.round(q.bat || 0)]), s.docked, Math.round(s.speed * 2), op && [op.kind, op.craft, Math.round(op.t)],
       Object.values(b.tubes).map((t) => [t.n, t.kind, Math.round(t.t)]), Math.round(b.doorDmg), sh.state, sh.mode, sh.dead, Math.round(sh.bat), Math.round(o2), rr && Math.round(rr.t / 10), pilots, pax, sh.ashore,
       [1, 2, 3, 4].map((n) => Math.round(rackBat(n))), tw && [Math.round(tw.brg), Math.round(tw.nm * 100), Math.round(sh.depth || 0)]]);
     if (next === sig) return; sig = next;
     const act = (label, fn, off, cls = '') => el('button', { class: 'btn chip ' + cls, text: label, disabled: !!off, onclick: () => { fn(); sig = ''; update(); } });
 
     // ---- the main bay: outer door, ship speed, airlock ----
-    const open = !!(op || r), fast = s.speed > BAY_SAFE_KT, vfast = s.speed > DOOR_DAMAGE_KT;   // the door damage itself shows only as JAMMED (the doors will not open)
+    const lost = !!(r && r.lost), fix = b.tetherFix, open = !!(op || (r && !lost)), fast = s.speed > BAY_SAFE_KT, vfast = s.speed > DOOR_DAMAGE_KT;   // the door damage itself shows only as JAMMED (the doors will not open)
     const doorLamp = s.docked ? lamp('ALONGSIDE', '') : open ? lamp(op ? 'OPEN' : 'OPEN · TETHER', vfast ? 'bad' : 'warn') : b.doorDmg >= 100 ? lamp('JAMMED', 'bad') : lamp('CLOSED', 'ok');
     const main = el('div', { class: 'card bay-main' },
       el('div', { class: 'bay-hd' }, el('b', { text: 'MAIN BAY' }), el('span', { class: 'gz-k', text: 'OUTER DOOR' }), doorLamp,
@@ -52,19 +52,20 @@ export function mount(body) {
       el('div', { class: 'bay-hd' }, el('span', { class: 'gz-k', text: 'SHIP SPEED' }), fast ? lamp('TOO FAST', 'bad') : lamp('OK', 'ok')));   // over bay speed: red
 
     // ---- Remora ----
-    const launchRov = () => { const x = launchRemora(); tell('science', x.ok ? `${ROV_NAME} is being readied. About ${Math.round(x.secs)} seconds.` : ({ docked: 'Undock first', fast: 'Slow below 8 kt first', out: 'Already out', busy: 'The bay is busy with another craft', doors: 'The bay doors are too damaged to open', rearm: `The team are still unloading and re-equipping her: about ${x.mins} min` })[x.why] || 'Cannot launch now', x.ok ? 'mission' : 'error', { key: 'bay' }); };
+    const launchRov = () => { const x = launchRemora(); tell('science', x.ok ? `${ROV_NAME} is being readied. About ${Math.round(x.secs)} seconds.` : ({ docked: 'Undock first', fast: 'Slow below 8 kt first', out: 'Already out', busy: 'The bay is busy with another craft', doors: 'The bay doors are too damaged to open', rearm: `The team are still unloading and re-equipping her: about ${x.mins} min`, tetherfix: `Engineering are splicing a new tether: about ${x.mins} min`, lost: 'Remora is lost. Send the Tern to fetch her' })[x.why] || 'Cannot launch now', x.ok ? 'mission' : 'error', { key: 'bay' }); };
     const recoverRov = () => { const x = recoverRemora(); tell('science', x.ok ? `Bringing ${ROV_NAME} aboard. About ${Math.round(x.secs)} seconds.` : x.why === 'busy' ? 'The bay is busy' : 'Bring Remora within 0.2 nm of the ship first', x.ok ? 'mission' : 'error', { key: 'bay' }); };
     const rovOp = op && op.craft === 'rov', tnm = r ? toward(s, r).nm : 0;
     // her sample collectors: one slot per sample she can hold (lit with what is in it), and the tool at work
-    const collectors = (cargo) => el('div', { class: 'coll' }, el('span', { class: 'gz-k', text: 'SAMPLES' }),
-      ...Array.from({ length: REMORA_STORE }, (_, i) => { const c = cargo[i]; return el('span', { class: 'slot' + (c ? ' full' : ''), text: c ? SHORT[c.kind] || c.kind.slice(0, 3).toUpperCase() : 'EMPTY' }); }),
+    const collectors = (cargo, unknown) => el('div', { class: 'coll' }, el('span', { class: 'gz-k', text: 'SAMPLES' }),   // unknown: no telemetry (tether parted)
+      ...Array.from({ length: REMORA_STORE }, (_, i) => { const c = cargo[i]; return el('span', { class: 'slot' + (c && !unknown ? ' full' : ''), text: unknown ? '?' : c ? SHORT[c.kind] || c.kind.slice(0, 3).toUpperCase() : 'EMPTY' }); }),
 );
     const working = (job) => { const t = TOOLS[job.tool] || { name: job.tool, secs: 1 }, left = Math.max(0, job.end - s.clock); return gauge('WORKING', 1 - left / t.secs, `${t.name.toUpperCase()} · ${Math.ceil(left / 60)} MIN`, 'warn'); };
     const rem = el('div', { class: 'card craft' },
-      el('div', { class: 'craft-hd' }, el('b', { text: CRAFT.rov }), rovOp ? lamp(op.kind === 'launch' ? 'LAUNCHING' : 'RECOVERING', 'warn') : r ? lamp('OUT', 'warn') : rr ? lamp('RE-EQUIP', 'warn') : lamp('IN BAY', 'ok')),
-      r ? gauge('TETHER', tnm / rovRange(), `${tnm.toFixed(2)} / ${rovRange()} nm`, tnm / rovRange() > 0.9 ? 'warn' : '') : rr ? gauge('RE-EQUIP', rr.t / rr.dur, `${mins((rr.dur - rr.t) / 60)}${rr.load ? ` · ${rr.load} smp` : ''}`, 'warn') : gauge('READY', 1, 'NO CHARGE NEEDED'),
-      collectors(r ? (r.cargo || []) : rr ? (rr.cargo || []) : []), r && r.job ? working(r.job) : null,
-      el('div', { class: 'row craft-btns' }, r ? act('Recover', recoverRov, busy()) : act('Launch', launchRov, s.docked || busy() || !!rr)));
+      el('div', { class: 'craft-hd' }, el('b', { text: CRAFT.rov }), rovOp ? lamp(op.kind === 'launch' ? 'LAUNCHING' : 'RECOVERING', 'warn') : lost ? lamp(sh.carry || sh.mode === 'fetch' ? 'TERN FETCHING' : 'LOST', 'bad') : r ? lamp('OUT', 'warn') : rr ? lamp('RE-EQUIP', 'warn') : lamp('IN BAY', 'ok')),
+      fix ? gauge('TETHER', fix.t / fix.dur, `PARTED · NEW ${mins((fix.dur - fix.t) / 60)}`, 'bad') : null,
+      lost ? null : r ? gauge('TETHER', tnm / rovRange(), `${tnm.toFixed(2)} / ${rovRange()} nm`, tnm / rovRange() > 0.9 ? 'warn' : '') : rr ? gauge('RE-EQUIP', rr.t / rr.dur, `${mins((rr.dur - rr.t) / 60)}${rr.load ? ` · ${rr.load} smp` : ''}`, 'warn') : gauge('READY', 1, 'NO CHARGE NEEDED'),
+      collectors(r ? (r.cargo || []) : sh.carry ? (sh.carry.cargo || []) : rr ? (rr.cargo || []) : [], lost), r && r.job ? working(r.job) : null,
+      el('div', { class: 'row craft-btns' }, lost ? null : r ? act('Recover', recoverRov, busy()) : act('Launch', launchRov, s.docked || busy() || !!rr || !!fix)));
 
     // ---- the Tern ----
     const ternLaunch = () => { const x = launchShuttle(); tell('helm', x.ok ? `${SHUTTLE_NAME} is being readied. About ${Math.round(x.secs)} seconds.` : ({ docked: 'Undock first', fast: 'Slow below 8 kt first', busy: 'The bay is busy', doors: 'The bay doors are too damaged to open', charge: `${SHUTTLE_NAME} needs ${MIN_LAUNCH_PCT} percent charge`, o2: `${SHUTTLE_NAME} needs ${MIN_LAUNCH_PCT} percent air`, tether: "Remora's tether is holding the doors open", deep: `Engineering: it is not safe to launch ${SHUTTLE_NAME} below ${TERN_SAFE_M} m. Bring us up first`, standoff: `${SHUTTLE_NAME} is holding at a safe distance until we are above ${TERN_SAFE_M} m`, pilot: 'She needs at least one pilot' })[x.why] || 'Cannot launch now', x.ok ? 'mission' : 'error', { key: 'bay' }); };
@@ -80,7 +81,8 @@ export function mount(body) {
     const ternBtns = inBay
       ? [act(`PILOTS ${pilots}/${SHUTTLE_COCKPIT}`, () => setManning((pilots + 1) % (SHUTTLE_COCKPIT + 1), pax)), act(`PAX ${pax}/${SHUTTLE_SEATS}`, () => setManning(pilots, (pax + 1) % (SHUTTLE_SEATS + 1))),
          act('Launch', ternLaunch, s.docked || busy() || sh.bat < MIN_LAUNCH_PCT || o2 < MIN_LAUNCH_PCT || pilots === 0)]
-      : [...(sh.mode === 'moored' ? [act('Pick up the team', () => { recallShuttle(); tell('helm', `${SHUTTLE_NAME} is boarding the team`); })] : []),
+      : [...(lost && !sh.dead && sh.mode !== 'fetch' && !sh.carry ? [act('Fetch Remora', () => { const x = fetchRemora(); tell('helm', x.ok ? `${SHUTTLE_NAME} is going for Remora, ${x.nm.toFixed(1)} nm, about ${mins(x.hours * 60)}.` : x.why === 'range' ? `Remora is ${x.trip.toFixed(0)} nm there and back, more than ${SHUTTLE_NAME}'s ${x.range.toFixed(0)} nm range` : 'Not available', x.ok ? 'mission' : 'error', { key: 'bay' }); }, false, 'warn')] : []),
+         ...(sh.mode === 'moored' ? [act('Pick up the team', () => { recallShuttle(); tell('helm', `${SHUTTLE_NAME} is boarding the team`); })] : []),
          ...(sh.mode === 'follow' && !sh.dead ? [act('Send to…', sendTo), act('Take aboard', () => { const x = recoverShuttle(); tell('helm', x.ok ? `Bringing ${SHUTTLE_NAME} aboard.` : x.why === 'far' ? `${SHUTTLE_NAME} is too far from the ship` : 'Not available', x.ok ? '' : 'error'); }, busy())]
            : sh.mode === 'moored' ? [] : [act('Recall', () => { recallShuttle(); tell('helm', `${SHUTTLE_NAME} recalled`); }, sh.dead)])];
     const tern = el('div', { class: 'card craft tern' },

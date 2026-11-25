@@ -12,6 +12,11 @@ const MAX_ROV_DEPTH = 600;
 export const ROV_DIVE_MPS = 2;   // Remora dives and climbs at 2 m per real second (was 8: too fast)
 export const REMORA_STORE = 3;   // she is small: three samples, then she has to come home and be unloaded
 export const rovCargo = () => (sim.s.rov && sim.s.rov.cargo) || [];
+/** The tether parts if the ship gets further than its length from her (2% slack). She is then LOST: no control and no telemetry until the Tern
+ *  brings her home (bayops fetchRemora). Engineering splice a new tether: TETHER_REPAIR_S. */
+export const TETHER_SNAP = 1.02, TETHER_REPAIR_S = 2 * 3600;
+export const rovLost = () => !!(sim.s.rov && sim.s.rov.lost);
+export const rovTethered = () => !!(sim.s.rov && !sim.s.rov.lost);
 const GO_ARRIVE_NM = 0.03;
 const HOME_NM = 0.03;   // about 55 m: alongside
 
@@ -41,6 +46,7 @@ export const rovFloor = () => { const r = sim.s.rov; return r && seafloor.ready 
 sim.rovUse = (toolId) => {
   const r = sim.s.rov, t = TOOLS[toolId];
   if (!r || !t || t.remora === false) return { ok: false, why: 'none' };
+  if (r.lost) return { ok: false, why: 'lost' };
   if (r.job) return { ok: false, why: 'busy' };
   const fl = rovFloor(), site = rovSite(), kind = pickKind(toolId, site);
   if (!kind) return { ok: false, why: 'nothing' };
@@ -53,7 +59,13 @@ sim.rovUse = (toolId) => {
 
 sim.hooks.push((dt) => {
   const s = sim.s, r = s.rov; if (!r) return;
+  if (r.lost) return;   // tether parted: she sits where she was, out of contact, until the Tern fetches her
   if (s.docked) { s.rov = null; return; }
+  if (toward(s, r).nm > rovRange() * TETHER_SNAP) {   // the ship has dragged the tether past its length: it parts
+    Object.assign(r, { lost: true, lostAt: s.clock, job: null, go: null, auto: false, home: false, thrSet: 0, hdgTo: null, depTo: null, cmd: { thr: 0, turn: 0, dive: 0 } });
+    const b = s.bay || (s.bay = {}); b.tetherFix = { t: 0, dur: TETHER_REPAIR_S }; b.override = false;
+    sim.emit('rov-snapped', { lat: r.lat, lon: r.lon, nm: toward(s, r).nm }); sim.touch(); return;
+  }
   if (r.job) {
     if (s.clock >= r.job.end) {
       const site = s.pois.find((p) => p.id === r.job.site) || null, kind = pickKind(r.job.tool, site);
@@ -102,7 +114,7 @@ sim.hooks.push((dt) => {
 });
 
 /** Set-and-go controls. Each cancels auto return and a trip, as a hand on the stick would. */
-const rv = () => { const r = sim.s.rov; if (!r || r.job) return null; r.auto = false; r.home = false; return r; };
+const rv = () => { const r = sim.s.rov; if (!r || r.job || r.lost) return null; r.auto = false; r.home = false; return r; };
 sim.rovSpeed = (delta) => { const r = rv(); if (!r) return null; r.go = null; r.thrSet = Math.max(0, Math.min(1, Math.round(((r.thrSet || 0) + delta) * 4) / 4)); sim.touch(); return r.thrSet; };
 sim.rovStop = () => { const r = sim.s.rov; if (!r) return; r.thrSet = 0; r.go = null; r.hdgTo = null; r.depTo = null; r.auto = false; sim.touch(); };
 sim.rovYaw = (deg) => { const r = rv(); if (!r) return null; r.go = null; const from = r.hdgTo != null ? r.hdgTo : r.heading; r.hdgTo = (from + deg + 360) % 360; sim.touch(); return r.hdgTo; };
@@ -112,7 +124,7 @@ sim.rovToFloor = () => { const r = rv(), fl = rovFloor(); if (!r || fl == null) 
 sim.rovGo = (poi) => { const r = rv(); if (!r) return { ok: false, why: 'none' }; const nm = toward(r, poi).nm; r.go = { lat: poi.lat, lon: poi.lon, name: poi.name || 'the mark' }; r.thrSet = 0; sim.touch(); return { ok: true, nm, minutes: nm / ROV_KT * 60 }; };
 /** Automatic return: she drives back to the ship at her own slow speed and rises to the ship's depth. Then she waits alongside to be taken aboard. */
 sim.rovAuto = () => {
-  const r = sim.s.rov; if (!r) return { ok: false, why: 'none' };
+  const r = sim.s.rov; if (!r) return { ok: false, why: 'none' }; if (r.lost) return { ok: false, why: 'lost' };
   if (r.job) return { ok: false, why: 'busy' };
   r.cmd = { thr: 0, turn: 0, dive: 0 }; r.auto = true; r.home = false; r.go = null; r.thrSet = 0; r.hdgTo = null; r.depTo = null;
   sim.touch(); return { ok: true, nm: toward(sim.s, r).nm, hours: toward(sim.s, r).nm / ROV_KT };
@@ -136,7 +148,7 @@ export function tetherBar() {
   const txt = el('span'), fill = el('div', { class: 'tt-fill' });
   const box = el('div', { class: 'tether' }, el('div', { class: 'tt-head' }, el('span', { text: 'TETHER' }), txt), el('div', { class: 'tt-track' }, fill));
   box.refresh = () => {
-    const r = sim.s.rov; box.hidden = !r; if (!r) return;
+    const r = sim.s.rov; box.hidden = !r || !!r.lost; if (!r || r.lost) return;   // no tether: it parted
     const out = toward(sim.s, r).nm, max = rovRange(), f = Math.min(1, out / max);
     fill.style.width = `${Math.round(f * 100)}%`; box.className = `tether${f >= 0.98 ? ' taut' : f >= 0.8 ? ' long' : ''}`;
     txt.textContent = `${out.toFixed(2)} of ${max.toFixed(1)} nm out${f >= 0.98 ? ' · taut' : ''}`;

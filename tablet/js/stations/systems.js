@@ -22,7 +22,7 @@ export function mount(body) {
     m.bat.set(s.battery, Math.round(s.battery) + '%'); m.pow.set(s.power, Math.round(s.power) + ' kW', 30, 15, true);
     m.o2.set(s.oxygen, Math.round(s.oxygen) + '%'); m.co2.set(s.co2 * 20, s.co2.toFixed(2) + '%', 40, 20, true);
     m.hull.set(s.hull, Math.round(s.hull) + '%'); m.pres.set(s.depth / 60, Math.round(s.depth / 10 + 1) + ' bar', 60, 20, true);
-    const b = bay(), op = b.op, outerOpen = !!(op || s.rov), kt = s.speed;
+    const b = bay(), op = b.op, outerOpen = !!(op || (s.rov && !s.rov.lost)), kt = s.speed;
     const why = op ? (op.kind === 'launch' ? 'launching' : 'taking aboard') : 'held by Remora\'s tether';
     door.outer.set(outerOpen ? 'OPEN, ' + why : s.docked ? 'CLOSED, alongside' : 'CLOSED', outerOpen && kt > BAY_SAFE_KT ? 'bad' : outerOpen ? 'warn' : '');
     door.outerNote.textContent = `Speed limit with the outer doors open: ${BAY_SAFE_KT} kt, held by the helm unless you override it (the ship takes damage above it), ${DOOR_DAMAGE_KT} kt (the doors are damaged for good). Ship speed ${kt.toFixed(1)} kt. Door damage ${Math.round(b.doorDmg)}%${b.doorDmg >= 100 ? ': the outer doors will not open' : b.doorDmg > 0 ? ': launches take longer' : ''}.`;

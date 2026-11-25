@@ -56,7 +56,7 @@ export const shuttleRangeNm = () => { const sh = mannedDefaults(shuttle()); retu
 
 /** A WSKR's own launch bay: the same safe-speed rule, no outer door (no door damage, no tether in the way). */
 function startTube(op) { const b = bay(); if (b.tubes[op.n]) return { ok: false, why: 'busy' }; if (sim.s.speed > BAY_SAFE_KT && !b.override) return { ok: false, why: 'fast' }; b.tubes[op.n] = { t: 0, dur: LAUNCH_S, air: 0, ...op }; sim.touch(); sim.emit('bay-op', b.tubes[op.n]); return { ok: true, secs: LAUNCH_S }; }
-function startOp(op) { const b = bay(); if (op.craft === 'wskr') return startTube(op); if (b.op) return { ok: false, why: 'busy' }; if (sim.s.speed > BAY_SAFE_KT && !b.override) return { ok: false, why: 'fast' }; if (b.doorDmg >= 100) return { ok: false, why: 'doors' }; if (sim.s.rov && op.craft !== 'rov') return { ok: false, why: 'tether' }; b.op = { t: 0, dur: opSeconds(), air: 0, ...op }; sim.touch(); sim.emit('bay-op', b.op); return { ok: true, secs: b.op.dur + b.op.air }; }
+function startOp(op) { const b = bay(); if (op.craft === 'wskr') return startTube(op); if (b.op) return { ok: false, why: 'busy' }; if (sim.s.speed > BAY_SAFE_KT && !b.override) return { ok: false, why: 'fast' }; if (b.doorDmg >= 100) return { ok: false, why: 'doors' }; if (sim.s.rov && !sim.s.rov.lost && op.craft !== 'rov') return { ok: false, why: 'tether' }; b.op = { t: 0, dur: opSeconds(), air: 0, ...op }; sim.touch(); sim.emit('bay-op', b.op); return { ok: true, secs: b.op.dur + b.op.air }; }
 
 /** Start a one-minute WSKR launch. Picks the racked WSKR with the most charge. */
 export function launchWskr(want) {
@@ -80,11 +80,12 @@ export function launchAllWskrs() {
 }
 /** Remora leaves through the bay: one minute, then the doors stay open for its tether until it is recovered. */
 export function launchRemora() {
-  const s = sim.s, b = bay(); if (s.rov) return { ok: false, why: 'out' }; if (s.docked) return { ok: false, why: 'docked' };
+  const s = sim.s, b = bay(); if (s.rov) return { ok: false, why: s.rov.lost ? 'lost' : 'out' }; if (s.docked) return { ok: false, why: 'docked' };
+  if (b.tetherFix) return { ok: false, why: 'tetherfix', mins: Math.ceil((b.tetherFix.dur - b.tetherFix.t) / 60) };   // a new tether is being spliced
   if (b.rearm) return { ok: false, why: 'rearm', mins: Math.ceil((b.rearm.dur - b.rearm.t) / 60) };
   return startOp({ kind: 'launch', craft: 'rov' });
 }
-export function recoverRemora() { const s = sim.s; if (!s.rov) return { ok: false, why: 'aboard' }; if (toward(s, s.rov).nm > 0.2) return { ok: false, why: 'far' }; return startOp({ kind: 'recover', craft: 'rov' }); }
+export function recoverRemora() { const s = sim.s; if (!s.rov) return { ok: false, why: 'aboard' }; if (s.rov.lost) return { ok: false, why: 'lost' }; if (toward(s, s.rov).nm > 0.2) return { ok: false, why: 'far' }; return startOp({ kind: 'recover', craft: 'rov' }); }
 export const remoraRearm = () => bay().rearm;
 export function launchShuttle() {
   const s = sim.s, sh = mannedDefaults(shuttle()); if (sh.state !== 'bay') return { ok: false, why: 'out' }; if (s.docked) return { ok: false, why: 'docked' };
@@ -109,6 +110,18 @@ export function sendShuttle(poi, stay = false) {
   Object.assign(sh, { stay: !!stay && sh.pax > 0, mode: 'going', dest: { id: poi.id, name: poi.name, lat: poi.lat, lon: poi.lon }, route: null, air: 0 }); sh.depth = Math.max(sh.depth || 0, sh.holdDepth == null ? TERN_CRUISE_M : sh.holdDepth); sh.mission = { kind: sh.supply ? 'supply' : 'dock', dest: sh.dest }; sim.touch();
   return { ok: true, nm: toward(sh, poi).nm, hours: toward(sh, poi).nm / SHUTTLE_KT };
 }
+/** Send the Tern to pick up Remora after her tether parted: she goes to where Remora was lost, takes her aboard and comes home.
+ *  Remora comes into the ship with the Tern (and her samples go through the usual unloading). */
+export function fetchRemora() {
+  const s = sim.s, r = s.rov, sh = mannedDefaults(shuttle());
+  if (!r || !r.lost) return { ok: false, why: 'none' };
+  if (sh.state !== 'out' || sh.dead) return { ok: false, why: 'away' };
+  if (sh.carry) return { ok: false, why: 'full' };
+  const trip = toward(sh, r).nm + toward(r, s).nm, range = shuttleRangeNm();
+  if (trip > range) return { ok: false, why: 'range', trip, range };
+  Object.assign(sh, { mode: 'fetch', dest: { name: 'Remora', lat: r.lat, lon: r.lon }, route: null, stay: false }); sh.mission = { kind: 'fetch', dest: sh.dest }; sim.touch();
+  return { ok: true, nm: toward(sh, r).nm, hours: toward(sh, r).nm / SHUTTLE_KT };
+}
 export function recallShuttle() { const sh = mannedDefaults(shuttle()); if (sh.state !== 'out' || sh.mode === 'follow') return { ok: false, why: 'none' }; if (sh.mode === 'moored') { Object.assign(sh, { mode: 'exchange', boarding: true, air: 0 }); sim.touch(); return { ok: true, boarding: true }; } sh.mode = 'returning'; sh.route = null; sim.touch(); return { ok: true }; }
 /** Dry dock repair (no dry dock exists yet): the doors are as new. */
 export const repairDoors = () => { bay().doorDmg = 0; sim.touch(); };
@@ -124,13 +137,19 @@ function finishOp(op) {
   if (op.craft === 'wskr' && op.kind === 'launch') { const r = sim.deployWskr(op.n); if (r.ok) sim.emit('bay-launched', { craft: 'wskr', n: r.n }); }
   else if (op.craft === 'wskr') { const i = s.wskrs.findIndex((w) => w.n === op.n); if (i >= 0) { const w = s.wskrs[i]; s.wskrs.splice(i, 1); rack()[w.n] = w.bat == null ? 100 : w.bat; sim.emit('wskr-recovered', w); } }
   else if (op.kind === 'launch') { const sh = shuttle(); Object.assign(sh, { depth: s.depth, mission: null, holdDepth: undefined, ordKt: undefined, ordHdg: undefined, queue: [], lost: false, missed: 0, nextCheck: s.clock + 3600, lastContact: s.clock, state: 'out', mode: 'follow', lat: s.lat, lon: s.lon, dest: null, route: null, dead: false }); sim.emit('bay-launched', { craft: 'shuttle' }); }
-  else { const sh = shuttle(); Object.assign(sh, { state: 'bay', mode: 'follow', dest: null, route: null }); sim.emit('shuttle-aboard', sh); }
+  else {
+    const sh = shuttle(); Object.assign(sh, { state: 'bay', mode: 'follow', dest: null, route: null }); sim.emit('shuttle-aboard', sh);
+    if (sh.carry) {   // Remora comes in with her: the usual unloading and re-equipping
+      const cargo = sh.carry.cargo || [], load = cargo.length; sh.carry = null;
+      b.rearm = { t: 0, dur: REMORA_REARM_S + load * REMORA_UNLOAD_S, load, cargo }; sim.emit('remora-aboard', b.rearm);
+    }
+  }
 }
 
 /** The Captain overrides (or restores) the speed limit while the outer doors are open. It lapses when the doors close. */
-export const bayDoorsOpen = () => !!(bay().op || sim.s.rov);
+export const bayDoorsOpen = () => !!(bay().op || (sim.s.rov && !sim.s.rov.lost));
 export function setBayOverride(on) { const b = bay(); if (!bayDoorsOpen()) return false; b.override = !!on; sim.touch(); if (on) sim.emit('speed-override', {}); return true; }
-sim.speedCaps.push((s) => (bay().op || s.rov || Object.keys(bay().tubes).length) && !bay().override ? BAY_SAFE_KT : null);   // any bay cycling: hold bay speed
+sim.speedCaps.push((s) => (bay().op || (s.rov && !s.rov.lost) || Object.keys(bay().tubes).length) && !bay().override ? BAY_SAFE_KT : null);   // any bay cycling: hold bay speed
 
 /** The doors are open for a launch or recovery, and the whole time Remora is out on its tether. */
 function stepOp(g) {
@@ -141,7 +160,8 @@ function stepOp(g) {
       const c = b.rearm.cargo.shift(); sim.deliverSample(c); sim.emit('remora-unloaded', { kind: c.kind, left: b.rearm.cargo.length });
     }
     if (b.rearm.t >= b.rearm.dur) { b.rearm = null; sim.emit('remora-ready'); } }
-  if (!op && !s.rov) { b.warned = b.doorSaid = false; if (!Object.keys(b.tubes).length) b.override = false; return; }
+  if (b.tetherFix) { b.tetherFix.t += g; if (b.tetherFix.t >= b.tetherFix.dur) { b.tetherFix = null; sim.emit('tether-repaired'); } }
+  if (!op && !(s.rov && !s.rov.lost)) { b.warned = b.doorSaid = false; if (!Object.keys(b.tubes).length) b.override = false; return; }
   if (kt <= BAY_SAFE_KT) b.warned = b.doorSaid = false;
   if (kt > BAY_SAFE_KT) {
     if (!b.warned) { b.warned = true; sim.emit('bay-warn', { kt }); }
@@ -227,7 +247,7 @@ function stepShuttle(g) {
   if (sh.pilots < 2 && sh.mode === 'going' && !shuttleLink(sh)) { sh.mode = 'returning'; sh.route = null; sim.emit('shuttle-nolink', sh); }   // one pilot needs a radio link
   let goal = null;
   if (sh.mode === 'search') { goal = sh.pat && sh.pat.wps[sh.pat.k]; if (!goal) { sh.mode = 'station'; sh.pat = null; sh.route = null; sim.emit('shuttle-search-done', sh); } }
-  else if (sh.mode === 'going' || sh.mode === 'goto') goal = sh.dest; else if (sh.mode === 'returning' || sh.mode === 'follow' || sh.mode === 'relay') goal = s;
+  else if (sh.mode === 'going' || sh.mode === 'goto' || sh.mode === 'fetch') goal = sh.dest; else if (sh.mode === 'returning' || sh.mode === 'follow' || sh.mode === 'relay') goal = s;
   tickDepth(sh, g);
   // The ship is below the Tern's safe depth (800 m): she formates at a safe distance and depth, and hails the ship, until it is safe to dock.
   if (!sh.dead && (sh.mode === 'follow' || sh.mode === 'returning')) {
@@ -248,9 +268,10 @@ function stepShuttle(g) {
     }
   } else if (sh.mode === 'moored') { /* waiting at the dock for the team; charging below */ } else if (goal) {
     const t = toward(sh, goal), end = sh.route && sh.route.length ? sh.route[sh.route.length - 1] : goal;
-    const arrived = t.nm < (sh.mode === 'going' ? 0.1 : sh.mode === 'search' ? 0.05 : 0.15) || (sh.routeSnapped && toward(sh, end).nm < 0.12);
+    const arrived = t.nm < (sh.mode === 'going' || sh.mode === 'fetch' ? 0.1 : sh.mode === 'search' ? 0.05 : 0.15) || (sh.routeSnapped && toward(sh, end).nm < 0.12);
     if (arrived) {
       if (sh.mode === 'going') { sh.mode = 'exchange'; sh.air = 0; sim.emit('shuttle-arrived', sh); }
+      else if (sh.mode === 'fetch') { const r = s.rov; if (r && r.lost) { sh.carry = { cargo: r.cargo || [] }; s.rov = null; sim.emit('shuttle-fetched', sh); } sh.mode = 'returning'; sh.route = null; sh.dest = null; }
       else if (sh.mode === 'goto') { sh.mode = 'station'; sh.route = null; sim.emit('shuttle-onstation', sh); }
       else if (sh.mode === 'search') { sh.pat.k++; sh.route = null; if (sh.pat.k >= sh.pat.wps.length) { sh.mode = 'station'; sh.holdDepth = Math.round(sh.depth || 0); sim.emit('shuttle-search-done', sh); sh.pat = null; } }
       else if (sh.mode === 'relay') { /* stays up with the ship */ }
@@ -270,7 +291,7 @@ function stepShuttle(g) {
   }
   if (sh.bat <= 0) { sh.dead = true; sim.emit('shuttle-dead', sh); }
   else if (sh.o2 <= 0) { sh.dead = true; sim.emit('shuttle-o2-out', sh); }
-  else if ((sh.bat <= LOW_PCT || sh.o2 <= LOW_PCT) && (sh.mode === 'going' || sh.mode === 'search')) { sh.mode = 'returning'; sh.route = null; sim.emit(sh.o2 <= LOW_PCT ? 'shuttle-o2-low' : 'shuttle-low', sh); }
+  else if ((sh.bat <= LOW_PCT || sh.o2 <= LOW_PCT) && (sh.mode === 'going' || sh.mode === 'search' || sh.mode === 'fetch')) { sh.mode = 'returning'; sh.route = null; sim.emit(sh.o2 <= LOW_PCT ? 'shuttle-o2-low' : 'shuttle-low', sh); }
 }
 
 sim.hooks.push((dt) => {

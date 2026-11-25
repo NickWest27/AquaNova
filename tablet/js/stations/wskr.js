@@ -19,7 +19,7 @@ import { openSearchDialog } from '../searchDialog.js';
 
 export const ordersOk = () => !GATES_ON || research.has('wskr-orders');
 const CODES = ['Sc', 'La', 'Dr', 'Sp'];
-const hm = (m) => (m >= 60 ? `${Math.floor(m / 60)} h ${Math.round(m % 60)} min` : `${Math.max(0, Math.round(m))} min`);
+const hm = (m) => { const t = Math.max(0, Math.round(m)); return t >= 60 ? `${Math.floor(t / 60)} h ${t % 60} min` : `${t} min`; };   // rounded once, so never "1 h 60 min"
 const lat = (v) => `${Math.abs(v).toFixed(3)}°${v >= 0 ? 'N' : 'S'}`, lon = (v) => `${Math.abs(v).toFixed(3)}°${v >= 0 ? 'E' : 'W'}`;
 const SAY = { escort: 'Holding formation', manual: 'Manual control', search: 'Search pattern', relay: 'Relay', recall: 'Returning to the bay', task: 'Investigating a contact', trail: 'Investigating a sonar contact' };
 const RANGES = [1, 2, 4, 8, 16];

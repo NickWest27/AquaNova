@@ -166,12 +166,13 @@ export function createND(wrap, { onPick, stage = false, units = 1, contours = fa
       ctx.font = '700 14px system-ui'; ctx.textAlign = 'left'; ctx.fillText(WSKR_CODES[q.n - 1] || 'W' + q.n, x + 9, y + 5);
     }
     // Remora (tethered science ROV): a violet rounded square marked Rm, on a dashed tether to the ship (WSKRs are yellow or orange diamonds)
-    if (s.rov && !craft) {
-      const scale = R / nd.range, tr = turn(toward(c, s.rov)), ts = turn(toward(c, s)), x = w / 2 + tr.dx * scale, y = h / 2 - tr.dy * scale, sx = w / 2 + ts.dx * scale, sy = h / 2 - ts.dy * scale;
-      ctx.save(); ctx.strokeStyle = '#c792ff'; ctx.lineWidth = 1.5; ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(x, y); ctx.stroke(); ctx.setLineDash([]);
-      const k = bigWskr ? 15 : 11; ctx.fillStyle = '#2b1a4d'; ctx.strokeStyle = '#c792ff'; ctx.lineWidth = 2.5;
+    if (s.rov && !craft) {   // tether parted (lost): no tether line, greyed, marked at the last known position
+      const lost = !!s.rov.lost, scale = R / nd.range, tr = turn(toward(c, s.rov)), ts = turn(toward(c, s)), x = w / 2 + tr.dx * scale, y = h / 2 - tr.dy * scale, sx = w / 2 + ts.dx * scale, sy = h / 2 - ts.dy * scale;
+      ctx.save(); ctx.strokeStyle = '#c792ff'; ctx.lineWidth = 1.5; ctx.setLineDash([4, 4]); if (!lost) { ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(x, y); ctx.stroke(); } ctx.setLineDash([]);
+      if (lost) ctx.globalAlpha = 0.6;
+      const k = bigWskr ? 15 : 11; ctx.fillStyle = '#2b1a4d'; ctx.strokeStyle = lost ? '#ff6b6b' : '#c792ff'; ctx.lineWidth = 2.5;
       ctx.beginPath(); ctx.roundRect(x - k, y - k * 0.75, k * 2, k * 1.5, 5); ctx.fill(); ctx.stroke();
-      ctx.fillStyle = '#e9d8ff'; ctx.font = `800 ${bigWskr ? 14 : 12}px system-ui`; ctx.textAlign = 'center'; ctx.fillText('Rm', x, y + 4.5); ctx.restore();
+      ctx.fillStyle = '#e9d8ff'; ctx.font = `800 ${bigWskr ? 14 : 12}px system-ui`; ctx.textAlign = 'center'; ctx.fillText(lost ? 'Rm?' : 'Rm', x, y + 4.5); ctx.restore();
     }
     // Tern (the shuttle): a pink arrowhead marked Tn, pointing along her heading, while she is out of the bay
     { const sh = shuttle();
