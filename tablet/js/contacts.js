@@ -3,6 +3,7 @@
 // A contact is { id, tag, name, label, lat, lon, source, type }. The selection is kept in sim.s.selContact (saved by persist.js).
 import { sim } from './sim.js';
 import { plotted, shownName } from './traffic.js';
+import { seafloor } from './seafloor.js';
 
 export const contactList = () => {
   const s = sim.s; let n = 0;
@@ -13,3 +14,5 @@ export const contactList = () => {
 export const selectedContact = () => { const id = sim.s.selContact; return id ? contactList().find((c) => c.id === id) || null : null; };
 /** Select a contact by id; selecting the one already selected clears it. Returns the new selection id (or null). */
 export const selectContact = (id) => { sim.s.selContact = sim.s.selContact === id ? null : id; sim.touch(); return sim.s.selContact; };
+/** A contact as a readout target (readout.js): a ship sits on the surface at its speed; a site is on the sea floor, still. */
+export const targetOf = (c) => c && { name: c.label, lat: c.lat, lon: c.lon, depth: c.vessel ? 'surface' : (seafloor.ready ? seafloor.depthAt(c.lat, c.lon) : null), kt: c.vessel ? (c.vessel.ident ? c.vessel.kt : null) : 0 };

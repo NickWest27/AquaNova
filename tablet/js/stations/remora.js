@@ -7,6 +7,8 @@ import { ROV_NAME, rovRange, rovSite, rovFloor, rovCargo, REMORA_STORE, tetherBa
 import { TOOLS, samples, pickKind } from '../science.js';
 import { el, toast, modal } from '../util.js';
 import { mountCraftView } from '../craftview.js';
+import { selectedContact, targetOf } from '../contacts.js';
+import { seafloor } from '../seafloor.js';
 
 const WHY = { floor: 'Get within 6 m of the sea floor first.', nothing: 'Nothing to take here. Move to a site.', busy: 'The ROV is busy.', none: 'No ROV out.', full: 'Her sample storage is full. Bring her home to unload.' };
 
@@ -41,7 +43,7 @@ export function mount(body) {
   toolRow.append(...toolBtns); pilot.append(toolRow);
   const readout = el('p', { style: 'color:var(--dim);margin-top:0.6rem' }); pilot.append(readout);
   const viewBox = el('div', { class: 'card cv' });
-  const cv = mountCraftView(viewBox, { title: ROV_NAME, range: 0.5, getCraft: () => { const r = sim.s.rov; return r ? { lat: r.lat, lon: r.lon, heading: r.heading, depth: r.depth, kt: Math.abs(r.cmd.thr || r.thrSet || (r.go ? 1 : 0)) * 2 } : null; } });
+  const cv = mountCraftView(viewBox, { title: ROV_NAME, range: 0.5, readouts: () => { const r = sim.s.rov, g = r && r.go; return { ship: sim.s, target: g ? { name: g.name, lat: g.lat, lon: g.lon, depth: seafloor.ready ? seafloor.depthAt(g.lat, g.lon) : null, kt: 0 } : targetOf(selectedContact()) }; }, getCraft: () => { const r = sim.s.rov; return r ? { lat: r.lat, lon: r.lon, heading: r.heading, depth: r.depth, kt: Math.abs(r.cmd.thr || r.thrSet || (r.go ? 1 : 0)) * 2 } : null; } });
   body.append(viewBox, el('div', { class: 'rem-low' }, head, pilot));
 
   function update() {

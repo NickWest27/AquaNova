@@ -47,8 +47,8 @@ def main():
         r = page.evaluate("(()=>{const b=document.querySelector('#station .tether'); return b && !b.hidden ? {txt:b.innerText, w:b.querySelector('.tt-fill').style.width} : null})()")
         check("the Remora page shows how much tether is out (0.5 of 1.0 nm: half)", r and "0.50 of 1.0" in r["txt"] and r["w"] == "50%", r)
         page.evaluate("window.__aq.open('bay')"); page.wait_for_timeout(600)
-        r = page.evaluate("(()=>{const b=document.querySelector('#station .tether'); return b && !b.hidden ? b.innerText : null})()")
-        check("the Launch Bay page shows it on Remora's card", r and "0.50 of 1.0" in r, r)
+        r = page.evaluate("(()=>{const g=[...document.querySelectorAll('#station .gz')].find(x=>x.innerText.includes('TETHER')); return g ? {txt:g.innerText, w:g.querySelector('.gz-bar i').style.width} : null})()")
+        check("the Launch Bay page shows it on Remora's card (a TETHER line, half full)", r and "0.50 / 1 nm" in r["txt"] and r["w"] == "50%", r)
         # tools that can take nothing at this spot are not shown; at Mystic Reef the spectrometer is
         js(setup + "s.rov.lat=s.lat; s.rov.lon=s.lon; s.rov.depth=5; return 1")
         page.evaluate("window.__aq.open('remora')"); page.wait_for_timeout(500)

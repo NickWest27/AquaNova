@@ -27,6 +27,7 @@ PROBE = """(sel) => {
     const cs = getComputedStyle(e), oy = cs.overflowY, ox = cs.overflowX;
     const dy = e.scrollHeight - e.clientHeight, dx = e.scrollWidth - e.clientWidth;
     if (e.tagName === 'CANVAS' || e.tagName === 'svg' || e.closest('svg')) continue;
+    if (e.matches('.snr-list')) continue;   // list areas inside a page may scroll (the SONAR contact list)
     if ((oy === 'auto' || oy === 'scroll') && dy > 4) out.push({ kind: 'scrolls', el: (e.className || e.tagName) + '', px: dy });
     else if (oy === 'hidden' && dy > 6 && e.clientHeight > 40 && !e.matches('.tabs, .tabs *, button, button *')) out.push({ kind: 'cut off', el: (e.className || e.tagName) + '', px: dy });
   }

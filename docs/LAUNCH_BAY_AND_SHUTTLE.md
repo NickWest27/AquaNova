@@ -1,5 +1,7 @@
 # Launch bay, shuttle (Tern) and "Ask about…" topics
 
+> **Changed 2026-11-25 (owner):** two kinds of bay. The **main bay** (outer door, airlock, speed limit, door damage) is shared by **Remora and the Tern**, one craft at a time (`bay().op`). **Each WSKR has its own launch bay** with its own one-minute airlock cycle (`bay().tubes[n]`, `tubeBusy(n)`): WSKRs no longer wait for the main bay or for Remora's tether, can launch or come aboard together, and cause no door damage (the safe-speed rule still applies, and the ship holds bay speed while any bay cycles). The Launch Bay page is now instruments, not instructions: an OUTER DOOR lamp, an AIRLOCK line that fills while a craft goes out and empties while one comes in, SHIP SPD and DOOR DMG lines, BATT/O2/RANGE lines for the Tern (with the standard readout when she is out), TETHER or RE-EQUIP for Remora, and a BATT line and its own LOCK line for each WSKR launch bay. Text below that says the WSKRs share the bay doors is out of date.
+
 Last updated: 2026-11-22. Part of the document set listed in `DEVELOPMENT.md`. Code: `tablet/js/bayops.js` (rules and state), `stations/bay.js` (bay page), `stations/remora.js` (Remora page), `stations/systems.js` (door card), `topics.js` + `stations/crew.js` (topics). Tests: `tools/bay_test.py`, `tools/limits_test.py`, `tools/topics_test.py`.
 
 ## Launch bay scene (2026-11-22)

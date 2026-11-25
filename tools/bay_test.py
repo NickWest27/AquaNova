@@ -49,10 +49,11 @@ def main():
             check("a WSKR below 20% charge cannot launch", not r["ok"] and r["why"] == "charge", str(r))
             # speed rules
             js("sim.s.rack={}; sim.s.bay={op:null,doorDmg:0,override:true}; sim.s.damage=0; return 1")
-            r = js(B + "const s=sim.s; s.speed=15; s.throttle=1; const d0=s.damage; B.launchWskr(); return {d0}"); page.wait_for_timeout(1000)
+            r = js(B + "const s=sim.s; s.speed=15; s.throttle=1; const d0=s.damage; B.launchShuttle(); return {d0}"); page.wait_for_timeout(1000)   # the main bay (a WSKR uses its own launch bay: no outer door)
             r = js("const s=sim.s, b=s.bay; return {kt:s.speed, dmg:s.damage, door:b.doorDmg}")
             check("bay open above 8 kt damages the ship", r["kt"] > 8 and r["dmg"] > 0, str(r))
             check("bay open above 10 kt damages the doors for good", r["kt"] > 10 and r["door"] > 0, str(r))
+            js("const s=sim.s; s.bay.op=null; s.shuttle={state:'bay',bat:100,mode:'follow'}; s.speed=0; s.throttle=0; return 1")   # the Tern back in the bay for the checks below
             js("const s=sim.s; s.throttle=0; s.speed=0; s.damage=0; s.bay={op:null,doorDmg:0}; s.wskrs=[]; return 1"); page.wait_for_timeout(1500)
             r = js(B + "const d0=sim.s.damage; B.launchWskr(); return d0")
             page.wait_for_timeout(1500)
@@ -116,7 +117,7 @@ def main():
             check("Remora is not out until the minute is up", js("return !!sim.s.rov") is False)
             page.wait_for_timeout(1500)
             check("then she is out", js("return !!sim.s.rov") is True)
-            r = js(B + "return [B.launchWskr().why, B.launchShuttle().why]"); check("her tether blocks WSKR and shuttle launches", r == ["tether", "tether"], str(r))
+            r = js(B + "const w=B.launchWskr(); return [w.ok, B.launchShuttle().why]"); check("her tether blocks the shuttle, but not the WSKRs (each has its own launch bay)", r == [True, "tether"], str(r))
             js("window.__ev=[]; sim.on((t,d)=>window.__ev.push(t)); const s=sim.s; s.bay.override=true; s.speed=12; s.throttle=1; return 1"); page.wait_for_timeout(800)
             r = js("const s=sim.s; return {door:s.bay.doorDmg, dmg:s.damage}"); check("doors open for the tether: speed over 10 kt damages them with no operation running", r["door"] > 0 and r["dmg"] > 0, str(r))
             ev = page.evaluate("window.__ev"); check("Engineering is told (bay-warn, bay-door-damage)", "bay-warn" in ev and "bay-door-damage" in ev, str(ev))
@@ -135,7 +136,7 @@ def main():
             # UI
             js("window.__aq.open('bay'); return 1"); page.wait_for_timeout(700)
             t = page.inner_text("#station").lower()
-            check("bay page shows doors, WSKRs, shuttle", "bay doors" in t and "tern" in t and "wskr 1" in t and "pilots" in t and "passengers" in t, t[:300])
+            check("bay page shows the main bay, airlock, Tern gauges and the WSKR launch bays", "outer door" in t and "airlock" in t and "tern" in t and "batt" in t and "o2" in t and "wskr launch bays" in t and "pilots" in t and "pax" in t, t[:300])
             check("no page errors", not errors, str(errors[:2]))
             browser.close()
     server.shutdown()

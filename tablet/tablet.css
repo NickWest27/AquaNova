@@ -530,8 +530,8 @@ textarea.field { min-height: 6rem; resize: none; }
 .cv-row { display: flex; gap: 0.6rem; align-items: stretch; }
 .cv-prof { flex: 0 0 28%; min-width: 0; } .cv-prof .prof-canvas { width: 100% !important; height: auto !important; border-radius: 10px; display: block; }
 .cv-synth { flex: 1; min-width: 0; position: relative; }
-.cv-ro { position: absolute; bottom: 8px; display: flex; flex-direction: column; gap: 0.1rem; align-items: center; padding: 0.3rem 0.55rem; text-align: center; border-radius: 8px; background: rgba(0,0,30,0.6); color: rgba(225,240,255,0.95); font-size: 0.8rem; line-height: 1.25; pointer-events: none; }
-.cv-ro.l { left: 8px; } .cv-ro.r { right: 8px; } .cv-ro b { display: block; letter-spacing: 0.04em; } .cv-arrow { font-size: 1.3rem; color: #3ddc84; display: inline-block; } .cv-ro.r .cv-arrow { color: #ffe14a; } .cv-synth .synth-canvas { width: 100%; height: auto; aspect-ratio: 16 / 9; border-radius: 10px; display: block; border: 2px solid #3a3ab8; }
+/* the readouts over a craft view: readout.js (.ro) */
+.cv-synth .synth-canvas { width: 100%; height: auto; aspect-ratio: 16 / 9; border-radius: 10px; display: block; border: 2px solid #3a3ab8; } .cv-synth .ro { pointer-events: none; }
 .cv-map { flex: 0 0 26%; position: relative; aspect-ratio: 1; border-radius: 10px; overflow: hidden; border: 2px solid var(--line-soft); }
 
 /* mail: inbox rows and the 90s zoom window */
@@ -856,3 +856,38 @@ input.mix { width: 100%; height: 2.4rem; accent-color: var(--cyan); }
 .wk-cmds { gap: 0.35rem; } .wk-cmds .btn.chip { min-height: 2.6rem; padding: 0 0.8rem; font-size: 0.82rem; }   /* compact, so manual control fits in two rows */
 .cv-map canvas { display: block; }   /* no gap under an inline canvas */
 .cp-btns { flex-wrap: nowrap; } .cp-btns .cp-step { flex: 1 1 0; min-width: 0; padding: 0 0.3rem; font-size: 0.78rem; white-space: nowrap; }   /* one row each, so Comms Controls fits the page */
+
+/* ---------- Instruments (Launch Bay, 2026-11-25): level lines, lamps, airlock lines ---------- */
+.gz { display: grid; grid-template-columns: 5.6rem minmax(0, 1fr) auto; align-items: center; gap: 0.6rem; font: 700 0.82rem var(--mono); letter-spacing: 0.06em; }
+.gz-k { color: var(--dim); }
+.gz-bar { position: relative; height: 0.7rem; border: 1px solid var(--line); border-radius: 3px; background: #02101a; overflow: hidden; }
+.gz-bar i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--cyan); }
+.gz-v { color: var(--text); white-space: nowrap; min-width: 4.5rem; text-align: right; } .gz-v.wide { grid-column: 2 / -1; text-align: left; }
+.gz.warn .gz-bar i { background: var(--amber); } .gz.warn .gz-v { color: var(--amber); }
+.gz.bad .gz-bar i { background: var(--red, #ff5c5c); } .gz.bad .gz-v { color: var(--red, #ff5c5c); }
+.gz.idle .gz-v { color: var(--dim); }
+.gz.cyc .gz-bar i { background: repeating-linear-gradient(90deg, var(--amber) 0 10px, #c98d1a 10px 14px); }
+.ilamp { display: inline-flex; align-items: center; gap: 0.4rem; font: 700 0.82rem var(--mono); letter-spacing: 0.06em; color: var(--dim); white-space: nowrap; flex: none; }
+.ilamp i { width: 0.7rem; height: 0.7rem; border-radius: 50%; background: #334; }
+.ilamp.ok { color: #3ddc84; } .ilamp.ok i { background: #3ddc84; box-shadow: 0 0 6px #3ddc84; }
+.ilamp.warn { color: var(--amber); } .ilamp.warn i { background: var(--amber); box-shadow: 0 0 6px var(--amber); }
+.ilamp.bad { color: var(--red, #ff5c5c); } .ilamp.bad i { background: var(--red, #ff5c5c); box-shadow: 0 0 6px var(--red, #ff5c5c); }
+.bay-v { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 0.6rem; }
+.bay-v .card { margin: 0; padding: 0.7rem 0.9rem; display: flex; flex-direction: column; gap: 0.5rem; }
+.bay-hd, .craft-hd { display: flex; align-items: center; gap: 0.9rem; } .bay-hd b, .craft-hd b { letter-spacing: 0.1em; color: var(--cyan); } .craft-hd .ilamp { margin-left: auto; }
+.bay-op { margin-left: auto; font: 700 0.82rem var(--mono); color: var(--amber); letter-spacing: 0.06em; }
+.bay-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; }
+.bay-craft { display: grid; grid-template-columns: 1fr 1.6fr; gap: 0.6rem; }
+.bay-lbl { font: 700 0.8rem var(--mono); letter-spacing: 0.12em; color: var(--dim); margin: 0.1rem 0 -0.3rem; }
+.bay-w { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.6rem; }
+.bay-w .gz { grid-template-columns: 3.2rem minmax(0, 1fr) auto; } .bay-w .gz-v { min-width: 0; }
+.craft-btns { margin-top: auto; gap: 0.4rem; flex-wrap: wrap; } .craft-btns .btn.chip { min-height: 2.6rem; padding: 0 0.8rem; font-size: 0.82rem; }
+.tern-body { display: flex; gap: 0.8rem; align-items: flex-start; } .tern-g { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.5rem; }
+
+/* ---------- The standard target readout (readout.js): arrow, then NAME, BRG, RNG, DEP, SPD stacked ---------- */
+.ro { display: flex; flex-direction: column; align-items: center; min-width: 7.5rem; padding: 0.35rem 0.6rem; border-radius: 8px; background: rgba(4, 16, 31, 0.78); border: 1px solid var(--line-soft); font: 700 0.78rem var(--mono); letter-spacing: 0.04em; color: #e6f1ff; }
+.ro-arrow { font-size: 1.2rem; line-height: 1.1; color: #3ddc84; display: inline-block; } .ro.tgt .ro-arrow { color: #ffe14a; }
+.ro-name { letter-spacing: 0.06em; margin-bottom: 0.1rem; white-space: nowrap; }
+.ro-row { display: grid; grid-template-columns: 2.4rem auto; gap: 0.3rem; width: 100%; } .ro-row i { font-style: normal; color: var(--dim); } .ro-row span { text-align: right; white-space: nowrap; }
+.cv-synth .ro { position: absolute; bottom: 8px; } .cv-synth .ro.l { left: 8px; } .cv-synth .ro.r { right: 8px; }   /* the standard readouts over a craft's view */
+.wk-view .ro { font-size: 0.68rem; min-width: 6.4rem; padding: 0.2rem 0.45rem; } .wk-view .ro-arrow { font-size: 0.95rem; }   /* smaller over the WSKR's short view */

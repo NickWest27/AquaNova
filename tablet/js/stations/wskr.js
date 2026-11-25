@@ -5,8 +5,9 @@
 //  Along the bottom: commands. With nothing selected they act on every WSKR; with one selected they act on it.
 import { tell } from '../notify.js';
 import { sim, wskrMinutes, wskrName, wskrCraft, wskrDepthFor, WSKR_PERKS, WSKR_DEPTHS, WSKR_LINK_NM, WSKR_LOST_MIN, WSKR_LOW_PCT, toward, wskrBatteryHours } from '../sim.js';
-import { selectedContact, selectContact } from '../contacts.js';
-import { launchWskr, launchText, rackBat, busy, MIN_LAUNCH_PCT } from '../bayops.js';
+import { selectedContact, selectContact, targetOf } from '../contacts.js';
+import { launchWskr, launchText, rackBat, tubeBusy, MIN_LAUNCH_PCT } from '../bayops.js';
+const noBay = () => [1, 2, 3, 4].every((n) => sim.s.wskrs.some((w) => w.n === n) || tubeBusy(n));   // every WSKR is out or its own launch bay is cycling
 import { WSKR_CHARGE_H } from '../sim.js';
 import { mountCraftView } from '../craftview.js';
 import { mapZoom } from '../mapZoom.js';
@@ -35,7 +36,7 @@ export function mountWskrPanel(body) {
   const zoom = (d) => { const i = RANGES.indexOf(range); range = RANGES[Math.max(0, Math.min(RANGES.length - 1, i + d))]; nd.setRange(range); drawKey = ''; update(); };
   const zc = mapZoom(zoom), rangeLbl = zc.label; mapBox.append(zc.box);
   const viewBox = el('div', { class: 'wk-view' });
-  const cv = mountCraftView(viewBox, { only: 'synth', title: () => { const w = cur(); return w ? wskrName(w) : 'WSKR'; }, range: 2, readouts: () => { const c = selectedContact(); return { ship: sim.s, target: c && { name: c.label, lat: c.lat, lon: c.lon } }; }, getCraft: () => { const w = cur(); return w ? wskrCraft(w) : null; } });
+  const cv = mountCraftView(viewBox, { only: 'synth', title: () => { const w = cur(); return w ? wskrName(w) : 'WSKR'; }, range: 2, readouts: () => ({ ship: sim.s, target: targetOf(selectedContact()) }), getCraft: () => { const w = cur(); return w ? wskrCraft(w) : null; } });
   const say = (t) => tell('sensors', t);
   const toggle = (n) => { sel = sel === n ? null : n; sig = ''; drawKey = ''; update(); };
   const act = (text, on, fn, disabled) => el('button', { class: 'btn chip' + (on ? ' on' : ''), text, disabled: !!disabled, onclick: () => { fn(); sig = ''; update(); } });
@@ -93,7 +94,7 @@ export function mountWskrPanel(body) {
     let list;
     if (!sel) {
       const live = s.wskrs.filter((q) => !q.dead);
-      list = [act('Deploy WSKR', false, () => say(launchText(launchWskr())), s.docked || s.wskrs.length >= 4 || busy()),
+      list = [act('Deploy WSKR', false, () => say(launchText(launchWskr())), s.docked || s.wskrs.length >= 4 || noBay()),
         act('Recall all', false, () => { sim.recallWskrs(); say('WSKRs recalled'); }, !s.wskrs.length),
         act(live.length && live.every((q) => q.mode === 'escort') ? 'In formation' : 'Rejoin formation', live.length > 0 && live.every((q) => q.mode === 'escort'), () => { live.forEach((q) => sim.orderWskr(q.n, 'escort')); say('All WSKRs rejoining formation'); }, !ok || !live.length || live.every((q) => q.mode === 'escort')),
         act('Search…', false, () => openSearchDialog({ craft: 'wall' }), !ok || !live.length),
@@ -103,7 +104,7 @@ export function mountWskrPanel(body) {
         el('span', { class: 'wk-sep', text: 'Depth' }), ...Object.entries(WSKR_DEPTHS).map(([k, t]) => act(t, s.wskrDepth === k, () => { sim.setWskrDepth(k); say(`WSKR depth: ${t.toLowerCase()}`); }, !ok))];
     } else if (!w) {
       const b = rackBat(sel);
-      list = [act('Launch', false, () => say(launchText(launchWskr(sel))), s.docked || s.wskrs.length >= 4 || busy() || b < MIN_LAUNCH_PCT)];
+      list = [act('Launch', false, () => say(launchText(launchWskr(sel))), s.docked || s.wskrs.length >= 4 || tubeBusy(sel) || b < MIN_LAUNCH_PCT)];
     } else {
       const poi = c && c.poi && c.poi.type !== 'dock' ? c.poi : null, off = !ok || w.dead || w.arrived;
       list = [act(w.mode === 'escort' ? 'In formation' : 'Rejoin formation', w.mode === 'escort', () => { sim.orderWskr(w.n, 'escort'); say(`${wskrName(w)} rejoining formation`); }, off || w.mode === 'escort'),
@@ -121,7 +122,7 @@ export function mountWskrPanel(body) {
 
   function update() {
     const s = sim.s, c = selectedContact();
-    const next = JSON.stringify([sel, ordersOk(), s.wskrForm, s.wskrDepth, s.docked, busy(), s.wskrs.map((q) => [q.n, q.mode, q.target, !!q.dead, !!q.arrived]), c && c.id, Math.round(rackBat(sel || 1) / 20)]);
+    const next = JSON.stringify([sel, ordersOk(), s.wskrForm, s.wskrDepth, s.docked, noBay(), Object.keys(sim.s.bay && sim.s.bay.tubes || {}).join(), s.wskrs.map((q) => [q.n, q.mode, q.target, !!q.dead, !!q.arrived]), c && c.id, Math.round(rackBat(sel || 1) / 20)]);
     if (next !== sig) {
       sig = next;
       const w = cur(), outCount = s.wskrs.length;
