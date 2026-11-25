@@ -104,8 +104,8 @@ export function createScene(stage, { onOpen }) {
   const sign = (text, corners, h = 120) => slanted('wsign-box', el('div', { class: 'wsign', style: `height:${h}px`, text }), 412, h, corners);
   const walkway = el('div', { class: 'scene walkway', hidden: true });
   walkway.append(
-    el('img', { class: 'frame retro', src: 'retro/assets/walkway.png', alt: '', draggable: 'false', decoding: 'async' }),
-    // retro frame (320x240 art at 6x): the BRIDGE sign is painted in the art, so the game draws no signs here
+    el('img', { class: 'frame retro hires', src: 'retro/assets/walkway_original.jpg', alt: '', draggable: 'false', decoding: 'async' }),
+    // the owner's original picture (512x382, smooth), stretched to the 1920x1440 stage; walkway.png is the 320x240 palette-snapped copy. The BRIDGE sign is painted in the art, so the game draws no signs here
     door('SCIENCE', 150, 260, 230, 940, 'science'),
     door('MEDICAL', 380, 380, 110, 680, 'medbay'),
     door('QUARTERS', 1600, 300, 180, 900, 'quarters'),
