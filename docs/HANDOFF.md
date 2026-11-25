@@ -2,6 +2,17 @@
 
 Last updated: 2026-11-25. Branch to work on: `tablet`. Repo: NickWest27/AquaNova (GitHub Pages path `/AquaNova/`). Last change: quarters, science lab and launch bay on the owner's new pictures (after bridge and walkway A1).
 
+## Starting a Claude Code session (owner's workflow since 2026-11-25)
+The owner works from an iPad and a phone, does not use git, and wants Claude to do all of it.
+1. **Branch:** work on `tablet` directly and push to `tablet` after each change (the owner's iPad link publishes from it). Do not use a `claude/...` session branch and do not touch `main`. If the session cannot push to `tablet`, paste the exact error to the owner; do not push somewhere else without saying so.
+2. **First reply of a session:** read `CLAUDE.md`, this file and `docs/RETRO_SKIN_PLAN.md`, run `git status` and `git log -5`, then say in a few lines where things are and wait.
+3. **Prove the first push:** after the first real change, tell the owner to check the iPad (reload, or PED > Settings > Update now). Pages takes a minute or two.
+4. **New room pictures:** the owner attaches them in the chat. Keep the original, make the Retro copy with `tools/snap_picture.py`, register both in `tablet/js/art.js`, place tap areas by eye and check a screenshot (see the room notes below).
+5. **Tests:** need Python with Playwright and a headless Chrome. If something is missing, say so and run what can run; never install silently over a blocked network.
+6. **Owner preferences:** short answers (he reads on a phone), no flattery, dry humor welcome, steps in ASD-STE100 style, no follow-up questions just to keep chatting. Ask before any design change; the rule is RESKIN, NOT REDESIGN.
+7. **The Claude Project** (`claude/...` docs) is no longer the source of truth. The repo's `docs/` is. Update the Project copy of this file only if the Project is attached to the session.
+8. **Not in the repo:** the story PDFs (`2_AquaNova Chapters.pdf`, `3_AquaNova Characters .pdf`) and two concept images (`SeaQuestHullMap.png`, `sciencemedbay.png`) live only in the Claude Project. `STORY_BIBLE.md` is derived from the PDFs.
+
 ## Where things are
 - `main` = the desktop version to come (16:9, 1920x1080); for now the same game as `tablet` at the branch split. `tablet` = the retro-skinned tablet version (pixel-art frames, 4:3 where reskinned). Palette: `data/palette.json`, `RETRO_PALETTE.md`; art rules for other AIs: `Guides/ASSET_SPEC.md`.
 - Test before pushing: `python3 tools/smoke.py` plus the relevant `tools/*_test.py`. Known failing before the retro work: `tern_test.py`, `bay_test.py` (ROV sample), `wskr_chase_test.py`, `notices_test.py`; `bridge_test.py` fails at the "Scan" step on the old page but its first checks (stations open) pass.
