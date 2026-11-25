@@ -6,6 +6,8 @@
 //   Centre controls: Source (a list: the ship or a WSKR), Full sweep, and with a contact picked, Scan and Clear.   Right desk: range - and +, DSP.
 import { sim, toward } from './sim.js';
 import { el } from './util.js';
+import { scanned, fileScan } from './findings.js';
+import { tell } from './notify.js';
 import { drawContact, contactSvg, frameColour } from './contactIcons.js';
 import { sources, source, setSource, contactsFor, selected, select, snr, sweeping, startSweep, stopSweep, startScan, canScan, toggleInvestigate, canInvestigate, SCAN_NM } from './sonar.js';
 
@@ -152,17 +154,19 @@ export function createSnrView({ bbtn }) {
   // ---- centre controls: Source, Full sweep; with a contact picked, Scan, Investigate and Clear ----
   const srcB = bbtn('Source', () => { open = !open; side(); });
   const sweepB = bbtn('Full sweep', () => { if (sweeping()) stopSweep(); else if (!startSweep()) return; side(); });
+  const atSite = () => { const a = sim.s.at; return a && a.type !== 'dock' && !scanned(a) ? a : null; };   // the ship at a site it has not scanned yet
+  const siteB = bbtn('Scan site', () => { const a = atSite(); if (a && fileScan(a)) tell('sensors', `Scan filed: ${a.name}`, 'mission'); side(); });
   const scanB = bbtn('Scan', () => { startScan(); side(); });
   const clearB = bbtn('Clear', () => { const st = snr(); if (st.sel) select(st.sel); side(); });
   const invB = bbtn('Investigate', () => { toggleInvestigate(); side(); sim.touch(); });
-  const r1 = el('div', { class: 'rowN' }, srcB, sweepB), r2 = el('div', { class: 'rowN' }, scanB, invB, clearB), srcList = el('div', { class: 'snr-srcs' });
+  const r1 = el('div', { class: 'rowN' }, srcB, sweepB, siteB), r2 = el('div', { class: 'rowN' }, scanB, invB, clearB), srcList = el('div', { class: 'snr-srcs' });
   const c = el('div', { class: 'bc' }, r1, r2, srcList);
   let open = false, srcSig = '';
   function side() {
     const st = snr(), sel = selected(), srcs = sources();
     set(rangeTxt, view.range + ' NM');
     srcB.classList.toggle('on', open); sweepB.classList.toggle('on', !!st.sweep); sweepB.textContent = st.sweep ? 'Stop sweep' : 'Full sweep'; sweepB.disabled = !source().ok && !st.sweep;
-    r2.hidden = !sel || open; r1.hidden = open; srcList.hidden = !open;
+    r2.hidden = !sel || open; r1.hidden = open; srcList.hidden = !open; siteB.hidden = !atSite();
     scanB.disabled = !canScan(); scanB.textContent = st.scan ? 'Scanning' : 'Scan'; scanB.classList.toggle('on', !!st.scan);
     invB.disabled = !canInvestigate(); invB.classList.toggle('on', !!(sel && sel.inv.length)); invB.textContent = sel && sel.inv.length ? 'Investigating' : 'Investigate';
     const sig = open + '|' + st.src + '|' + srcs.map((x) => x.id + x.name + x.ok).join();

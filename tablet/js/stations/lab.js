@@ -24,7 +24,7 @@ export function mount(body, ctx) {
     sig = next;
     tabs.replaceChildren(...[['samples', 'Samples'], ['analysis', 'Analysis'], ['research', 'Research']].map(([id, label]) =>
       el('button', { class: 'btn chip' + (tab === id ? ' on' : ''), text: label, onclick: () => go(id) })));
-    screens = [];
+    screens = []; view.className = 'tab-body' + (tab === 'research' ? ' bay-grid lab-res' : tab === 'analysis' ? ' lab-an' : '');   // laid out to fit the screen without scrolling
     if (tab === 'samples') {
       view.replaceChildren(...(sm.length ? [...sm].reverse().map((q) => el('div', { class: 'card task' },
         el('div', { class: 'grow' }, el('h3', { text: sampleName(q, sm) }),
@@ -38,12 +38,12 @@ export function mount(body, ctx) {
         const running = job && sm.find((q) => q.id === job.sample), finished = sm.filter((q) => q.status === 'done' && SAMPLE_KINDS[q.kind].lab === id);
         const canvas = el('canvas', { class: 'an-screen', 'aria-label': `${lab.name} display` });
         screens.push({ id, canvas });
-        return el('div', { class: 'card' }, el('h3', { text: lab.name }), canvas,
+        return el('div', { class: 'card' }, canvas, el('div', { class: 'grow' }, el('h3', { text: lab.name }),
           el('p', { style: 'color:var(--dim);margin:0.3rem 0' }, job ? `Running ${sampleName(sm.find((q) => q.id === job.sample) || { kind: 'water', site: '', id: job.sample }, sm)}. ${fmt(job.end - s.clock)} left.` : 'Idle.'),
           el('div', { class: 'row' }, ...(running ? [] : raw.map((q) => el('button', { class: 'btn chip', text: `Run ${sampleName(q, sm)}`, onclick: () => {
             if (startAnalysis(q.id)) tell('science', `${lab.name}: ${sampleName(q, sm)} started`); sig = ''; update(); } })))),
           el('div', { class: 'row' }, ...(!job ? [...finished].reverse().slice(0, 4).map((q) => el('button', { class: 'btn chip' + (shown[id] === q.id ? ' on' : ''), text: `Show ${sampleName(q, sm)}`, onclick: () => { shown[id] = shown[id] === q.id ? null : q.id; sig = ''; update(); } })) : [])),
-          !job && !raw.length && !finished.length && el('p', { style: 'color:var(--dim)', text: 'No samples for this instrument.' }));
+          !job && !raw.length && !finished.length && el('p', { style: 'color:var(--dim)', text: 'No samples for this instrument.' })));   // screen on the left, words and buttons on the right
       }));
     } else {
       view.replaceChildren(el('div', { class: 'card' }, el('div', { class: 'lbl', text: 'Research points' }), el('div', { class: 'num', text: String(pts) }),

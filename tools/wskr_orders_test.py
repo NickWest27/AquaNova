@@ -29,7 +29,7 @@ def main():
             js("window.__aq.open('sensors'); return 1"); page.wait_for_timeout(600)
             page.locator("#station .tabs .btn", has_text="WSKRs").tap(); page.wait_for_timeout(700)
             txt = page.inner_text("#station")
-            check("WSKRs tab shows the status of each WSKR", "SCOUT" in txt.upper() and "LANTERN" in txt.upper() and "BAT" in txt and "Link" in txt and page.locator(".wk-map canvas").count() > 0, txt[:200])
+            check("WSKRs tab shows the status of each WSKR", "SCOUT" in txt.upper() and "LANTERN" in txt.upper() and "BAT" in txt and "link" in txt.lower() and page.locator(".wk-map canvas").count() > 0, txt[:200])
             if gated:
                 page.locator("#station .wk-tile", has_text="Scout").tap(); page.wait_for_timeout(300)
                 check("gated: orders locked until researched", page.locator("#station .wk-cmds .btn", has_text="Manual control").is_disabled())

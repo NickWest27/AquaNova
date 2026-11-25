@@ -1,6 +1,6 @@
 # Handoff (read this first when a session starts; update it before parking)
 
-Last updated: 2026-11-25. Branch to work on: `tablet`. Repo: NickWest27/AquaNova (GitHub Pages path `/AquaNova/`). Last change: contact tracking (detection chance, names belong to tracks, probable matches, signatures on file: `docs/CONTACT_TRACKING.md`); before that identified ships saved; before that one zoom direction everywhere ("+" zooms in) and round map zoom buttons; before that the bridge original picture with real transparent holes; before that the medbay on the owner's picture (after bridge, walkway A1, quarters, science lab, launch bay).
+Last updated: 2026-11-25. Branch to work on: `tablet`. Repo: NickWest27/AquaNova (GitHub Pages path `/AquaNova/`). Last change: pages fit the screen (1180 x 820, `tools/fit_test.py`), Sensors has SONAR and WSKRs only; before that contact tracking (detection chance, names belong to tracks, probable matches, signatures on file: `docs/CONTACT_TRACKING.md`); before that identified ships saved; before that one zoom direction everywhere ("+" zooms in) and round map zoom buttons; before that the bridge original picture with real transparent holes; before that the medbay on the owner's picture (after bridge, walkway A1, quarters, science lab, launch bay).
 
 ## Starting a Claude Code session (owner's workflow since 2026-11-25)
 The owner works from an iPad and a phone, does not use git, and wants Claude to do all of it.
@@ -21,6 +21,8 @@ The owner works from an iPad and a phone, does not use git, and wants Claude to 
 ## Design defaults (owner, 2026-11-25)
 - **Zoom:** "+" always zooms in (shorter range), "−" zooms out, on every map and console.
 - **Zoomable maps** get the WSKR-page control: round − and + with the range between them, in the map's top-right corner. Use `mapZoom(step)` from `tablet/js/mapZoom.js` (class `.map-zoom`). In use: WSKR page, Nav station, Remora contour map.
+- **Pages fit the screen (1180 x 820) without scrolling**, except the logbook and list pages: see `docs/SCREENS.md`; test `tools/fit_test.py`.
+- **Sensors station: SONAR and WSKRs tabs** ("Sites and scans" removed 2026-11-25). Its jobs moved: Full sweep on SONAR also runs the 30 min chart sweep and the tutorial flag; **Scan site** shows on the SONAR controls at an unscanned site; tap a site on the WSKR chart to select it for Investigate.
 - **The bridge main screen is not tappable.** Its controls go on a desk console: the range − / + for NAV and SNR are on the right desk (`bridge.js`, `sonarView.js`).
 - Tests: `ui_test.py` (Nav), `sonar_test.py`, `remora_test.py`, `wskr_page_test.py`. `console_test.py` already failed before this change (it waits for `.nav-read`, which no longer exists); its range check was updated but is not reached.
 

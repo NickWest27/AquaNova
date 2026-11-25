@@ -11,7 +11,7 @@ import { mountCraftView } from '../craftview.js';
 const WHY = { floor: 'Get within 6 m of the sea floor first.', nothing: 'Nothing to take here. Move to a site.', busy: 'The ROV is busy.', none: 'No ROV out.', full: 'Her sample storage is full. Bring her home to unload.' };
 
 export function mount(body) {
-  body.style.flexDirection = 'column'; body.style.overflowY = 'auto';
+  body.style.flexDirection = 'column';   // fits the screen: the view on top, status and piloting side by side below
   const head = el('div', { class: 'card' }, el('div', { class: 'lbl', text: ROV_NAME + ' (Science ROV)' }), el('div', { class: 'num' }), el('p', { style: 'color:var(--dim);margin:0.4rem 0' }));
   const row = el('div', { class: 'row' });
   const launchBtn = el('button', { class: 'btn chip', text: 'Launch', onclick: () => { const r = launchRemora(); tell('science', r.ok ? `${ROV_NAME} is being readied in the bay. About ${Math.round(r.secs)} seconds.` : ({ docked: 'Undock first', fast: 'Slow below 8 kt first', out: 'Already out', busy: 'The bay is busy with another craft', doors: 'The bay doors are too damaged to open', rearm: `The team are still unloading and re-equipping her: about ${r.mins} min` })[r.why] || 'Cannot launch now', r.ok ? 'mission' : 'error', { key: 'bay' }); update(); } });
@@ -42,7 +42,7 @@ export function mount(body) {
   const readout = el('p', { style: 'color:var(--dim);margin-top:0.6rem' }); pilot.append(readout);
   const viewBox = el('div', { class: 'card cv' });
   const cv = mountCraftView(viewBox, { title: ROV_NAME, range: 0.5, getCraft: () => { const r = sim.s.rov; return r ? { lat: r.lat, lon: r.lon, heading: r.heading, depth: r.depth, kt: Math.abs(r.cmd.thr || r.thrSet || (r.go ? 1 : 0)) * 2 } : null; } });
-  body.append(head, viewBox, pilot);
+  body.append(viewBox, el('div', { class: 'rem-low' }, head, pilot));
 
   function update() {
     const s = sim.s, r = s.rov, op = bay().op, rr = remoraRearm();

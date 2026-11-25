@@ -1,93 +1,29 @@
-// Sensors station: sonar, contacts around the ship, scans, and the WSKRs (autonomous remote sensors).
-// A scan files a finding (PED → Findings). Scanning needs the ship at the site, or a WSKR sent to investigate it.
-// WSKRs are launched only here. They hold a ring round the ship, can be sent to a contact, and can be recalled.
-import { contactList, selectContact } from '../contacts.js';
-import { launchWskr, launchText } from '../bayops.js';
+// Sensors station: two pages. SONAR (the passive sonar display, the same as the bridge's SNR page: contacts, sweep, scan, and Scan site when the
+// ship is at a site) and WSKRs (the autonomous remote sensors: launch, orders, investigate; tap a site on their chart to select it).
+// The old "Sites and scans" page was removed on 2026-11-25 (owner): its information is on these two pages.
 import { tell } from '../notify.js';
-import { sim, toward, wskrName } from '../sim.js';
-import { el, toast } from '../util.js';
-import { findings, scanned, fileScan } from '../findings.js';
+import { el } from '../util.js';
 import { mountWskrPanel } from './wskr.js';
 import { isCommissioned, EXCUSES } from '../unlocks.js';
-import { seen as seenShips, shownName, sweep, canSweep } from '../traffic.js';
-import { affiliation, contactSvg } from '../contactIcons.js';
 import { mountSnr } from '../sonarView.js';
 
-const SONAR_RANGE_NM = 4, SWEEP_GAME_S = 1800;
-
-export function mount(body, ctx) {
+export function mount(body) {
   body.style.flexDirection = 'column';
-  const head = el('div', { class: 'card' }, el('div', { class: 'lbl', text: 'Sonar' }), el('div', { class: 'num' }), el('p', { style: 'color:var(--dim);margin-top:0.4rem' }));
-  const sonarBtn = el('button', { class: 'btn chip', onclick: () => { sim.s.sonar = !sim.s.sonar; sig = ''; update(); } });
-  const sweepBtn = el('button', { class: 'btn chip', text: 'Full sweep', onclick: () => { sim.s.sonar = true; sim.s.sweepUntil = sim.s.clock + SWEEP_GAME_S; ctx.flag('swept'); tell('sensors', 'Active sweep: the chart shows more detail for a minute'); sig = ''; update(); } });
-  head.append(sonarBtn, sweepBtn);
-  const wsk = el('div', { class: 'card' }, el('div', { class: 'lbl', text: 'WSKRs' }), el('div', { class: 'num' }), el('p', { style: 'color:var(--dim);margin:0.4rem 0' }));
-  const wRow = el('div', { class: 'row' });
-  const depBtn = el('button', { class: 'btn chip', text: 'Deploy WSKR', onclick: () => {
-    const r = launchWskr();
-    tell('sensors', launchText(r), r.ok ? '' : 'error'); sig = ''; update(); } });
-  const recBtn = el('button', { class: 'btn chip', text: 'Recall all', onclick: () => { sim.recallWskrs(); tell('sensors', 'WSKRs recalled'); sig = ''; update(); } });
-  const viewBtn = el('button', { class: 'btn chip', text: 'WSKR page', onclick: () => go('wskrs') });
-  wRow.append(depBtn, recBtn, viewBtn); wsk.append(wRow);
-  const list = el('div', { class: 'tab-body', style: 'flex:1;min-height:0' });
-  const pageA = el('div', { style: 'display:flex;flex-direction:column;flex:1;min-height:0;gap:inherit' }, head, wsk, list);
-  const pageB = el('div', { style: 'display:flex;flex-direction:column;flex:1;min-height:0;overflow-y:auto;gap:0.6rem' });
-  const pageS = el('div', { style: 'display:flex;flex-direction:column;flex:1;min-height:0;gap:0.5rem' });   // the main page: SNR, the same passive sonar display as the bridge
-  let snrPage = null;
+  const pageB = el('div', { style: 'display:flex;flex-direction:column;flex:1;min-height:0;gap:0.6rem' });   // WSKRs
+  const pageS = el('div', { style: 'display:flex;flex-direction:column;flex:1;min-height:0;gap:0.5rem' });   // the main page: SONAR, the same passive sonar display as the bridge
+  let snrPage = null, panel = null, tab = 'snr';
   const tabs = el('div', { class: 'tabs' });
-  let sig = '', tab = 'snr', panel = null;
   const go = (t) => {
     if (t === 'wskrs' && !isCommissioned('wskr')) { tell('sensors', EXCUSES.wskr, 'error'); return; }
-    tab = t; sig = ''; if (t === 'wskrs' && !panel) panel = mountWskrPanel(pageB);
+    tab = t; if (t === 'wskrs' && !panel) panel = mountWskrPanel(pageB);
     if (t === 'snr' && !snrPage) snrPage = mountSnr(pageS);
-    tabs.replaceChildren(...[['snr', 'SNR'], ['contacts', 'Sites and scans'], ['wskrs', 'WSKRs']].map(([id, label]) => el('button', { class: 'btn chip' + (tab === id ? ' on' : ''), text: label, onclick: () => go(id) })));
-    pageS.hidden = tab !== 'snr'; pageA.hidden = tab !== 'contacts'; pageB.hidden = tab !== 'wskrs'; update();
+    tabs.replaceChildren(...[['snr', 'SONAR'], ['wskrs', 'WSKRs']].map(([id, label]) => el('button', { class: 'btn chip' + (tab === id ? ' on' : ''), text: label, onclick: () => go(id) })));
+    pageS.hidden = tab !== 'snr'; pageB.hidden = tab !== 'wskrs'; update();
   };
-  body.append(tabs, pageS, pageA, pageB); pageA.hidden = pageB.hidden = true;
-
-  const scan = (p) => {
-    if (!fileScan(p)) { tell('sensors', 'Already scanned'); return; }
-    ctx.flag('scanned'); if (p.name === 'Vineyard Ledge') ctx.flag('scanned_ledge'); tell('sensors', `Scan filed: ${p.name}`, 'mission'); sig = ''; update();
-  };
-  const wText = (w, s) => ({ escort: 'holding formation', recall: 'returning', manual: 'manual control', search: 'searching', relay: 'relay' })[w.mode] || `investigating ${(s.pois.find((p) => p.id === w.target) || {}).name || 'a contact'}`;
-
+  body.append(tabs, pageS, pageB); pageB.hidden = true;
   function update() {
     if (tab === 'snr') { if (snrPage) snrPage.update(); return; }
-    if (tab === 'wskrs') { if (panel) panel.update(); return; }
-    const s = sim.s, sweeping = s.clock < (s.sweepUntil || 0);
-    head.children[1].textContent = sweeping ? 'SWEEPING' : s.sonar ? 'ACTIVE' : 'OFF';
-    head.children[1].className = 'num ' + (s.sonar ? 'ok' : 'bad');
-    head.children[2].textContent = s.sonar ? `Contacts within ${SONAR_RANGE_NM} nm. The chart shows detailed contours ${sweeping ? '8' : '4'} nm round the ship. ${findings().length} scan${findings().length === 1 ? '' : 's'} filed.` : 'Sonar off: contacts hidden and only the nearest 0.8 nm is charted in detail.';
-    sonarBtn.textContent = 'Sonar'; sonarBtn.classList.toggle('on', !!s.sonar);
-    wsk.children[1].textContent = `${s.wskrs.length} of 4 out`;
-    wsk.children[2].textContent = s.wskrs.length ? s.wskrs.map((w) => `${wskrName(w)}: ${wText(w, s)}`).join(' · ') : 'Autonomous remote sensors. Out, they spread round the ship for better readings, and each charts the sea floor in detail around itself. Send one to a contact to investigate it.';
-    depBtn.disabled = s.docked || s.wskrs.length >= 4; recBtn.disabled = !s.wskrs.length; viewBtn.disabled = false;
-    const rows = s.sonar ? s.pois.map((p) => ({ p, ...toward(s, p) })).filter((r) => r.nm <= SONAR_RANGE_NM).sort((a, b) => a.nm - b.nm) : [];
-    const idle = s.wskrs.some((w) => w.mode === 'escort');
-    const tagOf = Object.fromEntries(contactList().filter((c) => c.poi).map((c) => [c.poi.id, c]));
-    const ships = seenShips();
-    const next = JSON.stringify([ships.map((a) => [a.v.id, a.pos ? a.pos.lat.toFixed(3) + a.pos.lon.toFixed(3) : Math.round(a.ear), a.v.ident, a.v.prob, a.ais, !!a.v.sweepAt, canSweep(a)]), s.selContact, s.sonar, sweeping, s.wskrs.map((w) => [w.n, w.mode, w.target]), s.docked, rows.map((r) => [r.p.id, r.nm.toFixed(1), Math.round(r.brg), s.at && s.at.id === r.p.id, scanned(r.p)])]);
-    if (next === sig) return;   // redraw only when something visible changed
-    sig = next;
-    list.replaceChildren(...(rows.length ? rows.map((r) => {
-      const here = s.at && s.at.id === r.p.id, done = scanned(r.p), busy = s.wskrs.some((w) => w.target === r.p.id);
-      const ct = tagOf[r.p.id], picked = ct && s.selContact === ct.id;
-      return el('div', { class: 'card task' + (picked ? ' sel' : '') },
-        el('div', { class: 'grow' }, el('h3', { text: ct ? `${ct.tag} ${r.p.name}` : r.p.name }), el('p', { style: 'color:var(--dim)', text: `${r.nm.toFixed(1)} nm · bearing ${String(Math.round(r.brg)).padStart(3, '0')}° · ${r.p.type.replace(/_/g, ' ')}` })),
-        ct && el('button', { class: 'btn chip' + (picked ? ' on' : ''), text: picked ? 'Selected' : 'Select', onclick: () => { selectContact(ct.id); sig = ''; update(); } }),
-        done ? el('span', { class: 'ok', text: 'Scanned' }) : busy ? el('span', { style: 'color:var(--amber)', text: 'WSKR investigating' })
-          : [here && el('button', { class: 'btn primary', text: 'Scan', onclick: () => scan(r.p) }),
-             r.p.type !== 'dock' && (idle ? el('button', { class: 'btn chip', text: 'Send WSKR', onclick: () => { const w = sim.taskWskr(r.p); tell('sensors', `${wskrName(w)} sent to ${r.p.name}`); sig = ''; update(); } }) : !here && el('span', { style: 'color:var(--dim)', text: s.wskrs.length ? 'No free WSKR' : 'Deploy a WSKR or move closer' }))]);
-    }) : [el('div', { class: 'empty', text: s.sonar ? 'No contacts in range.' : 'Sonar is off.' })]).concat(ships.map((a) => {
-      const id = 'ship:' + a.v.id, picked = s.selContact === id, hot = a.v.ident && a.v.stance === 'hostile';
-      const where = a.pos ? toward(s, a.pos) : null, brg = String(Math.round(where ? where.brg : a.ear)).padStart(3, '0');
-      const how = a.ais ? 'AIS' : a.pos && a.pos.err > 0.05 ? `Fix ±${a.pos.err.toFixed(1)} nm` : a.pos ? 'Visual' : 'Sonar bearing only. A WSKR on another bearing gives a fix.';
-      return el('div', { class: 'card task' + (picked ? ' sel' : '') },
-        el('div', { class: 'grow' }, el('h3', {}, (() => { const i = document.createElement('span'); i.style.cssText = 'display:inline-block;vertical-align:-3px;margin-right:6px'; i.innerHTML = contactSvg('surface', affiliation(a.v), 20); return i; })(), shownName(a)), el('p', { style: 'color:var(--dim)', text: `${a.v.ident ? a.v.label + ' · ' + a.v.factionName + ' · ' : ''}${where ? where.nm.toFixed(1) + ' nm · ' : ''}bearing ${brg}° · ${how}${a.v.ais && a.pos ? ' · VHF ' + a.v.mhz.toFixed(3) : ''}` })),
-        hot && el('span', { style: 'color:#ff9a9a', text: 'HOSTILE' }),
-        (a.pos || canSweep(a)) ? el('button', { class: 'btn chip' + (picked ? ' on' : ''), text: picked ? 'Selected' : 'Select', onclick: () => { selectContact(id); sig = ''; update(); } }) : null,
-        !a.v.ident && canSweep(a) ? (a.v.sweepAt ? el('span', { style: 'color:var(--amber)', text: 'Sweeping…' }) : el('button', { class: 'btn primary', text: 'Sweep', onclick: () => { sweep(a.v); tell('sensors', 'Sensor sweep started on the contact'); sig = ''; update(); } })) : null);
-    })));
+    if (panel) panel.update();
   }
   go('snr');
   return { update, destroy() { if (panel) panel.destroy(); } };

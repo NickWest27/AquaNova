@@ -84,7 +84,7 @@ with sync_playwright() as p:
     js("S.snr().sweep.az=359.5")
     js("for(let i=0;i<12;i++) sim.step(1)")
     check("a finished sweep clears itself", js("return S.snr().sweep") is None)
-    js("for(let i=0;i<4;i++) sim.step(1)")
+    js("sim.s.sweepUntil=0; for(let i=0;i<4;i++) sim.step(1)")   # a full sweep also doubles the sonar range for 30 min: switch that off to test the fade
     check("the faint contact stays on the list a while, marked as faded", js("const c=S.contactsFor('ship').filter(c=>c.id==='ship:t:1'); return c.length===1&&c[0].lost"))
     js("T.traffic.cand[0].size=3")
     # every listener feeds every display: with the ship's sonar off, a ship only the WSKR hears still shows, as a bearing from the WSKR
@@ -112,7 +112,16 @@ with sync_playwright() as p:
     tap("−"); tap("−"); pg.wait_for_timeout(300)
     # the Sensors station opens on the SNR page
     pg.evaluate("window.__aq.open('sensors')"); pg.wait_for_timeout(500)
-    check("the Sensors station's main page is the SNR page", pg.locator(".tabs .btn.on", has_text="SNR").count() >= 1 and pg.locator(".tabs .btn", has_text="WSKRs").count() >= 1)
+    check("the Sensors station's main page is the SONAR page", pg.locator(".tabs .btn.on", has_text="SONAR").count() >= 1 and pg.locator(".tabs .btn", has_text="WSKRs").count() >= 1)
+    # Scan site (moved from the old "Sites and scans" page): shown when the ship is at a site it has not scanned
+    r = js("const s=sim.s, p=s.pois.find(q=>q.type!=='dock'); s.at=p; s.lat=p.lat; s.lon=p.lon; return p.name")
+    pg.wait_for_timeout(1500)
+    site = pg.locator('#station .bc:visible button:text-is("Scan site")')
+    vis = site.count() > 0 and site.first.is_visible()
+    if vis: site.first.tap(); pg.wait_for_timeout(400)
+    done = js("const F=await import('./js/findings.js'); return F.scanned(sim.s.at)")
+    check("at a site the SONAR page offers Scan site, and it files the scan", vis and done, f"{r} vis={vis} done={done}")
+    check("the old Sites and scans tab is gone", pg.locator("#station .tabs .btn", has_text="Sites").count() == 0)
     pg.screenshot(path=R + "/tools/shots/sonar_station.png")
     # DSP puts it on the main screen
     tap("DSP"); pg.wait_for_timeout(300)

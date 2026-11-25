@@ -1,5 +1,12 @@
 # Screen names (shared vocabulary)
 
+## Screen size and the no-scroll rule (owner, 2026-11-25)
+- **Target screen: 1180 × 820 CSS pixels**, an iPad Air in landscape (the owner plays on an iPad). `tools/smoke.py` and `tools/fit_test.py` use this size.
+- **Display pages fit this screen without scrolling**, in their normal busy state (for example all four WSKRs out, or one selected).
+- **Allowed to scroll:** the logbook, mail, the Comms contact directory, and the PED's list pages (Tasks, Contacts, Findings, Journal, Settings; the PED is a small handheld screen). The lab's Research list may scroll once it grows past one screen.
+- Ways used to make pages fit: tiles that share a column equally (WSKRs), two or three cards to a row (Launch Bay, lab Research), a screen beside its controls (lab Analysis, Remora), a picker instead of a button per item (shuttle "Send to…"), short spec lines instead of paragraphs.
+- **Test:** `python3 tools/fit_test.py` opens every station and tab (and harder states: WSKR in manual control, Remora out, shuttle alongside) and fails on any part of a page that scrolls or is cut off. Screenshots: `tools/shots/fit_*.png`. Add new pages and states to it.
+
 Use these names when talking about the bridge and the science lab.
 
 ## Bridge

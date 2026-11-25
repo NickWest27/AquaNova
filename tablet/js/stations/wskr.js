@@ -5,7 +5,7 @@
 //  Along the bottom: commands. With nothing selected they act on every WSKR; with one selected they act on it.
 import { tell } from '../notify.js';
 import { sim, wskrMinutes, wskrName, wskrCraft, wskrDepthFor, WSKR_PERKS, WSKR_DEPTHS, WSKR_LINK_NM, WSKR_LOST_MIN, WSKR_LOW_PCT, toward, wskrBatteryHours } from '../sim.js';
-import { selectedContact } from '../contacts.js';
+import { selectedContact, selectContact } from '../contacts.js';
 import { launchWskr, launchText, rackBat, busy, MIN_LAUNCH_PCT } from '../bayops.js';
 import { WSKR_CHARGE_H } from '../sim.js';
 import { mountCraftView } from '../craftview.js';
@@ -30,7 +30,7 @@ export function mountWskrPanel(body) {
   const cur = () => (sel ? out(sel) : null);
   const mapBox = el('div', { class: 'wk-map' }), side = el('div', { class: 'wk-side' }), cmds = el('div', { class: 'wk-cmds' });
   body.append(el('div', { class: 'wk' }, mapBox, side, cmds));
-  const nd = createND(mapBox, { trackUp: true, contours: true, rings: false, bigWskr: true, focus: () => cur(), onWskr: (q) => toggle(q.n) });
+  const nd = createND(mapBox, { trackUp: true, contours: true, rings: false, bigWskr: true, focus: () => cur(), onWskr: (q) => toggle(q.n), onPick: (p) => { if (p && sim.s.selContact !== 'poi:' + p.id) selectContact('poi:' + p.id); drawKey = ''; update(); } });   // tap a site: it becomes the selected contact (Investigate)
   nd.range = range;
   const zoom = (d) => { const i = RANGES.indexOf(range); range = RANGES[Math.max(0, Math.min(RANGES.length - 1, i + d))]; nd.setRange(range); drawKey = ''; update(); };
   const zc = mapZoom(zoom), rangeLbl = zc.label; mapBox.append(zc.box);
@@ -53,16 +53,17 @@ export function mountWskrPanel(body) {
   // ---- the right side: tiles, or one big tile ----
   const tile = (n) => {
     const q = out(n), t = el('button', { class: 'wk-tile' + (n === sel ? ' sel' : ''), 'data-n': n, onclick: () => toggle(n) });
-    t.append(dia(n, q && q.dead), el('div', { class: 'wk-tx' }, el('b', { class: 'wk-h' }), el('span', { class: 'wk-l1' }), el('span', { class: 'wk-l2' }), el('span', { class: 'wk-l3' }), el('span', { class: 'wk-l4' })));
+    t.append(dia(n, q && q.dead), el('div', { class: 'wk-tx' }, el('b', { class: 'wk-h' }), el('span', { class: 'wk-l1' }), el('span', { class: 'wk-l2' }), el('span', { class: 'wk-l3' })));
     return t;
   };
   const fillTile = (t, n) => {
     const q = out(n), set = (c, v, cls = '') => { const e = t.querySelector('.' + c); e.textContent = v; e.className = c + ' ' + cls; };
     set('wk-h', `WSKR #${n}: ${wskrName(q || { n }).toUpperCase()}`);
-    if (!q) { set('wk-l1', bayText(n)); set('wk-l2', WSKR_PERKS[n].text); set('wk-l3', ''); set('wk-l4', ''); return; }
+    if (!q) { set('wk-l1', bayText(n)); set('wk-l2', WSKR_PERKS[n].text); set('wk-l3', ''); return; }
     const m = wskrMinutes(q), bat = Math.round(q.bat == null ? 100 : q.bat);
+    const lk = sim.wskrLink(q);   // three lines so four tiles fit the column: position; order; battery and link
     set('wk-l1', `PSN: ${lat(q.lat)}  ${lon(q.lon)}`); set('wk-l2', orderText(q));
-    set('wk-l3', `BAT ${bat}% · ${hm(m.empty)} left`, bat <= WSKR_LOW_PCT ? 'bad' : ''); set('wk-l4', linkText(q), sim.wskrLink(q).raw ? '' : 'warn');
+    set('wk-l3', `BAT ${bat}% · ${hm(m.empty)} left · ${lk.raw ? `link ${lk.nm.toFixed(1)}/${lk.max} nm` : 'NO LINK'}`, bat <= WSKR_LOW_PCT ? 'bad' : lk.raw ? '' : 'warn');
   };
   const big = () => {
     const n = sel, q = out(n), t = el('button', { class: 'wk-big', onclick: () => toggle(n) });
@@ -73,10 +74,12 @@ export function mountWskrPanel(body) {
   const fillBig = (t) => {
     const q = out(sel); if (!q) return;
     const m = wskrMinutes(q), c = wskrCraft(q), tw = toward(sim.s, q), bat = Math.round(q.bat == null ? 100 : q.bat), l = sim.wskrLink(q);
-    const rows = [['PSN LAT', lat(q.lat)], ['PSN LNG', lon(q.lon)], ['FROM AQUA NOVA', `BRG ${String(Math.round(tw.brg) % 360).padStart(3, '0')}° · ${tw.nm.toFixed(1)} nm`], ['ORDER', orderText(q)],
-      ['DEPTH', `${Math.round(c.depth)} m`], ['SPEED', `${c.kt.toFixed(1)} kt${q.super ? ' (super cruise)' : q.kt > (WSKR_PERKS[q.n].kt || 16) ? ' (boost)' : ''}`], ['HEADING', `${String(Math.round(c.heading)).padStart(3, '0')}°`], ['LINK', linkText(q)],
-      ['BATTERY', `${bat}% · ${hm(m.empty)} left`], ['RECALLS ITSELF', `in about ${hm(m.recall)} (at ${WSKR_LOW_PCT}%)`], ['CELL LIFE', `${wskrBatteryHours()} h at base speed`]];
-    t.querySelector('.wk-grid').replaceChildren(...rows.flatMap(([k, v]) => [el('span', { class: 'k', text: k }), el('span', { class: 'v' + (k === 'BATTERY' && bat <= WSKR_LOW_PCT ? ' bad' : k === 'LINK' && !l.raw ? ' warn' : ''), text: v })]));
+    const rows = [['PSN LAT', lat(q.lat)], ['PSN LNG', lon(q.lon)], ['FROM SHIP', `BRG ${String(Math.round(tw.brg) % 360).padStart(3, '0')}° · ${tw.nm.toFixed(1)} nm`], ['ORDER', orderText(q)],
+      ['DEPTH', `${Math.round(c.depth)} m`], ['SPEED', `${c.kt.toFixed(1)} kt${q.super ? ' (super)' : q.kt > (WSKR_PERKS[q.n].kt || 16) ? ' (boost)' : ''}`], ['HEADING', `${String(Math.round(c.heading)).padStart(3, '0')}°`], ['LINK', linkText(q)],
+      ['BATTERY', `${bat}% · ${hm(m.empty)} left`], ['AUTO RECALL', `in about ${hm(m.recall)} (at ${WSKR_LOW_PCT}%)`], ['CELL LIFE', `${wskrBatteryHours()} h at base speed`]];
+    const WIDE = ['ORDER', 'LINK', 'BATTERY', 'AUTO RECALL'];   // two pairs to a row; the long ones take a whole row (the page fits without scrolling)
+    rows.sort((a, b) => WIDE.includes(a[0]) - WIDE.includes(b[0]));
+    t.querySelector('.wk-grid').replaceChildren(...rows.flatMap(([k, v]) => [el('span', { class: 'k' + (WIDE.includes(k) ? ' wide' : ''), text: k }), el('span', { class: 'v' + (WIDE.includes(k) ? ' wide' : '') + (k === 'BATTERY' && bat <= WSKR_LOW_PCT ? ' bad' : k === 'LINK' && !l.raw ? ' warn' : ''), text: v })]));
     const poi = q.target != null ? sim.s.pois.find((p) => p.id === q.target) : null;
     t.querySelector('.wk-note').textContent = !l.raw && q.mode !== 'manual' ? `Beyond the ${l.max} nm control link. It keeps to its order. ${l.surfaced ? 'It has surfaced and is talking over the surface link.' : `After ${WSKR_LOST_MIN} minutes without a link it surfaces to get comms back.`}`
       : q.mode === 'manual' ? `Manual: hold the turn buttons below. ${q.limited ? 'At the link limit: bring a relay out or turn back. ' : ''}${q.blockedNow ? 'Shallows ahead. ' : ''}Link reaches ${WSKR_LINK_NM} nm from the ship or a relay.`
@@ -107,7 +110,7 @@ export function mountWskrPanel(body) {
         act('Manual control', w.mode === 'manual', () => { sim.orderWskr(w.n, 'manual'); say(`${wskrName(w)} is yours, Captain`); }, off),
         act('Search…', w.mode === 'search', () => openSearchDialog({ craft: 'w' + w.n }), off),
         act('Relay', w.mode === 'relay', () => { sim.orderWskr(w.n, 'relay'); say(`${wskrName(w)} going up as a relay`); }, off),
-        act(poi ? `Investigate ${c.label}` : 'Investigate (select a contact)', w.mode === 'task' && poi && w.target === poi.id, () => { sim.taskWskr(poi, w.n); say(`${wskrName(w)} sent to ${poi.name}`); }, off || !poi),
+        act(poi ? `Investigate ${c.label}` : 'Investigate (tap a site)', w.mode === 'task' && poi && w.target === poi.id, () => { sim.taskWskr(poi, w.n); say(`${wskrName(w)} sent to ${poi.name}`); }, off || !poi),
         act('Recall', w.mode === 'recall', () => { sim.recallWskr(w.n); say(`${wskrName(w)} recalled`); }, w.dead || w.arrived)];
       if (w.mode === 'manual') list.push(el('span', { class: 'wk-sep', text: 'Helm' }), hold('Turn left', (d) => sim.wskrHelm(w.n, { turn: d ? -1 : 0 })), hold('Turn right', (d) => sim.wskrHelm(w.n, { turn: d ? 1 : 0 })),
         el('button', { class: 'btn chip', text: 'Slower', onclick: () => sim.wskrHelm(w.n, { thr: (cur().thr || 0) - 0.25 }) }), el('button', { class: 'btn chip', text: 'Faster', onclick: () => sim.wskrHelm(w.n, { thr: (cur().thr || 0) + 0.25 }) }),

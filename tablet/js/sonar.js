@@ -99,7 +99,8 @@ export function toggleInvestigate() {
 
 // ---- the sweep and the scan ----
 export function sweeping() { return !!snr().sweep; }
-export function startSweep() { const st = snr(), src = source(); if (!src.ok) return false; st.sweep = { src: src.id, az: 0, t: sim.s.clock, pause: 0, seen: new Set(), found: 0 }; sim.touch(); return true; }
+export const CHART_SWEEP_S = 1800;   // a full sweep also pings: finer contours round the ship and a longer sonar range for 30 game minutes
+export function startSweep() { const st = snr(), src = source(); if (!src.ok) return false; st.sweep = { src: src.id, az: 0, t: sim.s.clock, pause: 0, seen: new Set(), found: 0 }; sim.s.sonar = true; sim.s.sweepUntil = sim.s.clock + CHART_SWEEP_S; sim.emit('sonar-sweep', {}); sim.touch(); return true; }
 export function stopSweep() { snr().sweep = null; sim.touch(); }
 export function canScan() { const c = selected(); return !!c && !c.lost && !snr().scan; }
 export function startScan() {
@@ -113,7 +114,7 @@ function finishScan(sc, now) {
   const c = contactsFor(sc.src).find((x) => x.id === sc.id), ls = listener(sc.src); if (!c || !ls) return;
   const real = c.kind === 'ship' ? traffic.active.find((a) => a.v === c.ref) : { lat: c.ref.lat, lon: c.ref.lon };
   const nm = real ? toward(ls, real).nm : 99;
-  if (nm <= SCAN_NM) {
+  if (nm <= (c.onFile ? traffic.cfg.sensing.sweep_nm_known : SCAN_NM)) {   // a signature on file is recognised further out
     if (c.kind === 'ship') { c.ref.scanFixUntil = now + 180; c.ref.ident = true; } else instState.set(c.ref.id, { ...(instState.get(c.ref.id) || {}), scanFixUntil: now + 180, named: true });
     tell('sensors', `Scan complete, Captain. Contact bearing ${String(Math.round(c.bearing)).padStart(3, '0')}, range ${nm.toFixed(1)} miles. Fix and identity updated.`);
   } else tell('sensors', `Scan complete, Captain. That contact is too far for more detail. Closer than ${SCAN_NM} miles, or from a WSKR that is nearer.`);

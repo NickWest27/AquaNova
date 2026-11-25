@@ -44,7 +44,7 @@ def main():
         txt = page.inner_text(".wk-cmds").lower()
         check("selected: commands are for that WSKR", "all wskrs" not in txt and "manual control" in txt and "recall" in txt, txt[:120])
         big = page.inner_text(".wk-big")
-        check("big tile has detail", all(k in big for k in ("DEPTH", "SPEED", "HEADING", "BATTERY", "LINK", "FROM AQUA NOVA")), big[:200])
+        check("big tile has detail", all(k in big for k in ("DEPTH", "SPEED", "HEADING", "BATTERY", "LINK", "FROM SHIP")), big[:200])
         page.locator(".wk-big").tap(position={"x": 20, "y": 20}); page.wait_for_timeout(500)
         check("re-tapping the big tile deselects", page.locator(".wk-tile").count() == 4 and "all wskrs" in page.inner_text(".wk-cmds").lower())
         page.locator(".wk-tile").nth(1).tap(); page.wait_for_timeout(500)
