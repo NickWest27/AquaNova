@@ -89,10 +89,10 @@ export function createScene(stage, { onOpen }) {
   });
   const pinArt = el('div', { class: 'item-pin' }, el('img', { src: 'assets/comm-pin.webp', alt: '', draggable: 'false' }));
   const pedArt = el('div', { class: 'item-ped' }, el('i'), el('img', { src: 'assets/pda-frame.webp', alt: '', draggable: 'false' }));
-  const pinVis = slanted('item', pinArt, 90, 135, flat(1440, 985, 90, 135, -32, 0.36));
-  const pedVis = slanted('item', pedArt, 120, 213, flat(520, 1130, 120, 213, 62, 0.37));
+  const pinVis = slanted('item', pinArt, 66, 100, flat(1466, 926, 66, 100, -10, 0.34));   // in the wedge of desk top left of the laptop (checked in a stage-size screenshot)
+  const pedVis = slanted('item', pedArt, 120, 213, flat(470, 1068, 120, 213, 62, 0.37));   // on the blanket, clear of the mattress edge
   const grab = (label, tag, x, y, w, h, target) => el('button', { class: 'pickup', hidden: true, style: `left:${x}px;top:${y}px;width:${w}px;height:${h}px`, 'aria-label': label, onclick: () => onOpen(target) }, el('span', { class: 'tag', text: tag }));
-  const pinGrab = grab('Pick up communicator', 'COMMUNICATOR', 1370, 920, 150, 110, 'pickup'), pedGrab = grab('Pick up PED', 'PED', 430, 1060, 180, 120, 'pickup-ped');
+  const pinGrab = grab('Pick up communicator', 'COMMUNICATOR', 1390, 870, 150, 110, 'pickup'), pedGrab = grab('Pick up PED', 'PED', 370, 1005, 200, 125, 'pickup-ped');
   pinVis.hidden = pedVis.hidden = true;
   quarters.append(qimg,
     hs('LOGBOOK', 1480, 740, 340, 300, () => onOpen('log'), 'top'),
