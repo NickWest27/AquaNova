@@ -42,7 +42,9 @@ export function createScene(stage, { onOpen }) {
   const dispD = el('div', { class: 'bdisp' });
   const consoleApi = createBridgeConsole({ top: topD, main: mainD, display: dispD, center: ctrD, left: leftD, right: rightD, onExpand: (id) => onOpen(id) });
 
-  const frame = el('img', { class: 'frame', src: 'assets/bridge.webp', alt: '', draggable: 'false', decoding: 'async' });
+  // Retro skin: the bridge frame is the 320x240 pixel-art picture (transparent holes for the screens), shown at 6x with hard pixels.
+  // The bridge stage is 1920x1440 (4:3). Everything below is in stage pixels = art pixels x 6.
+  const frame = el('img', { class: 'frame retro', src: 'retro/assets/bridge.png', alt: '', draggable: 'false', decoding: 'async' });
   const hs = (label, x, y, w, h, onclick, tagPos = 'top', extra = '') =>
     el('button', { class: `hs ${extra}`, style: `left:${x}px;top:${y}px;width:${w}px;height:${h}px`, 'aria-label': label, onclick },
       el('span', { class: `tag ${tagPos}`, text: label }));
@@ -60,19 +62,21 @@ export function createScene(stage, { onOpen }) {
     mini(stnR, 'stnR', `<h5>SENSORS</h5><div class="${s.sonar ? 'ok' : 'bad'}"><span>SONAR</span><b>${sweeping ? 'SWEEPING' : s.sonar ? 'ACTIVE' : 'OFF'}</b></div><div><span>CONTACTS</span><b>${s.sonar ? inRange + ' in 4 nm' : '—'}</b></div><div><span>WSKRS</span><b>${s.wskrs.length} of 4 out</b></div><div><span>NEAREST</span><b>${near ? near.p.name.slice(0, 11) + ' ' + near.nm.toFixed(1) : '—'}</b></div>`);
   }
   topD.classList.add('compact');
+  const rect = (x0, y0, x1, y1) => [[x0, y0], [x1, y0], [x1, y1], [x0, y1]];
   bridge.append(
-    box('bmainbox', 243, 168, 1433, 351, [mainD]),                                                        // the big window
-    boxClip('btbox', 604, 52, 709, 40, [[0, 3], [709, 0], [674, 40], [28, 40]], [topD]),                  // Top Strip: front-facing, two lines
-    slanted('bdispbox', dispD, 560, 190, [[719, 584], [1203, 584], [1253, 740], [664, 735]]),             // centre display
-    slanted('', ctrD, 612, 130, [[752, 793], [1159, 792], [1206, 872], [713, 867]]),                      // centre desk
-    slanted('', leftD, 300, 116, [[389, 774], [614, 778], [552, 870], [304, 865]]),                       // left desk panel
-    slanted('', rightD, 300, 116, [[1306, 776], [1530, 772], [1616, 864], [1369, 869]]),                  // right desk panel
-    slanted('', stnL, 200, 74, [[266, 508], [444, 510], [413, 573], [231, 568]]),                         // left station screen
-    slanted('', stnR, 200, 74, [[1479, 510], [1652, 508], [1689, 572], [1504, 573]]),                     // right station screen
+    el('div', { class: 'bridge-base' }),
+    box('bmainbox', 240, 216, 1440, 576, [mainD]),                                                       // the big window
+    box('btbox', 606, 90, 708, 90, [topD]),                                                              // Top Strip, in the lit panel
+    slanted('bdispbox', dispD, 560, 190, rect(696, 840, 1224, 1086)),                                    // centre display
+    slanted('', stnL, 200, 74, rect(258, 768, 408, 840)),                                                // left station screen
+    slanted('', stnR, 200, 74, rect(1506, 768, 1656, 840)),                                              // right station screen
     frame,
-    hs('COMMS', 150, 470, 360, 170, () => onOpen('comms'), 'top'),        // comms officer, left station
-    hs('SENSORS', 1410, 470, 360, 170, () => onOpen('sensors'), 'top'),  // sensors, right station
-    hs('WALKWAY', 0, 890, 1920, 190, () => onOpen('walkway'), 'mid'),    // the whole bottom edge leaves the bridge
+    slanted('', ctrD, 612, 130, rect(636, 1140, 1284, 1332)),                                            // centre desk (on top of the frame: the pads are slanted holes)
+    slanted('', leftD, 300, 116, rect(312, 1140, 636, 1332)),                                            // left desk panel
+    slanted('', rightD, 300, 116, rect(1284, 1140, 1608, 1332)),                                         // right desk panel
+    hs('COMMS', 84, 500, 468, 340, () => onOpen('comms'), 'top'),        // comms officer, left station
+    hs('SENSORS', 1368, 500, 468, 340, () => onOpen('sensors'), 'top'),  // sensors, right station
+    hs('WALKWAY', 0, 1332, 1920, 108, () => onOpen('walkway'), 'mid'),   // the bottom edge leaves the bridge
   );
 
   // quarters
@@ -187,6 +191,8 @@ export function createScene(stage, { onOpen }) {
     inQuarters: false, where: 'bridge',
     show(which) {
       api.where = which; api.inQuarters = which === 'quarters';
+      document.body.classList.toggle('stage-4x3', which === 'bridge');   // the retro bridge is 4:3, the other scenes are still 16:9
+      window.dispatchEvent(new Event('resize'));
       bridge.hidden = which !== 'bridge'; quarters.hidden = which !== 'quarters'; walkway.hidden = which !== 'walkway'; walkway2.hidden = which !== 'walkway2'; science.hidden = which !== 'science'; medbay.hidden = which !== 'medbay'; bay.hidden = which !== 'launchbay';
       cache.clear(); api.update();
     },

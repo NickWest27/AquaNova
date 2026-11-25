@@ -117,6 +117,10 @@ textarea, input { font: inherit; font-size: 16px; user-select: text; -webkit-use
 
 .stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; transform-origin: 0 0; }
 .stage .scene { position: absolute; inset: 0; }
+body.stage-4x3 .stage { height: 1440px; }
+body.stage-4x3 .scene-wrap { aspect-ratio: 4 / 3; width: min(100%, calc((100vh - var(--dock-min)) * 4 / 3)); width: min(100%, calc((100dvh - var(--dock-min) - env(safe-area-inset-top) - env(safe-area-inset-bottom)) * 4 / 3)); }
+.stage .frame.retro { height: 1440px; image-rendering: pixelated; }
+.bridge-base { position: absolute; inset: 0; background: #0c213d; }
 .stage .frame { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; pointer-events: none; -webkit-user-drag: none; }
 .stage .disp { position: absolute; overflow: hidden; font-family: var(--mono); color: var(--text); }
 
