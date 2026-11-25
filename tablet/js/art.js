@@ -9,7 +9,7 @@ const BRIDGE = { src: 'retro/assets/bridge.png', smooth: false };
 export const ART = {
   bridge: { original: BRIDGE, retro: BRIDGE },
   // each room: the owner's original (smooth) and the 320x240 palette copy made by tools/snap_picture.py
-  ...Object.fromEntries(['walkway', 'quarters', 'science', 'launchbay', 'engineering'].map((n) => [n, { original: { src: `retro/assets/${n}_original.jpg`, smooth: true }, retro: { src: `retro/assets/${n}.png`, smooth: false } }])),
+  ...Object.fromEntries(['walkway', 'quarters', 'science', 'launchbay', 'medbay', 'engineering'].map((n) => [n, { original: { src: `retro/assets/${n}_original.jpg`, smooth: true }, retro: { src: `retro/assets/${n}.png`, smooth: false } }])),
 };
 
 export const getQuality = () => { try { return localStorage.getItem(KEY) === 'retro' ? 'retro' : 'original'; } catch (e) { return 'original'; } };

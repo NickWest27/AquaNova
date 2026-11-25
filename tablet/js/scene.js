@@ -142,13 +142,13 @@ export function createScene(stage, { onOpen }) {
     hs('MAIN COMPUTER', 1660, 690, 220, 160, () => onOpen('lab'), 'bottom'),
     hs('RESEARCH COMPUTER', 0, 360, 180, 270, () => onOpen('lab-research'), 'bottom'),
     hs('ROV STATION', 540, 650, 190, 140, () => onOpen('remora'), 'bottom'));
-  // medbay (concept art). Treatment and crew health are not built yet; the exam table is a locked tap area for now.
+  // medbay (the owner's picture, 512x382, cropped from 512x512; art px x 3.75 across, x 3.77 down). Treatment and crew health are not built yet; the exam table is a locked tap area for now.
   const medbay = el('div', { class: 'scene medbay', hidden: true });
   const mbRead = el('div', { class: 'mb-read' });
-  const mbView = el('div', { class: 'mb-view' }, [el('div', { class: 'mb-snow' }), el('div', { class: 'mb-snow s2' }), mbRead]);   // the cutout in the art shows the sea outside
-  medbay.append(mbView, el('img', { class: 'frame', src: 'assets/medbay.webp', alt: '', draggable: 'false', decoding: 'async' }),
-    hs('EXAM TABLE', 1045, 540, 500, 290, () => onOpen('medbay-station'), 'mid', 'locked'),
-    hs('WALKWAY ▸', 1516, 327, 230, 293, () => onOpen('walkway'), 'mid'));
+  const mbView = el('div', { class: 'mb-view' }, [el('div', { class: 'mb-snow' }), el('div', { class: 'mb-snow s2' }), mbRead]);   // on top of the painted window: drifting snow, the depth readout, darker with depth
+  medbay.append(artImg('medbay'), mbView,
+    hs('EXAM TABLE', 1070, 770, 600, 490, () => onOpen('medbay-station'), 'mid', 'locked'),
+    hs('WALKWAY ▸', 1669, 377, 225, 509, () => onOpen('walkway'), 'mid'));   // the round hatch on the right
   // launch bay (TempLaunchbay art, 1920x1080, a temporary frame): the control console is on the left, the door to the walkway beyond it,
   // the inner airlock straight ahead, Remora and a second craft on their racks to the right. The ceiling map will show door and tether status.
   const bay = el('div', { class: 'scene bay', hidden: true });
@@ -192,7 +192,7 @@ export function createScene(stage, { onOpen }) {
     inQuarters: false, where: 'bridge',
     show(which) {
       api.where = which; api.inQuarters = which === 'quarters';
-      document.body.classList.toggle('stage-4x3', ['bridge', 'walkway', 'quarters', 'science', 'launchbay'].includes(which));   // the retro scenes are 4:3, the others are still 16:9
+      document.body.classList.toggle('stage-4x3', ['bridge', 'walkway', 'quarters', 'science', 'launchbay', 'medbay'].includes(which));   // the retro scenes are 4:3, the others are still 16:9
       window.dispatchEvent(new Event('resize'));
       bridge.hidden = which !== 'bridge'; quarters.hidden = which !== 'quarters'; walkway.hidden = which !== 'walkway'; walkway2.hidden = which !== 'walkway2'; science.hidden = which !== 'science'; medbay.hidden = which !== 'medbay'; bay.hidden = which !== 'launchbay';
       cache.clear(); api.update();
