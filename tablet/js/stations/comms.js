@@ -78,7 +78,7 @@ export function mount(body) {
   const stamp = (m) => (m.gameClock != null ? gameDateText(m.gameClock).replace('  ', ', ').slice(0, -3) : when(m.receivedAt));
   let reading = null;   // { m, win, back, rowEl }
   const container = () => body.closest('#station') || body;
-  const rectIn = (box, host) => { const r = box.getBoundingClientRect(), h = host.getBoundingClientRect(); return { x: r.left - h.left, y: r.top - h.top, w: r.width, h: r.height }; };
+  const rectIn = (box, host) => { const r = box.getBoundingClientRect(), h = host.getBoundingClientRect(), k = (host.offsetWidth || h.width) / (h.width || 1); return { x: (r.left - h.left) * k, y: (r.top - h.top) * k, w: r.width * k, h: r.height * k }; };   // in the host's own px (the page is scaled)
   function zoom(host, from, to, done) {
     const frame = el('div', { class: 'mail-zoom' }); host.append(frame);
     let k = 0; const N = 4; const place = (t) => { frame.style.cssText = `left:${from.x + (to.x - from.x) * t}px;top:${from.y + (to.y - from.y) * t}px;width:${from.w + (to.w - from.w) * t}px;height:${from.h + (to.h - from.h) * t}px`; };

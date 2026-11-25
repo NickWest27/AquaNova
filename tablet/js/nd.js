@@ -22,8 +22,8 @@ export function createND(wrap, { onPick, stage = false, units = 1, contours = fa
   function resize() {
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     const r = wrap.getBoundingClientRect();
-    const lw = stage ? wrap.offsetWidth : r.width, lh = stage ? wrap.offsetHeight : r.height;   // layout size
-    const sc = stage && lw ? r.width / lw : 1;                                                    // the stage's scale
+    const lw = wrap.offsetWidth || r.width, lh = wrap.offsetHeight || r.height;   // layout size
+    const sc = lw ? r.width / lw : 1;                                               // the stage's or the page's scale
     nd.w = Math.max(1, Math.round(lw / units)); nd.h = Math.max(1, Math.round(lh / units));
     canvas.width = Math.round(lw * sc * dpr); canvas.height = Math.round(lh * sc * dpr);
     canvas.style.width = lw + 'px'; canvas.style.height = lh + 'px';
@@ -273,7 +273,7 @@ export function createND(wrap, { onPick, stage = false, units = 1, contours = fa
     const r = canvas.getBoundingClientRect();
     const x = (e.clientX - r.left) * (nd.w / r.width), y = (e.clientY - r.top) * (nd.h / r.height);   // into canvas units
     if (onWskr) { let bw = null, dw = 40; for (const q of sim.s.wskrs || []) { const t = toward(ctr(), q), tt = turn(t), sc = (Math.min(nd.w, nd.h) / 2 - 24) / nd.range, d = Math.hypot(nd.w / 2 + tt.dx * sc - x, nd.h / 2 - tt.dy * sc - y); if (d < dw) { dw = d; bw = q; } } if (bw) { onWskr(bw); return; } }
-    let best = null, bd = 44 / ((stage ? r.width / (wrap.offsetWidth || r.width) : 1) * units); // a finger-sized pick radius, in canvas units
+    let best = null, bd = 44 / ((r.width / (wrap.offsetWidth || r.width)) * units); // a finger-sized pick radius, in canvas units
     for (const poi of sim.s.pois) { const p = px(poi); const d = Math.hypot(p.x - x, p.y - y); if (d < bd) { bd = d; best = poi; } }
     nd.sel = best; nd.draw(); onPick && onPick(best);
   });

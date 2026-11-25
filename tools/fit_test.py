@@ -81,6 +81,14 @@ def main():
         for st in ["remora", "bay"]:
             page.evaluate(f"window.__aq.open('{st}')"); page.wait_for_timeout(700); probe(st + " (craft out)")
         stations(["ped"])   # the PED is a pop-up over the rest: last
+        # the page is 4:3 and scales with the screen: the same layout on a bigger iPad (1366 x 1024) and a 16:9 screen
+        for vw, vh in ((1366, 1024), (1280, 720)):
+            page.set_viewport_size({"width": vw, "height": vh}); page.keyboard.press("Escape"); page.wait_for_timeout(300)
+            page.evaluate("window.__aq.open('sensors')"); page.wait_for_timeout(700)
+            r = page.evaluate("(()=>{const r=document.querySelector('#station').getBoundingClientRect(); return {w:r.width,h:r.height,x:r.left,y:r.top}})()")
+            k = min(vw / 1024, vh / 768)
+            check(f"at {vw}x{vh} the page is the largest 4:3 box, centred", abs(r["w"] - 1024 * k) < 2 and abs(r["h"] - 768 * k) < 2 and abs(r["x"] - (vw - r["w"]) / 2) < 2 and abs(r["y"] - (vh - r["h"]) / 2) < 2, r)
+            probe(f"sensors/sonar at {vw}x{vh}")
         check("no page errors", not errors, str(errors))
         browser.close()
     server.shutdown()

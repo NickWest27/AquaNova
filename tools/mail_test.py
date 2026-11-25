@@ -40,7 +40,8 @@ def main():
         last = [float(x) for x in re.findall(r"[\d.]+", fr[-1])] if fr else [0]
         check("open zoom grows toward the large window (last frame is large)", last[2] > 600, fr[-1] if fr else fr)
         page.screenshot(path=os.path.join(ROOT, "tools", "shots", "mail_open.png"))
-        page.mouse.click(8, 400); page.wait_for_timeout(100)
+        sx = page.evaluate("document.querySelector('#station').getBoundingClientRect().left")   # the page is a scaled 4:3 box: tap just inside its left edge
+        page.mouse.click(sx + 8, 400); page.wait_for_timeout(100)
         check("zoom frame runs back out", page.query_selector(".mail-zoom") is not None)
         page.wait_for_timeout(600)
         check("window is gone after closing", page.query_selector(".mail-win") is None and page.query_selector(".mail-back") is None)

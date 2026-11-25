@@ -21,7 +21,7 @@ export function createLever({ ticks = [], onInput, format }) {
     scale.querySelectorAll('span').forEach((s) => { s.style.top = (1 - +s.dataset.v) * (track.clientHeight - thumb.offsetHeight) + thumb.offsetHeight / 2 + 'px'; });
   }
   const setFromPointer = (e) => {
-    const r = track.getBoundingClientRect(); const th = thumb.offsetHeight;
+    const r = track.getBoundingClientRect(); const th = thumb.offsetHeight * (r.height / (track.offsetHeight || r.height));   // in screen px (the page may be scaled)
     const v = 1 - (e.clientY - r.top - th / 2) / (r.height - th);
     value = clamp(v, 0, 1); layout(); onInput && onInput(value);
   };

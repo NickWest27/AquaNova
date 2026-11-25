@@ -1,8 +1,10 @@
 # Screen names (shared vocabulary)
 
 ## Screen size and the no-scroll rule (owner, 2026-11-25)
-- **Target screen: 1180 × 820 CSS pixels**, an iPad Air in landscape (the owner plays on an iPad). `tools/smoke.py` and `tools/fit_test.py` use this size.
-- **Display pages fit this screen without scrolling**, in their normal busy state (for example all four WSKRs out, or one selected).
+- **Station pages are 4:3, like the scenes, and scale with the screen.** A page is laid out once at **1024 × 768** (the stage's 1920 × 1440 divided by 1.875) and `fit()` in `tablet/js/app.js` scales it with one transform into the largest 4:3 box inside the safe area, centred; the rest of the screen is a dark letterbox. So a page looks the same on every iPad. `rem` is a fixed 16 px (times the user's zoom) for the same reason.
+- The owner's iPad (1180 × 820, an iPad Air in landscape) shows the page at about 1.07×. `tools/smoke.py` and `tools/fit_test.py` use that screen; `fit_test.py` also checks 1366 × 1024 and 1280 × 720.
+- **Display pages fit the 1024 × 768 page without scrolling**, in their normal busy state (for example all four WSKRs out, or one selected).
+- Code that measures the screen must allow for the page scale: use `offsetWidth`/`offsetHeight` for layout sizes and `getBoundingClientRect()` only for screen positions (see `nd.js` `resize()`, `ui.js` slider, `comms.js` `rectIn`).
 - **Allowed to scroll:** the logbook, mail, the Comms contact directory, and the PED's list pages (Tasks, Contacts, Findings, Journal, Settings; the PED is a small handheld screen). The lab's Research list may scroll once it grows past one screen.
 - Ways used to make pages fit: tiles that share a column equally (WSKRs), two or three cards to a row (Launch Bay, lab Research), a screen beside its controls (lab Analysis, Remora), a picker instead of a button per item (shuttle "Send to…"), short spec lines instead of paragraphs.
 - **Test:** `python3 tools/fit_test.py` opens every station and tab (and harder states: WSKR in manual control, Remora out, shuttle alongside) and fails on any part of a page that scrolls or is cut off. Screenshots: `tools/shots/fit_*.png`. Add new pages and states to it.

@@ -98,11 +98,17 @@ const syncUI = frameThrottle(() => {
 });
 
 // ---------- scene scaling: one transform ----------
+const PAGE_W = 1024, PAGE_H = 768;   // station pages: 4:3, the stage's 1920x1440 / 1.875
+let safe = null;
 function fit() {
   const wrap = $('#scene-wrap'), stage = $('#stage');
-  if (!wrap || !stage) return;
-  const w = wrap.clientWidth;
-  if (w) stage.style.transform = `scale(${w / 1920})`;
+  if (wrap && stage) { const w = wrap.clientWidth; if (w) stage.style.transform = `scale(${w / 1920})`; }
+  // the station page: the largest 4:3 box inside the safe area, centred, scaled by one transform
+  const st = $('#station'); if (!st) return;
+  if (!safe) { safe = document.createElement('div'); safe.style.cssText = 'position:fixed;left:0;top:0;width:0;height:0;visibility:hidden;pointer-events:none;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)'; document.body.append(safe); }
+  const cs = getComputedStyle(safe), T = parseFloat(cs.paddingTop) || 0, R = parseFloat(cs.paddingRight) || 0, B = parseFloat(cs.paddingBottom) || 0, L = parseFloat(cs.paddingLeft) || 0;
+  const W = window.innerWidth - L - R, H = window.innerHeight - T - B, k = Math.min(W / PAGE_W, H / PAGE_H);
+  st.style.transform = `translate(${Math.round(L + (W - PAGE_W * k) / 2)}px, ${Math.round(T + (H - PAGE_H * k) / 2)}px) scale(${k})`;
 }
 
 // ---------- PED: a pop-up on top of the current screen, not a station ----------
@@ -338,7 +344,7 @@ async function boot() {
     $('#splash').hidden = true; $('#shell').hidden = false;
     scene = createScene($('#stage'), { onOpen: openScene });
     const st = buildDock();
-    new ResizeObserver(fit).observe($('#scene-wrap')); fit();
+    new ResizeObserver(fit).observe($('#scene-wrap')); window.addEventListener('resize', fit); fit();
     boarded = true;
     const awayRep = catchUp();   // the app was closed while the crew had the con: work out what happened
     if (awayRep) pendingModals.push(() => showBriefing(awayRep));

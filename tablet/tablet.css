@@ -1,7 +1,8 @@
 /* Aqua Nova: tablet edition.
    Design rules:
-   - One scale. The bridge scene is a 1920x1080 stage scaled by ONE transform.
-     Everything else uses rem, and rem follows the screen (vmin), never --scale math.
+   - One scale. The scenes are a 1920x1440 (4:3) stage scaled by ONE transform. Station pages are a 1024x768 (4:3) page
+     scaled the same way (fit() in app.js), so every page is laid out once and looks the same on any screen.
+   - rem is a fixed 16px (times the user's zoom), not the screen size: inside the scaled pages the scale does that job.
    - Touch first: every control is at least 3.4rem tall. No hover-only anything.
    - Cheap to draw: no backdrop-filter, no big blurs, animations use opacity/transform only.
 */
@@ -29,8 +30,8 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 html {
-  /* 16px on small tablets, up to 21px on large ones. User zoom multiplies it. */
-  font-size: calc(clamp(16px, 2.15vmin, 21px) * var(--zoom));
+  /* a fixed 16px: the scenes and station pages scale as a whole (one transform). User zoom multiplies it. */
+  font-size: calc(16px * var(--zoom));
   background: var(--bg);
 }
 
@@ -180,14 +181,16 @@ body.show-labels .hs, body.show-labels .door { border-color: rgba(100,255,218,0.
 .dock-status .ok { color: var(--green); } .dock-status .warn { color: var(--amber); } .dock-status .bad { color: var(--red); }
 
 /* ---------- Station overlay ---------- */
+/* A station page: a 1024x768 (4:3) page, the stage's 1920x1440 divided by 1.875. fit() in app.js scales and centres it in the
+   largest 4:3 box on the screen (the same box as the scenes); the wide shadow letterboxes the rest. */
 #station {
-  position: absolute; inset: 0; z-index: 20;
+  position: absolute; left: 0; top: 0; width: 1024px; height: 768px; z-index: 20; transform-origin: 0 0;
   display: flex; flex-direction: column;
-  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
   background: linear-gradient(180deg, #071a2c, #04101f);
+  box-shadow: 0 0 0 4000px #02070d;
   animation: stIn 0.16s ease-out;
 }
-@keyframes stIn { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes stIn { from { opacity: 0; } to { opacity: 1; } }   /* opacity only: the transform is the page scale */
 .st-head { flex: none; display: flex; align-items: center; gap: 1rem; padding: 0.6rem 0.9rem; border-bottom: 2px solid var(--line); }
 .st-title { font-size: 1.35rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; }
 .st-chips { margin-left: auto; display: flex; gap: 1.4rem; font: 700 1rem var(--mono); color: var(--dim); }
@@ -852,3 +855,4 @@ input.mix { width: 100%; height: 2.4rem; accent-color: var(--cyan); }
 .rem-low > .card { margin: 0; } .rem-low > .card:only-child, .rem-low > .card:first-child:has(+ .card[hidden]) { grid-column: 1 / -1; }
 .wk-cmds { gap: 0.35rem; } .wk-cmds .btn.chip { min-height: 2.6rem; padding: 0 0.8rem; font-size: 0.82rem; }   /* compact, so manual control fits in two rows */
 .cv-map canvas { display: block; }   /* no gap under an inline canvas */
+.cp-btns { flex-wrap: nowrap; } .cp-btns .cp-step { flex: 1 1 0; min-width: 0; padding: 0 0.3rem; font-size: 0.78rem; white-space: nowrap; }   /* one row each, so Comms Controls fits the page */
