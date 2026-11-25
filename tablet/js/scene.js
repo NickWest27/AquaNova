@@ -104,16 +104,13 @@ export function createScene(stage, { onOpen }) {
   const sign = (text, corners, h = 120) => slanted('wsign-box', el('div', { class: 'wsign', style: `height:${h}px`, text }), 412, h, corners);
   const walkway = el('div', { class: 'scene walkway', hidden: true });
   walkway.append(
-    el('img', { class: 'frame', src: 'assets/walkway.webp', alt: '', draggable: 'false', decoding: 'async' }),
-    sign('SCIENCE', [[222, 45], [437, 165], [435, 227], [237, 142]]),
-    sign('MEDICAL', [[463, 177], [570, 235], [568, 290], [463, 243]]),
-    sign('QUARTERS', [[1483, 172], [1683, 62], [1680, 155], [1483, 238]]),
-    sign('BRIDGE', [[862, 312], [1068, 312], [1068, 355], [862, 355]], 86),
-    door('SCIENCE', 165, 240, 230, 720, 'science'),
-    door('MEDICAL', 446, 304, 116, 536, 'medbay'),
-    door('QUARTERS', 1524, 240, 237, 710, 'quarters'),
-    door('BRIDGE', 805, 377, 323, 293, 'bridge'),
-    hs('AN-1 DECK ▼', 560, 900, 800, 180, () => onOpen('walkway2'), 'mid'));      // walk on to the next section
+    el('img', { class: 'frame retro', src: 'retro/assets/walkway.png', alt: '', draggable: 'false', decoding: 'async' }),
+    // retro frame (320x240 art at 6x): the BRIDGE sign is painted in the art, so the game draws no signs here
+    door('SCIENCE', 150, 260, 230, 940, 'science'),
+    door('MEDICAL', 380, 380, 110, 680, 'medbay'),
+    door('QUARTERS', 1600, 300, 180, 900, 'quarters'),
+    door('BRIDGE', 780, 470, 380, 390, 'bridge'),
+    hs('AN-1 DECK ▼', 500, 1230, 920, 210, () => onOpen('walkway2'), 'mid'));      // walk on to the next section
   // walkway AN-1 (concept art): the junction past A1. Launch Bay on the left, Engineering on the right; the sign sits in the cutout.
   const walkway2 = el('div', { class: 'scene walkway2', hidden: true });
   walkway2.append(
@@ -191,7 +188,7 @@ export function createScene(stage, { onOpen }) {
     inQuarters: false, where: 'bridge',
     show(which) {
       api.where = which; api.inQuarters = which === 'quarters';
-      document.body.classList.toggle('stage-4x3', which === 'bridge');   // the retro bridge is 4:3, the other scenes are still 16:9
+      document.body.classList.toggle('stage-4x3', which === 'bridge' || which === 'walkway');   // the retro scenes are 4:3, the others are still 16:9
       window.dispatchEvent(new Event('resize'));
       bridge.hidden = which !== 'bridge'; quarters.hidden = which !== 'quarters'; walkway.hidden = which !== 'walkway'; walkway2.hidden = which !== 'walkway2'; science.hidden = which !== 'science'; medbay.hidden = which !== 'medbay'; bay.hidden = which !== 'launchbay';
       cache.clear(); api.update();
