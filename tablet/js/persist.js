@@ -35,12 +35,13 @@ export function snapshotSim() {
     gameState.updateProperty('navigation.fixes', s.fixes.map((f) => (f.type === 'waypoint' ? { name: f.name, id: f.id, lat: +f.lat.toFixed(5), lon: +f.lon.toFixed(5), depth: f.depth } : { poi: f.name })));
     gameState.updateProperty('navigation.wpN', s.wpN);
     gameState.updateProperty('navigation.docked', !!s.docked);
-    gameState.updateProperty('navigation.wskrs', s.wskrs.map((w) => ({ lat: +w.lat.toFixed(5), lon: +w.lon.toFixed(5), n: w.n, name: w.name, mode: w.mode, target: w.target, trail: w.mode === 'trail' ? w.trail : undefined, bat: +(w.bat == null ? 100 : w.bat).toFixed(1), dead: w.dead || undefined, heading: w.heading == null ? undefined : Math.round(w.heading), pat: w.pat ? { lat: +w.pat.lat.toFixed(5), lon: +w.pat.lon.toFixed(5), k: w.pat.k, t: 0, spec: w.pat.spec } : undefined })));
+    gameState.updateProperty('navigation.wskrs', s.wskrs.map((w) => ({ lat: +w.lat.toFixed(5), lon: +w.lon.toFixed(5), n: w.n, name: w.name, mode: w.mode, target: w.target, trail: w.mode === 'trail' ? w.trail : undefined, auto: w.mode === 'trail' && w.auto ? true : undefined, bat: +(w.bat == null ? 100 : w.bat).toFixed(1), dead: w.dead || undefined, heading: w.heading == null ? undefined : Math.round(w.heading), pat: w.pat ? { lat: +w.pat.lat.toFixed(5), lon: +w.pat.lon.toFixed(5), k: w.pat.k, t: 0, spec: w.pat.spec } : undefined })));
     gameState.updateProperty('navigation.bay', { doorDmg: +((s.bay && s.bay.doorDmg) || 0).toFixed(2), op: s.bay && s.bay.op ? { kind: s.bay.op.kind, craft: s.bay.op.craft, n: s.bay.op.n, t: Math.round(s.bay.op.t), dur: Math.round(s.bay.op.dur), air: s.bay.op.air || 0 } : null, base: (s.bay && s.bay.base) || 0, rearm: s.bay && s.bay.rearm ? { t: Math.round(s.bay.rearm.t), dur: Math.round(s.bay.rearm.dur), load: s.bay.rearm.load } : null, relaunch: (s.bay && s.bay.relaunch) || {}, launchAll: !!(s.bay && s.bay.launchAll) });
     gameState.updateProperty('navigation.rack', s.rack || {});
     gameState.updateProperty('navigation.shuttle', s.shuttle ? { state: s.shuttle.state, mode: s.shuttle.mode, bat: +s.shuttle.bat.toFixed(1), o2: +(s.shuttle.o2 == null ? 100 : s.shuttle.o2).toFixed(1), lat: s.shuttle.lat, lon: s.shuttle.lon, dest: s.shuttle.dest || null, dead: s.shuttle.dead || undefined, air: s.shuttle.air || 0, pilots: s.shuttle.pilots, pax: s.shuttle.pax, ashore: s.shuttle.ashore, stay: s.shuttle.stay || undefined, ...Object.fromEntries(['depth', 'holdDepth', 'ordKt', 'ordHdg', 'mission', 'queue', 'lost', 'missed', 'nextCheck', 'lastContact', 'supply', 'surfUntil', 'attempt', 'pending', 'pat'].filter((k) => s.shuttle[k] != null).map((k) => [k, s.shuttle[k]])), standoff: s.shuttle.standoff || undefined, boarding: s.shuttle.boarding || undefined } : null);
     gameState.updateProperty('navigation.wskrForm', s.wskrForm);
     gameState.updateProperty('navigation.wskrAuto', s.wskrAuto !== false);
+    gameState.updateProperty('navigation.wskrChased', s.wskrChased || []);   // contacts the auto-intercept has already chased (sonar.js): each only once
     gameState.updateProperty('navigation.selContact', s.selContact || null);
     gameState.updateProperty('navigation.away', sim.away || null);   // "crew has the con" plan (away.js)
     gameState.updateProperty('navigation.wskrDepth', s.wskrDepth);
@@ -80,7 +81,7 @@ export function restoreSim() {
   s.docked = (nav.docked == null ? (nav.depth || 0) === 0 : !!nav.docked) && !!s.at && s.at.type === 'dock';   // saves from before docking existed: parked at the dock counts as docked
   seafloor.setChart(nav.charted || '');
   s.wskrs = Array.isArray(nav.wskrs) ? nav.wskrs.map((w) => ({ busy: 0, mode: 'escort', target: null, bat: 100, ...w })) : [];
-  s.wskrForm = nav.wskrForm === 'tight' ? 'tight' : 'loose'; s.wskrAuto = nav.wskrAuto !== false;
+  s.wskrForm = nav.wskrForm === 'tight' ? 'tight' : 'loose'; s.wskrAuto = nav.wskrAuto !== false; s.wskrChased = Array.isArray(nav.wskrChased) ? [...nav.wskrChased] : [];
   s.bay = { doorDmg: (nav.bay && nav.bay.doorDmg) || 0, op: nav.bay && nav.bay.op ? { t: 0, ...nav.bay.op } : null, base: (nav.bay && nav.bay.base) || 0, rearm: nav.bay && nav.bay.rearm ? { ...nav.bay.rearm } : null, relaunch: (nav.bay && nav.bay.relaunch) || {}, launchAll: !!(nav.bay && nav.bay.launchAll) };
   s.rack = nav.rack && typeof nav.rack === 'object' ? { ...nav.rack } : {};
   s.shuttle = nav.shuttle && nav.shuttle.state ? { state: 'bay', mode: 'follow', bat: 100, ...nav.shuttle } : { state: 'bay', mode: 'follow', bat: 100 };

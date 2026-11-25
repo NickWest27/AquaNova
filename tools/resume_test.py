@@ -34,10 +34,12 @@ def main():
         # resume: a game that has read the welcome and reloads starts at the logbook
         js("(await import('./js/persist.js')).gameState.updateProperty('progress.read_welcome', true); (await import('./js/persist.js')).checkpoint && 0; return 1")
         page.evaluate("window.__aq.scene('bridge')")
-        js("const P=await import('./js/persist.js'); P.saveNow ? P.saveNow() : 0; return 1")
+        js("sim.s.wskrChased=['ship:1:2:3']; const P=await import('./js/persist.js'); P.saveNow ? P.saveNow() : 0; return 1")
         page.goto(base + "?resume=1"); page.wait_for_function("!document.getElementById('board-btn').disabled", timeout=15000)
         page.tap("#board-btn"); page.wait_for_timeout(1500)
         page.is_visible(".modal .btn") and page.tap(".modal .btn")
+        ch = js("return sim.s.wskrChased")
+        check("the WSKR auto-intercept's chased list survives a reload", ch == ['ship:1:2:3'], ch)
         title = page.inner_text(".st-title") if page.is_visible(".st-title") else ""
         check("resuming opens the logbook", "logbook" in title.lower(), title)
         ctx.close(); browser.close()

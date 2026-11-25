@@ -178,7 +178,7 @@ sim.afterStep = sim.afterStep || []; sim.afterStep.push(step);
 // ---- the screen intercepts what it has not identified ----
 // Every 5 game seconds: a WSKR in formation is sent to close on any unidentified ship the sonar has a fix on, nearest WSKR first, one at a time, and at least one
 // WSKR stays in the screen. When the contact is identified the WSKR is released back to its station. Off with sim.setWskrAuto(false). A contact is only chased once.
-const autoSent = new Set(); let autoAt = 0;
+let autoAt = 0;   // the chased list is sim.s.wskrChased (saved), so a reload does not send a WSKR after the same contact again
 /** Leash: the screen only starts a chase when the contact is within AUTO_START_NM of the ship, and breaks off if the WSKR gets beyond AUTO_LEASH_NM. Sent by hand (Investigate) there is no limit. */
 export const AUTO_START_NM = 6, AUTO_LEASH_NM = 8;
 sim.hooks.push(() => {
@@ -192,10 +192,10 @@ sim.hooks.push(() => {
   }
   const free = s.wskrs.filter((w) => w.mode === 'escort' && !w.dead && !w.arrived);
   if (free.length < 2) return;
-  const c = list.find((x) => x.kind === 'ship' && !x.ident && !x.lost && x.pos && toward(s, x.pos).nm <= AUTO_START_NM && !x.inv.length && !autoSent.has(x.id));
+  const c = list.find((x) => x.kind === 'ship' && !x.ident && !x.lost && x.pos && toward(s, x.pos).nm <= AUTO_START_NM && !x.inv.length && !(s.wskrChased || []).includes(x.id));
   if (!c) return;
   const near = free.sort((a, b) => toward(a, c.pos).nm - toward(b, c.pos).nm)[0];
   const w = sim.trailWskr({ kind: 'ship', id: c.ref.id }, near.n); if (!w) return;
-  w.auto = true; autoSent.add(c.id);
+  w.auto = true; s.wskrChased = [...(s.wskrChased || []), c.id].slice(-200);
   tell('sensors', `${wskrName(w)} is closing on an unidentified contact, bearing ${String(Math.round(c.bearing)).padStart(3, '0')}, Captain.`);
 });

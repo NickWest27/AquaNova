@@ -26,7 +26,7 @@ The owner works from an iPad and a phone, does not use git, and wants Claude to 
 
 ## Ship identity (2026-11-25)
 - Traffic is rebuilt from `world.seed` on every load, so a ship's identity used to reset on reload (and the WSKR auto-intercept could chase it again). Now `traffic.js` keeps the ids of identified ships in `traffic.known`, saved as `world.known` (like `world.sunk`), and reapplies them in `step()`. Scans (`sonar.js`) and hails (`commsModel.js`) are caught there too. A new game clears it (`gameState.reset()`). Test: `traffic_test.py` ("stays identified after the traffic is rebuilt"). Tests that set `ident=false` by hand also delete the id from `traffic.known`.
-- The auto-intercept "already chased" list (`autoSent` in `sonar.js`) is still not saved. With identity saved this only matters for a contact the screen gave up on at the 8 nm leash: after a reload it may be chased once more.
+- The auto-intercept "already chased" list is `sim.s.wskrChased`, saved as `navigation.wskrChased` (last 200 ids). A WSKR's `auto` flag (chasing for the screen, so leashed and released on identity) is saved with it. Test: `resume_test.py`.
 
 ## Retro skin: the approach (decided 2026-11-25)
 **The owner's rule: RESKIN, NOT REDESIGN.** Keep the real game, screens, buttons and layout. Only the frames and art assets become retro (pixel art). The info displays (charts, text, buttons) stay as they were, and may be made more retro later, as a separate step the owner asks for. Why: see `RETRO_SKIN_PLAN.md`.
