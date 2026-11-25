@@ -6,6 +6,7 @@ import { createSynth } from './synth.js';
 import { createND } from './nd.js';
 import { el } from './util.js';
 import { seafloor } from './seafloor.js';
+import { mapZoom } from './mapZoom.js';
 
 const RANGES = [0.25, 0.5, 1, 2, 4];
 
@@ -24,10 +25,9 @@ export function mountCraftView(parent, { getCraft, title, range = 0.5, readouts,
     r.brg.textContent = `BRG ${String(Math.round(t.brg) % 360).padStart(3, '0')}°`; r.rng.textContent = `RNG ${t.nm < 10 ? t.nm.toFixed(2) : t.nm.toFixed(1)} nm`;
     r.arrow.style.visibility = 'visible'; r.arrow.style.transform = `rotate(${rel}deg)`;
   };
-  const rangeLbl = el('span', { class: 'cv-range' });
   const step = (d) => { const i = RANGES.indexOf(rng); rng = RANGES[Math.max(0, Math.min(RANGES.length - 1, i + d))]; nd.setRange(rng); sig = ''; draw(); };
-  const bar = el('div', { class: 'row' }, el('button', { class: 'btn chip', text: 'Range −', onclick: () => step(-1) }), el('button', { class: 'btn chip', text: 'Range +', onclick: () => step(1) }), rangeLbl);
-  parent.append(row); if (!only) parent.append(bar);
+  const zc = mapZoom(step), rangeLbl = zc.label;   // on the contour map; it sets the profile range too
+  parent.append(row); if (!only) map.append(zc.box);
   const none = { draw() {}, setRange() {}, destroy() {} };
   const pr = only ? none : createProfile(prof), sy = createSynth(synth), nd = only ? none : createND(map, { stage: false, units: 1, contours: true, rings: false, craft: getCraft });
   nd.range = rng;
@@ -38,7 +38,7 @@ export function mountCraftView(parent, { getCraft, title, range = 0.5, readouts,
     const now = Date.now(); if (key === sig && now - last < 1000) return; sig = key; last = now;
     pr.draw({ ...c, sonar: true }, rng);
     sy.draw({ ...c, speed: c.kt || 0 });   // a window: fixed field of view and distance (the range buttons set the profile and map)
-    nd.draw(); rangeLbl.textContent = `Range ${rng} nm`;
+    nd.draw(); rangeLbl.textContent = `${rng} nm`;
   }
   draw();
   return { update: draw, destroy() { nd.destroy(); } };

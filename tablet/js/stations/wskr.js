@@ -9,6 +9,7 @@ import { selectedContact } from '../contacts.js';
 import { launchWskr, launchText, rackBat, busy, MIN_LAUNCH_PCT } from '../bayops.js';
 import { WSKR_CHARGE_H } from '../sim.js';
 import { mountCraftView } from '../craftview.js';
+import { mapZoom } from '../mapZoom.js';
 import { createND } from '../nd.js';
 import { GATES_ON } from '../unlocks.js';
 import { research } from '../science.js';
@@ -31,9 +32,8 @@ export function mountWskrPanel(body) {
   body.append(el('div', { class: 'wk' }, mapBox, side, cmds));
   const nd = createND(mapBox, { trackUp: true, contours: true, rings: false, bigWskr: true, focus: () => cur(), onWskr: (q) => toggle(q.n) });
   nd.range = range;
-  const rangeLbl = el('span', { class: 'wk-range' });
   const zoom = (d) => { const i = RANGES.indexOf(range); range = RANGES[Math.max(0, Math.min(RANGES.length - 1, i + d))]; nd.setRange(range); drawKey = ''; update(); };
-  mapBox.append(el('div', { class: 'wk-zoom' }, el('button', { class: 'btn chip', text: '−', 'aria-label': 'Zoom out', onclick: () => zoom(1) }), rangeLbl, el('button', { class: 'btn chip', text: '+', 'aria-label': 'Zoom in', onclick: () => zoom(-1) })));
+  const zc = mapZoom(zoom), rangeLbl = zc.label; mapBox.append(zc.box);
   const viewBox = el('div', { class: 'wk-view' });
   const cv = mountCraftView(viewBox, { only: 'synth', title: () => { const w = cur(); return w ? wskrName(w) : 'WSKR'; }, range: 2, readouts: () => { const c = selectedContact(); return { ship: sim.s, target: c && { name: c.label, lat: c.lat, lon: c.lon } }; }, getCraft: () => { const w = cur(); return w ? wskrCraft(w) : null; } });
   const say = (t) => tell('sensors', t);

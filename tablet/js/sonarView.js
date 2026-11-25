@@ -171,7 +171,7 @@ export function createSnrView({ bbtn }) {
       srcList.replaceChildren(...[0, 3].map((i) => el('div', { class: 'rowN' }, ...bs.slice(i, i + 3))).filter((r) => r.children.length));
     }
   }
-  return { make, c, v: [bbtn('−', () => zoom(-1), 'sym'), el('div', { class: 'rngbox' }, el('small', { text: 'RANGE' }), rangeTxt), bbtn('+', () => zoom(1), 'sym')], expand: null, side };
+  return { make, c, v: [bbtn('−', () => zoom(1), 'sym'), el('div', { class: 'rngbox' }, el('small', { text: 'RANGE' }), rangeTxt), bbtn('+', () => zoom(-1), 'sym')], expand: null, side };
 }
 
 /** The Sensors station's main page: the SNR display with its controls and range buttons under it, in station buttons. */

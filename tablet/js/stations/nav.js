@@ -3,6 +3,7 @@ import { createND } from '../nd.js';
 import { el, pad } from '../util.js';
 import { openPlotDialog } from '../plot.js';
 import { openSearchDialog } from '../searchDialog.js';
+import { mapZoom } from '../mapZoom.js';
 
 export function mount(body) {
   body.classList.add('nav-st');
@@ -31,11 +32,8 @@ export function mount(body) {
         el('button', { class: 'btn primary grow', text: 'Plot a course', onclick: () => openPlotDialog({ preselect: sel, onPlotted: renderPick }) }),
         el('button', { class: 'btn', text: 'Clear', onclick: () => { sel = null; nd.sel = null; nd.draw(); renderPick(); } })));
   };
-  const zoomRow = el('div', { class: 'range-row card' },
-    el('button', { class: 'btn sq', text: '−', 'aria-label': 'Decrease range', onclick: () => { rangeTxt.textContent = nd.zoom(-1) + ' nm'; } }),
-    el('div', { class: 'lbl', text: 'Map range' }),
-    el('button', { class: 'btn sq', text: '+', 'aria-label': 'Increase range', onclick: () => { rangeTxt.textContent = nd.zoom(1) + ' nm'; } }));
-  side.insertBefore(zoomRow, pick);
+  const zc = mapZoom((d) => { if (!nd) return; const r = nd.zoom(d) + ' nm'; rangeTxt.textContent = r; zc.label.textContent = r; });
+  zc.label.textContent = rangeTxt.textContent; wrap.append(zc.box);
 
   requestAnimationFrame(() => { nd = createND(wrap, { onPick: (p) => { sel = p; renderPick(); } }); renderPick(); update(); });
   function update() {

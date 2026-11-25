@@ -257,7 +257,6 @@ body.show-labels .hs, body.show-labels .door { border-color: rgba(100,255,218,0.
 .readouts { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
 .readouts .card { padding: 0.6rem 0.8rem; }
 .readouts .card.wide { grid-column: span 2; }
-.range-row { display: grid; grid-template-columns: var(--tap) 1fr var(--tap); gap: 0.6rem; align-items: center; text-align: center; }
 .wpt-card .num { font-size: 1.4rem; }
 
 /* Helm station */
@@ -531,7 +530,6 @@ textarea.field { min-height: 6rem; resize: none; }
 .cv-ro { position: absolute; bottom: 8px; display: flex; flex-direction: column; gap: 0.1rem; align-items: center; padding: 0.3rem 0.55rem; text-align: center; border-radius: 8px; background: rgba(0,0,30,0.6); color: rgba(225,240,255,0.95); font-size: 0.8rem; line-height: 1.25; pointer-events: none; }
 .cv-ro.l { left: 8px; } .cv-ro.r { right: 8px; } .cv-ro b { display: block; letter-spacing: 0.04em; } .cv-arrow { font-size: 1.3rem; color: #3ddc84; display: inline-block; } .cv-ro.r .cv-arrow { color: #ffe14a; } .cv-synth .synth-canvas { width: 100%; height: auto; aspect-ratio: 16 / 9; border-radius: 10px; display: block; border: 2px solid #3a3ab8; }
 .cv-map { flex: 0 0 26%; position: relative; aspect-ratio: 1; border-radius: 10px; overflow: hidden; border: 2px solid var(--line-soft); }
-.cv-range { color: var(--dim); font-size: 0.9rem; }
 
 /* mail: inbox rows and the 90s zoom window */
 .card.msg.mail-row { display: grid; grid-template-columns: 1rem 11rem minmax(0, 1fr) 9.5rem; gap: 1.1rem; align-items: center; text-align: left; width: 100%; padding: 1rem 1.4rem; color: inherit; font: inherit; cursor: pointer; }
@@ -693,8 +691,9 @@ input.mix { width: 100%; height: 2.4rem; accent-color: var(--cyan); }
 .wk { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: minmax(0, 1fr) auto; gap: 0.6rem; flex: 1; min-height: 0; }
 .wk-map { position: relative; min-height: 320px; border-radius: 10px; overflow: hidden; border: 2px solid #3a3ab8; background: #03121c; }
 .wk-map canvas { display: block; }
-.wk-zoom { position: absolute; top: 8px; right: 8px; display: flex; align-items: center; gap: 0.3rem; background: rgba(0,0,30,0.55); border-radius: 10px; padding: 0.15rem 0.3rem; }
-.wk-range { color: var(--dim); font-size: 0.85rem; min-width: 3.2rem; text-align: center; }
+/* Map zoom (mapZoom.js): round − and + in the top-right corner of every zoomable map. "+" zooms in. */
+.map-zoom { position: absolute; top: 8px; right: 8px; z-index: 3; display: flex; align-items: center; gap: 0.3rem; background: rgba(0,0,30,0.55); border-radius: 10px; padding: 0.15rem 0.3rem; }
+.map-range { color: var(--dim); font-size: 0.85rem; min-width: 3.2rem; text-align: center; }
 .wk-side { overflow-y: auto; -webkit-overflow-scrolling: touch; display: flex; flex-direction: column; gap: 0.5rem; min-height: 0; }
 .wk-title { display: flex; gap: 0.9rem; align-items: baseline; flex-wrap: wrap; } .wk-title b { font-size: 1.25rem; letter-spacing: 0.1em; color: var(--cyan); }
 .wk-tile, .wk-big { display: flex; text-align: left; gap: 0.8rem; align-items: center; padding: 0.55rem 0.8rem; border-radius: 12px; background: rgba(100,255,218,0.05); border: 1px solid var(--line-soft); color: inherit; font: inherit; }

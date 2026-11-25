@@ -1,6 +1,6 @@
 # Handoff (read this first when a session starts; update it before parking)
 
-Last updated: 2026-11-25. Branch to work on: `tablet`. Repo: NickWest27/AquaNova (GitHub Pages path `/AquaNova/`). Last change: bridge original picture with real transparent holes; before that the medbay on the owner's picture (after bridge, walkway A1, quarters, science lab, launch bay).
+Last updated: 2026-11-25. Branch to work on: `tablet`. Repo: NickWest27/AquaNova (GitHub Pages path `/AquaNova/`). Last change: one zoom direction everywhere ("+" zooms in) and round map zoom buttons; before that the bridge original picture with real transparent holes; before that the medbay on the owner's picture (after bridge, walkway A1, quarters, science lab, launch bay).
 
 ## Starting a Claude Code session (owner's workflow since 2026-11-25)
 The owner works from an iPad and a phone, does not use git, and wants Claude to do all of it.
@@ -17,6 +17,12 @@ The owner works from an iPad and a phone, does not use git, and wants Claude to 
 - `main` = the desktop version to come (16:9, 1920x1080); for now the same game as `tablet` at the branch split. `tablet` = the retro-skinned tablet version (pixel-art frames, 4:3 where reskinned). Palette: `data/palette.json`, `RETRO_PALETTE.md`; art rules for other AIs: `Guides/ASSET_SPEC.md`.
 - Test before pushing: `python3 tools/smoke.py` plus the relevant `tools/*_test.py`. Known failing before the retro work: `tern_test.py`, `bay_test.py` (ROV sample), `wskr_chase_test.py`, `notices_test.py`; `bridge_test.py` fails at the "Scan" step on the old page but its first checks (stations open) pass.
 - Before each push: `python3 tools/update_sw.py`, commit, push `tablet`.
+
+## Design defaults (owner, 2026-11-25)
+- **Zoom:** "+" always zooms in (shorter range), "−" zooms out, on every map and console.
+- **Zoomable maps** get the WSKR-page control: round − and + with the range between them, in the map's top-right corner. Use `mapZoom(step)` from `tablet/js/mapZoom.js` (class `.map-zoom`). In use: WSKR page, Nav station, Remora contour map.
+- **The bridge main screen is not tappable.** Its controls go on a desk console: the range − / + for NAV and SNR are on the right desk (`bridge.js`, `sonarView.js`).
+- Tests: `ui_test.py` (Nav), `sonar_test.py`, `remora_test.py`, `wskr_page_test.py`. `console_test.py` already failed before this change (it waits for `.nav-read`, which no longer exists); its range check was updated but is not reached.
 
 ## Retro skin: the approach (decided 2026-11-25)
 **The owner's rule: RESKIN, NOT REDESIGN.** Keep the real game, screens, buttons and layout. Only the frames and art assets become retro (pixel art). The info displays (charts, text, buttons) stay as they were, and may be made more retro later, as a separate step the owner asks for. Why: see `RETRO_SKIN_PLAN.md`.

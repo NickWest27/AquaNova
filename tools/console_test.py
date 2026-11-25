@@ -37,7 +37,7 @@ def main():
         page.screenshot(path=os.path.join(ROOT, "tools", "shots", "console_nav.png"))
         r0 = page.inner_text(".bc:visible .rng"); page.locator('.bc:visible .bbtn:text-is("+")').tap(); page.wait_for_timeout(200)
         r1 = page.inner_text(".bc:visible .rng")
-        check("+ increases range on the console", float(r1.split()[0]) > float(r0.split()[0]), (r0, r1))
+        check("+ zooms in on the console (shorter range)", float(r1.split()[0]) < float(r0.split()[0]), (r0, r1))
         for name, sel in (("HLM", ".bdisp .bd-helm"), ("SYS", ".bdisp .bd-sys"), ("VW", ".bdisp .bd.view"), ("NAV", ".bdisp .bd-nav")):
             page.locator(f'.selector .bbtn:text-is("{name}")').tap(); page.wait_for_timeout(300)
             check(f"{name} shows on the main screen", page.is_visible(sel))

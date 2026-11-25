@@ -119,7 +119,7 @@ export function createBridgeConsole({ top, main, display, center, left, right, o
     const showC = el('div', { class: 'bc shw' }, el('div', { class: 'rowN' }, showSw('ships', 'Ships'), showSw('subs', 'Subs'), showSw('base', 'Base'), showSw('orgs', 'Orgs'), showSw('labels', 'Labels')));
     const c = el('div', { class: 'bc' }, el('div', { class: 'rowN' }, dest, fix, routeB, plot));
     // View settings (right desk): range and PAN here, DSP and SHW added by the console.
-    const v = [bbtn('−', () => zoom(-1), 'sym'), el('div', { class: 'rngbox' }, el('small', { text: 'RANGE' }), rangeTxt), bbtn('+', () => zoom(1), 'sym')];   // the right desk is a bank of six: range first
+    const v = [bbtn('−', () => zoom(1), 'sym'), el('div', { class: 'rngbox' }, el('small', { text: 'RANGE' }), rangeTxt), bbtn('+', () => zoom(-1), 'sym')];   // the right desk is a bank of six: range first
     function refresh() { set(rangeTxt, nds[0] ? nds[0].range + ' nm' : ''); plot.classList.toggle('on', !!sim.s.wpt); }
     return { make, c, v, extra: showC, expand: 'nav', side: refresh, nds, show, zoom, rangeTxt, panBy, panOff, panStep: () => (nds[0] ? nds[0].range * 0.25 : 1) };
   })();
