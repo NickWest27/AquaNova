@@ -81,7 +81,7 @@ export function createScene(stage, { onOpen }) {
   );
 
   // quarters
-  const qimg = el('img', { src: 'assets/quarters.webp', alt: '', draggable: 'false', style: 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover' });
+  const qimg = artImg('quarters');
   // Two things to collect, lying flat: the communicator pin on the desk and the PED on the bed.
   // flat(): a w x h item turned by `rot` degrees on a surface seen from the front, so it is squashed vertically.
   const flat = (cx, cy, w, h, rot, squash) => [[-w / 2, -h / 2], [w / 2, -h / 2], [w / 2, h / 2], [-w / 2, h / 2]].map(([x, y]) => {
@@ -89,15 +89,15 @@ export function createScene(stage, { onOpen }) {
   });
   const pinArt = el('div', { class: 'item-pin' }, el('img', { src: 'assets/comm-pin.webp', alt: '', draggable: 'false' }));
   const pedArt = el('div', { class: 'item-ped' }, el('i'), el('img', { src: 'assets/pda-frame.webp', alt: '', draggable: 'false' }));
-  const pinVis = slanted('item', pinArt, 90, 135, flat(565, 668, 90, 135, -32, 0.36));
-  const pedVis = slanted('item', pedArt, 120, 213, flat(1150, 688, 120, 213, 62, 0.37));
+  const pinVis = slanted('item', pinArt, 90, 135, flat(1440, 985, 90, 135, -32, 0.36));
+  const pedVis = slanted('item', pedArt, 120, 213, flat(520, 1130, 120, 213, 62, 0.37));
   const grab = (label, tag, x, y, w, h, target) => el('button', { class: 'pickup', hidden: true, style: `left:${x}px;top:${y}px;width:${w}px;height:${h}px`, 'aria-label': label, onclick: () => onOpen(target) }, el('span', { class: 'tag', text: tag }));
-  const pinGrab = grab('Pick up communicator', 'COMMUNICATOR', 490, 610, 150, 110, 'pickup'), pedGrab = grab('Pick up PED', 'PED', 1060, 630, 180, 120, 'pickup-ped');
+  const pinGrab = grab('Pick up communicator', 'COMMUNICATOR', 1370, 920, 150, 110, 'pickup'), pedGrab = grab('Pick up PED', 'PED', 430, 1060, 180, 120, 'pickup-ped');
   pinVis.hidden = pedVis.hidden = true;
   quarters.append(qimg,
-    hs('LOGBOOK', 210, 516, 290, 190, () => onOpen('log'), 'top'),
-    hs('SLEEP', 640, 610, 580, 250, () => onOpen('sleep'), 'mid'),
-    hs('TO WALKWAY', 1236, 120, 560, 700, () => onOpen('walkway'), 'mid'),
+    hs('LOGBOOK', 1480, 740, 340, 300, () => onOpen('log'), 'top'),
+    hs('SLEEP', 0, 930, 750, 430, () => onOpen('sleep'), 'mid'),
+    hs('TO WALKWAY', 800, 1150, 570, 290, () => onOpen('walkway'), 'mid'),
     pinVis, pedVis, pinGrab, pedGrab);
   // walkway hub (concept art A1): a tap area on each door, a lit sign on each black panel above a door.
   // Corners are the four corners of the glass in stage pixels (art is cropped to 1920x1080).
@@ -122,23 +122,26 @@ export function createScene(stage, { onOpen }) {
     hs('A1 DECK ▼', 560, 900, 800, 180, () => onOpen('walkway'), 'mid'));
   // science lab (science.png, 1920x1080): five cut-outs hold live screens that open the stations they show. The door leads out to the walkway.
   const sci = { banner: el('div', { class: 'sciscr' }), samples: el('div', { class: 'sciscr' }), analysis: el('div', { class: 'sciscr' }), research: el('div', { class: 'sciscr' }), remora: el('div', { class: 'sciscr' }) };
-  const sciFrame = el('img', { class: 'frame', src: 'assets/science.webp', alt: '', draggable: 'false', decoding: 'async' });
+  const sciFrame = artImg('science');
   const science = el('div', { class: 'scene science', hidden: true });
+  const rect2 = (x0, y0, x1, y1) => [[x0, y0], [x1, y0], [x1, y1], [x0, y1]];
   science.append(
-    slanted('', sci.banner, 350, 72, [[365, 215], [715, 225], [723, 289], [370, 282]]),
-    slanted('', sci.samples, 250, 206, [[1569, 110], [1816, 36], [1810, 242], [1566, 281]]),
-    slanted('', sci.analysis, 296, 186, [[1596, 335], [1887, 301], [1882, 487], [1596, 483]]),                 // Main Computer
-    slanted('', sci.research, 160, 172, [[1107, 345], [1265, 311], [1268, 482], [1109, 483]]),
-    slanted('', sci.remora, 190, 96, [[749, 378], [936, 378], [936, 472], [750, 475]]),
     sciFrame,
-    hs('SAMPLES', 666, 620, 680, 430, () => onOpen('lab-samples'), 'top'),                 // the island bench
-    hs('ANALYSIS', 1280, 540, 640, 300, () => onOpen('lab-analysis'), 'top'),     // the bench with the racks and the microscope
-    hs('RESEARCH', 0, 380, 240, 260, () => onOpen('lab-research'), 'bottom'),     // the machine on the left
-    hs('WALKWAY ▸', 345, 345, 255, 300, () => onOpen('walkway'), 'mid'),          // the door
-    hs('SAMPLES', 1530, 60, 330, 250, () => onOpen('lab-samples'), 'bottom'),             // the screens
-    hs('MAIN COMPUTER', 1590, 300, 310, 200, () => onOpen('lab'), 'bottom'),
-    hs('RESEARCH COMPUTER', 1100, 310, 175, 180, () => onOpen('lab-research'), 'bottom'),
-    hs('ROV STATION', 745, 370, 195, 110, () => onOpen('remora'), 'bottom'));
+    // the picture is opaque, so the live screens sit on top of its dark screens (art px x 6 for the stage)
+    slanted('', sci.banner, 350, 72, rect2(722, 320, 1078, 386)),                 // the bar on the back wall
+    slanted('', sci.samples, 250, 206, rect2(1181, 508, 1350, 612)),              // the black screen on the right wall
+    slanted('', sci.analysis, 296, 186, rect2(1678, 706, 1847, 828)),             // Main Computer (the CRT)
+    slanted('', sci.research, 160, 172, rect2(0, 367, 178, 621)),                 // the left wall monitor
+    slanted('', sci.remora, 190, 96, rect2(563, 662, 709, 762)),                  // the ROV console
+    hs('SAMPLES', 955, 810, 450, 450, () => onOpen('lab-samples'), 'top'),        // the island bench
+    hs('SAMPLES', 0, 700, 300, 400, () => onOpen('lab-samples'), 'top'),          // the left bench, test tubes and microscope
+    hs('ANALYSIS', 1550, 380, 370, 290, () => onOpen('lab-analysis'), 'top'),     // the reagent shelves on the right
+    hs('RESEARCH', 300, 520, 260, 240, () => onOpen('lab-research'), 'bottom'),   // the aquarium
+    hs('WALKWAY ▸', 835, 480, 215, 330, () => onOpen('walkway'), 'mid'),          // the door
+    hs('SAMPLES', 1170, 500, 190, 120, () => onOpen('lab-samples'), 'bottom'),    // the screen on the right wall
+    hs('MAIN COMPUTER', 1660, 690, 220, 160, () => onOpen('lab'), 'bottom'),
+    hs('RESEARCH COMPUTER', 0, 360, 180, 270, () => onOpen('lab-research'), 'bottom'),
+    hs('ROV STATION', 540, 650, 190, 140, () => onOpen('remora'), 'bottom'));
   // medbay (concept art). Treatment and crew health are not built yet; the exam table is a locked tap area for now.
   const medbay = el('div', { class: 'scene medbay', hidden: true });
   const mbRead = el('div', { class: 'mb-read' });
@@ -149,11 +152,11 @@ export function createScene(stage, { onOpen }) {
   // launch bay (TempLaunchbay art, 1920x1080, a temporary frame): the control console is on the left, the door to the walkway beyond it,
   // the inner airlock straight ahead, Remora and a second craft on their racks to the right. The ceiling map will show door and tether status.
   const bay = el('div', { class: 'scene bay', hidden: true });
-  bay.append(el('img', { class: 'frame', src: 'assets/launchbay.webp', alt: '', draggable: 'false', decoding: 'async' }),
-    hs('BAY CONTROL', 0, 505, 560, 515, () => onOpen('bay'), 'mid'),                       // the console: doors, craft, charging
-    hs('◂ WALKWAY', 455, 340, 175, 330, () => onOpen('walkway2'), 'mid'),                  // the door to the walkway
-    hs('INNER AIRLOCK', 750, 365, 420, 280, () => onOpen('bay-airlock'), 'mid', 'locked'), // not built yet
-    hs('REMORA', 1250, 480, 660, 230, () => onOpen('remora'), 'mid'));                     // the craft on the racks
+  bay.append(artImg('launchbay'),
+    hs('BAY CONTROL', 0, 690, 525, 630, () => onOpen('bay'), 'mid'),                       // the console: doors, craft, charging
+    hs('◂ WALKWAY', 180, 225, 195, 415, () => onOpen('walkway2'), 'mid'),                  // the door to the walkway
+    hs('INNER AIRLOCK', 730, 490, 470, 350, () => onOpen('bay-airlock'), 'mid', 'locked'), // not built yet
+    hs('REMORA', 1275, 640, 645, 375, () => onOpen('remora'), 'mid'));                     // the craft on the racks
   stage.append(bridge, quarters, walkway, walkway2, science, medbay, bay);
   // Labels are hidden for immersion. Press and hold anywhere on the scene to show them (they stay a moment after release).
   { let t = null, off = null, shown = 0;
@@ -189,7 +192,7 @@ export function createScene(stage, { onOpen }) {
     inQuarters: false, where: 'bridge',
     show(which) {
       api.where = which; api.inQuarters = which === 'quarters';
-      document.body.classList.toggle('stage-4x3', which === 'bridge' || which === 'walkway');   // the retro scenes are 4:3, the others are still 16:9
+      document.body.classList.toggle('stage-4x3', ['bridge', 'walkway', 'quarters', 'science', 'launchbay'].includes(which));   // the retro scenes are 4:3, the others are still 16:9
       window.dispatchEvent(new Event('resize'));
       bridge.hidden = which !== 'bridge'; quarters.hidden = which !== 'quarters'; walkway.hidden = which !== 'walkway'; walkway2.hidden = which !== 'walkway2'; science.hidden = which !== 'science'; medbay.hidden = which !== 'medbay'; bay.hidden = which !== 'launchbay';
       cache.clear(); api.update();
