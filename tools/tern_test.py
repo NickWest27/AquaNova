@@ -62,7 +62,7 @@ def main():
         who("Nicole"); tap()
         if page.locator(".comm-reply", has_text="Nicole Brooks").count(): page.locator(".comm-line").first.tap(); tap()
         line("Orders"); tap()
-        line("The Tern"); tap()   # orders are grouped in folders (Reports, The Tern, Ship) since 2026-11-22
+        # a short order list is flat (2026-11-27): no folder to open
         line("Tell the Tern to"); tap(); line("Hold position"); tap()
         check("Nicole passes an order to the Tern from the communicator", js("return sim.s.shuttle.mode") == "station", js("return sim.s.shuttle.mode"))
         page.evaluate("window.__aq.scene('bridge')"); page.wait_for_timeout(300)

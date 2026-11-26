@@ -120,7 +120,7 @@ const ORDERS = {
   'Override the bay speed limit': () => (setBayOverride(true) ? 'Aye, Captain. The bay speed limit is overridden until the doors close.' : 'The outer doors are closed, Captain. No limit to override.'),
   'Restore the bay speed limit': () => (setBayOverride(false) ? 'Bay speed limit restored, Captain.' : 'The outer doors are closed, Captain.'),
   'Crew health report': () => 'Everyone is fit for duty, Captain. A couple of stiff necks from the bunks, nothing I need to see twice. Morale is good.',
-  'Request departure clearance': () => (docked() ? 'Woods Hole Harbor Control: you are cleared to depart at your discretion. Safe travels.' : 'Harbor Control: you are already underway, Captain.'),
+  'Request departure clearance': () => (docked() ? 'Woods Hole Harbour Control has cleared us to depart at your discretion, Captain. Commander Mitchell says safe travels, and to bring her back in one piece.' : 'We are already under way, Captain. The harbour knows.'),
 };
 // Orders that need a number. Each option runs when picked.
 const PARAM = {
@@ -161,7 +161,8 @@ const SAY = {
   'Open the bulkheads': 'Open the bulkheads.', 'Engage super cruise': 'Super cruise.', 'Disengage super cruise': 'Out of super cruise.',
 };
 const STATUS_SAY = { helm: 'How are things at the helm?', sensors: 'Anything out there, Alex?', communications: 'Any traffic, Nicole?', security: 'All quiet, Lieutenant?', science: 'How is the lab?' };
-const sayFor = (t, id) => (t === 'Status report' && STATUS_SAY[id]) || SAY[t] || t;
+const sayFor = (t, id) => { const l = (t === 'Status report' && STATUS_SAY[id]) || SAY[t] || t; return t in PARAM && !l.endsWith('…') ? `${l} …` : l; };   // an order that asks for a value opens a menu: it ends with …
+const sub = (l) => (l.endsWith('…') ? l : `${l} …`);   // a line that opens a menu
 const works = (t, pleasantry) => pleasantry || t in ORDERS || t in PARAM;
 
 
@@ -183,7 +184,7 @@ const TREE = {
     F('Depth', O('Make periscope depth', () => underway() && Math.abs(sim.s.depth - PERISCOPE_M) > 1.5), O('Make your depth', underway), O('Hug the floor', () => underway() && !sim.s.hug), O('Stop hugging the floor', () => !!sim.s.hug)),
     F('Heading', O('Make your heading', underway), O('Come left', underway), O('Come right', underway)),
     F('Speed', O('Make your speed', underway), O('All stop', () => underway() && (sim.s.speed > 0.1 || sim.s.throttle > 0)), O('Override the bay speed limit', () => bayDoorsOpen() && !bayState().override), O('Restore the bay speed limit', () => bayDoorsOpen() && !!bayState().override), O('Engage super cruise', () => underway() && !sim.s.cruise), O('Disengage super cruise', () => !!sim.s.cruise)),
-    F('Docking', O('Undock', docked), O('Dock', () => underway() && atDock()), O('Request departure clearance', docked)),
+    F('Docking', O('Undock', docked), O('Dock', () => underway() && atDock())),
     F('Navigation', O("Let's go home", () => underway() && !!sim.dockPoi() && !atDock())),
     F('Ship', O('Status report')),
   ],
@@ -195,7 +196,7 @@ const TREE = {
   engineering: () => [F('Ship', O('Engineering status report'), O('Open the bulkheads', () => { const b = E.eng().bulk; return !b.fwd || !b.aft; }))],
   science: () => [F('Ship', O('Status report'), O('Crew health report'))],
   communications: () => [
-    F('Reports', O('Transmit a report')),
+    F('Radio', O('Transmit a report'), O('Request departure clearance', docked)),
     F('The Tern', O('Order the Tern to', ternOut), O('Call back the Tern', ternOut), O('Report on the Tern', ternOut)),
     F('Ship', O('Status report')),
   ],
@@ -221,7 +222,8 @@ export function mount(body, ctx, opts = {}) {
       const shown = f.items.filter((i) => (i.text in ORDERS || i.text in PARAM) && i.show());
       if (shown.length) kids.push({ folder: true, label: f.label, title: f.label, kids: shown.map((i) => orderLeaf(i.text)) });
     }
-    return kids;
+    const all = kids.flatMap((k) => k.kids);
+    return all.length <= 6 ? all : kids;   // a few orders: show them straight away
   };
   const askKids = () => {
     const id = cur && cur.id, kids = [];
@@ -232,8 +234,8 @@ export function mount(body, ctx, opts = {}) {
   };
   const cats = () => {
     const top = [];
-    const ak = askKids(); if (ak.length) top.push({ folder: true, label: 'Ask about …', title: `Ask ${first(cur)} about`, kids: ak });
-    const ok = orderKids(); if (ok.length) top.push({ folder: true, label: 'Orders …', title: `Orders for ${first(cur)}`, kids: ok });
+    const ak = askKids(); if (ak.length) top.push({ folder: true, label: 'Ask about', title: `Ask ${first(cur)} about`, kids: ak });
+    const ok = orderKids(); if (ok.length) top.push({ folder: true, label: 'Orders', title: `Orders for ${first(cur)}`, kids: ok });
     const em = EMERGENCY[cur.id] ? EMERGENCY[cur.id]() : []; if (em.length) top.push({ folder: true, label: 'EMERGENCY', cls: 'danger', title: 'EMERGENCY', kids: em.map((t) => ({ label: t, cls: 'danger', run: () => speak(t) })) });
     return top;
   };
@@ -294,13 +296,13 @@ export function mount(body, ctx, opts = {}) {
         ...crew.map((c) => el('button', { class: 'comm-line comm-who', onclick: () => pick(c) }, el('span', { class: `avatar ${c.id === 'executiveOfficer' ? 'aria' : ''}${portrait(c.id) ? ' face' : ''}` }, portrait(c.id, 'avatar-face') || crewIcon(c.id) || initial(c)), el('span', {}, el('b', { text: c.name }), el('small', { text: c.role })), unreadFor(c.id) > 0 && el('span', { class: 'comm-badge', text: String(unreadFor(c.id)) })))];
     } else if (page === 'cat') {
       kids = [logView(5), withFace(el('div', {}, el('div', { class: 'comm-head', text: GREET[cur.id] || 'Yes, Captain?' }), el('div', { class: 'comm-who-label', text: `${cur.name} · ${cur.role}` }))),
-        ...cats().map((f) => line(f.label, () => { trail = [f.label]; page = 'lines'; render(); }, f.cls || '')),
+        ...cats().map((f) => line(sub(f.label), () => { trail = [f.label]; page = 'lines'; render(); }, f.cls || '')),
         line('Call another station', () => { page = 'crew'; render(); }, 'back'), line("That's all", () => ctx.closeComm(), 'back')];
     } else if (page === 'lines') {
       const f = openFolder();
       if (!f) { trail = []; page = 'cat'; return render(); }
       kids = [el('div', { class: 'comm-head', text: f.title }),
-        ...f.kids.map((k) => k.folder ? line(`${k.label}  ▸`, () => { trail.push(k.label); render(); }, k.cls || '') : line(k.label, k.run, k.cls || '')),
+        ...f.kids.map((k) => k.folder ? line(sub(k.label), () => { trail.push(k.label); render(); }, k.cls || '') : line(k.label, k.run, k.cls || '')),
         line('Back', () => { trail.pop(); if (!trail.length) page = 'cat'; render(); }, 'back')];
     } else if (page === 'decision') {
       const d = pendingDecisions()[0];

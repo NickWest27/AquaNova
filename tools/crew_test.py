@@ -47,7 +47,7 @@ def main():
         line("Make our speed"); tap(); line("60%"); tap()
         check("speed order sets throttle", abs(js("return sim.s.throttle") - 0.6) < 0.01)
         line("Something else"); tap()
-        js("sim.s.docked=true; sim.s.at=sim.dockPoi(); sim.s.speed=0"); line("Orders"); tap(); line("Docking"); tap()
+        js("sim.s.docked=true; sim.s.at=sim.dockPoi(); sim.s.speed=0"); line("Orders"); tap()   # docked, Marcus has few orders: the list is flat
         check("docked: Undock is offered, Dock is not", page.locator(".comm-line", has_text="Undock").count() == 1 and page.locator(".comm-line", has_text=re.compile(r"^Dock$")).count() == 0)
         line("Undock"); page.wait_for_timeout(5500)
         check("Undock order undocks the ship", js("return sim.s.docked") is False)
