@@ -71,10 +71,12 @@ export function createScene(stage, { onOpen }) {
     slanted('bdispbox', dispD, 560, 190, rect(696, 840, 1224, 1086)),                                    // centre display
     slanted('', stnL, 200, 74, rect(258, 768, 408, 840)),                                                // left station screen
     slanted('', stnR, 200, 74, rect(1506, 768, 1656, 840)),                                              // right station screen
+    // the three desk pads: each panel is warped onto its pad's corners (measured from the holes in bridge_original.png, 2026-11-26, grown 4 px
+    // under the frame) and sits BEHIND the frame, so the desk art frames it. TL, TR, BR, BL.
+    slanted('', leftD, 230, 200, [[445, 1132], [623, 1132], [560, 1332], [334, 1332]]),                     // left pad: the page selector
+    slanted('', ctrD, 640, 160, [[657, 1164], [1266, 1164], [1310, 1335], [611, 1335]]),                    // centre pad: the page's own controls
+    slanted('', rightD, 230, 200, [[1298, 1132], [1477, 1132], [1584, 1332], [1353, 1332]]),                // right pad: range and display buttons
     frame,
-    slanted('', ctrD, 612, 130, rect(636, 1140, 1284, 1332)),                                            // centre desk (on top of the frame: the pads are slanted holes)
-    slanted('', leftD, 300, 116, rect(312, 1140, 636, 1332)),                                            // left desk panel
-    slanted('', rightD, 300, 116, rect(1284, 1140, 1608, 1332)),                                         // right desk panel
     hs('COMMS', 84, 500, 468, 340, () => onOpen('comms'), 'top'),        // comms officer, left station
     hs('SENSORS', 1368, 500, 468, 340, () => onOpen('sensors'), 'top'),  // sensors, right station
     hs('WALKWAY', 0, 1332, 1920, 108, () => onOpen('walkway'), 'mid'),   // the bottom edge leaves the bridge

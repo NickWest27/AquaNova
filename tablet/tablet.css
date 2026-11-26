@@ -929,3 +929,8 @@ input.mix { width: 100%; height: 2.4rem; accent-color: var(--cyan); }
 .rd-box .comm-line.danger { color: var(--red, #ff5c5c); }
 .rd-box .comm-chips { display: flex; flex-direction: column; }
 #comm-pop.rd-on { box-shadow: 0 0 0 4000px #02070d; }
+/* desk pads (2026-11-26): the side pads are 230 x 200, so the selector and the right bank are three buttons wide, two high, compact */
+.bleft .selector { padding: 10px 12px; gap: 7px; } .bleft .selector .bbtn { font-size: 21px; border-width: 2px; border-radius: 10px; padding: 0; }
+.bright .msc { padding: 10px 10px; gap: 7px; } .bright .msc .rowN { gap: 6px; } .bright .msc .bbtn { font-size: 18px; border-width: 2px; border-radius: 10px; }
+.bright .msc .bbtn.sym { font-size: 34px; flex: 1 1 0; } .bright .msc .rowN .rngbox { flex: 1.2 1 0; } .bright .msc .rngbox .rng { font-size: 22px; } .bright .msc .rngbox small { font-size: 11px; }
+.bctl .bc { padding: 12px 18px; } .bctl .bbtn { border-radius: 12px; }
