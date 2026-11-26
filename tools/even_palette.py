@@ -14,8 +14,14 @@ SRC, OUT = os.path.join(ROOT, 'art_src', 'rooms'), os.path.join(ROOT, 'tablet', 
 REF = 'engineering'
 ROOMS = ['bridge', 'walkway', 'walkway2', 'quarters', 'science', 'launchbay', 'medbay', 'engineering']
 STRENGTH = 0.85   # 1 = match Engineering exactly; a little less keeps a trace of each room's own mood
+# Rooms whose source is soft and noisy (painted, not pixel art) are rebuilt as pixel art at Engineering's pixel size (2026-11-27):
+# denoise, shrink to the native grid, a limited palette, stray pixels removed, then blown back up in hard pixels. Saved as PNG.
+REPIXEL = ['walkway', 'walkway2', 'medbay']
+NATIVE = (341, 256)   # Engineering's art pixel: 1024 / 3 across
+PIX_COLOURS = 96
 
-def fname(room): return f'{room}_original.png' if room == 'bridge' else f'{room}_original.jpg'
+def fname(room): return f'{room}_original.png' if room == 'bridge' else f'{room}_original.jpg'          # the source in art_src/rooms
+def outname(room): return f'{room}_original.png' if room in ('bridge', *REPIXEL) else f'{room}_original.jpg'   # what the game loads
 
 # ---- sRGB <-> Lab (D65) ----
 M = np.array([[0.4124564, 0.3575761, 0.1804375], [0.2126729, 0.7151522, 0.0721750], [0.0193339, 0.1191920, 0.9503041]])
@@ -46,12 +52,28 @@ def match(rgb, alpha, ref_lab, ref_L_sorted):
         out[..., k][m] = v + (moved - v) * STRENGTH
     return to_rgb(out)
 
+def despeckle(img):
+    """Remove stray single pixels: a pixel unlike all four neighbours, when those neighbours agree, takes their colour."""
+    a = np.array(img.convert('RGB')).astype(np.int32); c = a.copy()
+    up, dn, lf, rt = a[:-2, 1:-1], a[2:, 1:-1], a[1:-1, :-2], a[1:-1, 2:]; mid = a[1:-1, 1:-1]
+    agree = (np.abs(up - dn).sum(-1) < 24) & (np.abs(lf - rt).sum(-1) < 24) & (np.abs(up - lf).sum(-1) < 24)
+    odd = np.abs(mid - up).sum(-1) > 60
+    c[1:-1, 1:-1][agree & odd] = up[agree & odd]
+    return Image.fromarray(c.astype(np.uint8), 'RGB')
+def repixel(img, ref_img):
+    from PIL import ImageFilter
+    small = img.filter(ImageFilter.MedianFilter(3)).resize(NATIVE, Image.BOX)
+    pal_src = Image.new('RGB', (NATIVE[0] * 2, NATIVE[1])); pal_src.paste(small, (0, 0)); pal_src.paste(ref_img.resize(NATIVE, Image.BOX), (NATIVE[0], 0))
+    pal = pal_src.quantize(PIX_COLOURS, method=Image.MEDIANCUT, dither=Image.NONE)
+    q = despeckle(small.quantize(palette=pal, dither=Image.NONE).convert('RGB'))
+    return q.resize((1024, 768), Image.NEAREST)
+
 def snap(img_rgb, alpha=None):
     d = json.load(open(os.path.join(ROOT, 'data', 'palette.json'))); c = d if isinstance(d, list) else d.get('colors', d)
     pal = [tuple(int(h[i:i + 2], 16) for i in (1, 3, 5)) for h in c]
     flat = [v for p in pal for v in p]; flat += flat[:3] * (256 - len(pal))
     pi = Image.new('P', (1, 1)); pi.putpalette(flat)
-    q = img_rgb.quantize(palette=pi, dither=Image.NONE).convert('RGB')
+    q = despeckle(img_rgb.quantize(palette=pi, dither=Image.NONE).convert('RGB'))   # no dither; stray speckles from noisy sources cleaned up
     if alpha is not None: q = q.convert('RGBA'); q.putalpha(alpha)
     return q
 
@@ -75,7 +97,13 @@ def main():
             b = Image.fromarray(match(brgb, balpha, ref_lab, ref_L), 'RGB')
             snap(b, Image.fromarray(balpha.astype(np.uint8))).save(os.path.join(OUT, 'bridge.png'))
         else:
-            out.save(os.path.join(OUT, fname(r)), quality=92, optimize=True)
+            if r in REPIXEL:
+                out = repixel(out, Image.open(os.path.join(SRC, fname(REF))).convert('RGB'))
+                out.save(os.path.join(OUT, outname(r)), optimize=True)
+                old = os.path.join(OUT, fname(r))
+                if old != os.path.join(OUT, outname(r)) and os.path.exists(old): os.remove(old)   # the soft JPEG is replaced by the PNG
+            else:
+                out.save(os.path.join(OUT, fname(r)), quality=92, optimize=True)
             snap(out.resize((320, 240), Image.LANCZOS)).save(os.path.join(OUT, f'{r}.png'))
         print('evened', r)
 

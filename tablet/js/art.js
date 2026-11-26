@@ -8,7 +8,8 @@ export const ART = {
   // bridge: the owner's 1448x1086 picture, cut to the art (1448x992) with real transparent holes; bridge.png is the 320x240 pixel frame
   bridge: { original: { src: 'retro/assets/bridge_original.png', smooth: true }, retro: { src: 'retro/assets/bridge.png', smooth: false } },
   // each room: the owner's original (smooth) and the 320x240 palette copy made by tools/snap_picture.py
-  ...Object.fromEntries(['walkway', 'walkway2', 'quarters', 'science', 'launchbay', 'medbay', 'engineering'].map((n) => [n, { original: { src: `retro/assets/${n}_original.jpg`, smooth: true }, retro: { src: `retro/assets/${n}.png`, smooth: false } }])),
+  // walkway, walkway2 and medbay were soft paintings: tools/even_palette.py rebuilds them as pixel art at Engineering's pixel size (PNG)
+  ...Object.fromEntries(['walkway', 'walkway2', 'quarters', 'science', 'launchbay', 'medbay', 'engineering'].map((n) => [n, { original: { src: `retro/assets/${n}_original.${['walkway', 'walkway2', 'medbay'].includes(n) ? 'png' : 'jpg'}`, smooth: true }, retro: { src: `retro/assets/${n}.png`, smooth: false } }])),
 };
 
 export const getQuality = () => { try { return localStorage.getItem(KEY) === 'retro' ? 'retro' : 'original'; } catch (e) { return 'original'; } };

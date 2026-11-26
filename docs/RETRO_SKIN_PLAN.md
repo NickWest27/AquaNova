@@ -29,3 +29,9 @@ Test for later decisions: does a choice make assets **more consistent** and **ch
 - AI-generated art: generators cannot make true pixel grids. Generate larger at 4:3, shrink to exactly 320 x 240, snap to the palette, then clean by hand (see `Guides/ASSET_SPEC.md`). The bridge frame of 2026-11-25 came out palette-only at 320 x 240 with transparent holes.
 - Git: the owner does not use git; Claude works on `tablet`, tests, runs `tools/update_sw.py`, commits and pushes. `main` is the desktop version and is not touched unless asked.
 - Deferred ideas (not started): programmatic sound, programmatic animation and cut scenes, static crew portraits with speech boxes, more-retro info displays (pixel-native chart, small font for dense pages).
+
+## Picture consistency (2026-11-27)
+- Colour and brightness: every room is matched to Engineering (`tools/even_palette.py`, CIE Lab: lightness histogram, colour mean and spread, 85% strength). Originals in `art_src/rooms/`.
+- Pixel size: Engineering, quarters, science and the launch bay are pixel art with an art pixel of about 5.6 stage px (1024 / 3 across). Walkway A1, walkway AN-1 and the medbay were soft paintings with compression noise; they are rebuilt at the same grid (denoise, 341x256, 96 colours shared with Engineering, stray pixels removed, hard pixels) and saved as PNG.
+- Retro copies: 320x240, the 64-colour palette, no dithering, then stray single pixels removed (noisy sources used to turn into speckle).
+- For new art: ask for pixel art at 1024x768 with a 3 px pixel grid (about 341x256 art pixels), flat cel shading, cool blue-grey steel with amber and cyan accents, Engineering as the reference. Then put the file in `art_src/rooms/` and run the script.

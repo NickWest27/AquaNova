@@ -114,7 +114,8 @@ export function createScene(stage, { onOpen }) {
   const walkway = el('div', { class: 'scene walkway', hidden: true });
   walkway.append(
     artImg('walkway'),
-    // the owner's original picture (512x382, smooth), stretched to the 1920x1440 stage; walkway.png is the 320x240 palette-snapped copy. The BRIDGE sign is painted in the art, so the game draws no signs here
+    // the owner's original picture (512x382, smooth), stretched to the 1920x1440 stage; walkway.png is the 320x240 palette-snapped copy. The BRIDGE sign is drawn by the game over the painted one
+    el('div', { class: 'an-sign one', style: 'left:836px;top:392px;width:248px;height:60px' }, el('div', { text: 'BRIDGE' })),   // drawn by the game: the painted sign is too small to survive the pixel art rebuild
     door('SCIENCE', 150, 260, 230, 940, 'enter-science'),
     door('MEDICAL', 380, 380, 110, 680, 'enter-medbay'),
     door('QUARTERS', 1600, 300, 180, 900, 'quarters'),
