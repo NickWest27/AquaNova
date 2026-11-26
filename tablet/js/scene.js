@@ -112,14 +112,15 @@ export function createScene(stage, { onOpen }) {
     door('QUARTERS', 1600, 300, 180, 900, 'quarters'),
     door('BRIDGE', 780, 470, 380, 390, 'bridge'),
     hs('AN-1 DECK ▼', 500, 1230, 920, 210, () => onOpen('walkway2'), 'mid'));      // walk on to the next section
-  // walkway AN-1 (concept art): the junction past A1. Launch Bay on the left, Engineering on the right; the sign sits in the cutout.
+  // walkway AN-1 (the owner's picture, 1024x765, 2026-11-26; art px x 1.875 across, x 1.88 down): the end door is the Launch Bay (lit sign in the
+  // panel above it), the near right door Engineering; the near left door is not used yet. The floor at the bottom goes back to A1.
   const walkway2 = el('div', { class: 'scene walkway2', hidden: true });
   walkway2.append(
-    el('div', { class: 'an-sign', style: 'left:677px;top:111px;width:565px;height:101px' }, [el('div', { class: 'l', text: '◂ LAUNCH BAY' }), el('div', { class: 'r', text: 'ENGINEERING ▸' })]),
-    el('img', { class: 'frame', src: 'assets/walkway-an1.webp', alt: '', draggable: 'false', decoding: 'async' }),
-    door('LAUNCH BAY', 396, 287, 494, 586, 'launchbay'),
-    door('ENGINEERING', 1062, 300, 413, 440, 'engineering'),
-    hs('A1 DECK ▼', 560, 900, 800, 180, () => onOpen('walkway'), 'mid'));
+    artImg('walkway2'),
+    el('div', { class: 'an-sign one', style: 'left:840px;top:390px;width:252px;height:62px' }, el('div', { text: 'LAUNCH BAY' })),
+    door('LAUNCH BAY', 769, 480, 384, 376, 'launchbay'),
+    door('ENGINEERING', 1575, 282, 188, 923, 'engineering'),
+    hs('A1 DECK ▼', 375, 1298, 1181, 142, () => onOpen('walkway'), 'mid'));
   // science lab (science.png, 1920x1080): five cut-outs hold live screens that open the stations they show. The door leads out to the walkway.
   const sci = { banner: el('div', { class: 'sciscr' }), samples: el('div', { class: 'sciscr' }), analysis: el('div', { class: 'sciscr' }), research: el('div', { class: 'sciscr' }), remora: el('div', { class: 'sciscr' }) };
   const sciFrame = artImg('science');
@@ -200,7 +201,7 @@ export function createScene(stage, { onOpen }) {
     inQuarters: false, where: 'bridge',
     show(which) {
       api.where = which; api.inQuarters = which === 'quarters';
-      document.body.classList.toggle('stage-4x3', ['bridge', 'walkway', 'quarters', 'science', 'launchbay', 'medbay', 'engineering'].includes(which));   // the retro scenes are 4:3, the others are still 16:9
+      document.body.classList.toggle('stage-4x3', ['bridge', 'walkway', 'walkway2', 'quarters', 'science', 'launchbay', 'medbay', 'engineering'].includes(which));   // the retro scenes are 4:3, the others are still 16:9
       window.dispatchEvent(new Event('resize'));
       bridge.hidden = which !== 'bridge'; quarters.hidden = which !== 'quarters'; walkway.hidden = which !== 'walkway'; walkway2.hidden = which !== 'walkway2'; science.hidden = which !== 'science'; medbay.hidden = which !== 'medbay'; bay.hidden = which !== 'launchbay'; eng.hidden = which !== 'engineering';
       cache.clear(); api.update();
