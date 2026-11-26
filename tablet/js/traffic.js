@@ -13,7 +13,7 @@ import { say } from './notify.js';
 const NM = 60, LON_K = 0.82;   // nm per degree of latitude; a fixed squash so cells are roughly square in the mid-latitudes
 /** Gates other modules set: is the VHF mast up high enough to hear AIS? */
 export const gates = { ais: () => true };
-export const traffic = { cfg: null, cells: new Map(), cand: [], scripted: [], candKey: '', active: [], sunk: new Set(), known: new Map(), rand: Math.random, ready: false, stats: { active: 0, cells: 0, ms: 0 }, lastClock: null };
+export const traffic = { cfg: null, cells: new Map(), cand: [], scripted: [], candKey: '', active: [], sunk: new Set(), known: new Map(), recent: new Map(), rand: Math.random, ready: false, stats: { active: 0, cells: 0, ms: 0 }, lastClock: null };
 const mulberry = (a) => () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
 const mix = (seed, x, y) => (Math.imul(seed ^ 0x9E3779B1, 0x85EBCA6B) ^ Math.imul(x, 73856093) ^ Math.imul(y, 19349663)) | 0;
 const pick = (rng, a) => a[Math.floor(rng() * a.length)];
@@ -234,6 +234,9 @@ export function step() {
     if (d < 0.05 && s.depth < c.draft_m[v.size] + c.collide_margin_m && now - v.hitAt > 60) collide(v, p, d);   // only on or just below the surface
   }
   traffic.active = out; traffic.stats.active = out.length; traffic.stats.ms = performance.now() - t0;
+  // the chart's memory: a contact heard in the last CHART_HOLD_S stays on the chart (faded) where it was last placed, so it does not blink at the edge of range
+  for (const a of out) if (a.shown) traffic.recent.set(a.v.id, { a, at: now });
+  for (const [id, x] of traffic.recent) if (now - x.at > CHART_HOLD_S || now < x.at || traffic.sunk.has(id)) traffic.recent.delete(id);
 }
 
 function collide(v, p) {
@@ -257,6 +260,9 @@ function sink(v, p) {
 export function sweep(v) { const sn = traffic.cfg.sensing, a = traffic.active.find((x) => x.v === v); if (!a || a.nm > sweepNm(v)) return false; v.sweepAt = sim.s.clock + sn.sweep_s; return true; }
 export const canSweep = (a) => a.nm <= sweepNm(a.v);
 export const seen = () => traffic.active.filter((a) => a.shown);
+/** For the charts: what is heard now, and what was heard in the last CHART_HOLD_S (stale: drawn faded at its last bearing or fix). */
+export const CHART_HOLD_S = 60;
+export const chartShips = () => { const now = sim.s.clock; return [...traffic.recent.values()].map((x) => (x.at >= now - 1e-6 ? x.a : { ...x.a, stale: true })); };
 /** Contacts with a position the player may use (AIS, a fix, or seen by eye). */
 export const plotted = () => traffic.active.filter((a) => a.shown && a.pos);
 export const probName = (v) => `Probable: ${v.name} (${Math.round(v.prob * 100)}%)`;

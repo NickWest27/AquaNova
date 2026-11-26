@@ -71,3 +71,8 @@ The traffic is rebuilt from the world seed on each load. `world.known` holds, fo
 
 ## Tests
 `traffic_test.py`: the detection curve, flow noise in super cruise, a held track keeping its name, the match chance after time out of contact, signature-on-file sweep range, and the reload. Tests that need the old fixed edges set `traffic.rand = () => 0.5` (so a ship is heard exactly when P > 50%, which is inside R50), `check_s = 0` and `drop_misses = 1`.
+
+## On the charts (2026-11-26)
+- **One bearing line per unfixed contact**: the ship's own bearing when it hears it, else the first WSKR's. The yellow "?" marker sits **on** the line (where it crosses 80% of the chart radius, kept inside the chart) with the bearing beside it.
+- **Chart memory**: a contact heard in the last 60 game seconds (`CHART_HOLD_S`, `traffic.chartShips()`) stays on the chart, faded, at its last bearing or fix, so contacts at the edge of range do not blink. The contact lists (SONAR page) keep their own 120 s memory as before.
+- Test: `sonar_test.py` ("chart memory").

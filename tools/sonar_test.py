@@ -122,6 +122,12 @@ with sync_playwright() as p:
     done = js("const F=await import('./js/findings.js'); return F.scanned(sim.s.at)")
     check("at a site the SONAR page offers Scan site, and it files the scan", vis and done, f"{r} vis={vis} done={done}")
     check("the old Sites and scans tab is gone", pg.locator("#station .tabs .btn", has_text="Sites").count() == 0)
+    # the chart's memory: a contact that drops out stays on the chart, faded, for a minute, then goes (no blinking at the edge of range)
+    r = js("""const s=sim.s; const A=window.__at(3,0); const v={id:'t:h',kind:'cargo',faction:'cargo',factionName:'Merchant',stance:'neutral',label:'Ship',size:2,kt:0,A,B:A,L:1,phase:0,boldness:0,ais:false,bias:0,name:'Hold',mhz:156,reply:0,ident:false,alerted:true,dyn:null,hitAt:-1e9};
+      T.traffic.cand.push(v); for(let i=0;i<3;i++) sim.step(1); const on=()=>T.chartShips().find(a=>a.v===v); const heard=!!on()&&!on().stale;
+      const far=window.__at(40,0); v.A=far; v.B=far; for(let i=0;i<20;i++) sim.step(1); const mid=on(); const midStale=!!(mid&&mid.stale);
+      for(let i=0;i<60;i++) sim.step(1); const gone=!on(); T.traffic.cand=T.traffic.cand.filter(x=>x!==v); return {heard, midStale, gone}""")
+    check("chart memory: a contact that drops out stays on the chart, faded, then goes after a minute", r["heard"] and r["midStale"] and r["gone"], r)
     # the full sweep: a faint contact to the south comes up only when the beam passes 180, and the sweep is over in under a minute
     r = js("""const s=sim.s; s.at=null; S.setSource('ship'); S.stopSweep(); const A=window.__at(-8,0); const v={id:'t:s',kind:'cargo',faction:'cargo',factionName:'Merchant',stance:'neutral',label:'Skiff',size:0,kt:0,A,B:A,L:1,phase:0,boldness:0,ais:false,bias:0,name:'Faint',mhz:156,reply:0,ident:false,alerted:true,dyn:null,hitAt:-1e9};
       T.traffic.cand.push(v); for(let i=0;i<2;i++) sim.step(1); const heard=()=>S.contactsFor('ship').some(c=>c.id==='ship:t:s'&&!c.lost);

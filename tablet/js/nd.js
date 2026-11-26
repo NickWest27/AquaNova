@@ -2,7 +2,7 @@
 import { sim, toward, WSKR_CODES } from './sim.js';
 import { frameThrottle } from './util.js';
 import { seafloor } from './seafloor.js';
-import { seen as seenShips } from './traffic.js';
+import { chartShips } from './traffic.js';
 import { shuttle } from './bayops.js';
 import { affiliation, frameColour, drawContact, placeAffiliation } from './contactIcons.js';
 
@@ -209,21 +209,27 @@ export function createND(wrap, { onPick, stage = false, units = 1, contours = fa
     }
     // surface traffic, drawn like a naval tactical plot: a frame for what we know (yellow clover unknown, blue circle friendly, green square neutral, amber diamond suspect, red diamond hostile), a course vector, and a label.
     // A bearing-only sonar contact is a dashed bearing line from the listener with its bearing at the end; two bearings make a fix (dashed ring = error).
-    if (!craft && nd.show.ships) for (const a of seenShips()) {
+    // Each bearing-only contact gets ONE line (the ship's own bearing when it hears it, else the first WSKR's), with its marker ON the line and the
+    // bearing beside it. A contact heard in the last minute stays, faded, where it was (traffic.chartShips), so nothing blinks at the edge of range.
+    if (!craft && nd.show.ships) for (const a of chartShips()) {
       const ik = units > 1.5 ? 0.55 : 1, kf = ik < 1 ? 0.8 : 1;   // the big main screen draws contact symbols, vectors and text smaller
-      const v = a.v, aff = affiliation(v), col = frameColour(aff), r = (9 + v.size * 1.5) * ik;
+      const v = a.v, aff = affiliation(v), col = frameColour(aff), r = (9 + v.size * 1.5) * ik, fade = a.stale ? 0.4 : 1;
       if (!a.pos) {
-        ctx.save(); ctx.strokeStyle = col; ctx.fillStyle = col; ctx.globalAlpha = 0.8; ctx.lineWidth = 1.5; ctx.setLineDash([7, 5]); ctx.font = `700 ${12 * kf}px ui-monospace, Menlo, monospace`; ctx.textAlign = 'center';
-        for (const ln of a.lines) {
-          const o = px(ln.from), th = ((ln.brg - (trackUp ? c.heading : 0)) * Math.PI) / 180, ux = Math.sin(th), uy = -Math.cos(th), len = Math.min(w, h) / 2 - 20;
-          ctx.beginPath(); ctx.moveTo(o.x, o.y); ctx.lineTo(o.x + ux * len * 1.15, o.y + uy * len * 1.15); ctx.stroke();
-          const lx = Math.max(24, Math.min(w - 24, o.x + ux * len * 0.8)), ly = Math.max(14, Math.min(h - 8, o.y + uy * len * 0.8));
-          ctx.setLineDash([]); ctx.save(); ctx.translate(lx - 24, ly - 4); drawContact(ctx, 'unknown', 'unknown', 8 * ik); ctx.restore(); if (nd.show.labels) ctx.fillText(String(Math.round(ln.brg)).padStart(3, '0') + '°', lx + 6, ly); ctx.setLineDash([7, 5]);
-        }
+        const ln = a.lines.find((l) => l.src === 'ship') || a.lines[0]; if (!ln) continue;
+        ctx.save(); ctx.strokeStyle = col; ctx.fillStyle = col; ctx.globalAlpha = 0.75 * fade; ctx.lineWidth = 1.5; ctx.setLineDash([7, 5]); ctx.font = `700 ${12 * kf}px ui-monospace, Menlo, monospace`; ctx.textAlign = 'left';
+        const o = px(ln.from), th = ((ln.brg - (trackUp ? c.heading : 0)) * Math.PI) / 180, ux = Math.sin(th), uy = -Math.cos(th), len = Math.min(w, h) / 2 - 20;
+        // the marker sits on the line where it crosses 80% of the chart radius (kept inside the chart); the line runs from the listener through it
+        let k = len * 0.8; const lim = (x, a0, a1) => Math.max(a0, Math.min(a1, x));
+        for (const [p0, d, a0, a1] of [[o.x, ux, 18, w - 18], [o.y, uy, 18, h - 18]]) if (d) { const t = ((d > 0 ? a1 : a0) - p0) / d; if (t > 0) k = Math.min(k, t); }
+        const lx = lim(o.x + ux * k, 18, w - 18), ly = lim(o.y + uy * k, 18, h - 18);
+        ctx.beginPath(); ctx.moveTo(o.x, o.y); ctx.lineTo(lx, ly); ctx.stroke(); ctx.setLineDash([]);
+        ctx.save(); ctx.translate(lx, ly); drawContact(ctx, 'unknown', 'unknown', 8 * ik); ctx.restore();
+        if (nd.show.labels) ctx.fillText(String(Math.round(ln.brg)).padStart(3, '0') + '°', lx + 12 * ik, ly + 4);
         ctx.restore(); continue;
       }
+      ctx.save(); ctx.globalAlpha = fade;
       const q = px(a.pos);
-      if (q.x < -20 || q.x > w + 20 || q.y < -20 || q.y > h + 20) continue;
+      if (q.x < -20 || q.x > w + 20 || q.y < -20 || q.y > h + 20) { ctx.restore(); continue; }
       const isSel = s.selContact === 'ship:' + v.id, fixOnly = !a.ais && a.pos.err > 0.05;
       if (fixOnly) { const er = Math.max(r + 4, (a.pos.err / nd.range) * (Math.min(w, h) / 2 - 24)); ctx.save(); ctx.strokeStyle = col; ctx.globalAlpha = 0.7; ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.arc(q.x, q.y, er, 0, 6.2832); ctx.stroke(); ctx.restore(); }
       if (a.pos.hdg != null && v.kt > 0.3) {   // course vector: longer for a faster ship
@@ -240,6 +246,7 @@ export function createND(wrap, { onPick, stage = false, units = 1, contours = fa
         ctx.fillText(`${tag}BRG ${pad(t.brg)}° ${t.nm.toFixed(1)}nm`, lx, q.y + 11 * kf + 1);
         if (a.pos.hdg != null) ctx.fillText(`CRS ${pad(a.pos.hdg)}° ${Math.round(v.kt)}kt`, lx, q.y + 22 * kf + 2);
       }
+      ctx.restore();   // the fade
     }
     // ship (centre), or in craft mode the craft at the centre and the ship where it is
     const mark = (x, y, hd, col, big) => {
