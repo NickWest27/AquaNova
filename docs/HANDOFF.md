@@ -2,6 +2,31 @@
 
 Last updated: 2026-11-26. Branch to work on: `tablet`. Repo: NickWest27/AquaNova (GitHub Pages path `/AquaNova/`). Last change: the quarters wall screen cycles NAV, synthetic vision, sonar, WSKRs and ship status (`quartersScreen.js`, tap = next page, 10 s each; test `tools/quarters_screen_test.py`); pushing the trials for records with a risk of light damage (`trials.js`); story bible brought up to date; before that Sea Trials became the commissioning trip to the Trials AO (welcome letter in the logbook, commissioning orders by mail, Welcome to the AO mail; nav, eng and super cruise commissioned in steps; see the tutorial table in `docs/COMMS_AND_PROGRESSION.md`); before that the owner's welcome letter in the logbook; before that general alarm (ARIA order + engineering button; red lighting and frames; faster fire/flood response if sounded first; see `docs/ENGINEERING.md`); before that the Engineering room shows the ship's state (core glow amber/red, live console screens, red alarm for fire/flooding; see `docs/ENGINEERING.md`); before that the engineering computer; before that the 90s dialogue screen for Nicole; before that Nicole's portrait; before that walkway AN-1 and Engineering on the owner's pictures (every room is now 4:3); before that site survey (`survey.js`, Survey site on SONAR, Seabed survey missions) and the XO tends Remora before getting under way; before that Remora's tether parts past its length, the Tern fetches her (`tools/tether_test.py`); before that PED, communicator and corner buttons in the 4:3 box; before that Launch Bay as instruments, WSKRs have their own launch bays, standard target readout (`readout.js`), Full sweep 36 s; before that station pages are a 4:3 page (1024 x 768) scaled like the stage; before that pages fit the screen (`tools/fit_test.py`) and Sensors has SONAR and WSKRs only; before that contact tracking (detection chance, names belong to tracks, probable matches, signatures on file: `docs/CONTACT_TRACKING.md`); before that identified ships saved; before that one zoom direction everywhere ("+" zooms in) and round map zoom buttons; before that the bridge original picture with real transparent holes; before that the medbay on the owner's picture (after bridge, walkway A1, quarters, science lab, launch bay).
 
+## Owner's testing list (2026-11-26): WORK IN PROGRESS, tick items off here
+Rooms and signs
+- [ ] 1. New game starts in the launch bay; PED and pin stay in the quarters.
+- [ ] 2. Signs: Engineering door on walkway AN-1; the airlock.
+- [ ] 3. Small screen right of the airlock door: a bar that fills/empties with the pressure differential.
+- [ ] 4. Launch bay: the walkway tap area is over a window; the door is right of the fire extinguisher.
+- [ ] 5. Launch bay console shows blank: fix.
+- [ ] 6. AN-1: the walkway A1 tap area is too small; match the other walkway tap areas.
+Bridge
+- [ ] 7. Comms and sonar tap areas too big: only over the consoles.
+- [ ] 8. Tap areas on the crew members open their dialogue.
+- [ ] 9. Remove the bridge lower-display NAV page (track-up, sonar-like) from the game entirely; replace with a simpler version of the main-screen nav display (range rings out to the screen). The quarters screen uses the same.
+- [ ] 10. PED icon black fill does not fit its frame in the bridge view.
+Crew and messages
+- [ ] 11. A crew member who speaks opens their dialogue automatically (above station pages, below the PED). Remove the message line along the bottom.
+- [ ] 12. Communicator folder "Report an emergency" becomes "EMERGENCY".
+- [ ] 13. "Ask about": each crew member lists the functions of the buttons on the pages they look after.
+Navigation
+- [ ] 14. Dest opens a waypoint pop-up: pick a known place, OR type lat/long, OR place + bearing + distance. Done / Cancel. No name, no depth.
+- [ ] 15. Route editor: always starts at present position, waypoints added below. Buttons: +, -, up, down, Done, Cancel.
+- [ ] 16. Plot: plots the route avoiding land; speed and depth do not change.
+- [ ] 17. Missions with an area (Trials AO, patrol, search) draw the area box on the chart automatically. The Trials AO is no longer a destination point: the player makes a waypoint and sails into the box.
+Quarters
+- [ ] 18. The quarters screen is too high definition: lower the detail to suit the retro look.
+
 ## Starting a Claude Code session (owner's workflow since 2026-11-25)
 The owner works from an iPad and a phone, does not use git, and wants Claude to do all of it.
 1. **Branch:** work on `tablet` directly and push to `tablet` after each change (the owner's iPad link publishes from it). Do not use a `claude/...` session branch and do not touch `main`. If the session cannot push to `tablet`, paste the exact error to the owner; do not push somewhere else without saying so.
