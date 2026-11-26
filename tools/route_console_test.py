@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Bridge NAV and HLM pages: Dest, Fix, Route, Plot (with turn points), manual control and return to route, SHW, and the HLM controls.  python3 tools/route_console_test.py"""
+"""Bridge NAV and HLM pages: Dest, Route, Plot (with turn points), manual control and return to route, SHW, and the HLM controls.  python3 tools/route_console_test.py"""
 import importlib.util, os, sys
 from playwright.sync_api import sync_playwright
 R = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -20,34 +20,40 @@ with sync_playwright() as p:
     tap = lambda t: pg.locator(f'.bbtn:visible:text-is("{t}")').first.dispatch_event("click")
     st = lambda: js("const s=sim.s; return {wpt:s.wpt&&s.wpt.name, fixes:s.fixes.map(f=>f.name), tps:s.route.filter(q=>q.tp).length, route:s.route.length, thr:s.throttle, hug:s.hug}")
     check("six pages on the left desk", pg.locator(".selector .bbtn").count() == 6 and pg.locator(".selector .bbtn").all_inner_texts() == ["NAV", "HLM", "TAC", "SNR", "VW", "SYS"])
-    # Dest: Vineyard Ledge
+    # Dest: the waypoint dialog, a known place; Done
     tap("Dest"); pg.wait_for_timeout(300)
-    pg.locator("#pc-place").first.select_option(label="Vineyard Ledge") if pg.locator("#pc-place").first.is_visible() else None
-    pg.locator(".pc .btn", has_text="Place / Bearing").first.tap(); pg.wait_for_timeout(200)
-    pg.locator("#pc-place").select_option(label="Vineyard Ledge")
-    pg.locator(".pc .btn.primary", has_text="Set destination").tap(); pg.wait_for_timeout(300)
+    check("the waypoint dialog offers Place, Lat / Long and Bearing / Distance, with no name or depth", all(pg.locator(".pc .btn", has_text=t).count() for t in ("Place", "Lat / Long", "Bearing / Distance")) and not pg.locator("#pc-name:visible, #pc-depth:visible").count())
+    pg.locator(".pc .btn", has_text="Place").first.tap(); pg.wait_for_timeout(200)
+    pg.locator("#pc-known").select_option(label="Vineyard Ledge")
+    pg.locator(".pc .btn.primary", has_text="Done").tap(); pg.wait_for_timeout(300)
     r = st(); check("Dest sets the last fix and does not plot yet", r["fixes"] == ["Vineyard Ledge"] and r["wpt"] is None, str(r))
-    # Fix: a waypoint by lat/long, with a name; it joins the end of the route
-    tap("Fix"); pg.wait_for_timeout(300)
     d = js("const d=sim.s.pois.find(p=>p.name==='Vineyard Ledge'); return {lat:d.lat,lon:d.lon}")
-    pg.fill("#pc-lat", str(round(d["lat"] - 0.1, 3))); pg.fill("#pc-lon", str(round(d["lon"] + 0.1, 3))); pg.fill("#pc-name", "Rendezvous"); pg.fill("#pc-depth", "40")
-    pg.locator(".pc .btn.primary", has_text="Add fix").tap(); pg.wait_for_timeout(300)
-    r = st(); check("Fix adds a named waypoint to the route", r["fixes"] == ["Vineyard Ledge", "Rendezvous"], str(r))
-    tap("Fix"); pg.wait_for_timeout(300)
-    pg.fill("#pc-lat", str(round(d["lat"] - 0.2, 3))); pg.fill("#pc-lon", str(round(d["lon"] + 0.2, 3)))
-    pg.locator(".pc .btn.primary", has_text="Add fix").tap(); pg.wait_for_timeout(300)
-    r = st(); check("an unnamed fix is called WP[number]", r["fixes"][-1].startswith("WP"), str(r))
-    # Route list: move the WP up, delete it
+    # Route: starts at present position; + adds a waypoint after the selected row (lat/long), and another by bearing and distance
     tap("Route"); pg.wait_for_timeout(300)
-    check("the route list shows each fix with the destination marked", "(DEST)" in pg.inner_text(".route-list") and pg.locator(".route-row").count() == 3)
-    pg.locator(".route-row").nth(2).locator('button[aria-label="Move up"]').tap(); pg.wait_for_timeout(200)
-    r = st(); check("a fix moves up", r["fixes"][1].startswith("WP") and r["fixes"][2] == "Rendezvous", str(r))
-    pg.locator(".route-row").nth(1).locator('button[aria-label="Delete"]').tap(); pg.wait_for_timeout(200)
-    r = st(); check("a fix is deleted", r["fixes"] == ["Vineyard Ledge", "Rendezvous"], str(r))
-    pg.locator(".modal .btn", has_text="Close").tap(); pg.wait_for_timeout(200)
+    check("the route starts at the present position", "PRESENT POSITION" in pg.inner_text(".route-list") and "(DEST)" in pg.inner_text(".route-list"))
+    pg.locator('.modal button[aria-label="Add a waypoint"]').tap(); pg.wait_for_timeout(300)
+    pg.locator(".pc .btn", has_text="Lat / Long").first.tap(); pg.wait_for_timeout(100)
+    pg.fill("#pc-lat", str(round(d["lat"] - 0.1, 3))); pg.fill("#pc-lon", str(round(d["lon"] + 0.1, 3)))
+    pg.locator(".pc .btn.primary", has_text="Done").last.tap(); pg.wait_for_timeout(300)
+    pg.locator('.modal button[aria-label="Add a waypoint"]').tap(); pg.wait_for_timeout(300)
+    pg.locator(".pc .btn", has_text="Bearing / Distance").first.tap(); pg.wait_for_timeout(100)
+    pg.locator("#pc-place").select_option(label="Vineyard Ledge"); pg.fill("#pc-brg", "180"); pg.fill("#pc-dist", "3")
+    pg.locator(".pc .btn.primary", has_text="Done").last.tap(); pg.wait_for_timeout(300)
+    check("the route is not changed until Done", st()["fixes"] == ["Vineyard Ledge"], str(st()))
+    check("waypoints are WP[number]", sum(1 for x in pg.locator(".route-row").all_inner_texts() if " WP" in x) == 2, pg.locator(".route-row").all_inner_texts())
+    pg.locator(".route-row").nth(2).tap(); pg.wait_for_timeout(100)
+    pg.locator('.modal button[aria-label="Move down"]').tap(); pg.wait_for_timeout(100)
+    pg.locator('.modal button[aria-label="Delete the waypoint"]').tap(); pg.wait_for_timeout(100)
+    pg.locator(".modal .btn", has_text="Done").last.tap(); pg.wait_for_timeout(300)
+    r = st(); check("select, move down, delete, Done: the route has two fixes", len(r["fixes"]) == 2 and r["fixes"][0] == "Vineyard Ledge", str(r))
+    tap("Route"); pg.wait_for_timeout(300)
+    pg.locator('.modal button[aria-label="Delete the waypoint"]').tap(); pg.wait_for_timeout(100)
+    pg.locator(".modal .btn", has_text="Cancel").last.tap(); pg.wait_for_timeout(300)
+    r = st(); check("Cancel drops the changes", len(r["fixes"]) == 2, str(r))
+    last = r["fixes"][-1]
     # Plot
     tap("Plot"); pg.wait_for_timeout(400)
-    r = st(); check("Plot makes a course to the last fix", r["wpt"] == "Rendezvous" and r["route"] >= 2, str(r))
+    r = st(); check("Plot makes a course to the last fix", r["wpt"] == last and r["route"] >= 2, str(r))
     pg.screenshot(path=os.path.join(R, "tools", "shots", "console_nav_route.png"))
     # manual control keeps the route; Plot returns to it
     tap("Port") if False else None
@@ -55,7 +61,7 @@ with sync_playwright() as p:
     tap("Port"); pg.wait_for_timeout(200)
     r = st(); check("manual control drops the course but keeps the route", r["wpt"] is None and len(r["fixes"]) == 2, str(r))
     pg.locator(".selector .bbtn", has_text="NAV").tap(); pg.wait_for_timeout(300); tap("Plot"); pg.wait_for_timeout(300)
-    r = st(); check("Plot returns to the route", r["wpt"] == "Rendezvous", str(r))
+    r = st(); check("Plot returns to the route", r["wpt"] == last, str(r))
     # turn points: a fix across land is reached by turn points
     pair = js("""const water=(la,lo)=>sim.shipPassable(la,lo); const cross=(a,b)=>{for(let i=0;i<=200;i++){const la=a.lat+(b.lat-a.lat)*i/200, lo=a.lon+(b.lon-a.lon)*i/200; if(!water(la,lo)) return true;} return false;};
       const a={lat:41.30,lon:-70.65}; for (const b of [{lat:41.62,lon:-70.40},{lat:41.50,lon:-70.30},{lat:41.45,lon:-71.00},{lat:41.60,lon:-70.60}]) { if(water(a.lat,a.lon)&&water(b.lat,b.lon)&&cross(a,b)) return {a,b}; } return null""")

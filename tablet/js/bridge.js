@@ -80,8 +80,8 @@ export function createBridgeConsole({ top, main, display, center, left, right, o
     // Controls. Dest, Fix and Route build the Route (s.fixes); Plot turns it into a course.
     const fixDialog = (opts) => openPlotDialog({ preselect: sel, ...opts });
     const helm = (text) => tell('helm', text);
-    const dest = bbtn('Dest', () => fixDialog({ title: 'Destination', action: 'Set destination', initial: null, onFix: (f) => { const fx = sim.s.fixes; fx.length ? fx.splice(fx.length - 1, 1, f) : fx.push(f); sim.touch(); refresh(); } }));
-    const fix = bbtn('Fix', () => fixDialog({ title: 'New fix', action: 'Add fix', onFix: (f) => { sim.s.fixes.push(f); sim.touch(); refresh(); } }));
+    // Dest: the waypoint dialog; the waypoint becomes the end of the Route (owner, 2026-11-27: no Fix button, Route + adds waypoints)
+    const dest = bbtn('Dest', () => fixDialog({ title: 'Destination', action: 'Done', initial: null, onFix: (f) => { const fx = sim.s.fixes; fx.length ? fx.splice(fx.length - 1, 1, f) : fx.push(f); sim.s.wpt = null; sim.touch(); refresh(); } }));
     const routeB = bbtn('Route', () => openRoute());
     const plot = bbtn('Plot', () => {
       const s = sim.s;
@@ -92,32 +92,35 @@ export function createBridgeConsole({ top, main, display, center, left, right, o
       helm(`Course plotted through ${s.fixes.length} fix${s.fixes.length === 1 ? '' : 'es'}${tps ? `, ${tps} turn point${tps === 1 ? '' : 's'} to clear the land` : ''}. ${s.throttle > 0.01 ? 'Speed unchanged.' : 'We are not under way. Set a speed when you are ready.'}`);
       refresh();
     }, 'go');
-    // The Route list: add, edit, delete, move up, move down. Turn points are the helm's own and are not listed.
+    // The Route editor (owner, 2026-11-27): starts at the ship's present position; waypoints below it. Tap a row to select it.
+    // + adds a waypoint after the selected one (the waypoint dialog), - deletes it, up and down move it. Done keeps the changes, Cancel drops them.
+    // Plot then plots it round the land; speed and depth do not change. Turn points are the helm's own and are not listed.
     function openRoute() {
-      const list = el('div', { class: 'route-list' }); let close = () => {};
+      const work = [...sim.s.fixes]; let at = work.length - 1, close = () => {};
+      const list = el('div', { class: 'route-list' });
       const draw = () => {
-        const fx = sim.s.fixes; let from = sim.s;
-        list.replaceChildren(...(fx.length ? fx.map((f, i) => {
-          const t = toward(from, f); from = f;
-          const mv = (d) => { const j = i + d; if (j < 0 || j >= fx.length) return; [fx[i], fx[j]] = [fx[j], fx[i]]; sim.touch(); draw(); refresh(); };
-          return el('div', { class: 'route-row' },
-            el('div', { class: 'grow' }, el('b', { text: `${i + 1}  ${f.name}${i === fx.length - 1 ? '  (DEST)' : ''}` }), el('small', { text: `${pad(t.brg)}°  ${t.nm.toFixed(1)} nm${f.depth != null ? `  ·  ${f.depth} m` : ''}` })),
-            el('button', { class: 'btn chip', text: '▲', 'aria-label': 'Move up', disabled: i === 0, onclick: () => mv(-1) }),
-            el('button', { class: 'btn chip', text: '▼', 'aria-label': 'Move down', disabled: i === fx.length - 1, onclick: () => mv(1) }),
-            f.type === 'waypoint' ? el('button', { class: 'btn chip', text: 'Edit', onclick: () => fixDialog({ title: `Edit ${f.name}`, action: 'Save fix', initial: f, onFix: (nf) => { fx[i] = nf; sim.touch(); draw(); refresh(); } }) }) : null,
-            el('button', { class: 'btn chip', text: '✕', 'aria-label': 'Delete', onclick: () => { fx.splice(i, 1); sim.touch(); draw(); refresh(); } }));
-        }) : [el('p', { class: 'empty', text: 'No fixes. Add one, or set a destination.' })]));
+        let from = sim.s;
+        const rows = [el('div', { class: 'route-row here' }, el('div', { class: 'grow' }, el('b', { text: '0  PRESENT POSITION' }), el('small', { text: `${deg(sim.s.lat, 'N', 'S', 2)} ${deg(sim.s.lon, 'E', 'W', 3)}` })))];
+        work.forEach((f, i) => { const t = toward(from, f); from = f;
+          rows.push(el('button', { class: 'route-row' + (i === at ? ' sel' : ''), onclick: () => { at = i; draw(); } },
+            el('div', { class: 'grow' }, el('b', { text: `${i + 1}  ${f.name}${i === work.length - 1 ? '  (DEST)' : ''}` }), el('small', { text: `${pad(t.brg)}°  ${t.nm.toFixed(1)} nm` })))); });
+        list.replaceChildren(...rows);
+        minus.disabled = at < 0; up.disabled = at <= 0; down.disabled = at < 0 || at >= work.length - 1;
       };
+      const mv = (d) => { const j = at + d; if (at < 0 || j < 0 || j >= work.length) return; [work[at], work[j]] = [work[j], work[at]]; at = j; draw(); };
+      const plus = el('button', { class: 'btn chip sym', text: '+', 'aria-label': 'Add a waypoint', onclick: () => fixDialog({ title: 'New waypoint', action: 'Done', onFix: (f) => { work.splice(at + 1, 0, f); at += 1; draw(); } }) });
+      const minus = el('button', { class: 'btn chip sym', text: '−', 'aria-label': 'Delete the waypoint', onclick: () => { if (at < 0) return; work.splice(at, 1); at = Math.min(at, work.length - 1); draw(); } });
+      const up = el('button', { class: 'btn chip sym', text: '▲', 'aria-label': 'Move up', onclick: () => mv(-1) });
+      const down = el('button', { class: 'btn chip sym', text: '▼', 'aria-label': 'Move down', onclick: () => mv(1) });
+      const done = el('button', { class: 'btn primary', text: 'Done', onclick: () => { sim.s.fixes = work; sim.s.wpt = null; sim.s.route = []; sim.touch(); close(); refresh(); } });   // a changed Route is plotted again with Plot
+      const cancel = el('button', { class: 'btn', text: 'Cancel', onclick: () => close() });
       draw();
-      close = modal({ title: 'Route', body: el('div', {}, list, el('div', { class: 'row' },
-        el('button', { class: 'btn primary grow', text: 'Add fix', onclick: () => { close(); fixDialog({ title: 'New fix', action: 'Add fix', onFix: (f) => { sim.s.fixes.push(f); sim.touch(); refresh(); openRoute(); } }); } }),
-        el('button', { class: 'btn', text: 'Clear route', onclick: () => { sim.clearRoute(); draw(); refresh(); } }),
-        el('button', { class: 'btn', text: 'Close', onclick: () => close() }))), actions: [] });
+      close = modal({ title: 'Route', body: el('div', {}, list, el('div', { class: 'row route-btns' }, plus, minus, up, down, done, cancel)), actions: [] });
     }
     // SHW: switches for what the NAV display draws. They replace the controls while SHW is on.
     const showSw = (key, label) => { const b = bbtn(label, () => { show[key] = !show[key]; nds.forEach((n) => n.redraw()); paint(); }); const paint = () => b.classList.toggle('on', !!show[key]); paint(); return b; };
     const showC = el('div', { class: 'bc shw' }, el('div', { class: 'rowN' }, showSw('ships', 'Ships'), showSw('subs', 'Subs'), showSw('base', 'Base'), showSw('orgs', 'Orgs'), showSw('labels', 'Labels')));
-    const c = el('div', { class: 'bc' }, el('div', { class: 'rowN' }, dest, fix, routeB, plot));
+    const c = el('div', { class: 'bc' }, el('div', { class: 'rowN' }, dest, routeB, plot));
     // View settings (right desk): range and PAN here, DSP and SHW added by the console.
     const v = [bbtn('−', () => zoom(1), 'sym'), el('div', { class: 'rngbox' }, el('small', { text: 'RANGE' }), rangeTxt), bbtn('+', () => zoom(-1), 'sym')];   // the right desk is a bank of six: range first
     function refresh() { set(rangeTxt, nds[0] ? nds[0].range + ' nm' : ''); plot.classList.toggle('on', !!sim.s.wpt); }

@@ -321,9 +321,12 @@ function syncLessonFlags() {
   if (ledge(s.at) && objStatus('navLesson_arrive') === 'active') flag('arrived_ledge');
   if (s.wskrs && s.wskrs.length) flag('wskr_out');
   // Sea Trials: the commissioning trip to the Trials AO
-  const ao = (p) => p && p.name === 'Trials AO';
-  if (ao(s.wpt) || (ao(s.at) && objStatus('seaTrials_plot'))) flag('plotted_ao');
-  if (ao(s.at) && objStatus('seaTrials_arrive') === 'active') flag('arrived_ao');
+  // mission areas: a box on the chart for every active mission that names one ("area" in its JSON)
+  sim.missionAreas = [...missions.activeMissions].map((id) => missions.missions.get(id)).filter((m) => m && m.area).map((m) => m.area);
+  const box = (sim.missionAreas || []).find((a) => a.name === 'TRIALS AO') || (missions.missions.get('seaTrials') || {}).area;
+  const inAO = (p) => !!(p && box && p.lat >= box.lat0 && p.lat <= box.lat1 && p.lon >= box.lon0 && p.lon <= box.lon1);
+  if (inAO(s.wpt) || (inAO(s) && objStatus('seaTrials_plot'))) flag('plotted_ao');
+  if (inAO(s) && objStatus('seaTrials_arrive') === 'active') flag('arrived_ao');
   if (objStatus('seaTrials_arrive') === 'active' && !limitsWarned && (s.depth > 305 || s.speed > 15.5)) { limitsWarned = true; say('aria', `${s.depth > 305 ? 'We are below 300 metres' : 'We are over 15 knots'}, Captain. Our orders are 15 knots and 300 metres until we reach the trials area.`, 'error'); }
   const ledgePoi = s.pois.find(ledge); if (ledgePoi && scanned(ledgePoi)) { flag('scanned'); flag('scanned_ledge'); }   // a scan filed by the ship or by a WSKR
   missions.checkTriggers();

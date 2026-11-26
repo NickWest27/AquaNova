@@ -187,12 +187,17 @@ export function createND(wrap, { onPick, stage = false, units = 1, contours = fa
           ctx.beginPath(); ctx.moveTo(0, -k * 1.2); ctx.lineTo(k, k); ctx.lineTo(0, k * 0.5); ctx.lineTo(-k, k); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore();
           ctx.fillStyle = '#ffd0e6'; ctx.font = `800 ${bigWskr ? 14 : 12}px system-ui`; ctx.textAlign = 'left'; ctx.fillText('Tn', x + k + 3, y + 4);
         } } }
-    // temporary Areas of Operation (a patrol area): a dashed amber ring, solid while the window is open
-    for (const ao of sim.tempAOs || []) {
-      const c0 = px(ao), r = ao.radius * ((Math.min(nd.w, nd.h) / 2 - 24) / nd.range), open = s.clock >= ao.from && s.clock <= ao.to;
-      if (c0.x + r < -20 || c0.x - r > w + 20 || c0.y + r < -20 || c0.y - r > h + 20) continue;
-      ctx.save(); ctx.strokeStyle = '#ffb020'; ctx.lineWidth = open ? 3 : 2; ctx.setLineDash(open ? [] : [10, 8]); ctx.globalAlpha = 0.85; ctx.beginPath(); ctx.arc(c0.x, c0.y, Math.max(r, 6), 0, 6.2832); ctx.stroke(); ctx.setLineDash([]);
-      ctx.fillStyle = '#ffb020'; ctx.font = '700 15px system-ui'; ctx.textAlign = 'center'; ctx.fillText(`PATROL AREA${open ? ' · ON STATION' : ''}`, c0.x, c0.y - Math.max(r, 6) - 8); ctx.restore();
+    // Mission areas (owner, 2026-11-27): a box on the chart for each area a mission assigns (the Trials AO, a patrol area). Amber; a patrol
+    // area is dashed until its window opens. The player makes a waypoint and sails into it: an area is not a destination.
+    const boxes = [...(sim.missionAreas || []), ...(sim.tempAOs || []).map((ao) => { const dLat = ao.radius / 60, dLon = ao.radius / (60 * Math.cos((ao.lat * Math.PI) / 180)), open = s.clock >= ao.from && s.clock <= ao.to;
+      return { name: `PATROL AREA${open ? ' · ON STATION' : ''}`, lat0: ao.lat - dLat, lat1: ao.lat + dLat, lon0: ao.lon - dLon, lon1: ao.lon + dLon, dashed: !open }; })];
+    for (const b of boxes) {
+      const a = px({ lat: b.lat1, lon: b.lon0 }), c = px({ lat: b.lat0, lon: b.lon1 });
+      if (c.x < -20 || a.x > w + 20 || c.y < -20 || a.y > h + 20) continue;
+      ctx.save(); ctx.strokeStyle = '#ffb020'; ctx.lineWidth = b.dashed ? 2 : 3; ctx.setLineDash(b.dashed ? [10, 8] : []); ctx.globalAlpha = 0.85;
+      if (trackUp) { const q = [px({ lat: b.lat1, lon: b.lon0 }), px({ lat: b.lat1, lon: b.lon1 }), px({ lat: b.lat0, lon: b.lon1 }), px({ lat: b.lat0, lon: b.lon0 })]; ctx.beginPath(); q.forEach((p, k) => (k ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y))); ctx.closePath(); ctx.stroke(); }
+      else ctx.strokeRect(a.x, a.y, Math.max(6, c.x - a.x), Math.max(6, c.y - a.y));
+      ctx.setLineDash([]); ctx.fillStyle = '#ffb020'; ctx.font = '700 15px system-ui'; ctx.textAlign = 'left'; ctx.fillText(b.name, Math.max(4, a.x + 4), Math.max(16, a.y - 8)); ctx.restore();
     }
     // POIs
     ctx.font = '700 17px system-ui';

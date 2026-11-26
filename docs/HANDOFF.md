@@ -20,10 +20,10 @@ Crew and messages
 - [x] 12. Communicator folder "Report an emergency" becomes "EMERGENCY".
 - [ ] 13. "Ask about": each crew member lists the functions of the buttons on the pages they look after.
 Navigation
-- [ ] 14. Dest opens a waypoint pop-up: pick a known place, OR type lat/long, OR place + bearing + distance. Done / Cancel. No name, no depth.
-- [ ] 15. Route editor: always starts at present position, waypoints added below. Buttons: +, -, up, down, Done, Cancel.
-- [ ] 16. Plot: plots the route avoiding land; speed and depth do not change.
-- [ ] 17. Missions with an area (Trials AO, patrol, search) draw the area box on the chart automatically. The Trials AO is no longer a destination point: the player makes a waypoint and sails into the box.
+- [x] 14. Dest opens a waypoint pop-up: pick a known place, OR type lat/long, OR place + bearing + distance. Done / Cancel. No name, no depth.
+- [x] 15. (The Fix button is gone: Route + does its job.) Route editor: always starts at present position, waypoints added below. Buttons: +, -, up, down, Done, Cancel.
+- [x] 16. Plot: plots the route avoiding land; speed and depth do not change.
+- [x] 17. Missions with an area (Trials AO, patrol, search) draw the area box on the chart automatically. The Trials AO is no longer a destination point: the player makes a waypoint and sails into the box.
 Quarters
 - [x] 18. The quarters screen is too high definition: lower the detail to suit the retro look.
 

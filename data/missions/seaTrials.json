@@ -27,7 +27,7 @@
     },
     {
       "id": "plot",
-      "description": "On the bridge NAV page, set Dest to the Trials AO and tap Plot",
+      "description": "Make a waypoint inside the Trials AO box (NAV page: Dest, then Lat / Long) and tap Plot",
       "required": true,
       "triggers": [
         {
@@ -52,7 +52,7 @@
     },
     {
       "id": "arrive",
-      "description": "Take the ship to the Trials AO, about 100 nm south (no faster than 15 knots)",
+      "description": "Sail into the Trials AO, about 100 nm south (no faster than 15 knots)",
       "required": true,
       "triggers": [
         {
@@ -195,7 +195,7 @@
         "objectiveId": "plot",
         "seconds": 60
       },
-      "message": "On the bridge NAV page, tap Dest, pick the Trials AO, then tap Plot, {captain}. Then set a speed at the Helm."
+      "message": "The Trials AO is the amber box on the chart, {captain}. On the NAV page tap Dest, choose Lat / Long and enter a point inside it, for example 39 54 N, 71 00 W. Then tap Plot and set a speed at the Helm."
     },
     {
       "condition": {
@@ -223,5 +223,12 @@
     }
   ],
   "logBriefing": "My orders from Admiral Okafor: commission the Aqua Nova. Depart Woods Hole for the Trials AO on the edge of the shelf, about 100 miles south, keeping under 15 knots and 300 metres on the way. In the AO: test depth, full speed and super cruise, then send the trials report from Comms.",
-  "logOutcome": "We reached the Trials AO, took her to 300 metres, ran her at full speed and opened her up in super cruise. I sent the trials report to OERA from {location} and the Aqua Nova is commissioned."
+  "logOutcome": "We reached the Trials AO, took her to 300 metres, ran her at full speed and opened her up in super cruise. I sent the trials report to OERA from {location} and the Aqua Nova is commissioned.",
+  "area": {
+    "name": "TRIALS AO",
+    "lat0": 39.75,
+    "lat1": 40.05,
+    "lon0": -71.25,
+    "lon1": -70.75
+  }
 }

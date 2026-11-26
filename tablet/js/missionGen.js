@@ -203,7 +203,7 @@ export function acceptOffer(id) {
   if (def.gen.type === 'patrol') {
     const o = g.offer, a = def.gen.area; g.patrol = { id, name: a.name, lat: a.lat, lon: a.lon, radius: a.radius, from: o.startAt, to: o.endAt, inside: 0, last: null, spawnAt: o.startAt + (1 + Math.random() * 2) * H, spawned: false };
     def.objectives.find((x) => x.id === 'watch').description = `Stay on station in ${a.name} from ${clockText(o.startAt)} until ${clockText(o.endAt)}`;
-    def.objectives.find((x) => x.id === 'arrive').description = `Enter the patrol area (${a.radius} nm round ${a.name}) before ${clockText(o.startAt)}`;
+    def.objectives.find((x) => x.id === 'arrive').description = `Enter the patrol area (the box ${a.radius * 2} nm across round ${a.name}) before ${clockText(o.startAt)}`;
     sim.tempAOs = [{ id, name: a.name, lat: a.lat, lon: a.lon, radius: a.radius, from: o.startAt, to: o.endAt }];
   }
   g.active = id; g.offerAccepted = { ...g.offer, acceptedAt: sim.s.clock }; g.offer = null; save(g);
@@ -325,7 +325,7 @@ function rescueTick(g, id, v, now) {
 /** On station: time inside the area counts only inside the window. Poachers show up an hour or two in. 80% coverage serves the patrol. */
 function patrolTick(g, id, now) {
   const p = g.patrol, dt = p.last == null ? 0 : now - p.last; p.last = now;
-  const inside = toward(sim.s, p).nm <= p.radius;
+  const t = toward(sim.s, p), inside = Math.abs(t.dx) <= p.radius && Math.abs(t.dy) <= p.radius;   // the area is a box (drawn as one on the chart), radius nm each way
   if (inside && !flag(id, 'inside')) prop(id, 'inside', 1);
   if (inside && now >= p.from && now <= p.to) p.inside += Math.min(dt, 120);
   if (!p.spawned && now >= p.spawnAt && now < p.to) {

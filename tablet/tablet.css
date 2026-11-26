@@ -1028,3 +1028,9 @@ body.general-alarm #station::after { content: ''; position: absolute; inset: 0; 
 .qs .bd-snr * { font-family: inherit; }
 .qs-ship { gap: 14px; padding: 10px 12px; } .qs-ship .qs-r { font-size: 18px; } .qs-ship .qs-r b { max-width: 120px; }
 .qs-wr { gap: 12px; font-size: 19px; white-space: nowrap; } .qs-wr b { width: 90px; }
+/* Route editor (bridge Route button): selectable rows, the present position first, a bank of + - up down Done Cancel */
+button.route-row { width: 100%; text-align: left; color: var(--text); font: inherit; min-height: 3.4rem; }
+.route-row.sel { border-color: var(--cyan); background: rgba(100,255,218,0.14); }
+.route-row.here { opacity: 0.8; border-style: dashed; }
+.route-list { display: flex; flex-direction: column; gap: 6px; max-height: 22rem; overflow-y: auto; }
+.route-btns { margin-top: 10px; gap: 8px; } .route-btns .btn.sym { min-width: 3.6rem; font-size: 1.4rem; } .route-btns .btn.primary { margin-left: auto; }

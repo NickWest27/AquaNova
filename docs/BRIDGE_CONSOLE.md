@@ -62,3 +62,11 @@ Old page ids `helm` and `view` are now `hlm` and `vw`. The old per-page right-de
 ## Open
 - Subs and Orgs contacts; TAC, VW, SYS specs.
 - The route list has no per-leg ETA yet.
+
+## Dest, Route, Plot (owner, 2026-11-27)
+- **Dest** opens the waypoint dialog: a known **Place**, a **Lat / Long**, or **Bearing / Distance** from a place. Done or Cancel. No name or depth (waypoints are WP1, WP2, ...). The waypoint becomes the end of the Route.
+- **Route** opens the Route editor: row 0 is the present position, the waypoints below. Tap a row to select it. **+** adds a waypoint after it (the same dialog), **−** deletes it, **▲ ▼** move it, **Done** keeps the changes, **Cancel** drops them. A changed Route needs Plot again.
+- **Plot** plots the Route round the land. Speed and depth do not change.
+- The **Fix** button is gone (Route + does the same).
+- **Mission areas** are amber boxes on every chart (`nd.js`): a mission's `"area": { name, lat0, lat1, lon0, lon1 }` (the Trials AO) and patrol areas (dashed until the window opens; the inside test is the same box, `missionGen.js`). An area is never a destination: the player makes a waypoint inside it.
+- The lower display's NAV page is north up (track up is gone from the bridge), with range rings at a quarter, half or the whole range setting carried out to the corners. The WSKR station's chart keeps track up.
