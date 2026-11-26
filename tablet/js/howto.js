@@ -20,6 +20,12 @@ export const GUIDES = {
     ] },
   ],
   helm: [
+    { label: 'Buttons on my pages', items: [
+      G('b-nav', 'Bridge NAV page', 'The NAV page is the chart, Captain. The buttons:', ['Dest: make the destination. Pick a Place, type a Lat / Long, or give a Bearing / Distance from a place. Done or Cancel.', 'Route: the list of waypoints from where we are. Tap a row, then + adds one after it, − deletes it, the arrows move it. Done keeps it, Cancel drops it.', 'Plot: I plot the Route round the land. Speed and depth stay as they are.', 'RANGE − and +: zoom the chart out and in.', 'PAN: arrows move the chart. Tap PAN again to come back to the ship.', 'SHW: switch Ships, Subs, Base, Orgs and Labels on or off.', 'DSP: put this page on the main screen.']),
+      G('b-hlm', 'Bridge HLM page', 'HLM is for steering by hand. The buttons:', ['Port and Stbd: turn 10 degrees.', 'Slow and Fast: 10 percent less or more throttle.', 'Stop: no throttle. The course is kept.', 'Up and Dn: change depth a step.', 'Srfc: take her to the surface.', 'NOE: hug the floor, 10 metres off the bottom. Tap again to stop.', 'Cruise: super cruise on or off.', 'DSP: put this page on the main screen.']),
+      G('b-helm', 'Helm station', 'The Helm station has two levers, a dial and a row of buttons:', ['Left lever: speed. Right lever: depth. Dial: heading.', 'STOP: no throttle.', 'SURFACE, PERISCOPE, DIVE 500: go to that depth.', 'SET DEPTH: type a depth.', 'PORT 10° and STBD 10°: turn.', 'DOCK: dock or undock. It needs a dock, the surface and under 1.5 knots.', 'SUPER CRUISE: on or off. It needs deep water ahead.', 'HUG FLOOR: follow the bottom.']),
+      G('b-navst', 'Navigation station', 'The Navigation station is the big chart:', ['− and +: zoom.', 'Tap a marker to pick it.', 'PLOT A COURSE: the waypoint dialog, and I plot it at once.', 'SEARCH PATTERN: a search round a point.']),
+    ] },
     { label: 'The Helm pages', items: [
       G('helm', 'Helm station', 'The Helm has a lever on each side and a dial in the middle.', ['Open the Helm station.', 'Left lever: speed. Move it to Stop, Half or Full.', 'Right lever: depth. Move it up for shallow and down for deep.', 'Dial: tap or drag it to set the heading.', 'Buttons under the dial: Stop, Surface, Periscope, Dive 500, Port 10°, Stbd 10°.', 'The Dock, Super cruise and Hug floor buttons are below.']),
       G('nav', 'Navigation station', 'Navigation shows the chart and plots courses.', ['Open the Navigation station.', 'Tap Map range − or + to zoom.', 'Tap a marker on the chart. Its name shows under Destination.', 'Tap Plot a course. Follow the steps in the window.', 'The ship steers to the place by itself. Tap Cancel course to stop.']),
@@ -32,6 +38,11 @@ export const GUIDES = {
     ] },
   ],
   sensors: [
+    { label: 'Buttons on my pages', items: [
+      G('b-sonar', 'SONAR page', 'The SONAR page is what we hear, Captain. The buttons:', ['A contact in the list: tap it for its details. Tap again to close.', 'Source: listen with the ship or with a WSKR.', 'Full sweep: a 36 second sweep all round.', '− and +: the range.', 'Investigate (with a contact picked): send a WSKR to it.', 'Scan site (at a site): scan it.']),
+      G('b-wskr', 'WSKRS page', 'The WSKRS page runs the four drones. The buttons:', ['A WSKR tile: pick that WSKR. The chart centres on it.', 'DEPLOY WSKR: launch the next one.', 'RECALL ALL: bring them all home.', 'IN FORMATION: back to the ring round the ship.', 'SEARCH: a search pattern for the picked WSKR.', 'SET UP A RELAY: a WSKR holds back to relay the link.', 'AUTO-INTERCEPT: WSKRs go to new contacts by themselves.', 'WIDE, NARROW, AUTO: the size of the formation.', 'SHALLOW, DEEP: their running depth.', '− and +: the chart range.']),
+      G('b-snr', 'Bridge SNR page', 'SNR is the sonar on the bridge:', ['Source: the ship or a WSKR.', 'Full sweep: a sweep all round.', '− and +: the range. NAV follows.', 'DSP: put it on the main screen.']),
+    ] },
     { label: 'Sensor tasks', items: [
       G('sweep', 'Run a sonar sweep', 'A full sweep charts the sea around us in detail, Captain.', ['Open the Sensors station. The SONAR page opens.', 'Tap Full sweep.', 'Wait. The sweep turns round the ship and shows more of the chart.', 'Contacts appear in the list.']),
       G('wskr', 'Launch a WSKR', 'We carry four WSKRs. Each one is a mobile listening post.', ['Be at sea, not docked.', 'Open the Sensors station.', 'Tap WSKRs.', 'Tap Deploy WSKR.', 'Wait. The WSKR leaves the bay and spreads out round us.']),
@@ -41,6 +52,11 @@ export const GUIDES = {
     ] },
   ],
   science: [
+    { label: 'Buttons on my pages', items: [
+      G('b-lab', 'Science Lab', 'The lab has three tabs, Captain:', ['SAMPLES: what we hold and where it came from.', 'ANALYSIS: pick a lab and a sample, then Analyse.', 'RESEARCH: spend points. Each RESEARCH button starts one topic.']),
+      G('b-remora', 'Remora station', 'Remora is ours to fly:', ['LAUNCH: out through the main bay.', 'Send Remora to: pick a site.', 'The tools (when she is out): take a sample at the site.', 'AUTO RETURN: she comes home by herself.', 'RECOVER: back into the bay, then unload.']),
+      G('b-bay', 'Launch Bay', 'The Launch Bay runs the doors and the craft:', ['LAUNCH (main bay): Remora or the Tern, one at a time.', 'PILOTS and PAX: who goes in the Tern.', 'RECALL: call the Tern back.', 'LAUNCH on a WSKR bay: that WSKR goes out.', 'The airlock line fills as the lock floods and empties as it drains.']),
+    ] },
     { label: 'Science tasks', items: [
       G('launch', 'Launch Remora', 'Remora is our science ROV, Captain.', ['Be at sea, not docked.', 'Open the Science Lab. Tap the ROV Station.', 'Tap Launch. Wait for the bay to finish.', 'You can also launch from the Launch Bay.']),
       G('sample', 'Take a sample', 'Remora takes samples at sites on the sea floor.', ['Launch Remora.', 'Tap Send Remora to. Pick a site.', 'Wait until Remora is at the site.', 'Tap a tool: Sample collector, Core drill or Magnetometer. Only tools that fit the site show.', 'Wait for the timer to end.', 'Tap Recover, or Auto return. The samples go to the lab.']),
@@ -48,6 +64,10 @@ export const GUIDES = {
     ] },
   ],
   executiveOfficer: [
+    { label: 'Buttons on the bridge', items: [
+      G('b-desk', 'The bridge desk', 'The desk under the main screen has three panels, Captain:', ['Left: the pages. NAV, HLM, TAC, SNR, VW, SYS. The page shows on the middle display.', 'Middle: the buttons for that page. Ask the crew member who looks after it.', 'Right: RANGE − and +, DSP (put the page on the main screen), and PAN and SHW on NAV.', 'TAC: not installed yet.', 'VW: Lights, and SHOW CAMERA or SHOW SYNTHETIC for the view ahead.']),
+      G('b-crew', 'Talking to the crew', 'You can reach anyone two ways:', ['Tap the pin, then tap a name.', 'On the bridge, tap Nicole or Alex at their consoles.', 'When someone has news, the line opens by itself.', 'EMERGENCY: orders such as Sound General Alarm.']),
+    ] },
     { label: 'Ship screens', items: [
       G('bridge', 'The bridge screens', 'The bridge has a main screen and a desk below it.', ['The Main Screen shows the chart. Use RANGE − and + on the right panel to zoom.', 'Tap DSP on the right panel to show the Centre Display on the Main Screen. Tap DSP again for the chart.', 'Tap PAN to move the chart. The Centre Desk Strip shows arrows. Tap PAN again to centre on the ship.', 'The Left Desk Panel picks the page: NAV, HELM, SYS or VIEW.']),
       G('ped', 'The PED and tasks', 'The PED holds your tasks.', ['Tap PED in the top-right corner.', 'Open Tasks.', 'Read the steps for each task.', 'Steps tick off by themselves.']),
@@ -55,6 +75,10 @@ export const GUIDES = {
     ] },
   ],
   engineering: [
+    { label: 'Buttons on my pages', items: [
+      G('b-eng', 'Engineering computer', 'The engineering computer is the console in Engineering, Captain. The buttons:', ['GENERAL ALARM: sound it. While it sounds, it reads SECURE ALARM.', 'A system in the list: show its picture, health and reading.', 'On a diagram: tap a pump, valve, fan or breaker to switch it.', 'REPAIR: send a team. We have two. STAND DOWN calls one back.', 'Cooler and Warmer (Heating/Cooling): the cabin set point.']),
+      G('b-sys', 'Systems page', 'Systems is the quick view:', ['LIGHTS: the outside lights on or off.', 'SONAR: active sonar on or off.']),
+    ] },
     { label: 'Engineering screens', items: [
       G('sys', 'Systems page', 'Systems shows how the ship is.', ['Open the Systems station, or tap SYS on the bridge.', 'Hull shows damage.', 'Life support shows air and scrubbers.', 'Power shows the plant and the battery.', 'Switches turn systems on and off.']),
     ] },
