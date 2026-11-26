@@ -32,17 +32,18 @@ def main():
         r = js(setup + "sh.state='out'; sh.mode='follow'; sh.lat=s.lat; sh.lon=s.lon; sh.depth=0; const a=N.orderTern({kind:'hold'}); const b=N.orderTern({kind:'depth',m:300}); const c=N.orderTern({kind:'depth',m:900}); return {a:a.text, mode:sh.mode, hd:sh.holdDepth, c:c.text}")
         check("an order to a Tern in contact is acknowledged at once", "acknowledges" in r["a"] and r["mode"] == "station" and r["hd"] == 300, r)
         check("she refuses a depth below her rating", "rated" in r["c"], r)
-        # 4. send her far away: out of range, the order is queued; Nicole says why
-        r = js(setup + "Object.assign(sh,{state:'out',mode:'station',lat:s.lat+0.9,lon:s.lon,depth:50,holdDepth:50,mission:{kind:'goto',dest:{name:'Test Point',lat:s.lat+0.9,lon:s.lon},label:'Test Point'},lastContact:s.clock,nextCheck:s.clock+3600}); sim.step(1); const x=N.orderTern({kind:'surface'}); return {text:x.text, queued:x.queued, q:sh.queue.length, mode:sh.mode, lost:sh.lost}")
+        # 4. send her far away: out of range, the order is queued; Nicole says why (due SOUTH of Woods Hole: due north lands within 20 nm of the
+        #    Port of Boston, and a dock relays her radio, so she would still be in contact)
+        r = js(setup + "Object.assign(sh,{state:'out',mode:'station',lat:s.lat-0.9,lon:s.lon,depth:50,holdDepth:50,mission:{kind:'goto',dest:{name:'Test Point',lat:s.lat-0.9,lon:s.lon},label:'Test Point'},lastContact:s.clock,nextCheck:s.clock+3600}); sim.step(1); const x=N.orderTern({kind:'surface'}); return {text:x.text, queued:x.queued, q:sh.queue.length, mode:sh.mode, lost:sh.lost}")
         check("out of range: the order waits and Nicole says out of communications range", r["queued"] and r["q"] == 1 and "out of communications range" in r["text"] and r["mode"] == "station", r)
-        # 5. an hour later she surfaces; still out of the surface range, so a check-in is missed (ship 54 nm away)
-        r = js("const s=sim.s, sh=B.shuttle(); sh.lat=s.lat+1.5; for(let i=0;i<100;i++) sim.step(40); return {missed:sh.missed, q:sh.queue.length, text:N.orderTern({kind:'hold'}).text}")
+        # 5. an hour later she surfaces; still out of the surface range, so a check-in is missed (54 nm due south: more than 40 nm, her surface radio range, from the ship and from every dock)
+        r = js("const s=sim.s, sh=B.shuttle(); sh.lat=s.lat-0.9; for(let i=0;i<100;i++) sim.step(40); return {missed:sh.missed, q:sh.queue.length, text:N.orderTern({kind:'hold'}).text}")
         check("she missed a check-in and Nicole says so", r["missed"] >= 1 and "missed a check-in" in r["text"], r)
         # 6. she comes back into range: contact, the queued orders go through
-        r = js("const s=sim.s, sh=B.shuttle(); sh.lat=s.lat+0.1; sim.step(1); return {q:sh.queue.length, hd:sh.holdDepth, mode:sh.mode, lost:sh.lost}")
+        r = js("const s=sim.s, sh=B.shuttle(); sh.lat=s.lat-0.1; sim.step(1); return {q:sh.queue.length, hd:sh.holdDepth, mode:sh.mode, lost:sh.lost}")
         check("when contact returns the waiting orders are sent", r["q"] == 0 and not r["lost"], r)
         # 7. check-in from surface range succeeds (about 30 nm, beyond the 20 nm link)
-        r = js(setup + "Object.assign(sh,{state:'out',mode:'station',lat:s.lat+0.5,lon:s.lon,depth:50,holdDepth:50,lastContact:s.clock,nextCheck:s.clock+3600,lost:false,missed:0}); sim.step(1); const a=sh.lost; N.orderTern({kind:'surface'}); for(let i=0;i<100;i++) sim.step(40); return {lost:a, nowLost:sh.lost, q:sh.queue.length, hd:sh.holdDepth, missed:sh.missed}")
+        r = js(setup + "Object.assign(sh,{state:'out',mode:'station',lat:s.lat-0.5,lon:s.lon,depth:50,holdDepth:50,lastContact:s.clock,nextCheck:s.clock+3600,lost:false,missed:0}); sim.step(1); const a=sh.lost; N.orderTern({kind:'surface'}); for(let i=0;i<100;i++) sim.step(40); return {lost:a, nowLost:sh.lost, q:sh.queue.length, hd:sh.holdDepth, missed:sh.missed}")
         check("an hourly check-in from the surface reaches us and delivers the order", r["lost"] and r["q"] == 0 and r["hd"] == 0 and r["missed"] == 0, r)
         # 8. call back, and mission resume
         r = js(setup + "Object.assign(sh,{state:'out',mode:'follow',lat:s.lat,lon:s.lon,depth:0}); const d={id:'x',name:'Test Point',lat:s.lat+0.05,lon:s.lon}; const a=N.orderTern({kind:'goto',dest:d}); const m=sh.mission&&sh.mission.label; N.orderTern({kind:'hold'}); const mm=sh.mode; N.orderTern({kind:'resume'}); const m2=sh.mode; const b=N.callBackTern(); return {a:a.text, m, mm, m2, home:sh.mode}")
@@ -61,6 +62,7 @@ def main():
         who("Nicole"); tap()
         if page.locator(".comm-reply", has_text="Nicole Brooks").count(): page.locator(".comm-line").first.tap(); tap()
         line("Give an order"); tap()
+        line("The Tern"); tap()   # orders are grouped in folders (Reports, The Tern, Ship) since 2026-11-22
         line("Order the Tern to"); tap(); line("Hold position"); tap()
         check("Nicole passes an order to the Tern from the communicator", js("return sim.s.shuttle.mode") == "station", js("return sim.s.shuttle.mode"))
         page.evaluate("window.__aq.scene('bridge')"); page.wait_for_timeout(300)

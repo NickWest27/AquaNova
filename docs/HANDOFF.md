@@ -15,7 +15,8 @@ The owner works from an iPad and a phone, does not use git, and wants Claude to 
 
 ## Where things are
 - `main` = the desktop version to come (16:9, 1920x1080); for now the same game as `tablet` at the branch split. `tablet` = the retro-skinned tablet version (pixel-art frames, 4:3 where reskinned). Palette: `data/palette.json`, `RETRO_PALETTE.md`; art rules for other AIs: `Guides/ASSET_SPEC.md`.
-- Test before pushing: `python3 tools/smoke.py` plus the relevant `tools/*_test.py`. Known failing before the retro work: `tern_test.py`, `bay_test.py` (ROV sample), `wskr_chase_test.py`, `notices_test.py`; `bridge_test.py` fails at the "Scan" step on the old page but its first checks (stations open) pass.
+- `tern_test.py` fixed 2026-11-26 (it sent the Tern north into radio range of the Port of Boston; and the orders menu has folders now). Other old failures (test rot, not game bugs as far as checked): bay_test (ROV sample), science, analysis, notices, console, transfer, comms, depthpad.
+- Test before pushing: `python3 tools/smoke.py` plus the relevant `tools/*_test.py`. Known failing before the retro work: `bay_test.py` (ROV sample), `wskr_chase_test.py`, `notices_test.py`; `bridge_test.py` fails at the "Scan" step on the old page but its first checks (stations open) pass.
 - Before each push: `python3 tools/update_sw.py`, commit, push `tablet`.
 
 ## Design defaults (owner, 2026-11-25)
