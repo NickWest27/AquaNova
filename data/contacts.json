@@ -65,8 +65,8 @@
             "id": "engineering",
             "name": "Chief Engineer Ryan Doyle",
             "role": "Chief Engineer",
-            "bio": "Came up through merchant ship engine rooms, then joined the team that commissioned the compact fusion plant at Woods Hole, and knows the Aqua Nova's plant better than its designers do. He fixes things with parts nobody planned to use. Boston Irish, loud, superstitious about his reactor, and the first to stay up all night when something breaks.",
-            "image": "images/crew/riley_chen.png",
+            "bio": "Twenty years in merchant ship engine rooms out of Boston, then the team that commissioned the compact fusion plant at Woods Hole, and knows the Aqua Nova's plant better than its designers do. He fixes things with parts nobody planned to use. Boston Irish, loud, superstitious about his reactor, and the first to stay up all night when something breaks.",
+            "image": "images/crew/ryan_doyle.png",
             "dialogueOptions": {
                 "commands": ["Engineering status report", "Open the bulkheads"],
                 "emergency": ["Emergency blow", "Discharge fire suppression", "Close the bulkheads"],
@@ -77,8 +77,8 @@
             "id": "security",
             "name": "Lieutenant Andre Washington",
             "role": "Head of Security",
-            "bio": "Twelve years in the Marine Corps: Force Recon, embassy security, then maritime boarding teams. Six foot five, sleeves of tattoos, and a laugh you can hear two decks away, but quiet and exact when it counts. Captain Voss insisted on him over the objections of O.E.R.A.'s science side, who did not want a weapons man on a research ship. Andre's view is that a ship that goes deeper than anyone will eventually meet something it cannot talk to. Courteous, protective, and always watching the door.",
-            "image": "images/crew/jordan_kim.png",
+            "bio": "Twelve years in the Marine Corps: Force Recon, embassy security, then maritime boarding teams in the Gulf. Six foot five, sleeves of tattoos, and a laugh you can hear two decks away, but quiet and exact when it counts. Captain Voss insisted on him over the objections of O.E.R.A.'s science side, who did not want a weapons man on a research ship. Andre's view is that a ship that goes deeper than anyone will eventually meet something it cannot talk to. Courteous, protective, and always watching the door.",
+            "image": "images/crew/andre_washington.png",
             "dialogueOptions": {
                 "commands": ["Status report", "Launch the Tern to"],
                 "emergency": [],

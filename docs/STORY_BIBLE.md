@@ -1,6 +1,6 @@
 # Aqua Nova — story bible
 
-Written 2026-11-19, brought up to date 2026-11-26. Sources: the Characters and Chapters PDFs, `data/contacts.json`, `data/commsContacts.json` and the arrival and logbook text. The owner has okayed it in principle (not yet read in full). Anything beyond the PDFs is invention by Claude. The bios in `contacts.json` use it. Names were changed on 2026-11-19 (see the end).
+Written 2026-11-19, brought up to date 2026-11-27. Sources: the Characters and Chapters PDFs, `data/contacts.json`, `data/commsContacts.json` and the arrival and logbook text. The owner has okayed it in principle (not yet read in full). Anything beyond the PDFs is invention by Claude. The bios in `contacts.json` use it. Names were changed on 2026-11-19 (see the end).
 
 ## Theme
 **Who decides what the deep is for?** The Aqua Nova is sold as a peaceful research ship, and the owner's own notes say Captain Voss did not think it should be *only* that. Science, security and funding all want something from the ocean floor. Missions should keep returning to that question in different forms (a discovery that is also a resource, a distress call that is also a test, a find that someone wants kept quiet) rather than being random encounters. The player starts as someone who believes the sea is worth understanding before it is worth using. The story tests that belief.
@@ -37,11 +37,16 @@ The Aqua Nova is advanced enough that the nations behind O.E.R.A. will not let h
 - **Marcus Chen, Helmsman (he).** Navy coxswain, nine years on small boats in bad water, then ferrying scientists to a research sub. Precise, dry, hates being rushed in harbour. *Use:* competence; notices when the Captain is pushing the boat too hard.
 - **Dr. Samira Patel, Chief Science and Medical Officer (she).** Emergency doctor turned marine biologist, ship's doctor on three expeditions. Chosen by Voss personally. *Use:* science and crew health; first to say what a discovery might cost.
 - **Alex Torres, Sensors (he).** Six years in a Navy sonar shack. Reports only when sure. *Use:* the contact he is not sure about, and whether the Captain trusts a "probably".
-- **Ryan Doyle, Chief Engineer (he).** Boston Irish. Twenty years in merchant ship engine rooms, then the team that commissioned the fusion plant. Loud, superstitious about his reactor (talks to it like a horse), fixes things with parts nobody planned to use. *Use:* the ship's heart; pride in the fusion plant during the trials; the first up all night when something breaks.
+- **Ryan Doyle, Chief Engineer (he).** Boston Irish, from Southie; his father ran harbour tugs. Twenty years in merchant ship engine rooms, then the team that commissioned the fusion plant. Loud, superstitious about his reactor (talks to it like a horse), fixes things with parts nobody planned to use. *Use:* the ship's heart; pride in the fusion plant during the trials; the first up all night when something breaks.
 - **Lt. Andre Washington, Security (he).** Twelve years a Marine (Force Recon, embassy duty, boarding teams in the Gulf). Six foot five, sleeves of tattoos (the Corps emblem, the names of men he served with, an anchor his daughter drew that she insists is a whale), a laugh you hear two decks away, quiet and exact when it counts. Voss insisted on him over the science side's objections. Believes a ship that goes deeper than anyone will meet something it cannot talk to. *Use:* the voice of the other side of the theme; never a villain.
 - **Nicole Brooks, Communications (she).** Signals officer, then four years at a polar station with one satellite window twice a day. Knows what a delayed message costs. Hears old frequencies first. *Use:* Halcyon.
 
-- **Appearance:** Nicole has a portrait (`retro/assets/`, 90s dialogue screen). Other portraits to come as the owner makes them.
+- **Appearance** (portraits in `tablet/retro/assets/crew/`, sources in `art_src/crew/`; one look per person, keep new art to it):
+  - ARIA: no body. A glowing blue holographic brain of linked nodes over a projector ring.
+  - Marcus Chen: short dark hair, warm brown skin, a calm half-smile; seen over his shoulder at the helm console, navy uniform with the ship's patch.
+  - Dr. Samira Patel: long dark curly hair tied back, white lab coat over the navy uniform; in the lab with a tablet and a sample tube.
+  - Nicole Brooks: at the comms station (a stand-in picture; the owner wants an over-the-shoulder pose like Marcus).
+  - Still to draw: Alex Torres; Ryan Doyle (red-brown hair, freckles, sleeves rolled, grease on the hands, fifties); Andre Washington (very tall and broad, close-cropped hair, tattooed forearms, the uniform a size too small at the shoulders).
 
 ## Factions (`data/world/factions.json`)
 - O.E.R.A., Civil Harbour Authority and the Meridian Free Colony are friendly; freight, fishing, yachts, Sable Offshore Energy and two mining consortia (Deepcut, Abyssal Metals) are neutral; Concord Naval Command and Ridgeline Extraction are wary; the Grey Net Fleet (poachers) and the Black Tide Syndicate (pirates) are hostile. The miners and the colony are where the theme bites: the sea floor as a resource.
@@ -55,17 +60,16 @@ The Aqua Nova is advanced enough that the nations behind O.E.R.A. will not let h
 ## Names changed 2026-11-27 (owner: a more varied crew, 90s archetypes, before the portraits are made)
 - Lt. **Daniel Kim** is now **Andre Washington**, a big African American ex-Marine with tattoos.
 - Chief Engineer **Ryan Chen** is now **Ryan Doyle**, Boston Irish (two Chens was confusing). The "no relation" running joke is gone. "Commander Chen" in old text meant either man; it is now Marcus (helm) or Chief Doyle (engineering).
-- Saves pick up the new names and bios on load (contacts are merged from `data/contacts.json`); old logbook entries keep the old names.
 
 ## Names changed 2026-11-19 (owner: names are not important, they should fit the person)
 - Admiral **Elena Vasquez** is now **Catherine Okafor** (two Elenas was confusing). Voss keeps Elena, since the PDFs use it.
 - Dr. **Marcus Webb** is now **Thomas Webb** (Marcus Chen keeps Marcus).
-- Gender-neutral first names were made clear, so traditional pronouns read naturally: Sam Patel is now **Samira**, Riley Chen is now **Ryan**, Jordan Kim is now **Daniel**.
-- Saves keep the old text of logbook entries and mail they already hold. Names on contact cards and the new introductions update on load.
+- Gender-neutral first names were made clear, so traditional pronouns read naturally: Sam Patel is now **Samira**, Riley Chen became **Ryan** (now Ryan Doyle), Jordan Kim became **Daniel** (now Andre Washington).
 
 ## Other congruity checks
 - O.E.R.A. is "Oceanic Exploration and Research Alliance" everywhere (the Comms inbox said "Ocean").
-- Ryan's old bio said his solutions had "saved the ship on more than one occasion", but the ship is new. Fixed.
+- Ryan's very first bio said his solutions had "saved the ship on more than one occasion", but the ship is new. Fixed.
 - The Characters PDF lists a different original cast (Marcos Patel engineer, Dr. Lila Moreno, Lt. Gabriel Tanaka). The game's cast is treated as current.
 - The Chapters PDF has the player as a consultant who later becomes Captain. The game compresses this into day one; the Captain bio keeps both.
 - Crew pleasantries mix "Captain", "Commander" and "Sir" on purpose, for variety.
+- No save conversion: the owner has no saves and restarts the game after changes like these (2026-11-27). Do not write code to convert old saves.

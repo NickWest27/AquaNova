@@ -39,7 +39,7 @@ export const TOPICS = {
   ],
   engineering: [
     T('plant', 'the fusion plant', {}, 'I came off merchant ship engine rooms and onto the team that commissioned the plant. It is a better engine than anything I grew up with and it is more polite than any of them. I still talk to it when I think nobody is listening. So far it has not said anything back.'),
-    T('marcus', 'Marcus Chen', { talk: 3 }, 'No relation. I have said it so many times that I have started to say it in my sleep. If he hears the noise from below the deck, that is not the plant, that is me practising.'),
+    T('boston', 'Boston', { talk: 3 }, 'Southie, {captain}. My father ran tugs out of the harbour and my mother ran my father. I went to sea at nineteen because it was quieter than our kitchen. Twenty years in engine rooms and it still is.'),
     T('parts', 'fixing things', { talk: 5 }, 'I fix things with whatever is lying about. A good engineer does not have the right part. A good engineer knows which three other parts will do, and in what order to ask for them. If a pump dies on us, {captain}, you will want me and a box of nothing in particular.'),
   ],
   security: [

@@ -45,6 +45,7 @@ The owner works from an iPad and a phone, does not use git, and wants Claude to 
 - Before each push: `python3 tools/update_sw.py`, commit, push `tablet`.
 
 ## Design defaults (owner, 2026-11-25)
+- **No save conversion (owner, 2026-11-27):** the owner has no saves and restarts the game after changes. Do not write code to convert old saves on the fly.
 - **Zoom:** "+" always zooms in (shorter range), "−" zooms out, on every map and console.
 - **Zoomable maps** get the WSKR-page control: round − and + with the range between them, in the map's top-right corner. Use `mapZoom(step)` from `tablet/js/mapZoom.js` (class `.map-zoom`). In use: WSKR page, Nav station, Remora contour map.
 - **Station pages are 4:3 (1024 x 768) and scale with the screen** like the stage (`fit()` in `app.js`; `rem` is a fixed 16 px). They fit without scrolling, except the logbook and list pages: see `docs/SCREENS.md`; test `tools/fit_test.py`. The PED and communicator pop-ups and the PED button and pin (`#hud`) share the same 4:3 box.
