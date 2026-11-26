@@ -10,6 +10,7 @@ import { say, hush, unreadCount, stats as notifyStats } from './notify.js';
 import { seafloor } from './seafloor.js';
 import { fileScan, scanned } from './findings.js';
 import './survey.js';   // site surveys run on the sim clock
+import './engineering.js';   // the ship's systems, damage and repairs
 import './rov.js';
 import { SHUTTLE_NAME, BAY_SAFE_KT } from './bayops.js';
 import './tern.js';
@@ -30,7 +31,7 @@ import { gameState, loadGame, liveNav, startExitSave, saveBeforeSleep, checkpoin
 const STATIONS = {
   nav: { title: 'Navigation', icon: 'nav' }, helm: { title: 'Helm', icon: 'helm' }, sys: { title: 'Systems', icon: 'sys' },
   sensors: { title: 'Sensors', icon: 'sensors' }, comms: { title: 'Comms', icon: 'comms' }, log: { title: 'Logbook', icon: 'log' }, ped: { title: 'PED', icon: 'more' },
-  lab: { title: 'Science Lab', icon: 'sensors' }, wskr: { title: 'WSKRs', icon: 'sensors' }, remora: { title: 'Remora (Science ROV)', icon: 'helm' }, bay: { title: 'Launch Bay control', icon: 'helm' },
+  lab: { title: 'Science Lab', icon: 'sensors' }, eng: { title: 'Engineering computer', icon: 'sys' }, wskr: { title: 'WSKRs', icon: 'sensors' }, remora: { title: 'Remora (Science ROV)', icon: 'helm' }, bay: { title: 'Launch Bay control', icon: 'helm' },
   crew: { title: 'Communicator', icon: 'comms', hidden: true }, // opened from the pin, not the dock
 };
 const FILES = { sys: 'systems' };
@@ -374,6 +375,12 @@ async function boot() {
       else if (type === 'wskr-found') { const fresh = fileScan(data.poi); say('sensors', fresh ? `${wskrName(data.wskr)} has finished investigating ${data.poi.name}. Scan filed, Captain.` : `${wskrName(data.wskr)} re-checked ${data.poi.name}. Nothing new.`, 'mission'); }
       else if (type === 'rov-sample') { say('science', `Remora has a ${SAMPLE_KINDS[data.kind].label.toLowerCase()} sample from ${data.site}, Captain. Storage ${data.stored} of ${data.store}.${data.full ? ' She is full. Bring her home so we can unload her.' : ' Bring her home when you have what you came for, and she will deliver it to the lab.'}`, '', { action: true }); }
       else if (type === 'rov-arrived') say('science', `Remora is on station at ${data.name}, Captain. Take her down to the floor and take your sample.`, '', { action: true });
+      else if (type === 'eng-fire') say('engineering', `FIRE in the ${({ fwd: 'forward', mid: 'midships', aft: 'aft' })[data.comp]} compartment, Captain!`, 'error', { notice: 'FIRE' });
+      else if (type === 'eng-fire-out') say('engineering', data.auto ? 'Fire suppression has put the fire out, Captain.' : 'Fire is out, Captain.', '');
+      else if (type === 'eng-leak') say('engineering', `We are taking on water in the ${data.comp === 'fwd' ? 'forward' : 'aft'} compartment, Captain! Close that bulkhead.`, 'error', { notice: 'FLOODING' });
+      else if (type === 'eng-bulkhead-auto') say('engineering', `Damage control has closed the ${data.c === 'fwd' ? 'forward' : 'aft'} bulkhead, Captain. The flooding is contained. We need a repair team on the Bulkheads to seal the leak.`, 'error');
+      else if (type === 'eng-repaired') say('engineering', `${data.name} back to full, Captain.`, '');
+      else if (type === 'eng-cruise-lost') say('engineering', 'The fusion drive is down, Captain. Super cruise is out until it is back.', 'error');
       else if (type === 'survey-start') { /* told by the SONAR page */ }
       else if (type === 'survey-done') say('sensors', `Survey of ${data.name} complete, Captain. The sea floor is charted in detail round it, and the survey is filed in Findings.`, 'mission', { notice: 'SURVEY COMPLETE' });
       else if (type === 'survey-stopped' && data.why !== 'captain') say('sensors', `Survey of ${data.name} broken off, Captain: ${data.why === 'moved' ? 'we moved off station' : data.why === 'fast' ? 'we picked up speed' : 'we left the site'}.`, 'error');

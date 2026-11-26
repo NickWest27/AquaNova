@@ -17,6 +17,7 @@ import { requestSync } from './sync.js';
 import { SHUTTLE_NAME, SHUTTLE_KT, shuttle, shuttleRangeNm, shuttleHours, bay, dockList, REMORA_REARM_S, REMORA_UNLOAD_S, recoverRemora, busy } from './bayops.js';
 import { addSample, pickKind, SAMPLE_KINDS } from './science.js';
 import { REMORA_STORE } from './rov.js';
+import { eng, setBulkhead, repair, discharge, TEAMS } from './engineering.js';
 
 export const AWAY_CAPS = [4, 8, 12, 24];
 export const AWAY_MIN_S = 90;            // away for less than this: no briefing
@@ -148,10 +149,20 @@ function tendRemora(a, s) {
   if (!r.auto && !r.home && !r.job) sim.rovAuto();            // drive home (a tool job finishes first)
   if (r.home && !busy()) recoverRemora();                   // alongside: take her aboard
 }
-sim.speedCaps.push(() => (sim.away && sim.away.rovHold ? 0 : null));   // the ship holds still while Remora comes home
+sim.speedCaps.push(() => (sim.away && sim.away.rovHold ? 0 : null));
+/** Damage control while the crew have the con: close a flooding compartment, send a team to seal the leak, put out a fire by hand if the
+ *  automatic suppression is off, and send the free teams to the worst-hurt systems. */
+function damageControl(a) {
+  const e = eng();
+  for (const c of ['fwd', 'aft']) if (e.leak[c] && e.bulk[c]) { setBulkhead(c, false); note(`Flooding ${c === 'fwd' ? 'forward' : 'aft'}: the crew closed the bulkhead.`); }
+  if ((e.leak.fwd || e.leak.aft) && !e.repairs.some((r) => r.id === 'bulkheads')) { if (e.repairs.length >= TEAMS) e.repairs.shift(); repair('bulkheads'); }
+  if (e.fire && !e.armed && discharge().ok) note('The crew put out a fire by hand.');
+  const hurt = Object.entries(e.health).filter(([id, h]) => h < 100 && !e.repairs.some((r) => r.id === id)).sort((x, y) => x[1] - y[1]);
+  for (const [id] of hurt) { if (e.repairs.length >= TEAMS) break; repair(id); }
+}   // the ship holds still while Remora comes home
 sim.hooks.push(() => {
   const a = sim.away, s = sim.s; if (!a) return;
-  tendRemora(a, s);
+  tendRemora(a, s); damageControl(a);
   const d = toward(a.last, s).nm; if (d > 0 && d < 5) a.nm += d; a.last = { lat: s.lat, lon: s.lon };   // distance covered
   if (s.clock - lastCheck < 60 && s.clock >= lastCheck) return;
   lastCheck = s.clock;

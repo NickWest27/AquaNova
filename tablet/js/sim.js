@@ -87,6 +87,7 @@ sim.setCruise = (on) => {
   if (!on) { if (s.cruise) { s.cruise = false; sim.touch(); } return { ok: true }; }
   if (s.docked) return { ok: false, why: 'docked' };
   if (s.battery <= 0) return { ok: false, why: 'power' };
+  for (const f of sim.cruiseGate || []) { const why = f(); if (why) return { ok: false, why }; }   // e.g. the fusion drive offline (engineering.js)
   if (!superWaterAhead()) return { ok: false, why: 'shallow' };
   s.cruise = true; sim.touch(); return { ok: true };
 };
@@ -580,7 +581,7 @@ const stepOnce = (dt) => {
     else if (s.scrubbers > 0) s.scrubbers = clamp(s.scrubbers - 100 * gs / (SCRUB_DAYS * 86400), 0, 100);   // submerged: single-use CO2 scrubbers wear out (months)
     else s.oxygen = clamp(s.oxygen - 100 * gs / (12 * 3600), 0, 100);   // scrubbers spent: the air goes bad in about 12 hours
   }
-  s.co2 = clamp(0.04 + (100 - (s.scrubbers == null ? 100 : s.scrubbers)) * 0.012 + (100 - s.oxygen) * 0.012, 0, 5);
+  s.co2 = clamp(0.04 + (100 - (s.scrubbers == null ? 100 : s.scrubbers)) * 0.012 + (100 - s.oxygen) * 0.012 + ((s.eng && s.eng.co2x) || 0), 0, 5);   // co2x: scrubbers off or out (engineering.js)
   s.temp = clamp(20 - Math.sqrt(s.depth) * 0.28, 1.5, 20);
   if (s.docked) s.damage = Math.max(0, s.damage - 6 * (dt * TIMESCALE) / 3600);   // the dock crew repair about 6% an hour
   s.hull = clamp(100 - s.damage - Math.max(0, s.depth - CRUSH_M * 0.8) / 30, 0, 100);   // pressure strain starts at 80% of crush depth

@@ -72,7 +72,7 @@ def main():
                   if st == "sensors" and label == "wskrs":   # and with a WSKR selected
                       tile = page.locator(".wk-tile").first
                       if tile.count(): tile.dispatch_event("click"); probe("sensors/wskrs selected"); page.locator(".wk-big").first.dispatch_event("click") if page.locator(".wk-big").count() else None
-        stations(["nav", "helm", "sys", "sensors", "comms", "log", "lab", "remora", "bay"])
+        stations(["nav", "helm", "sys", "sensors", "comms", "log", "lab", "remora", "bay", "eng"])
         # harder states: a WSKR in manual control (more buttons), Remora out, the shuttle alongside (a Send button per dock)
         page.evaluate("window.__aq.open('sensors')"); page.wait_for_timeout(600)
         page.locator("#station .tabs > .btn").nth(1).dispatch_event("click"); page.wait_for_timeout(300)

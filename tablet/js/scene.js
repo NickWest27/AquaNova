@@ -164,8 +164,8 @@ export function createScene(stage, { onOpen }) {
   // the octagonal hatch goes back to walkway AN-1, the workbench is locked for now
   const eng = el('div', { class: 'scene engineering', hidden: true });
   eng.append(artImg('engineering'),
-    hs('ENGINEERING CONSOLE', 262, 828, 760, 600, () => onOpen('sys'), 'top'),
-    hs('POWER CORES', 1022, 301, 553, 420, () => onOpen('sys'), 'mid'),
+    hs('ENGINEERING CONSOLE', 262, 828, 760, 600, () => onOpen('eng'), 'top'),
+    hs('POWER CORES', 1022, 301, 553, 420, () => onOpen('eng'), 'mid'),
     hs('WORKBENCH', 1031, 725, 581, 273, () => onOpen('eng-bench'), 'mid', 'locked'),
     hs('◂ WALKWAY', 553, 480, 253, 320, () => onOpen('walkway2'), 'mid'));
   stage.append(bridge, quarters, walkway, walkway2, science, medbay, bay, eng);
