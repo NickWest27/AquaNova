@@ -25,6 +25,26 @@ Each has a **health** (0-100). Below 50 it is DEGRADED, at 0 it is OFFLINE. Each
 | Ballast | A | Fore and aft tanks follow the dive; EMERGENCY BLOW drives her to the surface | Needs the air charge |
 | Air charge | A | High-pressure air bank (250 bar). The compressor recharges it near the surface (shallower than 20 m) | An emergency blow uses 60% |
 
+## Flow diagrams (2026-11-26)
+Each system's page is an interactive diagram (`tablet/js/engDiagrams.js`, drawn by `tablet/js/schematic.js`): pumps (spin while running),
+fans, valves (green open, red shut), breakers, tanks with levels, units, nozzles, watertight doors and the blow lever, joined by pipes and
+wires coloured by what they carry (power yellow, sea blue, fresh water light blue, air white, O2 green, CO2 grey, coolant orange, agent
+red, gas violet). Live lines flow. **Tap a part to switch it.** The components (`PARTS` in `engineering.js`, saved in `eng.parts`) are real:
+a system works only when its chain is complete, and all start on/open, so an untouched ship behaves as before.
+
+| System | Parts (tap) | What the chain does |
+|---|---|---|
+| Power relays | fusion drive (online/standby), relays A-D | Loads are live through a closed relay from the main bus |
+| Propulsion | coolant pump, sea intake, port and starboard jet pumps | Each jet is half the thrust; no intake, no thrust; coolant pump off: the fusion drive goes down (no super cruise) |
+| CO2 scrubbers | fan, bank A and bank B valves | One bank: normal; both: boost; fan off or no bank: off |
+| O2 | feed pump, electrolyser, tank valve | Feed and electrolyser make O2; the tank backs up the air only with its valve open |
+| Water | sea intake, HP pump, distribution pump | Intake and HP pump make water; distribution off: nobody draws water |
+| Heating/cooling | sea pump, heat pump, cabin fan | All three hold the cabin at the set point (Cooler / Warmer buttons) |
+| Fire suppression | master valve, AUTO switch, the burning zone's nozzle | Master valve shut: no automatic or manual discharge; tap the burning nozzle to discharge |
+| Bulkheads | forward and aft doors, forward and aft bilge pumps | A compartment drains only with its bilge pump on |
+| Ballast | bank valve, EMERGENCY BLOW lever | Bank valve shut: no blow |
+| Air charge | snorkel intake, compressor, bank valve | Charges only near the surface with all three |
+
 ## Damage, fire, flooding and repairs
 - **Damage:** every impact (`sim.hurt`) also damages a system, in turn round the list, by twice the hull damage.
 - **Fire:** a hit of 15% or more (a collision at about 9 kt or faster; touching bottom slowly does not) starts a fire in the compartment of the system it damaged. A fire takes 2 health a minute from the systems

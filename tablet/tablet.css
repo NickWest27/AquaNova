@@ -946,3 +946,21 @@ input.mix { width: 100%; height: 2.4rem; accent-color: var(--cyan); }
 .eng-sys .gz-bar { height: 0.4rem; } .eng-sys .gz-bar i.warn { background: var(--amber); } .eng-sys .gz-bar i.bad { background: var(--red, #ff5c5c); }
 .eng-detail { margin: 0; padding: 0.8rem 1rem; display: flex; flex-direction: column; gap: 0.7rem; min-height: 0; }
 .eng-detail .craft-hd b { letter-spacing: 0.1em; color: var(--cyan); }
+/* Schematics (schematic.js): flow diagrams on the engineering computer */
+.eng-sch { flex: 1; min-height: 0; display: flex; } .sch { width: 100%; height: 100%; }
+.sch-pipe { fill: none; stroke-width: 5; stroke-linejoin: round; opacity: 0.28; }
+.sch-flow { fill: none; stroke-width: 3; stroke-linejoin: round; stroke-dasharray: 8 10; animation: schflow 0.9s linear infinite; }
+@keyframes schflow { to { stroke-dashoffset: -18; } }
+.sch-part { fill: #072236; stroke-width: 3; } .sch-part.on { stroke: #3ddc84; } .sch-part.off { stroke: #6b7a8c; } .sch-part.alarm { stroke: #ff5c5c; fill: #3a0d12; }
+.sch-imp { fill: #cfe9f2; transform-box: fill-box; transform-origin: center; } .sch-imp.spin { animation: schspin 1.2s linear infinite; } @keyframes schspin { to { transform: rotate(360deg); } }
+.sch-valve { stroke-width: 2; stroke: #04101f; } .sch-valve.open { fill: #3ddc84; } .sch-valve.shut { fill: #ff5c5c; }
+.sch-dot { fill: #cfe9f2; } .sch-arm { stroke-width: 4; stroke-linecap: round; } .sch-arm.on { stroke: #3ddc84; } .sch-arm.off { stroke: #ff5c5c; }
+.sch-tank { fill: #031020; stroke: #5d7a99; stroke-width: 2; } .sch-fill { opacity: 0.75; }
+.sch-unit { fill: #072236; stroke-width: 2.5; } .sch-unit.on { stroke: #3ddc84; } .sch-unit.off { stroke: #6b7a8c; }
+.sch-door.open { fill: #ffb020; } .sch-door.shut { fill: #3ddc84; } .sch-node.alarm .sch-door { stroke: #ff5c5c; stroke-width: 3; }
+.sch-lever { fill: #4a1016; stroke: #ff5c5c; stroke-width: 3; } .sch-lever.alarm { fill: #ff5c5c; }
+.sch-flame { fill: #ffb020; animation: pulse2 0.6s ease-in-out infinite; }
+.sch-lbl { fill: #b8c9dc; font: 700 11px var(--mono); letter-spacing: 0.06em; } .sch-end { fill: #8aa0b8; font: 700 12px var(--mono); letter-spacing: 0.06em; }
+.sch-inner { fill: #e6f1ff; font: 800 11px var(--mono); letter-spacing: 0.06em; } .sch-val { fill: #e6f1ff; font: 800 12px var(--mono); }
+.sch-state { fill: #ffd666; font: 800 10px var(--mono); letter-spacing: 0.08em; text-anchor: middle; }
+.sch-hit { fill: transparent; } .sch-node.tap { cursor: pointer; } .sch-node.tap:active .sch-hit { fill: rgba(100,255,218,0.18); }

@@ -19,6 +19,27 @@ export const COMPS = { fwd: 'Forward', mid: 'Midships', aft: 'Aft' };
 export const AUTO_CLOSE_S = 60, TEAMS = 2, REPAIR_PER_H = 25, DOCK_REPAIR_PER_H = 100, FIRE_AUTO_S = 20, FIRE_AGENT = 25, BLOW_AIR = 60;
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+/** The components drawn on each system's flow diagram (true = running / open). A system works only when its chain is complete. */
+export const PARTS = {
+  'prop.coolant': true, 'prop.intake': true, 'prop.port': true, 'prop.stbd': true,
+  'scrub.fan': true, 'scrub.a': true, 'scrub.b': false,
+  'o2.feed': true, 'o2.cell': true, 'o2.tank': true,
+  'water.intake': true, 'water.hp': true, 'water.dist': true,
+  'hvac.sea': true, 'hvac.comp': true, 'hvac.fan': true,
+  'fire.main': true,
+  'bulk.pump.fwd': true, 'bulk.pump.aft': true,
+  'air.intake': true, 'air.comp': true, 'air.bank': true,
+};
+export const part = (k) => !!eng().parts[k];
+export function setPart(k, v) { if (!(k in PARTS)) return { ok: false }; eng().parts[k] = !!v; syncScrub(); sim.touch(); sim.emit('eng-part', { k, v: !!v }); return { ok: true }; }
+export const togglePart = (k) => setPart(k, !part(k));
+// what each chain gives
+const scrubFromParts = () => (!part('scrub.fan') ? 'off' : part('scrub.a') && part('scrub.b') ? 'boost' : part('scrub.a') || part('scrub.b') ? 'normal' : 'off');
+function syncScrub() { eng().scrubMode = scrubFromParts(); }
+export const o2Making = () => working('o2') && part('o2.feed') && part('o2.cell');
+export const desalMaking = () => working('water') && part('water.intake') && part('water.hp');
+export const hvacRunning = () => working('hvac') && part('hvac.sea') && part('hvac.comp') && part('hvac.fan');
+export const airCharging = () => working('air') && part('air.intake') && part('air.comp') && sim.s.depth < 20;
 export function eng() {
   const s = sim.s;
   if (!s.eng) s.eng = {};
@@ -28,6 +49,7 @@ export function eng() {
   e.relays ||= { A: true, B: true, C: true, D: true };
   e.on ||= { o2: true, water: true, hvac: true, fusion: true, compressor: true };
   e.scrubMode ||= 'normal';
+  e.parts ||= {}; for (const [k, v] of Object.entries(PARTS)) if (e.parts[k] == null) e.parts[k] = v;   // pumps, valves, fans: all on/open in a healthy ship
   if (e.water == null) e.water = 100; if (e.o2tank == null) e.o2tank = 100; if (e.air == null) e.air = 100; if (e.agent == null) e.agent = 100;
   if (e.cabin == null) e.cabin = 21; if (e.set == null) e.set = 21; if (e.co2x == null) e.co2x = 0;
   if (e.armed == null) e.armed = true;
@@ -43,24 +65,25 @@ export const hp = (id) => eng().health[id];
 export const powered = (id) => { const e = eng(), x = SYSTEMS.find((q) => q.id === id); return !x.relay || (e.relays[x.relay] && e.health.relays > 0); };
 export const working = (id) => powered(id) && eng().health[id] > 0;
 export const status = (id) => { const e = eng(), h = e.health[id], x = SYSTEMS.find((q) => q.id === id); if (e.fire && e.fire.comp === x.comp) return 'fire'; if (!powered(id) || h <= 0) return 'offline'; return h < 50 ? 'degraded' : 'ok'; };
-export const fusionOk = () => working('propulsion') && eng().on.fusion && eng().health.propulsion >= 25;
+export const fusionOk = () => working('propulsion') && eng().on.fusion && eng().health.propulsion >= 25 && part('prop.coolant');   // the coolant pump keeps the drive alive
 /** Top speed from the hydro-jets: full at 50 health or more, falling to half as they are hurt; nothing without relay A. */
-export const jetFactor = () => (!working('propulsion') ? 0 : clamp(0.5 + eng().health.propulsion / 100, 0.5, 1));
+export const jetFactor = () => (!working('propulsion') || !part('prop.intake') ? 0 : clamp(0.5 + eng().health.propulsion / 100, 0.5, 1) * ((part('prop.port') ? 0.5 : 0) + (part('prop.stbd') ? 0.5 : 0)));   // each hydro-jet is half the thrust
 export const busyTeams = () => eng().repairs.length;
 
 /** Captain's controls. Each returns { ok, why }. */
 export function setRelay(r, on) { const e = eng(); e.relays[r] = !!on; sim.touch(); sim.emit('eng-relay', { r, on: !!on }); return { ok: true }; }
-export function setOn(k, on) { eng().on[k] = !!on; sim.touch(); return { ok: true }; }
-export function setScrub(mode) { if (!['normal', 'boost', 'off'].includes(mode)) return { ok: false }; eng().scrubMode = mode; sim.touch(); return { ok: true }; }
+const ON_PART = { o2: 'o2.cell', water: 'water.hp', hvac: 'hvac.comp', compressor: 'air.comp' };
+export function setOn(k, on) { if (ON_PART[k]) return setPart(ON_PART[k], on); eng().on[k] = !!on; sim.touch(); return { ok: true }; }
+export function setScrub(mode) { if (!['normal', 'boost', 'off'].includes(mode)) return { ok: false }; const p = eng().parts; p['scrub.fan'] = mode !== 'off'; if (mode !== 'off') { p['scrub.a'] = true; p['scrub.b'] = mode === 'boost'; } syncScrub(); sim.touch(); return { ok: true }; }
 export function setCabin(t) { eng().set = clamp(Math.round(t), 18, 24); sim.touch(); return { ok: true }; }
 export function setArmed(on) { eng().armed = !!on; sim.touch(); return { ok: true }; }
 export function setBulkhead(c, open) { eng().bulk[c] = !!open; sim.touch(); sim.emit('eng-bulkhead', { c, open: !!open }); return { ok: true }; }
 export function discharge() {
-  const e = eng(); if (!e.fire) return { ok: false, why: 'nofire' }; if (e.agent < FIRE_AGENT) return { ok: false, why: 'agent' }; if (!working('fire')) return { ok: false, why: 'offline' };
+  const e = eng(); if (!e.fire) return { ok: false, why: 'nofire' }; if (e.agent < FIRE_AGENT) return { ok: false, why: 'agent' }; if (!working('fire')) return { ok: false, why: 'offline' }; if (!part('fire.main')) return { ok: false, why: 'valve' };
   e.agent -= FIRE_AGENT; const comp = e.fire.comp; e.fire = null; sim.touch(); sim.emit('eng-fire-out', { comp }); return { ok: true };
 }
 export function blow() {
-  const e = eng(), s = sim.s; if (e.air < BLOW_AIR) return { ok: false, why: 'air' }; if (!working('ballast')) return { ok: false, why: 'offline' }; if (s.depth < 1) return { ok: false, why: 'surface' };
+  const e = eng(), s = sim.s; if (e.air < BLOW_AIR) return { ok: false, why: 'air' }; if (!working('ballast')) return { ok: false, why: 'offline' }; if (!part('air.bank')) return { ok: false, why: 'valve' }; if (s.depth < 1) return { ok: false, why: 'surface' };
   e.air -= BLOW_AIR; e.blowing = true; s.targetDepth = 0; sim.touch(); sim.emit('eng-blow', {}); return { ok: true };
 }
 export function repair(id) {
@@ -93,28 +116,28 @@ sim.hooks.push((dt) => {
   if (!e.relays.D || e.health.relays <= 0) s.lights = false;
   if (s.cruise && !fusionOk()) { s.cruise = false; sim.emit('eng-cruise-lost', {}); }
   // CO2: scrubbers off or out (submerged) and it climbs; on, it settles back. Boost uses the canisters twice as fast and clears it quickly.
-  const scrub = working('scrubbers') && e.scrubMode !== 'off';
+  syncScrub(); const scrub = working('scrubbers') && e.scrubMode !== 'off';
   if (sub && !scrub) e.co2x = clamp(e.co2x + 0.5 * h, 0, 4);
   else e.co2x = clamp(e.co2x - (e.scrubMode === 'boost' ? 3 : 1) * h, 0, 4);
   if (sub && scrub && e.scrubMode === 'boost' && s.scrubbers > 0) s.scrubbers = clamp(s.scrubbers - 100 * g / (90 * 86400), 0, 100);   // the second half of boost's use
   // O2: the generator keeps the air; without it (submerged) the tank goes first, then the air
-  if (sub && !(working('o2') && e.on.o2)) { if (e.o2tank > 0) e.o2tank = clamp(e.o2tank - 8 * h, 0, 100); else s.oxygen = clamp(s.oxygen - 8 * h, 0, 100); }
-  else if (e.o2tank < 100 && working('o2') && e.on.o2) e.o2tank = clamp(e.o2tank + 5 * h, 0, 100);
+  if (sub && !o2Making()) { if (e.o2tank > 0 && part('o2.tank')) e.o2tank = clamp(e.o2tank - 8 * h, 0, 100); else s.oxygen = clamp(s.oxygen - 8 * h, 0, 100); }   // the tank only helps with its valve open
+  else if (e.o2tank < 100 && o2Making() && part('o2.tank')) e.o2tank = clamp(e.o2tank + 5 * h, 0, 100);
   if (s.docked) e.o2tank = clamp(e.o2tank + 50 * h, 0, 100);
   // water
-  if (working('water') && e.on.water) e.water = clamp(e.water + 1 * h, 0, 100); else e.water = clamp(e.water - 2 * h, 0, 100);
+  if (desalMaking()) e.water = clamp(e.water + 1 * h, 0, 100); else if (part('water.dist')) e.water = clamp(e.water - 2 * h, 0, 100);   // distribution pump off: nobody draws water
   if (s.docked) e.water = clamp(e.water + 50 * h, 0, 100);
   // cabin temperature: held at the set point, or drifting toward the sea
-  const want = working('hvac') && e.on.hvac ? e.set : s.temp;
+  const want = hvacRunning() ? e.set : s.temp;
   e.cabin = e.cabin + (want - e.cabin) * clamp(h * (want === e.set ? 4 : 0.5), 0, 1);
   // air charge: the compressor recharges near the surface
-  if (s.depth < 20 && working('air') && e.on.compressor) e.air = clamp(e.air + 30 * h, 0, 100);
+  if (airCharging()) e.air = clamp(e.air + 30 * h, 0, 100);
   if (e.blowing && s.depth < 1) e.blowing = false;
   // fire
   if (e.fire) {
     e.fire.t += g;
     for (const x of SYSTEMS) if (x.comp === e.fire.comp) e.health[x.id] = clamp(e.health[x.id] - 2 * g / 60, 0, 100);
-    if (e.armed && working('fire') && e.fire.t >= FIRE_AUTO_S && e.agent >= FIRE_AGENT) { e.agent -= FIRE_AGENT; const comp = e.fire.comp; e.fire = null; sim.emit('eng-fire-out', { comp, auto: true }); }
+    if (e.armed && working('fire') && part('fire.main') && e.fire.t >= FIRE_AUTO_S && e.agent >= FIRE_AGENT) { e.agent -= FIRE_AGENT; const comp = e.fire.comp; e.fire = null; sim.emit('eng-fire-out', { comp, auto: true }); }
   }
   // flooding: a leak floods its compartment; with the bulkhead open it costs hull, closed it is contained and the pumps clear it
   for (const c of ['fwd', 'aft']) {
@@ -124,7 +147,7 @@ sim.hooks.push((dt) => {
       if (e.bulk[c] && e.leakT[c] >= AUTO_CLOSE_S && !e.autoClosed?.[c]) { e.bulk[c] = false; (e.autoClosed ||= {})[c] = true; sim.emit('eng-bulkhead-auto', { c }); }
     } else {
       if (e.leakT) { e.leakT[c] = 0; if (e.autoClosed) e.autoClosed[c] = false; }
-      if (e.flood[c] > 0) e.flood[c] = clamp(e.flood[c] - (100 / 10) * g / 60, 0, 100);   // sealed: the pumps clear it in 10 minutes
+      if (e.flood[c] > 0 && part('bulk.pump.' + c)) e.flood[c] = clamp(e.flood[c] - (100 / 10) * g / 60, 0, 100);   // sealed: its bilge pump clears it in 10 minutes
     }
     if (e.leak[c] && !e.bulk[c] && e.flood[c] >= 100) e.flood[c] = 100;
   }

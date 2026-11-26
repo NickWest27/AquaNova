@@ -4,7 +4,9 @@ import { sim, MAX_KT, SUPER_KT } from '../sim.js';
 import { el } from '../util.js';
 import { tell } from '../notify.js';
 import { gauge, field, lamp } from '../instruments.js';
-import { SYSTEMS, RELAYS, COMPS, TEAMS, BLOW_AIR, FIRE_AGENT, eng, status, powered, working, fusionOk, jetFactor, busyTeams, setRelay, setOn, setScrub, setCabin, setArmed, setBulkhead, discharge, blow, repair, standDown } from '../engineering.js';
+import { drawSchematic } from '../schematic.js';
+import { DIAGRAMS } from '../engDiagrams.js';
+import { SYSTEMS, COMPS, TEAMS, FIRE_AGENT, eng, status, powered, fusionOk, jetFactor, airCharging, busyTeams, setCabin, repair, standDown } from '../engineering.js';
 
 const LAMP = { ok: ['OK', 'ok'], degraded: ['DEGRADED', 'warn'], offline: ['OFFLINE', 'bad'], fire: ['FIRE', 'bad'] };
 const lvl = (h) => (h < 25 ? 'bad' : h < 50 ? 'warn' : '');
@@ -20,53 +22,29 @@ export function mount(body) {
   function detailFor(id) {
     const e = eng(), s = sim.s, x = SYSTEMS.find((q) => q.id === id), h = e.health[id], st = status(id), team = e.repairs.some((r) => r.id === id);
     const head = el('div', { class: 'craft-hd' }, el('b', { text: x.name.toUpperCase() }), el('span', { class: 'gz-k', text: `${COMPS[x.comp].toUpperCase()}${x.relay ? ` · RELAY ${x.relay}` : ''}` }), lamp(...LAMP[st]));
-    const rows = [gauge('HEALTH', h / 100, `${Math.round(h)}%`, lvl(h))];
-    const ctl = [];
-    if (id === 'relays') {
-      for (const r of Object.keys(RELAYS)) rows.push(el('div', { class: 'eng-row' }, el('span', { class: 'gz-k', text: `${r} · ${RELAYS[r].toUpperCase()}` }), e.relays[r] ? lamp('CLOSED', 'ok') : lamp('OPEN', 'bad'),
-        act(e.relays[r] ? 'Open' : 'Close', () => setRelay(r, !e.relays[r]))));
-    } else if (id === 'propulsion') {
-      const top = Math.round(MAX_KT * jetFactor());
-      rows.push(gauge('HYDRO-JETS', jetFactor(), `TOP ${top} KT`, jetFactor() < 1 ? 'warn' : ''),
-        el('div', { class: 'eng-row' }, el('span', { class: 'gz-k', text: 'FUSION DRIVE' }), fusionOk() ? lamp('ONLINE', 'ok') : e.on.fusion ? lamp('FAULT', 'bad') : lamp('STANDBY', 'warn')),
-        field('SPEED', `${s.speed.toFixed(1)} KT${s.cruise ? ' · SUPER CRUISE' : ''}`), field('SUPER CRUISE', fusionOk() ? `AVAILABLE · ${SUPER_KT} KT` : 'NOT AVAILABLE', fusionOk() ? '' : 'idle'));
-      ctl.push(toggle('Fusion drive', e.on.fusion, () => setOn('fusion', !e.on.fusion)));
-    } else if (id === 'scrubbers') {
-      rows.push(gauge('CANISTERS', (s.scrubbers ?? 100) / 100, `${Math.round(s.scrubbers ?? 100)}%`, lvl(s.scrubbers ?? 100)), field('CO2', `${s.co2.toFixed(2)}%`, s.co2 > 1 ? 'bad' : s.co2 > 0.5 ? 'warn' : ''));
-      ctl.push(...['normal', 'boost', 'off'].map((m) => act(m.toUpperCase(), () => setScrub(m), { on: e.scrubMode === m })));
-    } else if (id === 'o2') {
-      rows.push(gauge('OXYGEN', s.oxygen / 100, `${Math.round(s.oxygen)}%`, lvl(s.oxygen)), gauge('O2 TANK', e.o2tank / 100, `${Math.round(e.o2tank)}%`, lvl(e.o2tank)),
-        field('GENERATOR', working('o2') && e.on.o2 ? 'MAKING O2' : 'STOPPED', working('o2') && e.on.o2 ? 'ok' : 'warn'));
-      ctl.push(toggle('Generator', e.on.o2, () => setOn('o2', !e.on.o2)));
-    } else if (id === 'water') {
-      rows.push(gauge('FRESH WATER', e.water / 100, `${Math.round(e.water)}%`, lvl(e.water)), field('DESALINATOR', working('water') && e.on.water ? 'MAKING WATER' : 'STOPPED', working('water') && e.on.water ? 'ok' : 'warn'));
-      ctl.push(toggle('Desalinator', e.on.water, () => setOn('water', !e.on.water)));
-    } else if (id === 'hvac') {
-      rows.push(field('CABIN', `${e.cabin.toFixed(1)} °C`, Math.abs(e.cabin - e.set) > 3 ? 'warn' : ''), field('SET', `${e.set} °C`), field('SEA', `${s.temp.toFixed(1)} °C`, 'idle'));
-      ctl.push(act('−', () => setCabin(e.set - 1)), act('+', () => setCabin(e.set + 1)), toggle('Heat/cool', e.on.hvac, () => setOn('hvac', !e.on.hvac)));
-    } else if (id === 'fire') {
-      rows.push(el('div', { class: 'eng-row' }, el('span', { class: 'gz-k', text: 'COMPARTMENTS' }), e.fire ? lamp(`FIRE · ${COMPS[e.fire.comp].toUpperCase()}`, 'bad') : lamp('CLEAR', 'ok')),
-        gauge('AGENT', e.agent / 100, `${Math.round(e.agent)}% · ${Math.floor(e.agent / FIRE_AGENT)} SHOTS`, e.agent < FIRE_AGENT ? 'bad' : ''));
-      ctl.push(toggle('Auto', e.armed, () => setArmed(!e.armed)), act('Discharge', discharge, { off: !e.fire, cls: 'warn', why: (w) => (w === 'agent' ? 'No agent left' : 'Fire suppression is offline') }));
-    } else if (id === 'bulkheads') {
-      for (const c of ['fwd', 'aft']) rows.push(el('div', { class: 'eng-row' }, el('span', { class: 'gz-k', text: COMPS[c].toUpperCase() }), e.bulk[c] ? lamp('OPEN', 'warn') : lamp('CLOSED', 'ok'), e.leak[c] ? lamp('LEAK', 'bad') : null,
-        act(e.bulk[c] ? 'Close' : 'Open', () => setBulkhead(c, !e.bulk[c]))), gauge(`FLOOD ${c.toUpperCase()}`, e.flood[c] / 100, `${Math.round(e.flood[c])}%`, e.flood[c] > 0 ? 'bad' : ''));
-    } else if (id === 'ballast') {
-      const fill = Math.min(1, s.depth / 600), trim = s.targetDepth > s.depth + 1 ? 'DIVING' : s.targetDepth < s.depth - 1 ? 'RISING' : 'TRIMMED';
-      rows.push(gauge('FORE TANK', fill, `${Math.round(fill * 100)}%`), gauge('AFT TANK', fill, `${Math.round(fill * 100)}%`), field('TRIM', e.blowing ? 'EMERGENCY BLOW' : trim, e.blowing ? 'bad' : ''), field('AIR', `${Math.round(e.air)}% · BLOW NEEDS ${BLOW_AIR}%`, e.air < BLOW_AIR ? 'warn' : ''));
-      ctl.push(act('Emergency blow', blow, { off: e.air < BLOW_AIR || s.depth < 1, cls: 'warn', why: (w) => (w === 'air' ? 'Not enough air charge' : w === 'offline' ? 'Ballast is offline' : 'We are on the surface') }));
-    } else if (id === 'air') {
-      rows.push(gauge('AIR BANK', e.air / 100, `${Math.round(e.air * 2.5)} BAR`, e.air < BLOW_AIR ? 'warn' : ''), field('COMPRESSOR', !e.on.compressor ? 'OFF' : s.depth < 20 && working('air') ? 'CHARGING' : 'WAITING (ABOVE 20 M)', s.depth < 20 && e.on.compressor ? 'ok' : 'idle'));
-      ctl.push(toggle('Compressor', e.on.compressor, () => setOn('compressor', !e.on.compressor)));
-    }
-    if (!powered(id) && x.relay) rows.push(field('POWER', `RELAY ${x.relay} OPEN`, 'bad'));
+    const pic = el('div', { class: 'eng-sch' }, drawSchematic(DIAGRAMS[id]()));
+    pic.addEventListener('click', () => { sig = ''; update(); });   // a tap on a part changed the model: redraw at once
+    const sum = {   // one line of the numbers that matter
+      relays: `BATTERY ${Math.round(s.battery)}% · DRAW ${Math.round(s.power)} kW`,
+      propulsion: `TOP SPEED ${Math.round(MAX_KT * jetFactor())} KT · SUPER CRUISE ${fusionOk() ? 'AVAILABLE' : 'OUT'}`,
+      scrubbers: `MODE ${e.scrubMode.toUpperCase()} · CANISTERS ${Math.round(s.scrubbers ?? 100)}% · CO2 ${s.co2.toFixed(2)}%`,
+      o2: `OXYGEN ${Math.round(s.oxygen)}% · TANK ${Math.round(e.o2tank)}%`,
+      water: `FRESH WATER ${Math.round(e.water)}%`,
+      hvac: `CABIN ${e.cabin.toFixed(1)}°C · SET ${e.set}°C · SEA ${s.temp.toFixed(1)}°C`,
+      fire: `${e.fire ? 'FIRE ' + COMPS[e.fire.comp].toUpperCase() : 'NO FIRE'} · AGENT ${Math.round(e.agent)}% (${Math.floor(e.agent / FIRE_AGENT)} SHOTS) · ${e.armed ? 'AUTO' : 'MANUAL'}`,
+      bulkheads: `FLOOD FWD ${Math.round(e.flood.fwd)}% · AFT ${Math.round(e.flood.aft)}%`,
+      ballast: `AIR ${Math.round(e.air)}% · ${e.blowing ? 'EMERGENCY BLOW' : 'TRIMMED'}`,
+      air: `AIR BANK ${Math.round(e.air * 2.5)} BAR · ${airCharging() ? 'CHARGING' : 'NOT CHARGING'}`,
+    }[id];
+    const ctl = id === 'hvac' ? [act('Cooler', () => setCabin(e.set - 1)), act('Warmer', () => setCabin(e.set + 1))] : [];
+    if (!powered(id) && x.relay) ctl.push(lamp(`RELAY ${x.relay} OPEN`, 'bad'));
     const fix = team ? act('Stand down', () => standDown(id)) : act('Repair', () => repair(id), { off: h >= 100 || busyTeams() >= TEAMS, why: (w) => (w === 'teams' ? 'Both teams are busy' : '') });
-    return [head, el('div', { class: 'rem-g' }, ...rows), el('div', { class: 'row craft-btns' }, ...ctl, fix, team ? lamp('TEAM WORKING', 'warn') : null)];
+    return [head, gauge('HEALTH', h / 100, `${Math.round(h)}%`, lvl(h)), pic, field('READING', sum), el('div', { class: 'row craft-btns' }, ...ctl, fix, team ? lamp('TEAM WORKING', 'warn') : null)];
   }
 
   function update() {
     const e = eng(), s = sim.s;
-    const next = JSON.stringify([sel, e, Math.round(s.battery), Math.round(s.power), Math.round(s.speed * 2), s.cruise, Math.round(s.oxygen), s.co2.toFixed(2), Math.round(s.scrubbers ?? 100), Math.round(s.depth / 5), s.targetDepth, s.temp.toFixed(1)].map((v) => (typeof v === 'object' ? JSON.stringify(v, (k, x) => (typeof x === 'number' ? Math.round(x) : x)) : v)));
+    const next = JSON.stringify([sel, e, Math.round(s.battery), Math.round(s.power), Math.round(s.speed * 2), s.cruise, Math.round(s.oxygen), s.co2.toFixed(2), Math.round(s.scrubbers ?? 100), Math.round(s.depth / 5), s.targetDepth, s.temp.toFixed(1), Math.round(s.speed)].map((v) => (typeof v === 'object' ? JSON.stringify(v, (k, x) => (typeof x === 'number' ? Math.round(x) : x)) : v)));
     if (next === sig) return; sig = next;
     const flood = e.flood.fwd > 0 || e.flood.aft > 0 || e.leak.fwd || e.leak.aft;
     top.replaceChildren(
