@@ -67,7 +67,7 @@
       "onComplete": [
         {
           "type": "unlock_crew",
-          "crewId": "sensors"
+          "crewId": "helm"
         },
         {
           "type": "unlock_crew",
@@ -75,7 +75,7 @@
         },
         {
           "type": "unlock_crew",
-          "crewId": "security"
+          "crewId": "sensors"
         }
       ]
     }
@@ -99,7 +99,7 @@
     {
       "type": "crew_say",
       "role": "aria",
-      "text": "That is the ship, Captain. The helm and systems are signed off. You can also ask Marcus to move the ship on the communicator. OERA will send your orders soon."
+      "text": "This is the bridge, {captain}. The centre desk is yours: the chart, the helm and the ship's systems, all at your fingertips. Marcus Chen has the helm; tell him where you want to go. Nicole Brooks, on your left, runs communications, and Alex Torres, on your right, reads the sonar. The others you will meet as we need them: Dr. Patel in the science lab and Chief Doyle in engineering. Lieutenant Washington keeps the launch bay, where you came aboard. The helm and systems are signed off. O.E.R.A.'s orders will come soon."
     },
     {
       "type": "send_message",

@@ -25,6 +25,7 @@ import { runIntake } from './intake.js';
 import { startAria } from './aria.js';
 import { armAway, catchUp, wakeNow, briefing, onWake, AWAY_CAPS } from './away.js';
 import { isCommissioned, excuse } from './unlocks.js';
+import { isOpen, visit, LOCKED } from './rooms.js';
 sim.cruiseGate = sim.cruiseGate || []; sim.cruiseGate.push(() => (isCommissioned('cruise') ? null : 'commission'));   // super cruise is commissioned in the trials area
 import { initMissionLog } from './missionLog.js';
 import { initAudio, updateHum, chirp, ping } from './audio.js';
@@ -197,6 +198,12 @@ function updateChips() {
   if (current.chips.textContent !== txt) current.chips.textContent = txt;
 }
 function openScene(name) {
+  if (name.startsWith('enter-')) {   // a door into a room the story may not have opened yet
+    const room = name.slice(6);
+    if (!isOpen(room)) { const o = ctx.objectives().find((x) => !x.done), t = o ? o.text.charAt(0).toLowerCase() + o.text.slice(1).replace(/\.?$/, '') : 'carry on with what we are doing'; say('aria', (LOCKED[room] || 'That door stays shut for now, {captain}. For now, {task}.').replace('{task}', t)); return; }
+    name = room;
+  }
+  visit(name);   // the people who work here are now on the communicator
   if (name.startsWith('talk-')) { const id = name.slice(5); if (gameState.getProperty(`contacts.crew.${id}`)) gameState.updateProperty(`contacts.crew.${id}.known`, true); return toggleComm(id); }   // a tap on a crew member in a room opens the line to them (meeting them in person makes them reachable)
   if (['bridge', 'walkway', 'walkway2', 'science', 'medbay', 'launchbay', 'engineering'].includes(name)) setTimeout(() => document.dispatchEvent(new CustomEvent('location-enter', { detail: { location: name } })), 0);
   if (name === 'quarters') {

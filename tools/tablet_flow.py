@@ -57,7 +57,7 @@ def main():
         done = js("const g=(await import('./js/persist.js')).gameState;return g.getProperty('mission.completedIds')")
         check("First Contact completed", done and "meetTheCrew" in done, done)
         known = js("const g=(await import('./js/persist.js')).gameState;return g.getProperty('contacts.crew.science.known')")
-        check("science unlocked by mission", known is True, known)
+        check("Dr. Patel is not on the communicator until the Captain visits the lab", known is not True, known)
         page.screenshot(path=f"{SHOTS}/f-4done.png")
         page.evaluate("document.querySelector(\'#comm-pop\').click()")
         # persistence

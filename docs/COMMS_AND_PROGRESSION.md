@@ -13,6 +13,14 @@ Last updated: 2026-11-22. Part of the document set listed in `DEVELOPMENT.md`.
 - `openStation()` in `app.js` refuses a locked station and has ARIA give its excuse (`EXCUSES`: helm, nav, sys, sensors, comms, lab, remora, wskr, bay). A station that opens sets the flag `tutorial.opened_<name>`.
 - A mission commissions a station with `{ "type": "unlock_station", "station": "wskr" }`, and a crew member with `{ "type": "unlock_crew", ... }` (see `TIME_CRUISE_AND_START.md`).
 
+## Rooms and crew open with the story (owner, 2026-11-27, `tablet/js/rooms.js`)
+- Open from the start: Launch Bay (the Captain arrives there), walkways AN-1 and A1, quarters, bridge. The rest open by mission action `{ "type": "unlock_room", "room": "…" }`: **science and medbay** when First Survey starts (samples are needed), **engineering** on arrival in the Trials AO. `?open=1` opens every room.
+- A tap on a locked door: ARIA names who is behind it and gives the current task ("I will introduce you to Dr. Patel later, Captain. … For now, open the logbook on your desk."). Only door taps are gated (`enter-<room>` targets); the test hooks still open any scene.
+- Crew join the communicator when the Captain visits their room: bridge = Marcus, Nicole, Alex; launch bay = Lt. Washington; science lab or medbay = Dr. Patel; engineering = Chief Doyle. First Contact no longer unlocks Dr. Patel and Chief Doyle.
+- A message from someone not met yet comes through ARIA ("Engineering reports: …").
+- Reaching the bridge (end of Know Your Ship), ARIA says who works there and what they do, instead of "That is the ship".
+- Test: `tools/rooms_test.py`.
+
 ## Tutorial chain (rebuilt 2026-11-22)
 Each lesson is a mission (`data/missions/*.json`, listed in `index.json`). Steps watch **flags** (`tutorial.*`, set once with `ctx.flag(name)` in `app.js`, also saved under `progress.flags`) or room entry (the `location-enter` event, sent for bridge, walkway, walkway2, science, medbay, launchbay). A mission action **`crew_say`** (`{ role, text }`) makes a crew member speak: communicator chirp plus console line, held until read. **Tutorial missions carry `"tutorial": true`**: no "New task" or "Objective complete" lines from ARIA, only the PED ticks (`UI_NOTES.md`).
 

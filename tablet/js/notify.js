@@ -48,14 +48,18 @@ const who = (role) => {
 /** role: 'helm' | 'aria' | 'sensors' | 'engineering' | 'comms' | 'science'. kind: '' | 'mission' | 'error'. */
 /** While hush.fn() is true nobody calls in: no chirps, no console lines, no ARIA guidance. (Before the communicator pin is picked up.) */
 export const hush = { fn: () => false };
+const DEPT = { helm: 'The helm', sensors: 'Sensors', engineering: 'Engineering', comms: 'Comms', science: 'The lab' };
 export function say(role, text, kind = '', opts = {}) {
   if (hush.fn()) return;
+  // someone the Captain has not met yet (they join the communicator when he visits their room): ARIA passes the message on
+  if (CREW_ID[role] && role !== 'aria' && gameState.getProperty(`contacts.crew.${CREW_ID[role]}`) && !gameState.getProperty(`contacts.crew.${CREW_ID[role]}.known`)) {
+    return say('aria', `${DEPT[role] || 'The crew'} reports: ${fill(text).replace(/^Captain, /, '')}`, kind, opts);
+  }
   text = fill(text); if (opts.keep) opts = { ...opts, keep: fill(opts.keep) };
   const now = Date.now(), w = who(role);
   const keepIt = (kind === 'mission' || kind === 'error') && opts.hold !== false && CREW_ID[role] !== openCrew;   // worth keeping until read, unless they are on the line with us now
   if (CREW_ID[role]) {
     if (!keepIt) logLine(CREW_ID[role], 'crew', text);   // the running notes belong in their communicator too. A kept message is filed when it is read.
-    if (!gameState.getProperty(`contacts.crew.${CREW_ID[role]}.known`)) gameState.updateProperty(`contacts.crew.${CREW_ID[role]}.known`, true);   // someone who has spoken to the Captain stays reachable
   }
   if (keepIt) {
     const id = CREW_ID[role] || role, l = (held.get(id) || []).filter((m) => !(opts.key && m.key === opts.key));

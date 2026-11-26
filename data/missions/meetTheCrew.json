@@ -90,14 +90,6 @@
           "type": "add_contextual",
           "characterId": "executiveOfficer",
           "context": "first_meeting"
-        },
-        {
-          "type": "unlock_crew",
-          "crewId": "science"
-        },
-        {
-          "type": "unlock_crew",
-          "crewId": "engineering"
         }
       ],
       "after": "learn_communicator"

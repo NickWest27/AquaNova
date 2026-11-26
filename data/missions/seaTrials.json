@@ -64,6 +64,10 @@
       "after": "plot",
       "onComplete": [
         {
+          "type": "unlock_room",
+          "room": "engineering"
+        },
+        {
           "type": "unlock_station",
           "station": "eng"
         },

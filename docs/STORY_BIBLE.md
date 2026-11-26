@@ -48,6 +48,8 @@ The Aqua Nova is advanced enough that the nations behind O.E.R.A. will not let h
   - Nicole Brooks: at the comms station (a stand-in picture; the owner wants an over-the-shoulder pose like Marcus).
   - Still to draw: Alex Torres; Ryan Doyle (red-brown hair, freckles, sleeves rolled, grease on the hands, fifties); Andre Washington (very tall and broad, close-cropped hair, tattooed forearms, the uniform a size too small at the shoulders).
 
+- **Where they work** (the Captain meets them there, then can call them): bridge = Marcus (helm), Nicole (comms, left console), Alex (sensors, right console; may move to a sonar room off the bridge if Marcus takes the right console); launch bay = Lt. Washington; science lab and sick bay = Dr. Patel; engineering = Chief Doyle; ARIA everywhere.
+
 ## Factions (`data/world/factions.json`)
 - O.E.R.A., Civil Harbour Authority and the Meridian Free Colony are friendly; freight, fishing, yachts, Sable Offshore Energy and two mining consortia (Deepcut, Abyssal Metals) are neutral; Concord Naval Command and Ridgeline Extraction are wary; the Grey Net Fleet (poachers) and the Black Tide Syndicate (pirates) are hostile. The miners and the colony are where the theme bites: the sea floor as a resource.
 

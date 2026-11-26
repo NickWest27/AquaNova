@@ -344,6 +344,11 @@ class MissionManager {
                 case 'unlock_crew':
                     gameStateInstance.unlockCrewMember(action.crewId);
                     break;
+                case 'unlock_room': {   // a room opens for the story (tablet/js/rooms.js)
+                    const l = gameStateInstance.getProperty('progress.roomsOpen') || [];
+                    if (!l.includes(action.room)) gameStateInstance.updateProperty('progress.roomsOpen', [...l, action.room]);
+                    break;
+                }
                 case 'add_item':
                     this.addItemToInventory(action.itemId, action.quantity || 1);
                     break;

@@ -115,8 +115,8 @@ export function createScene(stage, { onOpen }) {
   walkway.append(
     artImg('walkway'),
     // the owner's original picture (512x382, smooth), stretched to the 1920x1440 stage; walkway.png is the 320x240 palette-snapped copy. The BRIDGE sign is painted in the art, so the game draws no signs here
-    door('SCIENCE', 150, 260, 230, 940, 'science'),
-    door('MEDICAL', 380, 380, 110, 680, 'medbay'),
+    door('SCIENCE', 150, 260, 230, 940, 'enter-science'),
+    door('MEDICAL', 380, 380, 110, 680, 'enter-medbay'),
     door('QUARTERS', 1600, 300, 180, 900, 'quarters'),
     door('BRIDGE', 780, 470, 380, 390, 'bridge'),
     hs('AN-1 DECK ▼', 500, 1230, 920, 210, () => onOpen('walkway2'), 'mid'));      // walk on to the next section
@@ -128,7 +128,7 @@ export function createScene(stage, { onOpen }) {
     el('div', { class: 'an-sign one', style: 'left:840px;top:390px;width:252px;height:62px' }, el('div', { text: 'LAUNCH BAY' })),
     door('LAUNCH BAY', 769, 480, 384, 376, 'launchbay'),
     sign('ENGINEERING', [[1551, 179], [1693, 128], [1703, 229], [1547, 301]], 150, 44),   // the black panel above the near right door
-    door('ENGINEERING', 1575, 282, 188, 923, 'engineering'),
+    door('ENGINEERING', 1575, 282, 188, 923, 'enter-engineering'),
     hs('A1 DECK ▼', 500, 1230, 920, 210, () => onOpen('walkway'), 'mid'));   // the same size as the AN-1 DECK tap area on A1
   // science lab (science.png, 1920x1080): five cut-outs hold live screens that open the stations they show. The door leads out to the walkway.
   const sci = { banner: el('div', { class: 'sciscr' }), samples: el('div', { class: 'sciscr' }), analysis: el('div', { class: 'sciscr' }), research: el('div', { class: 'sciscr' }), remora: el('div', { class: 'sciscr' }) };
