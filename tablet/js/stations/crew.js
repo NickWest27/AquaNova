@@ -9,6 +9,7 @@ import { research } from '../science.js';
 import { el, toast } from '../util.js';
 import { gameState } from '../persist.js';
 import { crewIcon } from '../icons.js';
+import { portrait } from '../art.js';
 import { startReport } from '../transfer.js';
 import { topicsFor, askTopic } from '../topics.js';
 import { guidesFor, askGuide } from '../howto.js';
@@ -257,6 +258,8 @@ export function mount(body, ctx) {
   const onLine = (e) => { if (cur && e.detail.id === cur.id && (page === 'reply' || page === 'cat')) render(); };
   document.addEventListener('crew-line', onLine);
 
+  /** What a crew member says, with their portrait beside it when there is one (static portrait + speech box). */
+  const withFace = (node) => { const f = cur && portrait(cur.id, 'comm-face'); return f ? el('div', { class: 'comm-say' }, f, node) : node; };
   function render() {
     setOpenCrew(!cur || page === 'crew' ? null : cur.id);   // while we are on the line with someone, what they say is read as it comes
     let kids;
@@ -272,9 +275,9 @@ export function mount(body, ctx) {
           const held = takeHeld(c.id);   // what they tried to tell the Captain while he was elsewhere
           if (held.length) { greeted = true; reply = { said: null, text: held.map((h) => (/^Captain\b/.test(h) ? h : `Captain, ${h.charAt(0).toLowerCase()}${h.slice(1)}`)).join(' '), held: true }; page = 'reply'; } else page = 'cat';
           render();
-        } }, el('span', { class: `avatar ${c.id === 'executiveOfficer' ? 'aria' : ''}` }, crewIcon(c.id) || initial(c)), el('span', {}, el('b', { text: c.name }), el('small', { text: c.role })), unreadFor(c.id) > 0 && el('span', { class: 'comm-badge', text: String(unreadFor(c.id)) })))];
+        } }, el('span', { class: `avatar ${c.id === 'executiveOfficer' ? 'aria' : ''}${portrait(c.id) ? ' face' : ''}` }, portrait(c.id, 'avatar-face') || crewIcon(c.id) || initial(c)), el('span', {}, el('b', { text: c.name }), el('small', { text: c.role })), unreadFor(c.id) > 0 && el('span', { class: 'comm-badge', text: String(unreadFor(c.id)) })))];
     } else if (page === 'cat') {
-      kids = [logView(5), el('div', { class: 'comm-head', text: `What is on your mind, Captain?` }), el('div', { class: 'comm-who-label', text: `${cur.name} · ${cur.role}` }),
+      kids = [logView(5), withFace(el('div', {}, el('div', { class: 'comm-head', text: `What is on your mind, Captain?` }), el('div', { class: 'comm-who-label', text: `${cur.name} · ${cur.role}` }))),
         ...cats().map((f) => line(f.label, () => { trail = [f.label]; page = 'lines'; render(); }, f.cls || '')),
         line('Actually, let me call someone else …', () => { page = 'crew'; render(); }, 'back')];
     } else if (page === 'lines') {
@@ -286,7 +289,7 @@ export function mount(body, ctx) {
     } else if (page === 'decision') {
       const d = pendingDecisions()[0];
       if (!d) { page = 'cat'; return render(); }
-      kids = [el('div', { class: 'comm-reply' }, el('small', { text: cur.name }), el('p', { text: fill(d.text) })),
+      kids = [withFace(el('div', { class: 'comm-reply' }, el('small', { text: cur.name }), el('p', { text: fill(d.text) }))),
         ...d.options.map((o) => line(o.label, () => { say(o.label, decide(d.id, o.id)); }, 'decide')),
         line('Give me a moment …', () => { page = 'crew'; render(); }, 'back')];
     } else if (page === 'param') {
@@ -297,7 +300,7 @@ export function mount(body, ctx) {
       const T = transcript(cur.id), last = T[T.length - 1], live = !reply.stub && !reply.held && last && last.from === 'crew' ? last.text : null;
       kids = [!reply.stub && logView(8, true),
         reply.said && !live && el('div', { class: 'comm-you', text: `You: ${reply.said}` }),
-        el('div', { class: 'comm-reply' + (reply.stub ? ' stub' : '') }, el('small', { text: cur.name }), el('p', { text: live || reply.text })),
+        withFace(el('div', { class: 'comm-reply' + (reply.stub ? ' stub' : '') }, el('small', { text: cur.name }), el('p', { text: live || reply.text }))),
         line(reply.said ? `One more thing, ${first(cur)} …` : `I need something, ${first(cur)} …`, () => { page = 'cat'; render(); }, 'back'),
         line('Someone else …', () => { page = 'crew'; render(); }, 'back'),
         line("That's all. Out.", () => ctx.closeComm(), 'back')];

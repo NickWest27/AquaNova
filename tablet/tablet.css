@@ -900,3 +900,8 @@ input.mix { width: 100%; height: 2.4rem; accent-color: var(--cyan); }
 .coll-job { margin-left: 0.4rem; color: var(--amber); white-space: nowrap; }
 .rem-card { display: flex; flex-direction: column; gap: 0.55rem; } .rem-g { display: flex; flex-direction: column; gap: 0.45rem; } .rem-card .craft-hd b { letter-spacing: 0.1em; color: var(--cyan); }   /* Remora page instruments */
 .ilamp.data i { animation: dataflick 0.9s steps(2, jump-none) infinite; } @keyframes dataflick { 0% { opacity: 1; } 35% { opacity: 0.35; } 50% { opacity: 1; } 70% { opacity: 0.5; } 100% { opacity: 1; } }   /* a data light */
+/* crew portraits (art.js portrait): in the crew list's circle, and beside what they say on the communicator */
+.avatar.face { padding: 0; overflow: hidden; } .avatar-face { width: 100%; height: 100%; object-fit: cover; display: block; }
+.comm-say { display: flex; align-items: center; gap: 1rem; text-align: left; max-width: 44rem; } .comm-say > :last-child { flex: 1; min-width: 0; }
+.comm-face { width: 7.5rem; height: 7.5rem; flex: none; border-radius: 12px; border: 2px solid var(--cyan); object-fit: cover; background: #0b1a33; box-shadow: 0 0 14px rgba(100,255,218,0.25); }
+.comm-face.px, .avatar-face.px { image-rendering: pixelated; }

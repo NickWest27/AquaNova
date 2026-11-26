@@ -24,3 +24,17 @@ export function artImg(name) {
   apply(); window.addEventListener('art-change', apply);
   return img;
 }
+
+// Crew portraits (owner, 2026-11-26): the static portrait shown with what a crew member says on the communicator, and in the crew list.
+// Like the rooms: the owner's original (smooth) and a 64x64 palette copy (Display > Pictures > Retro). Keyed by crew id (data/contacts.json).
+export const PORTRAITS = {
+  communications: { original: 'retro/assets/crew/communications_original.jpg', retro: 'retro/assets/crew/communications.png' },   // Nicole Brooks
+};
+/** An <img> of a crew member's portrait that follows the Pictures setting, or null when there is none yet. */
+export function portrait(id, cls = 'portrait') {
+  const p = PORTRAITS[id]; if (!p) return null;
+  const img = el('img', { class: cls, alt: '', draggable: 'false', decoding: 'async' });
+  const apply = () => { const q = getQuality(); img.classList.toggle('px', q === 'retro'); const src = p[q]; if (!img.src.endsWith(src)) img.src = src; };
+  apply(); window.addEventListener('art-change', apply);
+  return img;
+}
