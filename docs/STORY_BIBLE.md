@@ -1,9 +1,21 @@
 # Aqua Nova — story bible
 
-Written 2026-11-19 from the Characters and Chapters PDFs, `data/contacts.json`, `data/commsContacts.json` and the arrival and logbook text. The owner has okayed it in principle (not yet read in full). Anything beyond the PDFs is invention by Claude. The bios in `contacts.json` use it. Names were changed on 2026-11-19 (see the end).
+Written 2026-11-19, brought up to date 2026-11-26. Sources: the Characters and Chapters PDFs, `data/contacts.json`, `data/commsContacts.json` and the arrival and logbook text. The owner has okayed it in principle (not yet read in full). Anything beyond the PDFs is invention by Claude. The bios in `contacts.json` use it. Names were changed on 2026-11-19 (see the end).
 
 ## Theme
 **Who decides what the deep is for?** The Aqua Nova is sold as a peaceful research ship, and the owner's own notes say Captain Voss did not think it should be *only* that. Science, security and funding all want something from the ocean floor. Missions should keep returning to that question in different forms (a discovery that is also a resource, a distress call that is also a test, a find that someone wants kept quiet) rather than being random encounters. The player starts as someone who believes the sea is worth understanding before it is worth using. The story tests that belief.
+
+## The ship and the opening (owner, 2026-11-26)
+- **The Aqua Nova Deep Sea Vessel (DSV).** The most advanced submarine ever built. A state-of-the-art hull skin designed for high-speed supercavitation, **hydro-jet propulsion** (port and starboard jets, 14 kt) and a **quantum fusion drive** (twin cores, seen in the Engineering room) that powers **super cruise** at 100 kt and more. Remora (tethered science ROV), the Tern (shuttle) and four WSKRs (scout drones) go with her. Systems detail: `ENGINEERING.md`.
+- **Mission statement (the owner's words, in Okafor's welcome):** "Your mission is to seek out new life where no light has ever reached. To explore, rescue, and protect. You are to become the guardian of the ocean, for beneath the waves lies our future." *Beneath the waves lies our future* is the tagline.
+- **Inspiration, not source:** the owner's brief echoes 90s TV submarines (SeaQuest DSV: twin reactors, water jets). Keep ours original.
+- **Opening in three letters from Admiral Okafor:**
+  1. **Welcome** (logbook entry M.LOG-0001, `data/logbooks/SeaTrials.json`): congratulations, the mission statement, the logbook, collect the PED and pin, call ARIA.
+  2. **Commissioning orders** (mail after the ship tour): depart immediately for the **Trials AO** at 39°54'N 071°00'W, on the shelf edge about 100 nm south; en route no more than 15 knots or 300 metres.
+  3. **Welcome to the AO** (mail on arrival): friendly vessels nearby, not everyone wants her to succeed, ship untested and crew new; push the limits of speed, "you should be able to get over 100 knots".
+- **The trials** test depth (300 m), full speed and super cruise. After each, the department head asks to **push her further** (two steps each: 450 then 600 m, 15.5 then 17 kt on the jets, 110 then 120 kt in super cruise). Each step that works sets a **ship record** in the logbook; each risks light damage that goes to the engineering computer for repair (`trials.js`). Marcus's "notices when the Captain is pushing the boat too hard" and Ryan's pride in the fusion plant both play here.
+- **Two meanings of AO:** the charter's **Area of Operations** (below) is the whole box the ship may work in. The **Trials AO** is a small area inside it, assigned for commissioning. Okafor's orders call it "the Area of Operations (AO) located at …", which is normal naval usage for a tasking area; ARIA's topic about "our Area of Operations" means the charter box.
+- **Not built yet:** the friendly escort vessels the AO letter mentions (only ordinary traffic is there), and hostile contacts beyond the poacher and pirate factions in `data/world/factions.json`.
 
 ## Areas of Operation (owner, 2026-11-20)
 The Aqua Nova is advanced enough that the nations behind O.E.R.A. will not let her go anywhere. The **Area of Operations** (AO) is the box the charter allows, and it is **political, not physical**: the ship could physically go further. In the game the AO is the charted area. **Outside it is a no-transgression zone**, drawn on the chart as a red hatched band with a dashed limit line.
@@ -15,8 +27,8 @@ The Aqua Nova is advanced enough that the nations behind O.E.R.A. will not let h
 ## Timeline
 - **Backstory:** O.E.R.A. (Oceanic Exploration and Research Alliance, a joint venture of several nations) builds the Aqua Nova at Woods Hole. Captain Elena Voss, a Navy veteran, is instrumental in the project and insists on a security officer and a hull that can do more than research.
 - **A few days before sea trials:** Voss is relieved of command at short notice. The reason is not given. ARIA was in the room and has not said what she saw. This is the first long thread.
-- **Day one (16 Aug 2074):** the player, a retired naval captain who came as an outsider to help bring the systems online, is given command. Admiral Okafor chose the player personally.
-- **Early game:** sea trials, charting, first survey. Quiet and teaching, with the theme planted: OERA wants the survey data, and some of it is wanted by someone other than the scientists.
+- **Day one** (50 years after the day the player first starts the game, 06:00; older saves and docs say 16 Aug 2074, see `TIME_CRUISE_AND_START.md`): the player, a retired naval captain who came as an outsider to help bring the systems online, is given command. Admiral Okafor chose the player personally.
+- **Early game:** the commissioning trip to the Trials AO (depth and speed trials, records), charting on the way home, first survey. Quiet and teaching, with the theme planted: OERA wants the survey data, and some of it is wanted by someone other than the scientists.
 - **First real choice:** the Halcyon distress call (hidden contact in `commsContacts.json`, HF 4.125 MHz, 40.3 N 69.5 W). Nicole hears it first because it is on an old frequency. It lies outside the Area of Operations (see above).
 
 ## Crew (bios in `contacts.json`; traditional pronouns throughout)
@@ -28,6 +40,11 @@ The Aqua Nova is advanced enough that the nations behind O.E.R.A. will not let h
 - **Ryan Chen, Chief Engineer (he).** Merchant ship engine rooms, then the team that commissioned the fusion plant. Fixes things with parts nobody planned to use. No relation to Marcus; both are tired of the question. *Use:* a running joke that can pay off once.
 - **Lt. Daniel Kim, Security (he).** Navy special warfare, then maritime boarding. Voss insisted on him over the science side's objections. Believes a ship that goes deeper than anyone will meet something it cannot talk to. *Use:* the voice of the other side of the theme; never a villain.
 - **Nicole Brooks, Communications (she).** Signals officer, then four years at a polar station with one satellite window twice a day. Knows what a delayed message costs. Hears old frequencies first. *Use:* Halcyon.
+
+- **Appearance:** Nicole has a portrait (`retro/assets/`, 90s dialogue screen). Other portraits to come as the owner makes them.
+
+## Factions (`data/world/factions.json`)
+- O.E.R.A., Civil Harbour Authority and the Meridian Free Colony are friendly; freight, fishing, yachts, Sable Offshore Energy and two mining consortia (Deepcut, Abyssal Metals) are neutral; Concord Naval Command and Ridgeline Extraction are wary; the Grey Net Fleet (poachers) and the Black Tide Syndicate (pirates) are hostile. The miners and the colony are where the theme bites: the sea floor as a resource.
 
 ## Contacts
 - **Admiral Catherine Okafor, Director of Operations (she).** Retired rear admiral. Argued for years for a ship that can go where no one else can and come back. Answers to a board and to the funding governments, who want different things. **Draws the Area of Operations with them.**

@@ -4,6 +4,7 @@ import { el } from './util.js';
 import { artImg } from './art.js';
 import * as E from './engineering.js';
 import { createBridgeConsole } from './bridge.js';
+import { createQuartersScreen } from './quartersScreen.js';
 import { samples, sampleName, jobs, points, research, LABS, SAMPLE_KINDS } from './science.js';
 import { rovRange } from './rov.js';
 import { LINKS, linkState, activeLink } from './commsModel.js';
@@ -97,7 +98,8 @@ export function createScene(stage, { onOpen }) {
   const grab = (label, tag, x, y, w, h, target) => el('button', { class: 'pickup', hidden: true, style: `left:${x}px;top:${y}px;width:${w}px;height:${h}px`, 'aria-label': label, onclick: () => onOpen(target) }, el('span', { class: 'tag', text: tag }));
   const pinGrab = grab('Pick up communicator', 'COMMUNICATOR', 1390, 870, 150, 110, 'pickup'), pedGrab = grab('Pick up PED', 'PED', 370, 1005, 200, 125, 'pickup-ped');
   pinVis.hidden = pedVis.hidden = true;
-  quarters.append(qimg,
+  const qscreen = createQuartersScreen(651, 245);   // the wall screen (art 465-812 x 274-404, x 1.875 / 1.88): cycles NAV, view, sonar, WSKRs, ship status
+  quarters.append(qimg, box('qscreen', 872, 515, 651, 245, [qscreen.root]),
     hs('LOGBOOK', 1480, 740, 340, 300, () => onOpen('log'), 'top'),
     hs('SLEEP', 0, 930, 750, 430, () => onOpen('sleep'), 'mid'),
     hs('TO WALKWAY', 800, 1150, 570, 290, () => onOpen('walkway'), 'mid'),
@@ -237,11 +239,13 @@ export function createScene(stage, { onOpen }) {
       }
       if (api.where === 'science') { updateScience(); return; }
       if (api.where === 'engineering') { updateEng(); return; }
+      if (api.where === 'quarters') { qscreen.update(); return; }
       if (api.where !== 'bridge') return;
       const s = sim.s;
       consoleApi.update(); updateStations();
     },
     console: consoleApi,
+    quartersScreen: qscreen,
     showItems({ pin, ped }) { pinVis.hidden = pinGrab.hidden = !pin; pedVis.hidden = pedGrab.hidden = !ped; },
     lock(label, on) { stage.querySelectorAll('.hs').forEach((b) => { if (b.textContent === label) b.classList.toggle('locked', on); }); },
     glow(label, on) { stage.querySelectorAll('.hs, .door, .pickup').forEach((b) => { if (b.textContent === label || b.getAttribute('aria-label') === label) b.classList.toggle('glow', on); }); },

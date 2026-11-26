@@ -11,6 +11,7 @@ import { seafloor } from './seafloor.js';
 import { fileScan, scanned } from './findings.js';
 import './survey.js';   // site surveys run on the sim clock
 import './engineering.js';   // the ship's systems, damage and repairs
+import './trials.js';   // pushing the trials in the Trials AO: records, and a risk of light damage
 import './rov.js';
 import { SHUTTLE_NAME, BAY_SAFE_KT } from './bayops.js';
 import './tern.js';

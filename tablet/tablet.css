@@ -987,3 +987,29 @@ body.general-alarm #station::after { content: ''; position: absolute; inset: 0; 
 @keyframes genalarm { 0%, 100% { opacity: 0.12; } 50% { opacity: 0.6; } }
 .gen-alarm-btn { margin-left: auto; color: var(--red); border-color: var(--red); }
 .gen-alarm-btn.lit { background: rgba(255, 60, 60, 0.3); color: #fff; }
+
+/* ---------- Quarters wall screen (quartersScreen.js): cycles display pages; a tap shows the next one ---------- */
+.disp.qscreen { overflow: hidden; background: #050d16; }
+.qs { position: relative; display: flex; flex-direction: column; font-family: var(--mono); color: var(--cyan); background: radial-gradient(ellipse at center, #08202f, #040b13); }
+.qs-head { flex: none; height: 30px; display: flex; align-items: center; justify-content: space-between; padding: 0 12px; border-bottom: 2px solid var(--line-soft); }
+.qs-title { font-size: 19px; letter-spacing: 0.14em; }
+.qs-dots i { display: inline-block; width: 9px; height: 9px; margin-left: 6px; border-radius: 50%; background: rgba(100,255,218,0.25); }
+.qs-dots i.on { background: var(--cyan); }
+.qs-body { flex: 1; position: relative; min-height: 0; }
+.qs-page { position: absolute; inset: 0; }
+.qs-page[hidden] { display: none; }
+.qs-nav { display: flex; }
+.qs-nd { flex: 1; position: relative; min-width: 0; }
+.qs-info { width: 210px; padding: 8px 12px; border-left: 2px solid var(--line-soft); }
+.qs-r { display: flex; justify-content: space-between; gap: 8px; font-size: 18px; line-height: 1.45; color: var(--dim); }
+.qs-r b { color: var(--cyan); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px; }
+.qs-r.bad b { color: var(--red); } .qs-r.ok b { color: var(--green); }
+.qs-ship { display: flex; gap: 22px; padding: 12px 16px; }
+.qs-col { flex: 1; }
+.qs-wk { padding: 10px 16px; }
+.qs-wr { display: flex; gap: 18px; font-size: 19px; line-height: 1.6; color: var(--dim); } .qs-wr b { color: var(--cyan); width: 110px; }
+.qs-none { font-size: 22px; color: var(--dim); text-align: center; margin-top: 70px; letter-spacing: 0.12em; }
+.qs-snr .bd-snr, .qs-view .bd { position: absolute; inset: 0; }
+.qs-tap { position: absolute; inset: 0; background: transparent; border: 0; z-index: 2; }
+.qs-view { display: flex; justify-content: center; background: #0a0a52; }
+.qs-view .synth-canvas { height: 100%; width: auto; aspect-ratio: 16 / 9; display: block; }
