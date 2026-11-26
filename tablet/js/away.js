@@ -100,7 +100,7 @@ const listener = (type, data) => {
   else if (type === 'bay-door-damage') note('The bay doors took damage.');
   else if (type === 'rov-snapped') { note('Remora\'s tether parted. She is out of contact.'); hold('craft'); if (a.stop) a.stop.name = 'Remora'; }
   else if (type === 'rov-blocked' && a.rovHold) note('Remora stopped at shoal water on her way back. The crew held the ship for you.');
-  else if (type === 'tether-repaired') note('Engineering finished splicing the new tether.');
+  else if (type === 'tether-repaired') note('Engineering finished fitting Remora\'s new tether.');
 };
 listener.keep = true;
 sim.on(listener);
@@ -122,7 +122,7 @@ function rules(a, s) {
     a.did.samples = true;
     const poi = st.kind === 'arrived' && s.pois.find((p) => p.name === st.name), b = bay();
     if (poi && poi.type !== 'dock' && !s.docked && a.endClock - s.clock >= REMORA_S) {
-      const free = !s.rov && !b.op && !b.rearm && !b.tetherFix, tools = ['collector', 'drill'], got = [];
+      const free = !s.rov && !b.op && !b.rearm && !b.tetherFix && !b.tetherBroken, tools = ['collector', 'drill'], got = [];
       for (const tool of (free ? tools : ['spectrometer', 'laser', ...(poi.type === 'wreck' ? ['magnetometer'] : [])]).slice(0, free ? REMORA_STORE : 9)) { const k = pickKind(tool, poi); if (k && !got.includes(k)) { addSample(k, poi, tool); got.push(k); } }
       if (got.length) {
         const what = `${got.length === 1 ? 'a' : got.length} ${got.map((k) => SAMPLE_KINDS[k].label.toLowerCase()).join(' and ')} sample${got.length > 1 ? 's' : ''}`;

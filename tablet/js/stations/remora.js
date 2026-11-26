@@ -6,7 +6,7 @@ import { launchRemora, recoverRemora, remoraRearm, bay } from '../bayops.js';
 import { ROV_NAME, rovRange, rovSite, rovFloor, rovCargo, REMORA_STORE, tetherBar } from '../rov.js';
 import { TOOLS, samples, pickKind } from '../science.js';
 import { el, toast, modal } from '../util.js';
-import { gauge, field, lamp, airlock, sampleSlots, mins } from '../instruments.js';
+import { gauge, field, lamp, airlock, sampleSlots, mins, linkLamp } from '../instruments.js';
 import { mountCraftView } from '../craftview.js';
 import { selectedContact, targetOf } from '../contacts.js';
 import { seafloor } from '../seafloor.js';
@@ -52,14 +52,14 @@ export function mount(body) {
   function update() {
     const s = sim.s, r = s.rov, op = bay().op, rr = remoraRearm();
     const lost = !!(r && r.lost), fix = bay().tetherFix, rovOp = op && op.craft === 'rov';   // tether parted: no control, no telemetry
-    const st = rovOp ? lamp(op.kind === 'launch' ? 'LAUNCHING' : 'RECOVERING', 'warn') : lost ? lamp('LOST CONTACT', 'bad') : r ? (r.auto ? lamp('DRIVING HOME', 'warn') : r.home ? lamp('ALONGSIDE', 'ok') : lamp('OUT', 'ok')) : rr ? lamp('RE-EQUIP', 'warn') : lamp('ABOARD', 'ok');
+    const st = rovOp ? lamp(op.kind === 'launch' ? 'LAUNCHING' : 'RECOVERING', 'warn') : r ? linkLamp(r) : rr ? lamp('RE-EQUIP', 'warn') : lamp('ABOARD', 'ok');
     const tn = r && !lost ? toward(s, r).nm : 0;
     const lines = [
-      fix ? gauge('TETHER', fix.t / fix.dur, `PARTED · NEW ${mins((fix.dur - fix.t) / 60)}`, 'bad') : null,
+      bay().tetherBroken ? gauge('TETHER', 0, 'PARTED', 'bad') : fix ? gauge('NEW TETHER', fix.t / fix.dur, mins((fix.dur - fix.t) / 60), 'warn') : null,
       r && !lost ? gauge('TETHER', tn / rovRange(), `${tn.toFixed(2)} / ${rovRange()} nm`, tn / rovRange() >= 0.9 ? 'warn' : '') : null,
       rovOp ? airlock(op, 'BAY') : null,
       !r && rr ? gauge('RE-EQUIP', rr.t / rr.dur, mins((rr.dur - rr.t) / 60), 'warn') : null,
-      lost ? field('LINK', 'NONE · TERN FETCH', 'bad') : null];
+      lost ? field('RECOVERY', 'THE TERN · LAUNCH BAY', 'bad') : null];
     const sig = JSON.stringify([st.textContent, lines.map((x) => x && x.textContent)]);
     if (headG._sig !== sig) { headG._sig = sig; headHd.replaceChildren(el('b', { text: ROV_NAME.toUpperCase() }), st); headG.replaceChildren(...lines.filter(Boolean)); }
     launchBtn.disabled = !!r || s.docked || !!op || !!rr || !!fix; recBtn.disabled = !r || !!op || lost; autoBtn.disabled = !r || !!r.job || !!r.auto || lost;
@@ -76,7 +76,7 @@ export function mount(body) {
       b.title = TOOLS[id].needsFloor && pickKind(id, site) !== 'water' && !near ? 'Get within 6 m of the sea floor first.' : '';
     });
     const nearest = site ? null : s.pois.filter((p) => p.type !== 'dock').map((p) => ({ p, ...toward(r, p) })).sort((x, y) => x.nm - y.nm)[0];
-    const alt = fl != null ? fl - r.depth : null, order = r.go ? `TO ${r.go.name.toUpperCase()}` : r.auto ? 'HOME' : r.thrSet ? `${(r.thrSet * 2).toFixed(1)} KT${r.hdgTo != null ? ` · HDG ${String(Math.round(r.hdgTo)).padStart(3, '0')}°` : ''}` : r.hdgTo != null ? `HDG ${String(Math.round(r.hdgTo)).padStart(3, '0')}°` : 'HOLDING';
+    const alt = fl != null ? fl - r.depth : null, order = r.go ? `TO ${r.go.name.toUpperCase()}` : r.auto ? 'DRIVING HOME' : r.home ? 'ALONGSIDE' : r.thrSet ? `${(r.thrSet * 2).toFixed(1)} KT${r.hdgTo != null ? ` · HDG ${String(Math.round(r.hdgTo)).padStart(3, '0')}°` : ''}` : r.hdgTo != null ? `HDG ${String(Math.round(r.hdgTo)).padStart(3, '0')}°` : 'HOLDING';
     const rows = [
       site ? field('SITE', site.name.toUpperCase(), 'ok') : field('SITE', nearest ? `NONE · ${nearest.p.name.toUpperCase()} ${nearest.nm.toFixed(2)} nm ${String(Math.round(nearest.brg)).padStart(3, '0')}°` : 'NONE', 'idle'),
       field('FLOOR', alt == null ? 'NO CHART' : `${Math.round(alt)} m BELOW${near ? ' · TOOLS REACH' : ''}`, near ? 'ok' : 'idle'),

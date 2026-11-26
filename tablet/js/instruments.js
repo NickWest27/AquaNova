@@ -21,3 +21,5 @@ const SHORT = { water: 'WATER', sediment: 'SEDIM', rock: 'CORE', bio: 'BIO' };
 export const sampleSlots = (cargo, n, unknown = false) => el('div', { class: 'coll' }, el('span', { class: 'gz-k', text: 'SAMPLES' }),
   ...Array.from({ length: n }, (_, i) => { const c = cargo[i]; return el('span', { class: 'slot' + (c && !unknown ? ' full' : ''), text: unknown ? '?' : c ? SHORT[c.kind] || c.kind.slice(0, 3).toUpperCase() : 'EMPTY' }); }));
 export const mins = (m) => { if (m < 1) return '<1 min'; const t = Math.round(m); return t < 60 ? `${t} min` : `${Math.floor(t / 60)} h ${t % 60} min`; };
+/** Remora's connection over her tether: LINK · DATA (flickers like data moving) while connected, LINK LOST once the tether has parted. */
+export const linkLamp = (r) => (r && r.lost ? lamp('LINK LOST', 'bad') : lamp('LINK · DATA', 'ok data'));

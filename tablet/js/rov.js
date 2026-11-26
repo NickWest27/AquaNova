@@ -12,8 +12,9 @@ const MAX_ROV_DEPTH = 600;
 export const ROV_DIVE_MPS = 2;   // Remora dives and climbs at 2 m per real second (was 8: too fast)
 export const REMORA_STORE = 3;   // she is small: three samples, then she has to come home and be unloaded
 export const rovCargo = () => (sim.s.rov && sim.s.rov.cargo) || [];
-/** The tether parts if the ship gets further than its length from her (2% slack). She is then LOST: no control and no telemetry until the Tern
- *  brings her home (bayops fetchRemora). Engineering splice a new tether: TETHER_REPAIR_S. */
+/** Remora is tethered to the Aqua Nova: the tether carries her control and data. It parts if the ship gets further than its length from her
+ *  (2% slack). Her link is then lost: no control and no telemetry. The outer door closes, the Tern can launch and fetch her (bayops fetchRemora),
+ *  and once she is back aboard Engineering need TETHER_REPAIR_S (2 h) to fit a new tether before she can be used again. */
 export const TETHER_SNAP = 1.02, TETHER_REPAIR_S = 2 * 3600;
 export const rovLost = () => !!(sim.s.rov && sim.s.rov.lost);
 export const rovTethered = () => !!(sim.s.rov && !sim.s.rov.lost);
@@ -63,7 +64,7 @@ sim.hooks.push((dt) => {
   if (s.docked) { s.rov = null; return; }
   if (toward(s, r).nm > rovRange() * TETHER_SNAP) {   // the ship has dragged the tether past its length: it parts
     Object.assign(r, { lost: true, lostAt: s.clock, job: null, go: null, auto: false, home: false, thrSet: 0, hdgTo: null, depTo: null, cmd: { thr: 0, turn: 0, dive: 0 } });
-    const b = s.bay || (s.bay = {}); b.tetherFix = { t: 0, dur: TETHER_REPAIR_S }; b.override = false;
+    const b = s.bay || (s.bay = {}); b.tetherBroken = true; b.override = false;   // the repair starts when she is back aboard
     sim.emit('rov-snapped', { lat: r.lat, lon: r.lon, nm: toward(s, r).nm }); sim.touch(); return;
   }
   if (r.job) {

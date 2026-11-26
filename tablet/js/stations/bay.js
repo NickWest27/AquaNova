@@ -7,7 +7,7 @@ import { ROV_NAME, rovRange, REMORA_STORE } from '../rov.js';
 import { TOOLS } from '../science.js';
 import { el, modal } from '../util.js';
 import { readout } from '../readout.js';
-import { gauge, field, lamp, airlock, pctLvl, sampleSlots, mins } from '../instruments.js';
+import { gauge, field, lamp, airlock, pctLvl, sampleSlots, mins, linkLamp } from '../instruments.js';
 import { TERN_SAFE_M, launchRemora, recoverRemora, remoraRearm, o2HoursLeft, O2_CHARGE_H, setManning, SHUTTLE_SEATS, SHUTTLE_COCKPIT, bay, busy, tubeBusy, rackBat, shuttle, launchWskr, launchText, receiveWskrNow, launchShuttle, recoverShuttle, sendShuttle, recallShuttle, fetchRemora, dockList, shuttleRangeNm, shuttleSpeed, SHUTTLE_NAME, BAY_SAFE_KT, DOOR_DAMAGE_KT, SHUTTLE_CHARGE_H, MIN_LAUNCH_PCT, LOW_PCT } from '../bayops.js';
 
 const toFull = (bat, hours) => ((100 - bat) / 100) * hours * 60;
@@ -24,7 +24,7 @@ export function mount(body) {
     const s = sim.s, w = s.wskrs, r = s.rov, b = bay(), sh = shuttle(), op = b.op, rr = remoraRearm();
     const o2 = sh.o2 == null ? 100 : sh.o2, pilots = sh.pilots == null ? 2 : sh.pilots, pax = sh.pax || 0;
     const tw = sh.state === 'out' ? toward(s, sh) : null;
-    const next = JSON.stringify([!!r, r && r.lost, b.tetherFix && Math.round(b.tetherFix.t / 30), !!sh.carry, r && Math.round(toward(s, r).nm * 100), r && (r.cargo || []).map((c) => c.kind).join(), r && r.job && Math.ceil((r.job.end - s.clock) / 60), rr && (rr.cargo || []).length, w.map((q) => [q.n, q.mode, !!q.arrived, Math.round(q.bat || 0)]), s.docked, Math.round(s.speed * 2), op && [op.kind, op.craft, Math.round(op.t)],
+    const next = JSON.stringify([!!r, r && r.lost, b.tetherBroken, b.tetherFix && Math.round(b.tetherFix.t / 30), !!sh.carry, r && Math.round(toward(s, r).nm * 100), r && (r.cargo || []).map((c) => c.kind).join(), r && r.job && Math.ceil((r.job.end - s.clock) / 60), rr && (rr.cargo || []).length, w.map((q) => [q.n, q.mode, !!q.arrived, Math.round(q.bat || 0)]), s.docked, Math.round(s.speed * 2), op && [op.kind, op.craft, Math.round(op.t)],
       Object.values(b.tubes).map((t) => [t.n, t.kind, Math.round(t.t)]), Math.round(b.doorDmg), sh.state, sh.mode, sh.dead, Math.round(sh.bat), Math.round(o2), rr && Math.round(rr.t / 10), pilots, pax, sh.ashore,
       [1, 2, 3, 4].map((n) => Math.round(rackBat(n))), tw && [Math.round(tw.brg), Math.round(tw.nm * 100), Math.round(sh.depth || 0)]]);
     if (next === sig) return; sig = next;
@@ -47,8 +47,8 @@ export function mount(body) {
     const collectors = (cargo, unknown) => sampleSlots(cargo, REMORA_STORE, unknown);
     const working = (job) => { const t = TOOLS[job.tool] || { name: job.tool, secs: 1 }, left = Math.max(0, job.end - s.clock); return gauge('WORKING', 1 - left / t.secs, `${t.name.toUpperCase()} · ${Math.ceil(left / 60)} MIN`, 'warn'); };
     const rem = el('div', { class: 'card craft' },
-      el('div', { class: 'craft-hd' }, el('b', { text: CRAFT.rov }), rovOp ? lamp(op.kind === 'launch' ? 'LAUNCHING' : 'RECOVERING', 'warn') : lost ? lamp(sh.carry || sh.mode === 'fetch' ? 'TERN FETCHING' : 'LOST', 'bad') : r ? lamp('OUT', 'warn') : rr ? lamp('RE-EQUIP', 'warn') : lamp('IN BAY', 'ok')),
-      fix ? gauge('TETHER', fix.t / fix.dur, `PARTED · NEW ${mins((fix.dur - fix.t) / 60)}`, 'bad') : null,
+      el('div', { class: 'craft-hd' }, el('b', { text: CRAFT.rov }), rovOp ? lamp(op.kind === 'launch' ? 'LAUNCHING' : 'RECOVERING', 'warn') : r ? linkLamp(r) : rr ? lamp('RE-EQUIP', 'warn') : lamp('IN BAY', 'ok')),
+      b.tetherBroken ? gauge('TETHER', 0, sh.carry || sh.mode === 'fetch' ? 'PARTED · TERN FETCHING' : 'PARTED', 'bad') : fix ? gauge('NEW TETHER', fix.t / fix.dur, mins((fix.dur - fix.t) / 60), 'warn') : null,
       lost ? null : r ? gauge('TETHER', tnm / rovRange(), `${tnm.toFixed(2)} / ${rovRange()} nm`, tnm / rovRange() > 0.9 ? 'warn' : '') : rr ? gauge('RE-EQUIP', rr.t / rr.dur, `${mins((rr.dur - rr.t) / 60)}${rr.load ? ` · ${rr.load} smp` : ''}`, 'warn') : gauge('READY', 1, 'NO CHARGE NEEDED'),
       collectors(r ? (r.cargo || []) : sh.carry ? (sh.carry.cargo || []) : rr ? (rr.cargo || []) : [], lost), r && r.job ? working(r.job) : null,
       el('div', { class: 'row craft-btns' }, lost ? null : r ? act('Recover', recoverRov, busy()) : act('Launch', launchRov, s.docked || busy() || !!rr || !!fix)));

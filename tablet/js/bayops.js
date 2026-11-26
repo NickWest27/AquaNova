@@ -14,7 +14,7 @@ import { seafloor } from './seafloor.js';
 import { planRoute } from './route.js';
 import { SHUTTLE_NAME } from './topics.js';
 import { research, samples } from './science.js';
-import './rov.js';
+import { TETHER_REPAIR_S } from './rov.js';
 import { retire } from './notify.js';
 
 export { SHUTTLE_NAME };
@@ -81,7 +81,8 @@ export function launchAllWskrs() {
 /** Remora leaves through the bay: one minute, then the doors stay open for its tether until it is recovered. */
 export function launchRemora() {
   const s = sim.s, b = bay(); if (s.rov) return { ok: false, why: s.rov.lost ? 'lost' : 'out' }; if (s.docked) return { ok: false, why: 'docked' };
-  if (b.tetherFix) return { ok: false, why: 'tetherfix', mins: Math.ceil((b.tetherFix.dur - b.tetherFix.t) / 60) };   // a new tether is being spliced
+  if (b.tetherFix) return { ok: false, why: 'tetherfix', mins: Math.ceil((b.tetherFix.dur - b.tetherFix.t) / 60) };   // a new tether is being fitted
+  if (b.tetherBroken) return { ok: false, why: 'tetherfix', mins: Math.ceil(TETHER_REPAIR_S / 60) };
   if (b.rearm) return { ok: false, why: 'rearm', mins: Math.ceil((b.rearm.dur - b.rearm.t) / 60) };
   return startOp({ kind: 'launch', craft: 'rov' });
 }
@@ -142,6 +143,7 @@ function finishOp(op) {
     if (sh.carry) {   // Remora comes in with her: the usual unloading and re-equipping
       const cargo = sh.carry.cargo || [], load = cargo.length; sh.carry = null;
       b.rearm = { t: 0, dur: REMORA_REARM_S + load * REMORA_UNLOAD_S, load, cargo }; sim.emit('remora-aboard', b.rearm);
+      if (b.tetherBroken) { b.tetherBroken = false; b.tetherFix = { t: 0, dur: TETHER_REPAIR_S }; sim.emit('tether-repair-start', b.tetherFix); }   // Engineering fit a new tether: 2 h
     }
   }
 }

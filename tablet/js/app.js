@@ -376,9 +376,10 @@ async function boot() {
       else if (type === 'survey-start') { /* told by the SONAR page */ }
       else if (type === 'survey-done') say('sensors', `Survey of ${data.name} complete, Captain. The sea floor is charted in detail round it, and the survey is filed in Findings.`, 'mission', { notice: 'SURVEY COMPLETE' });
       else if (type === 'survey-stopped' && data.why !== 'captain') say('sensors', `Survey of ${data.name} broken off, Captain: ${data.why === 'moved' ? 'we moved off station' : data.why === 'fast' ? 'we picked up speed' : 'we left the site'}.`, 'error');
-      else if (type === 'rov-snapped') say('science', `The tether has parted, Captain! We have lost Remora, ${data.nm.toFixed(1)} miles astern. No control and no telemetry. The Tern can fetch her: Launch Bay, Fetch Remora. Engineering are splicing a new tether.`, 'error', { notice: 'TETHER PARTED' });
+      else if (type === 'rov-snapped') say('science', `The tether has parted, Captain! We have lost Remora, ${data.nm.toFixed(1)} miles astern. No control and no telemetry. The outer door is closing, so the Tern can go for her: Launch Bay, Fetch Remora. Engineering will fit a new tether once she is back aboard.`, 'error', { notice: 'TETHER PARTED' });
       else if (type === 'shuttle-fetched') say('helm', 'The Tern has Remora aboard, Captain. Bringing her home.', 'mission');
-      else if (type === 'tether-repaired') say('science', 'Engineering: the new tether is spliced and tested. Remora can go out again once she is aboard.', '');
+      else if (type === 'tether-repair-start') say('science', 'Engineering have Remora. A new tether takes about two hours, Captain.', '');
+      else if (type === 'tether-repaired') say('science', 'Engineering: the new tether is fitted and tested. Remora is ready.', '');
       else if (type === 'rov-home') say('science', 'Remora is alongside, Captain. She is ready to be taken aboard.', '', { action: true });
       else if (type === 'rov-blocked') say('science', 'Remora has hit shoal water on her way back, Captain. She has stopped. Somebody needs to pilot her round it.', 'error');
       else if (type === 'rov-reading') say('science', `Magnetometer reading from ${data.site} is in the lab, live over the tether.`, '', { action: true });
