@@ -3,7 +3,7 @@ import { pendingDecisions, decide } from '../aria.js';
 import { fill } from '../player.js';
 import { reply as chatReply, statusReport } from '../chat.js';
 import { startSweep, setSource } from '../sonar.js';
-import { sim, toward, wskrName, HUG_ALT, HUG_MIN_FLOOR, PERISCOPE_M } from '../sim.js';
+import { sim, toward, wskrName, HUG_ALT, HUG_MIN_FLOOR, PERISCOPE_M, cruiseWhy } from '../sim.js';
 import { GATES_ON } from '../unlocks.js';
 import { research } from '../science.js';
 import { el, toast } from '../util.js';
@@ -98,9 +98,9 @@ const ORDERS = {
     return { docked: 'We are docked, Captain. Undock first.', fast: `We are over ${BAY_SAFE_KT} knots, Captain. Slow down and the bay will launch them.`, full: 'Every WSKR is already out, Captain.', charge: 'None of the WSKRs in the rack has the charge to launch, Captain. They need 20 percent.' }[r.why] || 'The bay cannot launch them now, Captain.';
   },
   'Recall all WSKRs': () => { const n = sim.recallWskrs(); return n ? `Recalling ${n === 1 ? 'the WSKR' : `all ${n} WSKRs`}, aye. The bay takes each one aboard when we are under ${BAY_SAFE_KT} knots.` : 'No WSKRs are out, Captain.'; },
-  'Hug the floor': () => { const r = sim.setHug(true); return r.ok ? `Hugging the floor, aye. I will hold ${HUG_ALT} metres off the bottom and follow it.` : r.why === 'docked' ? 'We are docked, Captain.' : r.why === 'fusion' ? 'The fusion drive is down, Captain. Engineering can bring it back.' : 'Not enough water here to hug the floor, Captain. I need at least ' + HUG_MIN_FLOOR + ' metres under us.'; },
+  'Hug the floor': () => { const r = sim.setHug(true); return r.ok ? `Hugging the floor, aye. I will hold ${HUG_ALT} metres off the bottom and follow it.` : r.why === 'docked' ? 'We are docked, Captain.' : 'Not enough water here to hug the floor, Captain. I need at least ' + HUG_MIN_FLOOR + ' metres under us.'; },
   'Stop hugging the floor': () => { if (!sim.s.hug) return 'We are not following the floor, Captain.'; sim.setHug(false); return `Leaving the floor, aye. Holding ${Math.round(sim.s.depth)} metres.`; },
-  'Engage super cruise': () => { const r = sim.setCruise(true); return r.ok ? 'Super cruise engaged. Hold on to something, Captain.' : r.why === 'docked' ? 'We are docked, Captain.' : r.why === 'power' ? 'We have no power for it, Captain.' : 'Not enough deep water ahead, Captain. We need 120 metres under us for the next nine miles.'; },
+  'Engage super cruise': () => { const r = sim.setCruise(true); return r.ok ? 'Super cruise engaged. Hold on to something, Captain.' : cruiseWhy(r.why); },
   'Disengage super cruise': () => { sim.setCruise(false); return 'Super cruise disengaged. Back to normal cruise.'; },
   'Set up a relay': () => {
     if (GATES_ON && !research.has('wskr-orders')) return 'We have not got the relay procedures yet, Captain. Science needs to finish the WSKR orders research.';

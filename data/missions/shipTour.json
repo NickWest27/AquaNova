@@ -106,10 +106,10 @@
       "delaySeconds": 90,
       "message": {
         "id": "oera-sea-trials",
-        "from": "OERA Operations",
-        "subject": "Sea trials orders",
+        "from": "Admiral Okafor, O.E.R.A.",
+        "subject": "Commissioning orders",
         "missionId": "seaTrials",
-        "text": "{captain},\n\nThank you for answering the call at such short notice. The Alliance is aware of the circumstances of Captain Voss's departure, and we are grateful for your steadiness.\n\nBefore the ship takes on survey work, OERA requires a full set of sea trials. Get the Aqua Nova out of dry dock at Woods Hole and underway. Take her below 30 meters, run her up to speed, then bring her back to the surface and send us a report from the Comms station. The antenna must be at 15 meters or shallower to reach us.\n\nTake your time and trust your crew. ARIA has the full trials checklist and Commander Chen knows these waters.\n\nAccept the mission when you are ready.\n\nO.E.R.A. Operations Directorate"
+        "text": "{captain},\n\nThank you for answering the call at such short notice. The Alliance is aware of the circumstances of Captain Voss's departure, and we are grateful for your steadiness.\n\nYour first task is to commission the Aqua Nova with a series of system tests. You are to depart immediately for the Area of Operations (AO) located at 39°54'N 071°00'W, on the edge of the continental shelf about 100 nm south of Woods Hole. It is marked on your chart as the Trials AO. En route, do not exceed 15 knots or 300 meters.\n\nIn the AO you will test her depth and speed. Your orders for the trials will be waiting when you arrive.\n\nARIA has the full trials checklist. It is a long transit: she can take the con while you rest. Accept these orders in Comms and get underway.\n\nAdmiral Catherine Okafor\nDirector of Operations, O.E.R.A."
       }
     }
   ],

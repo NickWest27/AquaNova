@@ -19,5 +19,12 @@
     "lat": 41.25,
     "lon": -70.6,
     "text": "A rocky ledge south of Martha's Vineyard, where the sandy shelf breaks up into outcrops."
+  },
+  {
+    "name": "Trials AO",
+    "type": "site",
+    "lat": 39.9,
+    "lon": -71.0,
+    "text": "The area of operations for the Aqua Nova's commissioning trials, on the edge of the continental shelf. Deep water to the south for depth and speed testing."
   }
 ]

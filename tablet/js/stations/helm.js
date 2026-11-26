@@ -1,5 +1,5 @@
 import { askDepth } from '../depthPad.js';
-import { sim, SUPER_KT, PERISCOPE_M } from '../sim.js';
+import { sim, SUPER_KT, PERISCOPE_M, cruiseWhy } from '../sim.js';
 import { tell } from '../notify.js';
 import { createLever, createDial } from '../ui.js';
 import { el } from '../util.js';
@@ -19,7 +19,7 @@ export function mount(body) {
   const dockBtn = el('button', { class: 'btn chip', text: 'Dock', onclick: () => toggleDock(() => thr.set(0)) });
   const cruiseBtn = el('button', { class: 'btn chip', text: 'Super cruise', onclick: () => {
     const r = sim.setCruise(!sim.s.cruise);
-    tell('helm', r.ok ? (sim.s.cruise ? `Super cruise engaged, Captain. Up to ${SUPER_KT} knots.` : 'Super cruise disengaged.') : r.why === 'docked' ? 'We are docked, Captain.' : r.why === 'fusion' ? 'The fusion drive is down, Captain. Engineering can bring it back.' : r.why === 'power' ? 'No power for super cruise.' : 'Not enough deep water ahead, Captain. Super cruise needs 120 m under us for the next 9 miles.', r.ok ? '' : 'error'); } });
+    tell('helm', r.ok ? (sim.s.cruise ? `Super cruise engaged, Captain. Up to ${SUPER_KT} knots.` : 'Super cruise disengaged.') : cruiseWhy(r.why), r.ok ? '' : 'error'); } });
   const hugBtn = el('button', { class: 'btn chip', text: 'Hug floor', onclick: () => {
     if (sim.s.hug) { sim.setHug(false); tell('helm', `Leaving the floor, Captain. Holding ${Math.round(sim.s.depth)} metres.`); return; }
     const r = sim.setHug(true);

@@ -10,7 +10,7 @@
   "objectives": [
     {
       "id": "plot",
-      "description": "On the bridge NAV page, set Dest to Vineyard Ledge (about 16 nm south of the dock) and tap Plot",
+      "description": "On the bridge NAV page, set Dest to Vineyard Ledge (on the way home, about 16 nm south of Woods Hole) and tap Plot",
       "required": true,
       "triggers": [
         {
@@ -138,7 +138,7 @@
         "objectiveId": "plot",
         "seconds": 60
       },
-      "message": "On the NAV page, tap Dest, pick Vineyard Ledge, then tap Plot, {captain}. It is south of the dock."
+      "message": "On the NAV page, tap Dest, pick Vineyard Ledge, then tap Plot, {captain}. It is on the way home, south of Martha's Vineyard."
     },
     {
       "condition": {

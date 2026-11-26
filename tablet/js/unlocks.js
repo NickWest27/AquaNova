@@ -21,6 +21,8 @@ export const EXCUSES = {
   remora: 'Remora is still in its cradle and has not been commissioned yet.',
   wskr: 'The WSKR control link has not been commissioned yet. The drones are still being tested.',
   bay: 'The launch bay controls have not been commissioned yet.',
+  eng: 'The engineering computer has not been commissioned yet. Commander Chen signs it off in the trials area.',
+  cruise: 'Super cruise has not been commissioned yet. OERA wants it tested in the trials area first.',
 };
 export const isCommissioned = (name) => !GATES_ON || ALWAYS.includes(name) || (gameState.getProperty('progress.stationsUnlocked') || []).map(norm).includes(name);
 const TOUR_STEPS = { log: 'open your logbook', ped: 'open your PED', walkway: 'walk the main walkway', bridge: 'visit the bridge' };

@@ -1,11 +1,17 @@
 {
   "id": "seaTrials",
   "name": "Sea Trials",
-  "description": "Take the Aqua Nova through her paces and report to OERA.",
+  "description": "Commission the Aqua Nova: take her to the Trials AO, test her depth and speed, and report to OERA.",
   "category": "main",
   "priority": "high",
   "autoStart": false,
   "prerequisites": [],
+  "onStart": [
+    {
+      "type": "unlock_station",
+      "station": "nav"
+    }
+  ],
   "objectives": [
     {
       "id": "undock",
@@ -20,8 +26,20 @@
       ]
     },
     {
+      "id": "plot",
+      "description": "On the bridge NAV page, set Dest to the Trials AO and tap Plot",
+      "required": true,
+      "triggers": [
+        {
+          "type": "property_change",
+          "property": "tutorial.plotted_ao",
+          "value": true
+        }
+      ]
+    },
+    {
       "id": "dive",
-      "description": "Dive below 30 m",
+      "description": "Dive below 30 m (no deeper than 300 m on the way)",
       "required": true,
       "triggers": [
         {
@@ -33,40 +51,117 @@
       "after": "undock"
     },
     {
+      "id": "arrive",
+      "description": "Take the ship to the Trials AO, about 100 nm south (no faster than 15 knots)",
+      "required": true,
+      "triggers": [
+        {
+          "type": "property_change",
+          "property": "tutorial.arrived_ao",
+          "value": true
+        }
+      ],
+      "after": "plot",
+      "onComplete": [
+        {
+          "type": "unlock_station",
+          "station": "eng"
+        },
+        {
+          "type": "unlock_station",
+          "station": "cruise"
+        },
+        {
+          "type": "crew_say",
+          "role": "engineering",
+          "text": "We are in the AO, Captain. The engineering computer and super cruise are signed off. Have a look at the fusion drive in Engineering before we open her up. OERA's trials orders are in your mail."
+        },
+        {
+          "type": "send_message",
+          "message": {
+            "id": "oera-welcome-ao",
+            "from": "Admiral Okafor, O.E.R.A.",
+            "subject": "Welcome to the AO",
+            "text": "{captain},\n\nWelcome to the AO. There are friendly vessels in the area while testing is being conducted. You may be the most formidable ship out there, but not everyone wants to see you succeed. The Aqua Nova is still untested and your crew still new.\n\nYou are to push the limits of speed and figure out where they are. Computer models and theory can only take us so far. The Aqua Nova has a state-of-the-art hull skin, designed for high-speed supercavitation, paired with a new hydro-jet propulsion system and a quantum fusion drive to power you. You should be able to get over 100 knots.\n\nCommander Chen has signed off the engineering computer and super cruise. Take her to her test depth of 300 meters, run her at full speed, then engage super cruise. The shelf is shallow to the north, so run south over deep water. When you are done, come up to 15 meters or shallower and send us your trials report.\n\nAdmiral Catherine Okafor\nDirector of Operations, O.E.R.A."
+          }
+        }
+      ]
+    },
+    {
+      "id": "eng",
+      "description": "Check the fusion drive on the engineering computer (the console in Engineering)",
+      "required": true,
+      "triggers": [
+        {
+          "type": "property_change",
+          "property": "tutorial.opened_eng",
+          "value": true
+        }
+      ],
+      "after": "arrive"
+    },
+    {
+      "id": "deep",
+      "description": "Dive to the test depth of 300 m",
+      "required": true,
+      "triggers": [
+        {
+          "type": "property_at_least",
+          "property": "navigation.depth",
+          "value": 295
+        }
+      ],
+      "after": "arrive"
+    },
+    {
       "id": "speed",
-      "description": "Run at 5 knots or faster",
+      "description": "Run at full speed (13 knots or faster)",
       "required": true,
       "triggers": [
         {
           "type": "property_at_least",
           "property": "navigation.speed",
-          "value": 5
+          "value": 13
         }
-      ]
+      ],
+      "after": "arrive"
+    },
+    {
+      "id": "cruise",
+      "description": "Engage super cruise and reach 100 knots (run south, over deep water)",
+      "required": true,
+      "triggers": [
+        {
+          "type": "property_at_least",
+          "property": "navigation.speed",
+          "value": 99
+        }
+      ],
+      "after": "eng"
     },
     {
       "id": "surface",
-      "description": "Return to 15 m or shallower, so the antenna has a link",
+      "description": "Come up to 15 m or shallower, so the antenna has a link",
       "required": true,
-      "after": "dive",
       "triggers": [
         {
           "type": "property_at_most",
           "property": "navigation.depth",
           "value": 15
         }
-      ]
+      ],
+      "after": "cruise"
     },
     {
       "id": "report",
-      "description": "Transmit your sea trials report from the Comms station",
+      "description": "Transmit your trials report from the Comms station",
       "required": true,
-      "after": "surface",
       "triggers": [
         {
           "type": "report_sent"
         }
-      ]
+      ],
+      "after": "surface"
     }
   ],
   "onComplete": [
@@ -81,7 +176,7 @@
         "id": "oera-trials-done",
         "from": "OERA Operations",
         "subject": "Sea trials: report received",
-        "text": "Report received. Good work, Captain. The ship passes. We are reviewing survey requests for the Atlantic shelf and will send your first assignment soon."
+        "text": "Report received. Good work, Captain. The Aqua Nova passes her trials and is commissioned. Bring her home. On the way, Dr. Patel and the sensors team want to try their equipment at Vineyard Ledge. Your first survey assignment will follow."
       }
     },
     {
@@ -93,6 +188,40 @@
       "missionId": "navLesson"
     }
   ],
-  "logBriefing": "OERA wants the Aqua Nova put through her paces before any survey work. My orders: take her out of the dock at Woods Hole, dive below 30 metres, run at 5 knots or better, come back up to 15 metres or less so the antenna has a link, and send the sea trials report from Comms.",
-  "logOutcome": "The ship left the dock, dived below 30 metres, made her speed and came back up to 15 metres for the antenna. I sent the report to OERA from {location} and they passed the Aqua Nova. Survey work comes next."
+  "hints": [
+    {
+      "condition": {
+        "type": "objective_active_for",
+        "objectiveId": "plot",
+        "seconds": 60
+      },
+      "message": "On the bridge NAV page, tap Dest, pick the Trials AO, then tap Plot, {captain}. Then set a speed at the Helm."
+    },
+    {
+      "condition": {
+        "type": "objective_active_for",
+        "objectiveId": "arrive",
+        "seconds": 180
+      },
+      "message": "It is a long way at 14 knots, {captain}. Order me to take the con and get some rest, or speed up time in Settings."
+    },
+    {
+      "condition": {
+        "type": "objective_active_for",
+        "objectiveId": "eng",
+        "seconds": 90
+      },
+      "message": "The engineering computer is the console in Engineering, {captain}: walkway AN-1, the door on the right."
+    },
+    {
+      "condition": {
+        "type": "objective_active_for",
+        "objectiveId": "cruise",
+        "seconds": 90
+      },
+      "message": "Super cruise is on the Helm station, or ask Commander Chen. Head south first, {captain}: it needs deep water ahead."
+    }
+  ],
+  "logBriefing": "My orders from Admiral Okafor: commission the Aqua Nova. Depart Woods Hole for the Trials AO on the edge of the shelf, about 100 miles south, keeping under 15 knots and 300 metres on the way. In the AO: test depth, full speed and super cruise, then send the trials report from Comms.",
+  "logOutcome": "We reached the Trials AO, took her to 300 metres, ran her at full speed and opened her up in super cruise. I sent the trials report to OERA from {location} and the Aqua Nova is commissioned."
 }

@@ -33,17 +33,17 @@ def main():
         e = entries(); new = e[n0:]
         check("accepting writes one mission log", len(new) == 1 and new[0]["type"] == "mission_log" and new[0]["id"].startswith("M.LOG-"), new)
         a = new[0] if new else {}
-        check("entry has the mission name, briefing and task list", "Sea Trials" in a.get("text", "") and "dive below 30 metres" in a.get("text", "") and len(a.get("tasks", [])) == 5 and a.get("done") == [], a)
+        check("entry has the mission name, briefing and task list", "Sea Trials" in a.get("text", "") and "Trials AO" in a.get("text", "") and len(a.get("tasks", [])) == 10 and a.get("done") == [], a)
         check("entry is a revert point with a snapshot", a.get("snap") and a.get("rev"), a)
         check("mission is active", js("return M.activeMissions.has('seaTrials')"))
         # fly the trials and report
-        js("for (const o of ['undock','dive','speed','surface']) M.completeObjective('seaTrials',o); return 1"); page.wait_for_timeout(300)
+        js("for (const o of ['undock','plot','dive','arrive','eng','deep','speed','cruise','surface']) M.completeObjective('seaTrials',o); return 1"); page.wait_for_timeout(300)
         check("no outcome entry before the report", len(entries()) == n0 + 1)
         js("M.completeObjective('seaTrials','report'); return 1"); page.wait_for_timeout(900)
         e = entries(); new = e[n0:]
         check("completion writes the second mission log", len(new) == 2 and new[1]["type"] == "mission_log", [x["id"] for x in new])
         b = new[1] if len(new) > 1 else {}
-        check("outcome is the captain's account as a summary, without the task list again", "Mission complete: Sea Trials" in b.get("text", "") and "passed the Aqua Nova" in b.get("text", "") and b.get("tasks", []) == [] and b.get("snap"), b)
+        check("outcome is the captain's account as a summary, without the task list again", "Mission complete: Sea Trials" in b.get("text", "") and "is commissioned" in b.get("text", "") and b.get("tasks", []) == [] and b.get("snap"), b)
         check("log numbers rise", a.get("id") != b.get("id"))
         # the logbook shows both
         page.evaluate("window.__aq.open('log')"); page.wait_for_timeout(500)

@@ -82,6 +82,8 @@ sim.speedCaps = [];   // functions (s) => fastest allowed speed (kt) or null (th
 sim.depthCaps = [];   // functions (s) => deepest allowed depth or null (the Tern's limit while she is out)
 sim.maxKt = () => (sim.s.cruise ? SUPER_KT : MAX_KT);
 /** Engage or drop super cruise. Needs deep water under and ahead of the ship, and not docked. */
+/** Why super cruise was refused, as the helm says it. */
+export const cruiseWhy = (why) => ({ docked: 'We are docked, Captain.', power: 'We have no power for super cruise, Captain.', fusion: 'The fusion drive is down, Captain. Engineering can bring it back.', commission: 'Super cruise has not been commissioned yet, Captain. OERA wants it tested in the trials area first.' })[why] || 'Not enough deep water ahead, Captain. Super cruise needs 120 m under us for the next 9 miles.';
 sim.setCruise = (on) => {
   const s = sim.s;
   if (!on) { if (s.cruise) { s.cruise = false; sim.touch(); } return { ok: true }; }

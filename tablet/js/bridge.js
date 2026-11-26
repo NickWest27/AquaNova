@@ -6,7 +6,7 @@
 //   left    : bottom left desk panel. Picks the page: NAV, HLM, TAC, SNR, VW, SYS.
 //   right   : bottom right desk panel. The view settings of the picked page (range, DSP, PAN, what to show).
 // Sized in the 1920x1080 stage. Only the visible displays are updated.
-import { sim, toward, gameDateText, clockText } from './sim.js';
+import { sim, toward, gameDateText, clockText, cruiseWhy } from './sim.js';
 import { createND } from './nd.js';
 import { createDial } from './ui.js';
 import { el, pad, modal, toast } from './util.js';
@@ -188,7 +188,7 @@ export function createBridgeConsole({ top, main, display, center, left, right, o
       const r = sim.setHug(true);
       tell('helm', r.ok ? 'Nap of the earth, Captain. Ten metres off the bottom.' : r.why === 'docked' ? 'We are docked, Captain.' : 'Not enough water here to follow the floor, Captain.');
     });
-    const cruiseB = bbtn('Cruise', () => { const r = sim.setCruise(!sim.s.cruise); tell('helm', r.ok ? (sim.s.cruise ? 'Super cruise engaged, Captain.' : 'Super cruise disengaged.') : r.why === 'docked' ? 'We are docked, Captain.' : 'Not enough deep water ahead, Captain. Super cruise needs 120 m under us for the next 9 miles.'); });
+    const cruiseB = bbtn('Cruise', () => { const r = sim.setCruise(!sim.s.cruise); tell('helm', r.ok ? (sim.s.cruise ? 'Super cruise engaged, Captain.' : 'Super cruise disengaged.') : cruiseWhy(r.why)); });
     const c = el('div', { class: 'bc' },
       el('div', { class: 'rowN' }, bbtn('Port', () => turn(-10)), bbtn('Stbd', () => turn(10)), bbtn('Stop', () => sim.stop(), 'stop'), bbtn('Slow', () => thr(-0.1)), bbtn('Fast', () => thr(0.1))),
       el('div', { class: 'rowN' }, bbtn('Up', () => dep(-50)), bbtn('Dn', () => dep(50)), bbtn('Srfc', () => sim.setDepth(0)), noeB, cruiseB));
