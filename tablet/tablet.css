@@ -1034,3 +1034,8 @@ button.route-row { width: 100%; text-align: left; color: var(--text); font: inhe
 .route-row.here { opacity: 0.8; border-style: dashed; }
 .route-list { display: flex; flex-direction: column; gap: 6px; max-height: 22rem; overflow-y: auto; }
 .route-btns { margin-top: 10px; gap: 8px; } .route-btns .btn.sym { min-width: 3.6rem; font-size: 1.4rem; } .route-btns .btn.primary { margin-left: auto; }
+
+/* the dialogue screen's text box sits on the empty side of each crew picture (art.js SCENE_BOX) */
+.rd.box-left .rd-box { left: 3%; right: 53%; }
+.rd.box-side-left .rd-box { left: 1.5%; right: 63%; top: 5%; bottom: 5%; }
+.rd.box-side-left .rd-box { background: rgba(2, 10, 18, 0.9); }

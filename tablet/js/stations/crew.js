@@ -9,7 +9,7 @@ import { research } from '../science.js';
 import { el, toast } from '../util.js';
 import { gameState } from '../persist.js';
 import { crewIcon } from '../icons.js';
-import { portrait, scenePic } from '../art.js';
+import { portrait, scenePic, SCENE_BOX } from '../art.js';
 import { startReport } from '../transfer.js';
 import { topicsFor, askTopic } from '../topics.js';
 import { guidesFor, askGuide } from '../howto.js';
@@ -313,7 +313,7 @@ export function mount(body, ctx, opts = {}) {
     }
     if (sceneOn()) {   // the retro dialogue screen: tap a choice, or tap the picture to end the call (app.js closes on a tap outside buttons and text)
       body.closest('#comm-pop')?.classList.add('rd-on');
-      body.replaceChildren(el('div', { class: 'rd' }, scenePic(cur.id), el('div', { class: 'rd-box comm-page' }, el('div', { class: 'rd-name', text: cur.name.toUpperCase() }), ...kids.filter(Boolean))));
+      body.replaceChildren(el('div', { class: 'rd box-' + (SCENE_BOX[cur.id] || 'right') }, scenePic(cur.id), el('div', { class: 'rd-box comm-page' }, el('div', { class: 'rd-name', text: cur.name.toUpperCase() }), ...kids.filter(Boolean))));
     } else {
       body.closest('#comm-pop')?.classList.remove('rd-on');
       body.replaceChildren(el('div', { class: 'comm-page' }, ...kids.filter(Boolean)));

@@ -29,6 +29,7 @@ export function artImg(name) {
 // Like the rooms: the owner's original (smooth) and a 64x64 palette copy (Display > Pictures > Retro). Keyed by crew id (data/contacts.json).
 export const PORTRAITS = {
   communications: { original: 'retro/assets/crew/communications_original.jpg', retro: 'retro/assets/crew/communications.png' },   // Nicole Brooks
+  ...Object.fromEntries(['helm', 'executiveOfficer', 'science'].map((id) => [id, { original: `retro/assets/crew/${id}_original.jpg`, retro: `retro/assets/crew/${id}.png` }])),   // Marcus, ARIA, Dr. Patel (tools/crew_art.py)
 };
 /** One <img> per picture and class, made once and reused (it follows the Pictures setting; no new listener on every redraw). */
 const pics = new Map();
@@ -49,6 +50,9 @@ export const portrait = (id, cls = 'portrait') => pic(PORTRAITS, id, cls);
 // fills the 4:3 box and a text box on the empty side carries what they say and the choices. Original and a 320x240 palette copy.
 export const SCENES = {
   communications: { original: 'retro/assets/crew/communications_scene_original.jpg', retro: 'retro/assets/crew/communications_scene.png' },   // Nicole at the comms station (a stand-in until the owner has the over-the-shoulder pose)
+  ...Object.fromEntries(['helm', 'executiveOfficer', 'science'].map((id) => [id, { original: `retro/assets/crew/${id}_scene_original.jpg`, retro: `retro/assets/crew/${id}_scene.png` }])),   // the owner's pictures, 2026-11-27
 };
+/** Where the text box goes on each scene picture: on the empty side. 'right' (default), 'left', or 'side-left' (narrow, beside a standing figure). */
+export const SCENE_BOX = { helm: 'left', science: 'side-left' };
 /** A crew member's scene picture (or null). */
 export const scenePic = (id, cls = 'rd-pic') => pic(SCENES, id, cls);
