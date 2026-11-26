@@ -9,7 +9,7 @@ import { research } from '../science.js';
 import { el, toast } from '../util.js';
 import { gameState } from '../persist.js';
 import { crewIcon } from '../icons.js';
-import { portrait } from '../art.js';
+import { portrait, scenePic } from '../art.js';
 import { startReport } from '../transfer.js';
 import { topicsFor, askTopic } from '../topics.js';
 import { guidesFor, askGuide } from '../howto.js';
@@ -259,7 +259,8 @@ export function mount(body, ctx) {
   document.addEventListener('crew-line', onLine);
 
   /** What a crew member says, with their portrait beside it when there is one (static portrait + speech box). */
-  const withFace = (node) => { const f = cur && portrait(cur.id, 'comm-face'); return f ? el('div', { class: 'comm-say' }, f, node) : node; };
+  const sceneOn = () => !!(cur && page !== 'crew' && scenePic(cur.id));   // 90s dialogue screen: their picture fills the box, a text box carries the talk
+  const withFace = (node) => { const f = !sceneOn() && cur && portrait(cur.id, 'comm-face'); return f ? el('div', { class: 'comm-say' }, f, node) : node; };
   function render() {
     setOpenCrew(!cur || page === 'crew' ? null : cur.id);   // while we are on the line with someone, what they say is read as it comes
     let kids;
@@ -305,7 +306,13 @@ export function mount(body, ctx) {
         line('Someone else …', () => { page = 'crew'; render(); }, 'back'),
         line("That's all. Out.", () => ctx.closeComm(), 'back')];
     }
-    body.replaceChildren(el('div', { class: 'comm-page' }, ...kids.filter(Boolean)));
+    if (sceneOn()) {   // the retro dialogue screen: tap a choice, or tap the picture to end the call (app.js closes on a tap outside buttons and text)
+      body.closest('#comm-pop')?.classList.add('rd-on');
+      body.replaceChildren(el('div', { class: 'rd' }, scenePic(cur.id), el('div', { class: 'rd-box comm-page' }, el('div', { class: 'rd-name', text: cur.name.toUpperCase() }), ...kids.filter(Boolean))));
+    } else {
+      body.closest('#comm-pop')?.classList.remove('rd-on');
+      body.replaceChildren(el('div', { class: 'comm-page' }, ...kids.filter(Boolean)));
+    }
   }
   render();
   return { update() {}, destroy() { setOpenCrew(null); document.removeEventListener('crew-line', onLine); } };

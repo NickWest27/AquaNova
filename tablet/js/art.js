@@ -30,11 +30,25 @@ export function artImg(name) {
 export const PORTRAITS = {
   communications: { original: 'retro/assets/crew/communications_original.jpg', retro: 'retro/assets/crew/communications.png' },   // Nicole Brooks
 };
-/** An <img> of a crew member's portrait that follows the Pictures setting, or null when there is none yet. */
-export function portrait(id, cls = 'portrait') {
-  const p = PORTRAITS[id]; if (!p) return null;
-  const img = el('img', { class: cls, alt: '', draggable: 'false', decoding: 'async' });
-  const apply = () => { const q = getQuality(); img.classList.toggle('px', q === 'retro'); const src = p[q]; if (!img.src.endsWith(src)) img.src = src; };
-  apply(); window.addEventListener('art-change', apply);
+/** One <img> per picture and class, made once and reused (it follows the Pictures setting; no new listener on every redraw). */
+const pics = new Map();
+function pic(set, id, cls) {
+  const p = set[id]; if (!p) return null;
+  const key = cls + '|' + id; let img = pics.get(key);
+  if (!img) {
+    img = el('img', { class: cls, alt: '', draggable: 'false', decoding: 'async' });
+    const apply = () => { const q = getQuality(); img.classList.toggle('px', q === 'retro'); const src = p[q]; if (!img.src.endsWith(src)) img.src = src; };
+    apply(); window.addEventListener('art-change', apply); pics.set(key, img);
+  }
   return img;
 }
+/** A crew member's portrait (or null when there is none yet). */
+export const portrait = (id, cls = 'portrait') => pic(PORTRAITS, id, cls);
+
+// Crew scene pictures (owner, 2026-11-26): talking with this crew member, the communicator becomes a 90s-style dialogue screen: the picture
+// fills the 4:3 box and a text box on the empty side carries what they say and the choices. Original and a 320x240 palette copy.
+export const SCENES = {
+  communications: { original: 'retro/assets/crew/communications_scene_original.jpg', retro: 'retro/assets/crew/communications_scene.png' },   // Nicole at the comms station (a stand-in until the owner has the over-the-shoulder pose)
+};
+/** A crew member's scene picture (or null). */
+export const scenePic = (id, cls = 'rd-pic') => pic(SCENES, id, cls);

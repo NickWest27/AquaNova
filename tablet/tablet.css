@@ -905,3 +905,27 @@ input.mix { width: 100%; height: 2.4rem; accent-color: var(--cyan); }
 .comm-say { display: flex; align-items: center; gap: 1rem; text-align: left; max-width: 44rem; } .comm-say > :last-child { flex: 1; min-width: 0; }
 .comm-face { width: 7.5rem; height: 7.5rem; flex: none; border-radius: 12px; border: 2px solid var(--cyan); object-fit: cover; background: #0b1a33; box-shadow: 0 0 14px rgba(100,255,218,0.25); }
 .comm-face.px, .avatar-face.px { image-rendering: pixelated; }
+
+/* The 90s dialogue screen (crew.js sceneOn): the crew member's picture fills the 4:3 box; a framed text box on the empty side holds what they
+   say and the choices. Tap a choice; tap the picture to end the call. */
+#comm-pop.rd-on { padding: 0; background: #02070d; -webkit-backdrop-filter: none; backdrop-filter: none; }
+#comm-pop.rd-on .comm-panel { width: 100%; height: 100%; max-height: none; }
+#comm-pop.rd-on .comm-top { display: none; }
+.rd { position: absolute; inset: 0; }
+.rd-pic { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; } .rd-pic.px { image-rendering: pixelated; }
+.rd-box { position: absolute; left: 53%; right: 3%; top: 7%; bottom: 7%; overflow-y: auto; display: flex; flex-direction: column; align-items: stretch; gap: 0.35rem; padding: 1rem 1.1rem;
+  background: rgba(3, 10, 22, 0.9); border: 3px double var(--cyan); border-radius: 4px; box-shadow: 0 0 0 2px #02070d, 0 0 18px rgba(100,255,218,0.25); font-family: var(--mono); text-align: left; }
+.rd-name { color: var(--amber); font: 700 1rem var(--mono); letter-spacing: 0.14em; border-bottom: 1px solid var(--line); padding-bottom: 0.35rem; margin-bottom: 0.2rem; }
+.rd-box .comm-log { display: none; }
+.rd-box .comm-head { font: 600 1.15rem var(--mono); color: #e6f1ff; margin: 0.2rem 0; text-align: left; }
+.rd-box .comm-who-label, .rd-box .comm-reply small { display: none; }
+.rd-box .comm-reply { background: none; border: 0; padding: 0; margin: 0.1rem 0 0.4rem; text-align: left; } .rd-box .comm-reply p { font: 1.12rem/1.45 var(--mono); color: #e6f1ff; margin: 0; }
+.rd-box .comm-you { font: italic 0.95rem var(--mono); color: var(--dim); text-align: left; }
+.rd-box .comm-line { justify-content: flex-start; text-align: left; min-width: 0; width: 100%; min-height: 2.5rem; padding: 0.3rem 0.5rem; border: 0; border-radius: 2px; background: none; font: 1rem var(--mono); color: var(--cyan); }
+.rd-box .comm-line::before { content: '▶'; width: 1.2rem; flex: none; color: var(--amber); visibility: hidden; }
+.rd-box .comm-line:active, .rd-box .comm-line:focus-visible { background: rgba(100,255,218,0.14); } .rd-box .comm-line:active::before { visibility: visible; }
+.rd-box .comm-line:first-of-type::before { visibility: visible; }
+.rd-box .comm-line.back { color: var(--dim); border: 0; }
+.rd-box .comm-line.danger { color: var(--red, #ff5c5c); }
+.rd-box .comm-chips { display: flex; flex-direction: column; }
+#comm-pop.rd-on { box-shadow: 0 0 0 4000px #02070d; }
