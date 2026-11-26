@@ -8,16 +8,16 @@ import { tell } from './notify.js';
 import { eng, SYSTEMS } from './engineering.js';
 
 export const TRIALS = {
-  deep: { obj: 'seaTrials_deep', who: 'engineering', name: 'Commander Chen', base: 300, unit: 'm', levels: [450, 600], risk: [0.2, 0.45], hit: ['bulkheads', 'ballast'],
-    ask: (b, t) => `{captain}, Commander Chen reports she is holding well at ${b} metres. Hull strain is low and the seals are dry. He asks permission to take her down to ${t} metres.`,
+  deep: { obj: 'seaTrials_deep', who: 'engineering', name: 'Chief Doyle', base: 300, unit: 'm', levels: [450, 600], risk: [0.2, 0.45], hit: ['bulkheads', 'ballast'],
+    ask: (b, t) => `{captain}, Chief Doyle reports she is holding well at ${b} metres. Hull strain is low and the seals are dry. He asks permission to take her down to ${t} metres.`,
     ok: (t) => `${t} metres, Captain. The hull is groaning a little, which is what hulls do. Nothing is leaking. That is the deepest the Aqua Nova has ever been.`,
     record: (t) => `Ship record: test dive to ${t} metres in the Trials AO, ${t - 300} metres past the rated test depth.` },
   speed: { obj: 'seaTrials_speed', who: 'helm', name: 'Marcus', base: MAX_KT, unit: 'kt', levels: [15.5, 17], risk: [0.2, 0.45], hit: ['propulsion'],
-    ask: (b, t) => `{captain}, Marcus has her at ${b} knots on the hydro-jets and says she has more in her. Commander Chen can run the jets past their rating. He asks permission to try for ${t} knots.`,
+    ask: (b, t) => `{captain}, Marcus has her at ${b} knots on the hydro-jets and says she has more in her. Chief Doyle can run the jets past their rating. He asks permission to try for ${t} knots.`,
     ok: (t) => `${t} knots on the jets, Captain. Faster than the models said. The jets are hot but happy.`,
     record: (t) => `Ship record: ${t} knots on the hydro-jets alone, past their rated ${MAX_KT} knots.` },
   cruise: { obj: 'seaTrials_cruise', who: 'helm', name: 'Marcus', base: SUPER_KT, unit: 'kt', levels: [110, 120], risk: [0.2, 0.45], hit: ['propulsion', 'relays'],
-    ask: (b, t) => `{captain}, ${b} knots in super cruise and the hull skin is holding the cavity clean. Marcus and Commander Chen ask permission to push her to ${t} knots.`,
+    ask: (b, t) => `{captain}, ${b} knots in super cruise and the hull skin is holding the cavity clean. Marcus and Chief Doyle ask permission to push her to ${t} knots.`,
     ok: (t) => `${t} knots, Captain! The fastest a crewed submarine has ever gone, as far as anyone knows. Easing back now.`,
     record: (t) => `Ship record: ${t} knots in super cruise in the Trials AO.` },
 };
@@ -35,7 +35,7 @@ function offer(kind, level) {
   if (level >= TRIALS[kind].levels.length) return false;
   const T = TRIALS[kind], from = level ? T.levels[level - 1] : T.base, to = T.levels[level];
   return offerDecision({ id: `trials_${kind}_${level + 1}`, text: T.ask(from, to), options: [
-    { id: 'push', label: `Push her to ${to} ${T.unit}`, reply: `Aye, {captain}. ${T.name === 'Marcus' ? 'Marcus' : 'Commander Chen'} is on it.`, actions: [{ type: 'set_property', property: 'progress.trials.push', value: { kind, level } }] },
+    { id: 'push', label: `Push her to ${to} ${T.unit}`, reply: `Aye, {captain}. ${T.name} is on it.`, actions: [{ type: 'set_property', property: 'progress.trials.push', value: { kind, level } }] },
     { id: 'hold', label: 'That will do', reply: 'Understood, {captain}. We will leave it there.', actions: [{ type: 'set_property', property: `progress.trials.${kind}`, value: { level, done: true } }] },
   ] });
 }

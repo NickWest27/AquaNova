@@ -37,8 +37,8 @@ The Aqua Nova is advanced enough that the nations behind O.E.R.A. will not let h
 - **Marcus Chen, Helmsman (he).** Navy coxswain, nine years on small boats in bad water, then ferrying scientists to a research sub. Precise, dry, hates being rushed in harbour. *Use:* competence; notices when the Captain is pushing the boat too hard.
 - **Dr. Samira Patel, Chief Science and Medical Officer (she).** Emergency doctor turned marine biologist, ship's doctor on three expeditions. Chosen by Voss personally. *Use:* science and crew health; first to say what a discovery might cost.
 - **Alex Torres, Sensors (he).** Six years in a Navy sonar shack. Reports only when sure. *Use:* the contact he is not sure about, and whether the Captain trusts a "probably".
-- **Ryan Chen, Chief Engineer (he).** Merchant ship engine rooms, then the team that commissioned the fusion plant. Fixes things with parts nobody planned to use. No relation to Marcus; both are tired of the question. *Use:* a running joke that can pay off once.
-- **Lt. Daniel Kim, Security (he).** Navy special warfare, then maritime boarding. Voss insisted on him over the science side's objections. Believes a ship that goes deeper than anyone will meet something it cannot talk to. *Use:* the voice of the other side of the theme; never a villain.
+- **Ryan Doyle, Chief Engineer (he).** Boston Irish. Twenty years in merchant ship engine rooms, then the team that commissioned the fusion plant. Loud, superstitious about his reactor (talks to it like a horse), fixes things with parts nobody planned to use. *Use:* the ship's heart; pride in the fusion plant during the trials; the first up all night when something breaks.
+- **Lt. Andre Washington, Security (he).** Twelve years a Marine (Force Recon, embassy duty, boarding teams in the Gulf). Six foot five, sleeves of tattoos (the Corps emblem, the names of men he served with, an anchor his daughter drew that she insists is a whale), a laugh you hear two decks away, quiet and exact when it counts. Voss insisted on him over the science side's objections. Believes a ship that goes deeper than anyone will meet something it cannot talk to. *Use:* the voice of the other side of the theme; never a villain.
 - **Nicole Brooks, Communications (she).** Signals officer, then four years at a polar station with one satellite window twice a day. Knows what a delayed message costs. Hears old frequencies first. *Use:* Halcyon.
 
 - **Appearance:** Nicole has a portrait (`retro/assets/`, 90s dialogue screen). Other portraits to come as the owner makes them.
@@ -51,6 +51,11 @@ The Aqua Nova is advanced enough that the nations behind O.E.R.A. will not let h
 - **Cdr. Sarah Mitchell, Harbour Master, Woods Hole (she).** Retired Coast Guard, eleven years running the harbour. Knows every vessel by sound. Keeps her opinions of the Aqua Nova to herself, mostly.
 - **Dr. Thomas Webb, Research Coordinator (he).** Marine ecologist who wants data, not discoveries. Disagreed with Voss, politely and at length, over carrying anything that is not for science.
 - **Captain Elena Voss (offstage, she).** Veteran Navy officer, instrumental in the project, not convinced it should be solely a research vessel. Firm but fair. Where she is now, and why she was relieved, is the first long question.
+
+## Names changed 2026-11-27 (owner: a more varied crew, 90s archetypes, before the portraits are made)
+- Lt. **Daniel Kim** is now **Andre Washington**, a big African American ex-Marine with tattoos.
+- Chief Engineer **Ryan Chen** is now **Ryan Doyle**, Boston Irish (two Chens was confusing). The "no relation" running joke is gone. "Commander Chen" in old text meant either man; it is now Marcus (helm) or Chief Doyle (engineering).
+- Saves pick up the new names and bios on load (contacts are merged from `data/contacts.json`); old logbook entries keep the old names.
 
 ## Names changed 2026-11-19 (owner: names are not important, they should fit the person)
 - Admiral **Elena Vasquez** is now **Catherine Okafor** (two Elenas was confusing). Voss keeps Elena, since the PDFs use it.

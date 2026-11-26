@@ -28,13 +28,13 @@ const INTRO = {
   helm: 'Marcus Chen, helm, {captain}. I have spent the fitting-out in the simulator with her, and I am glad to finally have water under the keel. Tell me where you want to go and I will get us there. I will also tell you if the floor comes up to meet us.',
   science: 'Dr. Samira Patel, {captain}. I look after the laboratory and the sick bay, so I suppose I am responsible for both the samples and the people. Bring me something strange from the deep and I will be happy. Bring me yourself with a headache and I will be almost as happy.',
   sensors: 'Alex Torres, sensors, {captain}. I look after the sonar and the WSKRs. If something is out there, big or small, I will find it before it finds us. Mostly.',
-  engineering: 'Ryan Chen, chief engineer, {captain}. No relation to Marcus. Everyone asks. The reactor, the pumps and the hull are mine, so please bring her back in one piece. If you hear a noise you do not like, call me before you worry.',
-  security: 'Lieutenant Daniel Kim, head of security, {captain}. Nothing is wrong, and I intend to keep it that way. If that changes, you will hear it from me first.',
+  engineering: 'Ryan Doyle, chief engineer, {captain}. Boston born, twenty years in merchant engine rooms, and this is the first ship I ever loved on sight. The reactor, the pumps and the hull are mine, so please bring her back in one piece. If you hear a noise you do not like, call me before you worry.',
+  security: 'Lieutenant Andre Washington, head of security, {captain}. Twelve years a Marine, and I still stand up when an officer walks in, so bear with me. Nothing is wrong on this boat, and I intend to keep it that way. If that changes, you hear it from me first.',
   communications: 'Nicole Brooks, communications, {captain}. Every message in and out of this boat comes through me. Satellite, laser, radio, whatever reaches us. I will tell you when O.E.R.A. calls.'
 };
 
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
-const GREET = { executiveOfficer: 'Yes, Captain?', helm: 'Helm here, Captain.', sensors: 'Sensors, Captain.', engineering: 'Engineering. What do you need?', science: 'Patel here, Captain.', communications: 'Comms, Captain. Go ahead.', security: 'Kim here, Captain.' };   // when the line opens
+const GREET = { executiveOfficer: 'Yes, Captain?', helm: 'Helm here, Captain.', sensors: 'Sensors, Captain.', engineering: 'Engineering. What do you need?', science: 'Patel here, Captain.', communications: 'Comms, Captain. Go ahead.', security: 'Washington. Go ahead, Captain.' };   // when the line opens
 
 export const knownCrew = () => Object.values(gameState.getProperty('contacts.crew') || {})
   .filter((c) => c && c.id !== 'captain' && (c.known || unreadFor(c.id) > 0) && c.name);   // someone who has called in is reachable
@@ -82,7 +82,6 @@ const ORDERS = {
     sim.setWpt(dock); sim.setDepth(0); sim.setThrottle(0.5); return `Course set for ${dock.name}. ${toward(sim.s, dock).nm.toFixed(1)} nautical miles.`;
   },
   'XO has the con': (ctx) => { setTimeout(() => ctx.openScene('sleepAway'), 400); return 'Aye, Captain. I have the con. Choose how long I keep it.'; },
-  'Take me to my quarters': (ctx) => { setTimeout(() => ctx.openScene('quarters'), 500); return 'Of course, Captain. I will keep the watch.'; },
   'All stop': () => { sim.stop(); return 'All stop, aye.'; },
   'All ahead flank': () => { if (docked()) return 'We are docked, Captain.'; sim.setThrottle(1); return 'All ahead flank!'; },
   'Sound General Alarm': () => (soundAlarm('captain').ok ? 'Sounding the general alarm. All hands to emergency stations! Damage control teams are closing up, Captain.' : 'The general alarm is already sounding, Captain.'),
@@ -120,7 +119,7 @@ const ORDERS = {
   'Go active': () => { sim.s.sonar = true; sim.touch(); return 'Active sonar on, Captain.'; },
   'Override the bay speed limit': () => (setBayOverride(true) ? 'Aye, Captain. The bay speed limit is overridden until the doors close.' : 'The outer doors are closed, Captain. No limit to override.'),
   'Restore the bay speed limit': () => (setBayOverride(false) ? 'Bay speed limit restored, Captain.' : 'The outer doors are closed, Captain.'),
-  'Crew health report': () => 'Everyone aboard is fit for duty, Captain. No one has reported sick.',
+  'Crew health report': () => 'Everyone is fit for duty, Captain. A couple of stiff necks from the bunks, nothing I need to see twice. Morale is good.',
   'Request departure clearance': () => (docked() ? 'Woods Hole Harbor Control: you are cleared to depart at your discretion. Safe travels.' : 'Harbor Control: you are already underway, Captain.'),
 };
 // Orders that need a number. Each option runs when picked.
@@ -149,6 +148,20 @@ PARAM['Launch the Tern to'] = () => ({ title: 'Launch the Tern to …', opts: [
   ['Go to …', () => ({ title: 'Go to …', opts: destOpts((d) => launchTern({ kind: 'goto', dest: d }).text) })]] });
 ORDERS['Call back the Tern'] = () => callBackTern().text;
 ORDERS['Report on the Tern'] = () => ternReport();
+// What the Captain says when picking an order: conversational, not a menu item (owner, 2026-11-27). The key is the order's id.
+const SAY = {
+  'Status Report': 'How is the ship, ARIA?', 'XO has the con': 'You have the con.',
+  'Engineering status report': 'How is she running, Ryan?', 'Crew health report': "How's the crew?",
+  'Full sensor sweep': 'Give me a full sweep.', 'Launch all WSKRs': 'Launch the WSKRs.', 'Recall all WSKRs': 'Bring the WSKRs home.',
+  'Go passive': 'Go passive. Active sonar off.', 'Go active': 'Go active.', 'Set up a relay': 'Put a WSKR up as a relay.', 'Stand down the relay': 'Bring the relay down.',
+  'Transmit a report': 'Send our report to OERA.', 'Order the Tern to': 'Tell the Tern to …', 'Call back the Tern': 'Bring the Tern home.', 'Report on the Tern': "How's the Tern doing?",
+  'Launch the Tern to': 'Get the Tern ready to go to …', 'Request departure clearance': 'Ask the harbour for departure clearance.',
+  'Make your depth': 'Take us to …', 'Make your heading': 'Steer …', 'Make your speed': 'Make our speed …', 'Make periscope depth': 'Periscope depth.',
+  'Override the bay speed limit': 'Ignore the bay speed limit.', 'Restore the bay speed limit': 'Back to the bay speed limit.',
+  'Open the bulkheads': 'Open the bulkheads.', 'Engage super cruise': 'Super cruise.', 'Disengage super cruise': 'Out of super cruise.',
+};
+const STATUS_SAY = { helm: 'How are things at the helm?', sensors: 'Anything out there, Alex?', communications: 'Any traffic, Nicole?', security: 'All quiet, Lieutenant?', science: 'How is the lab?' };
+const sayFor = (t, id) => (t === 'Status report' && STATUS_SAY[id]) || SAY[t] || t;
 const works = (t, pleasantry) => pleasantry || t in ORDERS || t in PARAM;
 
 
@@ -163,7 +176,7 @@ const atDock = () => !!(sim.s.at && sim.s.at.type === 'dock');
 const underway = () => !sim.s.docked;
 const TREE = {
   executiveOfficer: () => [
-    F('Ship', O('Status Report'), O('XO has the con'), O('Take me to my quarters')),
+    F('Ship', O('Status Report'), O('XO has the con')),
     F('Getting underway', O("Let's take her to sea", () => docked()), O("Let's go home", () => underway() && !!sim.dockPoi() && !atDock())),
   ],
   helm: () => [
@@ -201,7 +214,7 @@ export function mount(body, ctx, opts = {}) {
   const crew = knownCrew();
   let page = 'crew', cur = null, cat = null, reply = null, greeted = false, param = null;
   // The menu is a tree of folders. A folder is { folder: true, label, title, kids }, a leaf is { label, run, cls }.
-  const orderLeaf = (t) => ({ label: t, run: () => speak(t) });
+  const orderLeaf = (t) => ({ label: sayFor(t, cur && cur.id), run: () => speak(t) });
   const orderKids = () => {   // the folders in TREE, each order shown only when it makes sense now
     const id = cur && cur.id, kids = [];
     for (const f of (TREE[id] ? TREE[id]() : [])) {
@@ -239,9 +252,10 @@ export function mount(body, ctx, opts = {}) {
   }
   function speak(text) {
     const o = cur.dialogueOptions || {};
-    logLine(cur.id, 'you', text);   // before the order runs, so the running notes it starts land after it
-    if (PARAM[text]) { const p = PARAM[text](); param = { said: text, ...p }; page = 'param'; render(); return; }
-    if (ORDERS[text]) { say(text, ORDERS[text](ctx, cur.id), false); return; }
+    const spoken = sayFor(text, cur.id);
+    logLine(cur.id, 'you', spoken);   // before the order runs, so the running notes it starts land after it
+    if (PARAM[text]) { const p = PARAM[text](); param = { said: spoken.replace(/ …$/, ''), ...p }; page = 'param'; render(); return; }
+    if (ORDERS[text]) { say(spoken, ORDERS[text](ctx, cur.id), false); return; }
     reply = { said: text, text: 'Say again, Captain?', stub: true }; page = 'reply'; render();
   }
 
@@ -281,7 +295,7 @@ export function mount(body, ctx, opts = {}) {
     } else if (page === 'cat') {
       kids = [logView(5), withFace(el('div', {}, el('div', { class: 'comm-head', text: GREET[cur.id] || 'Yes, Captain?' }), el('div', { class: 'comm-who-label', text: `${cur.name} · ${cur.role}` }))),
         ...cats().map((f) => line(f.label, () => { trail = [f.label]; page = 'lines'; render(); }, f.cls || '')),
-        line('Someone else', () => { page = 'crew'; render(); }, 'back'), line("That's all", () => ctx.closeComm(), 'back')];
+        line('Call another station', () => { page = 'crew'; render(); }, 'back'), line("That's all", () => ctx.closeComm(), 'back')];
     } else if (page === 'lines') {
       const f = openFolder();
       if (!f) { trail = []; page = 'cat'; return render(); }
@@ -304,7 +318,7 @@ export function mount(body, ctx, opts = {}) {
         reply.said && !live && el('div', { class: 'comm-you', text: `You: ${reply.said}` }),
         withFace(el('div', { class: 'comm-reply' + (reply.stub ? ' stub' : '') }, el('small', { text: cur.name }), el('p', { text: live || reply.text }))),
         line(reply.said ? 'Something else' : `${first(cur)}, I need something`, () => { page = 'cat'; render(); }, 'back'),
-        line('Someone else', () => { page = 'crew'; render(); }, 'back'),
+        line('Call another station', () => { page = 'crew'; render(); }, 'back'),
         line("That's all", () => ctx.closeComm(), 'back')];
     }
     if (sceneOn()) {   // the retro dialogue screen: tap a choice, or tap the picture to end the call (app.js closes on a tap outside buttons and text)

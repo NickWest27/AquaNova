@@ -72,12 +72,12 @@ def main():
         check("course stays in water for a mile", r2 >= 3, r2)
         # dive clamp
         r = js("""const s=sim.s; s.docked=false; s.lat=41.2; s.lon=-70.7; s.at=null; s.speed=0; s.depth=0; s.targetDepth=0; return sim.deepest()""")
-        page.locator(".comm-line", has_text="Someone else").first.tap(); page.wait_for_timeout(300)
+        page.locator(".comm-line", has_text="Call another station").first.tap(); page.wait_for_timeout(300)
         page.locator(".comm-who").filter(has_text="Marcus").first.tap() if page.locator(".comm-who", has_text="Marcus").count() else None
         page.wait_for_timeout(300)
         if page.locator(".comm-line", has_text="Orders").count() == 0: page.locator(".comm-line", has_text=re.compile("Something eling|I need something")).first.tap(); page.wait_for_timeout(300)   # first meeting intro
         page.locator(".comm-line", has_text="Orders").first.tap(); page.wait_for_timeout(300)
-        page.locator(".comm-line", has_text="Make your depth").first.tap(); page.wait_for_timeout(300)
+        page.locator(".comm-line", has_text="Take us to").first.tap(); page.wait_for_timeout(300)
         page.locator(".comm-line", has_text="1000 m").first.tap(); page.wait_for_timeout(400)
         td = js("return sim.s.targetDepth")
         check("depth order is held above the floor", r is not None and td <= r, (td, r))
@@ -98,7 +98,7 @@ def main():
         check("held message shown in the dialogue area", "incoming message from Test" in page.inner_text(".comm-reply"), page.inner_text(".comm-reply"))
         check("pin stops glowing once read", "unread" not in page.get_attribute("#pin", "class"))
         check("first line offers I need something", page.locator(".comm-line", has_text="I need something").count() == 1)
-        check("Someone else label", page.locator(".comm-line", has_text="Someone else").count() == 1 and page.locator(".comm-line", has_text="Put me through").count() == 0)
+        check("Call another station label", page.locator(".comm-line", has_text="Call another station").count() == 1 and page.locator(".comm-line", has_text="Put me through").count() == 0)
         page.mouse.click(8, 8); page.wait_for_timeout(400)
         check("tap outside closes the communicator", not page.is_visible("#comm-pop .comm-page"))
 

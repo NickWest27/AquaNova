@@ -126,7 +126,7 @@ const CREW = {
     done: ['Understood, {captain}.', 'Engineering standing by.', 'Aye.', 'Fine by me.'],
   },
   security: {
-    greet: G('Security, {captain}.', 'Kim here, {captain}.', 'Captain.', { t: 'Corridors are quiet, {captain}.', p: 'night' }, 'All secure, {captain}.'),
+    greet: G('Security, {captain}.', 'Washington here, {captain}.', 'Captain.', { t: 'Corridors are quiet, {captain}.', p: 'night' }, 'All secure, {captain}.'),
     status: (c) => [
       'All quiet. That is how I like it.',
       c.docked ? 'The gangway is secure and logged.' : null,
@@ -158,10 +158,10 @@ const CREW = {
 
 /** Radio-room gossip. Light, a little dry; the Voss lines unlock once the Captain has been around a while. */
 const GOSSIP_LINES = [
-  { t: 'Between us, there are two Chens aboard and one mailbox. Mail is an adventure.' },
+  { t: 'Between us, Chief Doyle sings in the engine room when he thinks the hatch is shut. It is never shut.' },
   { t: 'Torres says "probably" so often that the crew has a pool on how many times a shift. I will not say which way I bet.' },
   { t: 'Marcus insists that the galley coffee is a breach of some convention. He still drinks three cups.' },
-  { t: 'Lieutenant Kim has walked the boat four times today. I do not think he trusts the doors.' },
+  { t: 'Lieutenant Washington has walked the boat four times today. I do not think he trusts the doors. He says the doors do not trust him either.' },
   { t: 'Dr. Patel keeps a plant on her desk in the sick bay. She says it is for the air. It is named Gerald.' },
   { t: 'Ryan talks to the reactor when he thinks nobody is listening. I am told it answers.' },
   { t: 'Nobody has sat in the Captain\'s chair on the bridge except you, {captain}. The rest of us are not sure if it is allowed.', min: 3 },

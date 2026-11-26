@@ -99,7 +99,7 @@
     {
       "type": "crew_say",
       "role": "aria",
-      "text": "That is the ship, Captain. The helm and systems are signed off. You can also ask Commander Chen to move the ship on the communicator. OERA will send your orders soon."
+      "text": "That is the ship, Captain. The helm and systems are signed off. You can also ask Marcus to move the ship on the communicator. OERA will send your orders soon."
     },
     {
       "type": "send_message",

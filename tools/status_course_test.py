@@ -33,7 +33,7 @@ def main():
         def report(who, label):
             for _ in range(2):
                 if not page.locator(".comm-who", has_text=who).count(): page.evaluate("document.querySelector('#pin').click()"); page.wait_for_timeout(700)
-            if not page.locator(".comm-who").count() and page.locator(".comm-line", has_text="Someone else").count(): page.locator(".comm-line", has_text="Someone else").first.tap(); tap()
+            if not page.locator(".comm-who").count() and page.locator(".comm-line", has_text="Call another station").count(): page.locator(".comm-line", has_text="Call another station").first.tap(); tap()
             page.locator(".comm-who", has_text=who).first.tap(timeout=5000); tap()
             if page.locator(".comm-line", has_text="I need something").count(): page.locator(".comm-line", has_text="I need something").first.tap(); tap()
             page.locator(".comm-line", has_text="Orders").first.tap(); tap()
@@ -41,13 +41,13 @@ def main():
             t = page.locator(".comm-reply").first.inner_text()
             page.evaluate("document.querySelector('.comm-line:last-child') && 0")
             return t
-        t = report("ARIA", "Status Report")
+        t = report("ARIA", "How is the ship")
         check("ARIA gives a full report", all(k in t for k in ("Battery", "Links:", "Crew are healthy")), t)
         page.evaluate("window.__aq.scene('bridge')"); page.wait_for_timeout(300)
         page.evaluate("document.querySelector('#pin').click()"); page.wait_for_timeout(700)
-        for who, key in (("Helmsman", "Helm report"), ("Nicole", "Communications report"), ("Torres", "Sensors report")):
+        for who, key, ask in (("Helmsman", "Helm report", "How are things at the helm"), ("Nicole", "Communications report", "Any traffic"), ("Torres", "Sensors report", "Anything out there")):
             page.evaluate("window.__aq.scene('bridge')"); page.wait_for_timeout(300)
-            t = report(who, "Status report")
+            t = report(who, ask)
             check(f"{who} gives a station report", key in t, t)
         check("no page errors", not errs, str(errs[:3]))
         b.close()

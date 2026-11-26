@@ -48,7 +48,7 @@ def main():
         line("Something else"); tap(); line("Ask about"); tap(); line("Comms tasks"); tap(); line("Send a report"); tap()
         check("task guide: send a report", "Transmit report" in page.inner_text(".comm-reply"))
         # --- relevant orders only ---
-        page.locator(".comm-line", has_text="Someone else").first.tap(); tap(); page.locator(".comm-who", has_text="Marcus").first.tap(); tap()
+        page.locator(".comm-line", has_text="Call another station").first.tap(); tap(); page.locator(".comm-who", has_text="Marcus").first.tap(); tap()
         if page.locator(".comm-reply", has_text="Marcus Chen").count(): line("I need something"); tap()
         line("Orders"); tap()
         folders = [t.strip() for t in page.locator(".comm-line").all_inner_texts()]

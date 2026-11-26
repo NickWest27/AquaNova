@@ -25,7 +25,7 @@ export const TOPICS = {
   helm: [
     T('boats', 'the small boats', {}, ['Nine years on small boats in bad water. A coxswain learns that the sea is never the problem. The problem is the five minutes when everybody else is in a hurry.', 'We carry one of our own, the Tern, in the launch bay. Twenty knots and about six hours on a charge. She ferries crew and supplies, so the boat does not have to tie up to do it. I like her already, and she is not even mine to drive.']),
     T('ferry', 'ferrying scientists', { talk: 3 }, 'Before this I ferried scientists out to a research submarine. Lovely people, no sense of the swell. One of them was sick over the side every morning and then asked, very politely, if we could go faster. I think of her whenever someone tells me it is an easy sea.'),
-    T('chens', 'the two Chens', { talk: 4 }, 'No relation. Ryan and I were both asked in the first week, and we have both stopped explaining. If you want to settle it, he has the engine room and I have the wheel, and between us we have one boat.'),
+    T('chief', 'the chief engineer', { talk: 4 }, 'Doyle? He talks to the reactor like it is a horse. Last week I heard him tell it to settle down and it did. I am not saying there is a connection. I am saying I do not go into the engine room without knocking.'),
   ],
   science: [
     T('years', 'her years at sea', {}, 'Three expeditions as the ship\'s doctor, and before that an emergency department, which is where I learned to stay calm when the room is not. Then I got curious about what lives down there, and went back to school in my thirties. Marine biology is the same job with better colours and fewer questions about insurance.'),
@@ -43,7 +43,8 @@ export const TOPICS = {
     T('parts', 'fixing things', { talk: 5 }, 'I fix things with whatever is lying about. A good engineer does not have the right part. A good engineer knows which three other parts will do, and in what order to ask for them. If a pump dies on us, {captain}, you will want me and a box of nothing in particular.'),
   ],
   security: [
-    T('boarding', 'boarding work', {}, 'Navy special warfare first, then maritime boarding. You learn to walk into a room you do not control and make it yours before anybody has decided to be afraid. It is mostly talking. I would like it to stay mostly talking.'),
+    T('boarding', 'the Marines', {}, 'Twelve years, {captain}. Force Recon, then embassy duty, then boarding teams in the Gulf. You learn to walk into a room you do not control and make it yours before anybody has decided to be afraid. It is mostly talking. I would like it to stay mostly talking.'),
+    T('ink', 'the tattoos', { talk: 2 }, 'The eagle, globe and anchor is the Corps. The names down this arm are men I served with. The anchor on the other one my daughter drew when she was six. She says it is a whale. I have stopped arguing.'),
     T('why', 'why a research ship needs security', { talk: 3 }, 'Because a ship that goes deeper than anyone else will meet something it cannot talk to, {captain}. It might be a storm, or a stranger, or a find that somebody wants quiet. The scientists are right that this is a research ship. I am here in case that is not the only thing it is.'),
     T('voss', 'Captain Voss', { talk: 6 }, 'Captain Voss insisted I come aboard, over the science side\'s objections. I understood her. I do not know why she left, and I have been told not to speculate, which is easier to follow when you do not have a theory. I do not have one. I have several, and I am being disciplined about it.'),
   ],

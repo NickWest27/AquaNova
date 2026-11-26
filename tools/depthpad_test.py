@@ -23,7 +23,7 @@ def main():
         tap = lambda: page.wait_for_timeout(350)
         page.locator(".comm-who", has_text="Helm").first.tap(); tap()
         if page.locator(".comm-reply", has_text="Marcus Chen").count(): page.locator(".comm-line", has_text="I need something").first.tap(); tap()
-        for t in ["Orders", "Make your depth", "Custom depth"]: page.locator(".comm-line", has_text=t).first.tap(); tap()
+        for t in ["Orders", "Take us to", "Custom depth"]: page.locator(".comm-line", has_text=t).first.tap(); tap()
         for k in ["1", "2", "0"]: page.locator(".dp-key", has_text=k).first.tap()
         check("keypad shows what was typed", "120" in page.inner_text(".dp-read"), page.inner_text(".dp-read"))
         page.locator(".dp-key", has_text="⌫").tap(); page.locator(".dp-key", has_text="5").tap()

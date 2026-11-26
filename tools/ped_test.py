@@ -38,7 +38,7 @@ def main():
         tab("Contacts"); t = text(); check("contacts: nobody listed before they are met", "Marcus Chen" not in t and "Commander ARIA" not in t and "not met the crew" in t, t[:200])
         page.evaluate("(async()=>{const g=(await import('./js/persist.js')).gameState; g.updateProperty('progress.met.executiveOfficer', true); g.updateProperty('progress.met.helm', true);})()"); tab("Status"); tab("Contacts")
         t = text(); check("contacts: known crew with a bio", "Commander ARIA" in t and "Advanced Research" in t and "Marcus Chen" in t, t[:200])
-        check("contacts: unmet crew hidden", "Daniel Kim" not in t)
+        check("contacts: unmet crew hidden", "Andre Washington" not in t)
         tab("Settings"); t = text()
         check("settings: no sync details card", "SYNC DETAILS" not in t.upper() and "SYNC WITH THE IPHONE PED" in t.upper() and "How to connect" in t)
         check("settings: sound sliders", page.locator("#ped-pop input.mix").count() == 6, page.locator("#ped-pop input.mix").count())
