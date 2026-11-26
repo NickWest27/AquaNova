@@ -6,7 +6,7 @@ import { tell } from '../notify.js';
 import { gauge, field, lamp } from '../instruments.js';
 import { drawSchematic } from '../schematic.js';
 import { DIAGRAMS } from '../engDiagrams.js';
-import { SYSTEMS, COMPS, TEAMS, FIRE_AGENT, eng, status, powered, fusionOk, jetFactor, airCharging, busyTeams, setCabin, repair, standDown } from '../engineering.js';
+import { SYSTEMS, COMPS, TEAMS, FIRE_AGENT, eng, status, powered, alarmOn, soundAlarm, secureAlarm, fusionOk, jetFactor, airCharging, busyTeams, setCabin, repair, standDown } from '../engineering.js';
 
 const LAMP = { ok: ['OK', 'ok'], degraded: ['DEGRADED', 'warn'], offline: ['OFFLINE', 'bad'], fire: ['FIRE', 'bad'] };
 const lvl = (h) => (h < 25 ? 'bad' : h < 50 ? 'warn' : '');
@@ -49,7 +49,8 @@ export function mount(body) {
     const flood = e.flood.fwd > 0 || e.flood.aft > 0 || e.leak.fwd || e.leak.aft;
     top.replaceChildren(
       el('div', { class: 'eng-row' }, el('b', { class: 'eng-title', text: 'QUANTUM FUSION DRIVE' }), fusionOk() ? lamp('ONLINE', 'ok') : e.on.fusion ? lamp('FAULT', 'bad') : lamp('STANDBY', 'warn'),
-        e.fire ? lamp('FIRE', 'bad') : null, flood ? lamp('FLOODING', 'bad') : null, lamp(`TEAMS ${TEAMS - busyTeams()}/${TEAMS} FREE`, busyTeams() >= TEAMS ? 'warn' : 'ok')),
+        e.fire ? lamp('FIRE', 'bad') : null, flood ? lamp('FLOODING', 'bad') : null, lamp(`TEAMS ${TEAMS - busyTeams()}/${TEAMS} FREE`, busyTeams() >= TEAMS ? 'warn' : 'ok'),
+        alarmOn() ? act('Secure alarm', secureAlarm, { cls: 'gen-alarm-btn lit', why: (w) => (w === 'casualty' ? 'Not while there is fire or flooding' : '') }) : act('General alarm', () => soundAlarm('captain'), { cls: 'gen-alarm-btn' })),
       el('div', { class: 'eng-2' }, gauge('BATTERY', s.battery / 100, `${Math.round(s.battery)}%`, lvl(s.battery)), gauge('POWER DRAW', s.power / 100, `${Math.round(s.power)} kW`)));
     list.replaceChildren(...SYSTEMS.map((x) => {
       const st = status(x.id), h = e.health[x.id];

@@ -18,6 +18,7 @@ import { openSearchDialog } from '../searchDialog.js';
 import { orderTern, callBackTern, ternReport, launchTern, destinations } from '../tern.js';
 import { TERN_SAFE_M, BAY_SAFE_KT, shuttle, bayDoorsOpen, setBayOverride, launchAllWskrs, bay as bayState } from '../bayops.js';
 import { toggleDock } from '../dock.js';
+import { alarmOn, soundAlarm, secureAlarm } from '../engineering.js';
 import { say as crewSay, takeHeld, unreadFor, unreadCount, transcript, logLine, setOpenCrew } from '../notify.js';
 
 // First meeting with each crew member. Spoken once, saved in progress.met.<id>. {captain} = "Captain Surname".
@@ -85,6 +86,8 @@ const ORDERS = {
   'All stop': () => { sim.stop(); return 'All stop, aye.'; },
   'All stop!': () => { sim.stop(); return 'All stop, aye.'; },
   'All ahead flank': () => { if (docked()) return 'We are docked, Captain.'; sim.setThrottle(1); return 'All ahead flank!'; },
+  'Sound General Alarm': () => (soundAlarm('captain').ok ? 'Sounding the general alarm. All hands to emergency stations! Damage control teams are closing up, Captain.' : 'The general alarm is already sounding, Captain.'),
+  'Secure from General Alarm': () => { const r = secureAlarm(); return r.ok ? 'Securing from general alarm. Normal lighting is back and the crew are standing down, Captain.' : r.why === 'casualty' ? 'Not yet, Captain. We still have fire or flooding aboard.' : 'There is no alarm sounding, Captain.'; },
   'Emergency surface': () => { sim.setDepth(0); return 'Blowing ballast. Surfacing!'; },
   'Emergency surfaace': () => { sim.setDepth(0); return 'Blowing ballast. Surfacing!'; },
   'Emergency dive': () => { if (docked()) return 'We are docked, Captain.'; return dive(500, 'Diving!'); },
@@ -220,7 +223,7 @@ export function mount(body, ctx) {
     const pl = mineP(); if (pl.length) top.push({ folder: true, label: 'Make small talk', title: `Say to ${first(cur)}…`, kids: pl.map((t) => ({ label: t, run: () => speak(t) })) });
     const ak = askKids(); if (ak.length) top.push({ folder: true, label: 'Ask about …', title: `Ask ${first(cur)} about…`, kids: ak });
     const ok = orderKids(); if (ok.length) top.push({ folder: true, label: 'Give an order', title: `Order to ${first(cur)}…`, kids: ok });
-    const em = (o.emergency || []); if (em.length) top.push({ folder: true, label: 'Report an emergency', cls: 'danger', title: `Tell ${first(cur)}…`, kids: em.map((t) => ({ label: t, cls: works(t) ? '' : 'stub', run: () => speak(t) })) });
+    let em = (o.emergency || []); if (cur.id === 'executiveOfficer') em = [alarmOn() ? 'Secure from General Alarm' : 'Sound General Alarm', ...em.filter((t) => !/general alarm/i.test(t))]; if (em.length) top.push({ folder: true, label: 'Report an emergency', cls: 'danger', title: `Tell ${first(cur)}…`, kids: em.map((t) => ({ label: t, cls: works(t) ? '' : 'stub', run: () => speak(t) })) });
     return top;
   };
   let trail = [];   // labels of the folders open now, outermost first. Looked up again on every draw, so the menu follows the ship's state.

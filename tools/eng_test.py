@@ -53,6 +53,15 @@ def main():
         check("closed, the flooding is contained (no more hull loss)", abs(r["d3"] - r["d2"]) < 0.01, r)
         r = js("const e=E.eng(); const x=E.repair('bulkheads'); for(let i=0;i<120;i++) sim.step(60); return {ok:x.ok, leak:e.leak.fwd||e.leak.aft, flood:Math.max(e.flood.fwd,e.flood.aft), hp:e.health.bulkheads}")
         check("repairing Bulkheads seals the leak and the pumps clear the water", r["ok"] and not r["leak"] and r["flood"] == 0 and r["hp"] == 100, r)
+        # general alarm: sounded before the casualty, the crew answer faster; not sounded, the crew sound it themselves
+        r = js(fresh + "for(let i=0;i<31;i++) sim.step(1); const a=E.soundAlarm('captain'); const red=document.body.classList.contains('general-alarm'); sim.hurt(10,'test'); for(let i=0;i<9;i++) sim.step(1); return {ok:a.ok, red, out:!E.eng().fire}")
+        check("general alarm sounded: red lighting, and a fire is out in 8 s (not 20)", r["ok"] and r["red"] and r["out"], r)
+        r = js("const x=E.secureAlarm(); for(let i=0;i<31;i++) sim.step(1); E.eng().casualty=false; const red=document.body.classList.contains('general-alarm'); sim.hurt(10,'test'); for(let i=0;i<9;i++) sim.step(1); return {ok:x.ok, red, on:E.alarmOn(), burning:!!E.eng().fire}")
+        check("secured: normal lighting; a new fire sounds the alarm by itself but burns longer", r["ok"] and not r["red"] and r["on"] and r["burning"], r)
+        r = js("const x=E.secureAlarm(); return {why:x.why}")
+        check("cannot secure while there is fire", r["why"] == "casualty", r)
+        r = js(fresh + "for(let i=0;i<31;i++) sim.step(1); E.soundAlarm(); sim.hurt(14,'test'); for(let i=0;i<30;i++) sim.step(1); const e=E.eng(), c=e.leak.fwd?'fwd':'aft'; for(let i=0;i<16;i++) sim.step(1); return {leak:e.leak[c], closed:!e.bulk[c]}")
+        check("alarm already sounding: damage control close a flooding bulkhead in 15 s", r["leak"] and r["closed"], r)
         # repairs: two teams, 25 an hour
         r = js(fresh + "const e=E.eng(); e.health.water=50; e.health.hvac=50; e.health.air=50; const a=E.repair('water'), b=E.repair('hvac'), c=E.repair('air'); for(let i=0;i<60;i++) sim.step(60); return {a:a.ok, b:b.ok, c:c.why, w:e.health.water}")
         check("two damage-control teams; a third job waits", r["a"] and r["b"] and r["c"] == "teams", r)

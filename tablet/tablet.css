@@ -979,3 +979,11 @@ input.mix { width: 100%; height: 2.4rem; accent-color: var(--cyan); }
 .eng-alarm { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse at center, transparent 45%, rgba(255,20,20,0.45) 100%); animation: alarmpulse 1.1s ease-in-out infinite; }
 @keyframes alarmpulse { 0%, 100% { opacity: 0.25; } 50% { opacity: 1; } }
 .door-lamp { position: absolute; pointer-events: none; border-radius: 4px; background: #ff3b3b; box-shadow: 0 0 22px 8px rgba(255,40,40,0.8); animation: alarmpulse 0.6s steps(2, jump-none) infinite; }
+
+/* ---------- General alarm (engineering.js soundAlarm): the ship's lighting pulses red; page frames turn red ---------- */
+body.general-alarm { --line: rgba(255, 92, 92, 0.6); --line-soft: rgba(255, 92, 92, 0.3); }
+body.general-alarm .stage::after { content: ''; position: absolute; inset: 0; z-index: 40; pointer-events: none; background: #ff2020; mix-blend-mode: multiply; animation: genalarm 2.2s ease-in-out infinite; }
+body.general-alarm #station::after { content: ''; position: absolute; inset: 0; z-index: 60; pointer-events: none; box-shadow: inset 0 0 40px 10px rgba(255, 30, 30, 0.7); animation: genalarm 2.2s ease-in-out infinite; }
+@keyframes genalarm { 0%, 100% { opacity: 0.12; } 50% { opacity: 0.6; } }
+.gen-alarm-btn { margin-left: auto; color: var(--red); border-color: var(--red); }
+.gen-alarm-btn.lit { background: rgba(255, 60, 60, 0.3); color: #fff; }

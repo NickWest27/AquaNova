@@ -361,7 +361,7 @@ async function boot() {
     sim.on((type, data) => {
       if (type === 'tick') {
         const s = sim.s;
-        scene.update(); updateChips(); current && current.api.update(); ped && ped.api.update(); updateHum(s.speed);
+        document.body.classList.toggle('general-alarm', !!(s.eng && s.eng.general)); scene.update(); updateChips(); current && current.api.update(); ped && ped.api.update(); updateHum(s.speed);
         if (++tickN % 5 === 0) { liveNav(); if (sim.s.wpt) flag('plotted'); syncLessonFlags(); if (awardSurveyBonus()) say('science', 'OERA has granted a research budget for the survey, Captain: 3 research points. Check the Research tab.', 'mission'); for (const q of tickLab()) say('science', `Analysis of sample #${q.id} (${SAMPLE_KINDS[q.kind].label.toLowerCase()}) is done: ${q.result} Finding filed.`, 'mission'); }            // about once a second
         const t = `${s.lat.toFixed(3)}°N ${Math.abs(s.lon).toFixed(3)}°W`;
         if (st.pos.textContent !== t) st.pos.textContent = t;
@@ -375,6 +375,8 @@ async function boot() {
       else if (type === 'wskr-found') { const fresh = fileScan(data.poi); say('sensors', fresh ? `${wskrName(data.wskr)} has finished investigating ${data.poi.name}. Scan filed, Captain.` : `${wskrName(data.wskr)} re-checked ${data.poi.name}. Nothing new.`, 'mission'); }
       else if (type === 'rov-sample') { say('science', `Remora has a ${SAMPLE_KINDS[data.kind].label.toLowerCase()} sample from ${data.site}, Captain. Storage ${data.stored} of ${data.store}.${data.full ? ' She is full. Bring her home so we can unload her.' : ' Bring her home when you have what you came for, and she will deliver it to the lab.'}`, '', { action: true }); }
       else if (type === 'rov-arrived') say('science', `Remora is on station at ${data.name}, Captain. Take her down to the floor and take your sample.`, '', { action: true });
+      else if (type === 'general-alarm') { document.body.classList.toggle('general-alarm', data.on); if (data.on && data.by === 'auto') say('aria', 'General alarm, Captain. All hands to emergency stations. Damage control teams are closing up.', 'error'); }
+      else if (type === 'general-alarm-clear') say('aria', 'The casualty is over, Captain. Fire and flooding are clear. Give the order when you want to secure from general alarm.', '');
       else if (type === 'eng-fire') say('engineering', `FIRE in the ${({ fwd: 'forward', mid: 'midships', aft: 'aft' })[data.comp]} compartment, Captain!`, 'error', { notice: 'FIRE' });
       else if (type === 'eng-fire-out') say('engineering', data.auto ? 'Fire suppression has put the fire out, Captain.' : 'Fire is out, Captain.', '');
       else if (type === 'eng-leak') say('engineering', `We are taking on water in the ${data.comp === 'fwd' ? 'forward' : 'aft'} compartment, Captain! Close that bulkhead.`, 'error', { notice: 'FLOODING' });

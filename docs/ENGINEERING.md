@@ -58,6 +58,14 @@ a system works only when its chain is complete, and all start on/open, so an unt
 ## Crew have the con
 The XO runs damage control: closes a flooding compartment, sends a team to seal the leak, discharges by hand if suppression is off, and sends free teams to the worst-hurt systems (`damageControl` in `away.js`).
 
+## General alarm (2026-11-26, owner)
+- **Order:** communicator, ARIA, Report an emergency, *Sound General Alarm* (then *Secure from General Alarm*). Also a GENERAL ALARM button on the engineering computer's top strip.
+- **Look:** while it sounds, every room's lighting pulses red (a red multiply layer on the stage) and station page frames turn red (`body.general-alarm` in `tablet.css`).
+- **Reward:** if the alarm was already sounding when a fire or leak starts, the crew are at their stations: fire suppression puts the fire out in 8 s instead of 20, and damage control closes a flooding bulkhead in 15 s instead of 60 (`READY_FIRE_S`, `READY_CLOSE_S`).
+- If nobody sounded it, the crew sound it themselves when the casualty starts (no bonus). When the fire and flooding are clear, ARIA says so; the Captain secures. It cannot be secured while there is fire or flooding.
+- No cost yet for leaving it on (open question for the owner).
+- Saved in `navigation.eng.general`. Test: `tools/eng_test.py`.
+
 ## The Engineering room is alive (2026-11-26)
 The room picture shows the state of the ship (`updateEng()` in `scene.js`, styles "Engineering room" in `tablet.css`):
 - **Power cores:** cyan pulse = fusion drive online; steady amber = standby; flickering red = fault (switched on but not working, e.g. no coolant).

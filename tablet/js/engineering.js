@@ -17,6 +17,8 @@ export const SYSTEMS = [
 export const RELAYS = { A: 'Propulsion', B: 'Life support', C: 'Sensors and comms', D: 'Hotel' };
 export const COMPS = { fwd: 'Forward', mid: 'Midships', aft: 'Aft' };
 export const AUTO_CLOSE_S = 60, TEAMS = 2, REPAIR_PER_H = 25, DOCK_REPAIR_PER_H = 100, FIRE_AUTO_S = 20, FIRE_AGENT = 25, BLOW_AIR = 60;
+// General alarm: a crew already at emergency stations when a fire or leak starts answer it much faster.
+export const READY_FIRE_S = 8, READY_CLOSE_S = 15;
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 /** The components drawn on each system's flow diagram (true = running / open). A system works only when its chain is complete. */
@@ -58,8 +60,14 @@ export function eng() {
   e.leak ||= { fwd: false, aft: false };
   e.repairs ||= [];                      // [{ id }]: a team on a system
   if (e.next == null) e.next = 0;        // whose turn it is to take damage
+  if (e.general == null) e.general = false;   // the general alarm is sounding (red lighting throughout the ship)
   return e;
 }
+export const alarmOn = () => !!eng().general;
+/** Sound the general alarm. by: 'captain' or 'auto' (the crew sound it themselves when a casualty starts). */
+export function soundAlarm(by = 'captain') { const e = eng(); if (e.general) return { ok: false, why: 'on' }; e.general = true; sim.emit('general-alarm', { on: true, by }); return { ok: true }; }
+/** Secure from general alarm: only once there is no fire and no leak. */
+export function secureAlarm() { const e = eng(); if (!e.general) return { ok: false, why: 'off' }; if (e.fire || e.leak.fwd || e.leak.aft) return { ok: false, why: 'casualty' }; e.general = false; e.casualty = false; sim.emit('general-alarm', { on: false }); return { ok: true }; }
 export const hp = (id) => eng().health[id];
 /** A system works when its relay is closed, the relay system itself is alive, and it has health left. */
 export const powered = (id) => { const e = eng(), x = SYSTEMS.find((q) => q.id === id); return !x.relay || (e.relays[x.relay] && e.health.relays > 0); };
@@ -98,8 +106,10 @@ function onHit(d) {
   const e = eng(), x = SYSTEMS[e.next % SYSTEMS.length]; e.next++;
   e.health[x.id] = clamp(e.health[x.id] - d * 2, 0, 100);
   sim.emit('eng-damage', { id: x.id, name: x.name, hp: Math.round(e.health[x.id]) });
-  if (d >= 15 && !e.fire) { e.fire = { comp: x.comp, t: 0 }; sim.emit('eng-fire', { comp: x.comp }); }
-  if (d >= 20) { const c = x.comp === 'fwd' ? 'fwd' : 'aft'; if (!e.leak[c]) { e.leak[c] = true; e.health.bulkheads = Math.min(e.health.bulkheads, 60); sim.emit('eng-leak', { comp: c }); } }   // a leak damages Bulkheads: repairing it seals the leak
+  const ready = !!e.general;   // sounded before the casualty: the crew are already at their stations
+  if (d >= 15 && !e.fire) { e.fire = { comp: x.comp, t: 0, ready }; sim.emit('eng-fire', { comp: x.comp }); }
+  if (d >= 20) { const c = x.comp === 'fwd' ? 'fwd' : 'aft'; if (!e.leak[c]) { e.leak[c] = true; (e.leakReady ||= {})[c] = ready; e.health.bulkheads = Math.min(e.health.bulkheads, 60); sim.emit('eng-leak', { comp: c }); } }   // a leak damages Bulkheads: repairing it seals the leak
+  if (e.fire || e.leak.fwd || e.leak.aft) { e.casualty = true; if (!e.general) soundAlarm('auto'); }
 }
 sim.on((type, data) => { if (type === 'bump' && data && data.damage) onHit(data.damage); });
 
@@ -137,14 +147,14 @@ sim.hooks.push((dt) => {
   if (e.fire) {
     e.fire.t += g;
     for (const x of SYSTEMS) if (x.comp === e.fire.comp) e.health[x.id] = clamp(e.health[x.id] - 2 * g / 60, 0, 100);
-    if (e.armed && working('fire') && part('fire.main') && e.fire.t >= FIRE_AUTO_S && e.agent >= FIRE_AGENT) { e.agent -= FIRE_AGENT; const comp = e.fire.comp; e.fire = null; sim.emit('eng-fire-out', { comp, auto: true }); }
+    if (e.armed && working('fire') && part('fire.main') && e.fire.t >= (e.fire.ready ? READY_FIRE_S : FIRE_AUTO_S) && e.agent >= FIRE_AGENT) { e.agent -= FIRE_AGENT; const comp = e.fire.comp; e.fire = null; sim.emit('eng-fire-out', { comp, auto: true }); }
   }
   // flooding: a leak floods its compartment; with the bulkhead open it costs hull, closed it is contained and the pumps clear it
   for (const c of ['fwd', 'aft']) {
     if (e.leak[c] && !s.docked) {
       e.flood[c] = clamp(e.flood[c] + 10 * g / 60, 0, 100); if (e.bulk[c]) s.damage = Math.min(100, s.damage + 1 * g / 60);
       e.leakT ||= {}; e.leakT[c] = (e.leakT[c] || 0) + g;   // the damage-control crew close a flooding compartment themselves after a minute
-      if (e.bulk[c] && e.leakT[c] >= AUTO_CLOSE_S && !e.autoClosed?.[c]) { e.bulk[c] = false; (e.autoClosed ||= {})[c] = true; sim.emit('eng-bulkhead-auto', { c }); }
+      if (e.bulk[c] && e.leakT[c] >= (e.leakReady?.[c] ? READY_CLOSE_S : AUTO_CLOSE_S) && !e.autoClosed?.[c]) { e.bulk[c] = false; (e.autoClosed ||= {})[c] = true; sim.emit('eng-bulkhead-auto', { c }); }
     } else {
       if (e.leakT) { e.leakT[c] = 0; if (e.autoClosed) e.autoClosed[c] = false; }
       if (e.flood[c] > 0 && part('bulk.pump.' + c)) e.flood[c] = clamp(e.flood[c] - (100 / 10) * g / 60, 0, 100);   // sealed: its bilge pump clears it in 10 minutes
@@ -158,5 +168,6 @@ sim.hooks.push((dt) => {
     e.health[r.id] = clamp(e.health[r.id] + rate, 0, 100);
     if (r.id === 'bulkheads' && e.health.bulkheads >= 100) { e.leak.fwd = e.leak.aft = false; }
   }
+  if (e.general && e.casualty && !e.fire && !e.leak.fwd && !e.leak.aft) { e.casualty = false; sim.emit('general-alarm-clear', {}); }   // the XO suggests securing
   const done = e.repairs.filter((r) => e.health[r.id] >= 100); if (done.length) { e.repairs = e.repairs.filter((r) => e.health[r.id] < 100); done.forEach((r) => sim.emit('eng-repaired', { id: r.id, name: SYSTEMS.find((x) => x.id === r.id).name })); }
 });
