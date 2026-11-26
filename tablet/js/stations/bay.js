@@ -7,24 +7,12 @@ import { ROV_NAME, rovRange, REMORA_STORE } from '../rov.js';
 import { TOOLS } from '../science.js';
 import { el, modal } from '../util.js';
 import { readout } from '../readout.js';
+import { gauge, field, lamp, airlock, pctLvl, sampleSlots, mins } from '../instruments.js';
 import { TERN_SAFE_M, launchRemora, recoverRemora, remoraRearm, o2HoursLeft, O2_CHARGE_H, setManning, SHUTTLE_SEATS, SHUTTLE_COCKPIT, bay, busy, tubeBusy, rackBat, shuttle, launchWskr, launchText, receiveWskrNow, launchShuttle, recoverShuttle, sendShuttle, recallShuttle, fetchRemora, dockList, shuttleRangeNm, shuttleSpeed, SHUTTLE_NAME, BAY_SAFE_KT, DOOR_DAMAGE_KT, SHUTTLE_CHARGE_H, MIN_LAUNCH_PCT, LOW_PCT } from '../bayops.js';
 
-const mins = (m) => { if (m < 1) return '<1 min'; const t = Math.round(m); return t < 60 ? `${t} min` : `${Math.floor(t / 60)} h ${t % 60} min`; };
 const toFull = (bat, hours) => ((100 - bat) / 100) * hours * 60;
 const TERN_STATE = { fetch: 'FETCHING REMORA', goto: 'UNDER WAY', station: 'HOLDING', steer: 'ON A HEADING', relay: 'RELAY', follow: 'ALONGSIDE', going: 'TO DOCK', exchange: 'AIRLOCK', returning: 'RETURNING', moored: 'MOORED', search: 'SEARCHING' };
-const SHORT = { water: 'WATER', sediment: 'SEDIM', rock: 'CORE', bio: 'BIO' };   // a sample's kind on its slot
 const CRAFT = { rov: ROV_NAME.toUpperCase(), shuttle: SHUTTLE_NAME.toUpperCase(), wskr: 'WSKR' };
-
-/** A level line: label, bar, value. lvl: 'bad' or 'warn' colours it. */
-const gauge = (k, frac, v, lvl = '') => el('div', { class: 'gz ' + lvl }, el('span', { class: 'gz-k', text: k }), el('span', { class: 'gz-bar' }, el('i', { style: `width:${Math.round(Math.max(0, Math.min(1, frac)) * 100)}%` })), el('span', { class: 'gz-v', text: v }));
-const pctLvl = (p) => (p < LOW_PCT ? 'bad' : p < MIN_LAUNCH_PCT ? 'warn' : '');
-const lamp = (text, kind) => el('span', { class: 'ilamp ' + (kind || '') }, el('i'), text);
-/** An airlock line: fills while a craft goes out, empties while one comes in. */
-const airlock = (op, label = 'AIRLOCK') => {
-  if (!op) return gauge(label, 0, 'IDLE', 'idle');
-  const tot = op.dur + (op.air || 0), f = Math.min(1, op.t / tot), left = Math.max(0, Math.round(tot - op.t));
-  return gauge(label, op.kind === 'launch' ? f : 1 - f, `${op.kind === 'launch' ? 'OUT' : 'IN'} ${left} s`, 'cyc ' + (op.kind === 'launch' ? 'out' : 'in'));
-};
 
 export function mount(body) {
   body.style.flexDirection = 'column';
@@ -56,9 +44,7 @@ export function mount(body) {
     const recoverRov = () => { const x = recoverRemora(); tell('science', x.ok ? `Bringing ${ROV_NAME} aboard. About ${Math.round(x.secs)} seconds.` : x.why === 'busy' ? 'The bay is busy' : 'Bring Remora within 0.2 nm of the ship first', x.ok ? 'mission' : 'error', { key: 'bay' }); };
     const rovOp = op && op.craft === 'rov', tnm = r ? toward(s, r).nm : 0;
     // her sample collectors: one slot per sample she can hold (lit with what is in it), and the tool at work
-    const collectors = (cargo, unknown) => el('div', { class: 'coll' }, el('span', { class: 'gz-k', text: 'SAMPLES' }),   // unknown: no telemetry (tether parted)
-      ...Array.from({ length: REMORA_STORE }, (_, i) => { const c = cargo[i]; return el('span', { class: 'slot' + (c && !unknown ? ' full' : ''), text: unknown ? '?' : c ? SHORT[c.kind] || c.kind.slice(0, 3).toUpperCase() : 'EMPTY' }); }),
-);
+    const collectors = (cargo, unknown) => sampleSlots(cargo, REMORA_STORE, unknown);
     const working = (job) => { const t = TOOLS[job.tool] || { name: job.tool, secs: 1 }, left = Math.max(0, job.end - s.clock); return gauge('WORKING', 1 - left / t.secs, `${t.name.toUpperCase()} · ${Math.ceil(left / 60)} MIN`, 'warn'); };
     const rem = el('div', { class: 'card craft' },
       el('div', { class: 'craft-hd' }, el('b', { text: CRAFT.rov }), rovOp ? lamp(op.kind === 'launch' ? 'LAUNCHING' : 'RECOVERING', 'warn') : lost ? lamp(sh.carry || sh.mode === 'fetch' ? 'TERN FETCHING' : 'LOST', 'bad') : r ? lamp('OUT', 'warn') : rr ? lamp('RE-EQUIP', 'warn') : lamp('IN BAY', 'ok')),

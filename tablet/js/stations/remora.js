@@ -6,6 +6,7 @@ import { launchRemora, recoverRemora, remoraRearm, bay } from '../bayops.js';
 import { ROV_NAME, rovRange, rovSite, rovFloor, rovCargo, REMORA_STORE, tetherBar } from '../rov.js';
 import { TOOLS, samples, pickKind } from '../science.js';
 import { el, toast, modal } from '../util.js';
+import { gauge, field, lamp, airlock, sampleSlots, mins } from '../instruments.js';
 import { mountCraftView } from '../craftview.js';
 import { selectedContact, targetOf } from '../contacts.js';
 import { seafloor } from '../seafloor.js';
@@ -14,13 +15,15 @@ const WHY = { floor: 'Get within 6 m of the sea floor first.', nothing: 'Nothing
 
 export function mount(body) {
   body.style.flexDirection = 'column';   // fits the screen: the view on top, status and piloting side by side below
-  const head = el('div', { class: 'card' }, el('div', { class: 'lbl', text: ROV_NAME + ' (Science ROV)' }), el('div', { class: 'num' }), el('p', { style: 'color:var(--dim);margin:0.4rem 0' }));
+  // instruments, not instructions (owner, 2026-11-26): a state lamp and level lines; the help is in the how-to guides
+  const headHd = el('div', { class: 'craft-hd' }), headG = el('div', { class: 'rem-g' });
+  const head = el('div', { class: 'card rem-card' }, headHd, headG);
   const row = el('div', { class: 'row' });
   const launchBtn = el('button', { class: 'btn chip', text: 'Launch', onclick: () => { const r = launchRemora(); tell('science', r.ok ? `${ROV_NAME} is being readied in the bay. About ${Math.round(r.secs)} seconds.` : ({ docked: 'Undock first', fast: 'Slow below 8 kt first', out: 'Already out', busy: 'The bay is busy with another craft', doors: 'The bay doors are too damaged to open', rearm: `The team are still unloading and re-equipping her: about ${r.mins} min`, tetherfix: `Engineering are splicing a new tether: about ${r.mins} min`, lost: 'Remora is lost. Send the Tern to fetch her' })[r.why] || 'Cannot launch now', r.ok ? 'mission' : 'error', { key: 'bay' }); update(); } });
   const recBtn = el('button', { class: 'btn chip', text: 'Recover', onclick: () => { const r = recoverRemora(); tell('science', r.ok ? `Bringing ${ROV_NAME} aboard. About ${Math.round(r.secs)} seconds.` : r.why === 'busy' ? 'The bay is busy' : 'Bring the ROV within 0.2 nm of the ship first', r.ok ? 'mission' : 'error', { key: 'bay' }); update(); } });
   const autoBtn = el('button', { class: 'btn chip', text: 'Auto return', onclick: () => { const r = sim.rovAuto(); tell('science', r.ok ? (r.nm < 0.03 ? 'She is alongside. Matching your depth, then she is ready to come aboard.' : `${ROV_NAME} is driving home on her own, about ${Math.max(1, Math.round(r.hours * 60))} minutes at her speed. Take her aboard when she arrives.`) : r.why === 'busy' ? 'She is working a tool. Wait for it to finish.' : 'No ROV out.'); update(); } });
-  row.append(launchBtn, autoBtn, recBtn); const tether = tetherBar(); head.append(row, tether);
-  const pilot = el('div', { class: 'card' });
+  row.classList.add('craft-btns'); row.append(launchBtn, autoBtn, recBtn); head.append(row);
+  const pilot = el('div', { class: 'card rem-card' });
   // set-and-go: taps set a speed, a heading and a depth she then holds; or pick a site and she drives there and stops
   const tap = (label, fn) => el('button', { class: 'btn chip', text: label, 'aria-label': label, onclick: () => { fn(); update(); } });
   const pilotBtns = [
@@ -41,19 +44,24 @@ export function mount(body) {
   const toolBtns = toolIds.map((id) => [id, TOOLS[id]]).map(([id, t]) => el('button', { class: 'btn chip', text: t.name, onclick: () => {
     const r = sim.rovUse(id); tell('science', r.ok ? `${t.name} working` : WHY[r.why], r.ok ? '' : 'error'); update(); } }));
   toolRow.append(...toolBtns); pilot.append(toolRow);
-  const readout = el('p', { style: 'color:var(--dim);margin-top:0.6rem' }); pilot.append(readout);
+  const status = el('div', { class: 'rem-g' }); pilot.append(status);   // SITE, FLOOR, SAMPLES, WORKING, ORDER
   const viewBox = el('div', { class: 'card cv' });
   const cv = mountCraftView(viewBox, { title: ROV_NAME, range: 0.5, readouts: () => { const r = sim.s.rov, g = r && r.go; return { ship: sim.s, target: g ? { name: g.name, lat: g.lat, lon: g.lon, depth: seafloor.ready ? seafloor.depthAt(g.lat, g.lon) : null, kt: 0 } : targetOf(selectedContact()) }; }, getCraft: () => { const r = sim.s.rov; return r ? { lat: r.lat, lon: r.lon, heading: r.heading, depth: r.depth, kt: Math.abs(r.cmd.thr || r.thrSet || (r.go ? 1 : 0)) * 2 } : null; } });
   body.append(viewBox, el('div', { class: 'rem-low' }, head, pilot));
 
   function update() {
     const s = sim.s, r = s.rov, op = bay().op, rr = remoraRearm();
-    head.children[1].textContent = r ? 'OUT' : 'ABOARD'; head.children[1].className = 'num ' + (r ? 'ok' : '');
-    head.children[2].textContent = op ? `The bay doors are open: ${op.kind === 'launch' ? 'launching' : 'taking aboard'}, ${Math.max(0, Math.round(op.dur - op.t))} s.` : r ? 'Set her speed, yaw and depth, or send her to a site. Slow (2 kt) and on a tether: the bay doors stay open until she is back aboard, so keep the ship slow.' : rr ? `Aboard. The team are unloading ${rr.load} sample${rr.load === 1 ? '' : 's'} and re-equipping her: ${Math.max(1, Math.ceil((rr.dur - rr.t) / 60))} min.` : 'Short range, slow, and it carries the instruments the WSKRs lack. Launch it at sea.';
-    tether.refresh();
-    const lost = !!(r && r.lost), fix = bay().tetherFix;   // tether parted: no control, no telemetry
-    if (lost) { head.children[1].textContent = 'LOST CONTACT'; head.children[1].className = 'num bad'; head.children[2].textContent = 'Tether parted. No control, no telemetry. Launch Bay: send the Tern to Fetch Remora.'; }
-    else if (!r && fix) head.children[2].textContent = `New tether being spliced: ${Math.ceil((fix.dur - fix.t) / 60)} min.`;
+    const lost = !!(r && r.lost), fix = bay().tetherFix, rovOp = op && op.craft === 'rov';   // tether parted: no control, no telemetry
+    const st = rovOp ? lamp(op.kind === 'launch' ? 'LAUNCHING' : 'RECOVERING', 'warn') : lost ? lamp('LOST CONTACT', 'bad') : r ? (r.auto ? lamp('DRIVING HOME', 'warn') : r.home ? lamp('ALONGSIDE', 'ok') : lamp('OUT', 'ok')) : rr ? lamp('RE-EQUIP', 'warn') : lamp('ABOARD', 'ok');
+    const tn = r && !lost ? toward(s, r).nm : 0;
+    const lines = [
+      fix ? gauge('TETHER', fix.t / fix.dur, `PARTED · NEW ${mins((fix.dur - fix.t) / 60)}`, 'bad') : null,
+      r && !lost ? gauge('TETHER', tn / rovRange(), `${tn.toFixed(2)} / ${rovRange()} nm`, tn / rovRange() >= 0.9 ? 'warn' : '') : null,
+      rovOp ? airlock(op, 'BAY') : null,
+      !r && rr ? gauge('RE-EQUIP', rr.t / rr.dur, mins((rr.dur - rr.t) / 60), 'warn') : null,
+      lost ? field('LINK', 'NONE · TERN FETCH', 'bad') : null];
+    const sig = JSON.stringify([st.textContent, lines.map((x) => x && x.textContent)]);
+    if (headG._sig !== sig) { headG._sig = sig; headHd.replaceChildren(el('b', { text: ROV_NAME.toUpperCase() }), st); headG.replaceChildren(...lines.filter(Boolean)); }
     launchBtn.disabled = !!r || s.docked || !!op || !!rr || !!fix; recBtn.disabled = !r || !!op || lost; autoBtn.disabled = !r || !!r.job || !!r.auto || lost;
     autoBtn.textContent = r && r.auto ? 'Driving home…' : 'Auto return'; pilot.hidden = !r || lost; viewBox.hidden = !r || lost;
     pilotBtns.concat(goBtn).forEach((b) => { b.disabled = !r || !!r.job || lost; });
@@ -67,9 +75,16 @@ export function mount(body) {
       b.disabled = !!r.job || r.auto || (rovCargo().length >= REMORA_STORE && pickKind(id, site) !== 'magnetic') || (TOOLS[id].needsFloor && pickKind(id, site) !== 'water' && !near);
       b.title = TOOLS[id].needsFloor && pickKind(id, site) !== 'water' && !near ? 'Get within 6 m of the sea floor first.' : '';
     });
-    readout.textContent = `Range ${t.nm.toFixed(2)} of ${rovRange()} nm · bearing ${String(Math.round(t.brg)).padStart(3, '0')}° · heading ${String(Math.round(r.heading)).padStart(3, '0')}° · depth ${Math.round(r.depth)} m` +
-      (fl != null ? ` · floor ${Math.round(fl)} m` : '') + (site ? ` · at ${site.name}` : (() => { const n = s.pois.filter((p) => p.type !== 'dock').map((p) => ({ p, ...toward(r, p) })).sort((a, b) => a.nm - b.nm)[0]; return n ? ` · no site here: nearest is ${n.p.name}, ${n.nm.toFixed(2)} nm, bearing ${String(Math.round(n.brg)).padStart(3, '0')}° (get within 0.15 nm)` : ' · no site here'; })()) +
-      (r.job ? ` · ${TOOLS[r.job.tool].name}: ${Math.max(0, Math.ceil((r.job.end - s.clock) / 60))} min left` : '') + ` · storage ${rovCargo().length} of ${REMORA_STORE}` + (r.go ? ` · driving to ${r.go.name}` : '') + (r.thrSet ? ` · speed ${Math.round(r.thrSet * 100)}% (${(r.thrSet * 2).toFixed(1)} kt)` : '') + (r.hdgTo != null && !r.go ? ` · turning to ${String(Math.round(r.hdgTo)).padStart(3, '0')}°` : '') + (r.depTo != null ? ` · going to ${Math.round(r.depTo)} m` : '') + (r.auto ? ' · driving home' : r.home ? ' · alongside, ready to take aboard' : '');
+    const nearest = site ? null : s.pois.filter((p) => p.type !== 'dock').map((p) => ({ p, ...toward(r, p) })).sort((x, y) => x.nm - y.nm)[0];
+    const alt = fl != null ? fl - r.depth : null, order = r.go ? `TO ${r.go.name.toUpperCase()}` : r.auto ? 'HOME' : r.thrSet ? `${(r.thrSet * 2).toFixed(1)} KT${r.hdgTo != null ? ` · HDG ${String(Math.round(r.hdgTo)).padStart(3, '0')}°` : ''}` : r.hdgTo != null ? `HDG ${String(Math.round(r.hdgTo)).padStart(3, '0')}°` : 'HOLDING';
+    const rows = [
+      site ? field('SITE', site.name.toUpperCase(), 'ok') : field('SITE', nearest ? `NONE · ${nearest.p.name.toUpperCase()} ${nearest.nm.toFixed(2)} nm ${String(Math.round(nearest.brg)).padStart(3, '0')}°` : 'NONE', 'idle'),
+      field('FLOOR', alt == null ? 'NO CHART' : `${Math.round(alt)} m BELOW${near ? ' · TOOLS REACH' : ''}`, near ? 'ok' : 'idle'),
+      sampleSlots(rovCargo(), REMORA_STORE),
+      r.job ? (() => { const tl = TOOLS[r.job.tool], left = Math.max(0, r.job.end - s.clock); return gauge('WORKING', 1 - left / tl.secs, `${tl.name.toUpperCase()} · ${mins(left / 60)}`, 'warn'); })() : null,
+      field('ORDER', order)];
+    const sig2 = JSON.stringify(rows.map((x) => x && x.textContent));
+    if (status._sig !== sig2) { status._sig = sig2; status.replaceChildren(...rows.filter(Boolean)); }
   }
   update();
   return { update, destroy() { cv.destroy(); if (sim.s.rov) sim.s.rov.cmd = { thr: 0, turn: 0, dive: 0 }; } };

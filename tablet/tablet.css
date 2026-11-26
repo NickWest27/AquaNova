@@ -898,3 +898,4 @@ input.mix { width: 100%; height: 2.4rem; accent-color: var(--cyan); }
 .coll { display: flex; align-items: center; gap: 0.4rem; font: 700 0.78rem var(--mono); letter-spacing: 0.05em; } .coll .gz-k { width: 5.6rem; flex: none; }
 .coll .slot { flex: 1; text-align: center; padding: 0.25rem 0; border: 1px solid var(--line); border-radius: 4px; color: var(--dim); background: #02101a; } .coll .slot.full { color: #04101f; background: var(--cyan); border-color: var(--cyan); }
 .coll-job { margin-left: 0.4rem; color: var(--amber); white-space: nowrap; }
+.rem-card { display: flex; flex-direction: column; gap: 0.55rem; } .rem-g { display: flex; flex-direction: column; gap: 0.45rem; } .rem-card .craft-hd b { letter-spacing: 0.1em; color: var(--cyan); }   /* Remora page instruments */

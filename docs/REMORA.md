@@ -1,5 +1,7 @@
 # Remora: the unmanned sample collector
 
+> **Page as instruments (2026-11-26, owner):** no sentences. Status card: REMORA with a state lamp (OUT, ALONGSIDE, DRIVING HOME, LAUNCHING, RECOVERING, RE-EQUIP, ABOARD, LOST CONTACT), a TETHER line (or the re-equip line, the bay airlock while she launches or comes in, the tether repair line), and the buttons. Pilot card: the buttons, then SITE (the site, or the nearest with range and bearing), FLOOR (metres below her; TOOLS REACH within 6 m), SAMPLES (three slots), WORKING (the tool and minutes left) and ORDER. Bearing, range, depth and speed are in the standard readouts over her view. Shared helpers: `tablet/js/instruments.js`.
+
 Built 2026-11-20 on the owner's description: **a small unmanned remote deep sea sample collector. It drills and collects samples that it returns to the lab to be analysed.** This doc supersedes the Remora parts of `SCIENCE_LAB.md` and `LAUNCH_BAY_AND_SHUTTLE.md` where they differ. Code: `tablet/js/rov.js` (the craft, controls, tether bar), `stations/remora.js` (the page), `bayops.js` (launch, recovery, unload, re-equip), `away.js` (the crew's dive), `science.js` (tools). Tests: `tools/remora_test.py`, `tools/science_test.py`, `tools/survey_test.py`, `tools/bay_test.py`.
 
 ## What she carries (owner, 2026-11-20)
