@@ -58,5 +58,12 @@ a system works only when its chain is complete, and all start on/open, so an unt
 ## Crew have the con
 The XO runs damage control: closes a flooding compartment, sends a team to seal the leak, discharges by hand if suppression is off, and sends free teams to the worst-hurt systems (`damageControl` in `away.js`).
 
+## The Engineering room is alive (2026-11-26)
+The room picture shows the state of the ship (`updateEng()` in `scene.js`, styles "Engineering room" in `tablet.css`):
+- **Power cores:** cyan pulse = fusion drive online; steady amber = standby; flickering red = fault (switched on but not working, e.g. no coolant).
+- **Console screens** (warped onto the console with `slanted`): main = FUSION, BATTERY, FIRE, FLOOD, TEAMS; left = relays A to D (lit = closed); right = NORMAL or ALARM.
+- **Alarm:** during a fire or flooding the room edges pulse red and a lamp flashes over the hatch.
+Inspiration note: the owner's brief (hydro-jets, quantum fusion drive) echoes 90s TV subs, e.g. SeaQuest DSV (twin fusion reactors, water-jet propulsion, fuel from seawater per fan wikis). Ours stays original.
+
 ## Saving
 `navigation.eng` (the whole engineering state).

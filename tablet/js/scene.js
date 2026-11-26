@@ -2,6 +2,7 @@
 import { sim, toward, gameDateText } from './sim.js';
 import { el } from './util.js';
 import { artImg } from './art.js';
+import * as E from './engineering.js';
 import { createBridgeConsole } from './bridge.js';
 import { samples, sampleName, jobs, points, research, LABS, SAMPLE_KINDS } from './science.js';
 import { rovRange } from './rov.js';
@@ -163,7 +164,16 @@ export function createScene(stage, { onOpen }) {
   // engineering (the owner's picture, 1024x765; art px x 1.875 across, x 1.88 down): the console and the power cores open Systems,
   // the octagonal hatch goes back to walkway AN-1, the workbench is locked for now
   const eng = el('div', { class: 'scene engineering', hidden: true });
-  eng.append(artImg('engineering'),
+  // living room (2026-11-26): the power cores glow by the fusion drive's state, the console's three screens show live status, and fire or
+  // flooding pulses the room red. Corners measured from the picture (art px x 1.875 across, x 1.88 down).
+  const coreL = el('div', { class: 'core', style: 'left:1100px;top:521px;width:125px;height:188px' }), coreR = el('div', { class: 'core', style: 'left:1363px;top:521px;width:125px;height:188px' });
+  const scrMain = el('div', { class: 'escr main' }), scrL = el('div', { class: 'escr side' }), scrR = el('div', { class: 'escr side' });
+  const alarmV = el('div', { class: 'eng-alarm', hidden: true }), doorLamp = el('div', { class: 'door-lamp', hidden: true, style: 'left:597px;top:458px;width:116px;height:20px' });
+  eng.append(artImg('engineering'), coreL, coreR,
+    slanted('', scrMain, 340, 170, [[473, 877], [803, 858], [829, 997], [478, 1045]]),
+    slanted('', scrL, 90, 170, [[362, 890], [444, 885], [465, 1050], [398, 1067]]),
+    slanted('', scrR, 70, 150, [[829, 843], [887, 841], [919, 988], [849, 994]]),
+    doorLamp, alarmV,
     hs('ENGINEERING CONSOLE', 262, 828, 760, 600, () => onOpen('eng'), 'top'),
     hs('POWER CORES', 1022, 301, 553, 420, () => onOpen('eng'), 'mid'),
     hs('WORKBENCH', 1031, 725, 581, 273, () => onOpen('eng-bench'), 'mid', 'locked'),
@@ -199,6 +209,17 @@ export function createScene(stage, { onOpen }) {
     // ROV Station
     put('remora', `<h4>ROV STATION</h4>${row('Remora', rovTxt)}${r ? row('Tether', tether + '%') : ''}${row('Storage', `${held} of 3`)}`);
   }
+  function updateEng() {
+    const e = E.eng(), s = sim.s, st = E.fusionOk() ? 'on' : e.on.fusion ? 'fault' : 'standby', flood = e.leak.fwd || e.leak.aft || e.flood.fwd > 0 || e.flood.aft > 0, alarm = !!e.fire || flood;
+    const key = [st, Math.round(s.battery), !!e.fire, flood, e.repairs.length, ...Object.values(e.relays)].join();
+    if (cache.get('eng') === key) return; cache.set('eng', key);
+    coreL.className = coreR.className = 'core ' + st;
+    const row = (k, v, cls = '') => `<div class="${cls}"><span>${k}</span><b>${v}</b></div>`;
+    scrMain.innerHTML = `<h5>ENGINEERING</h5>${row('FUSION', st === 'on' ? 'ONLINE' : st === 'fault' ? 'FAULT' : 'STANDBY', st === 'on' ? 'ok' : 'bad')}${row('BATTERY', Math.round(s.battery) + '%', s.battery < 20 ? 'bad' : '')}${row('FIRE', e.fire ? 'FIRE ' + ({ fwd: 'FWD', mid: 'MID', aft: 'AFT' })[e.fire.comp] : 'CLEAR', e.fire ? 'bad' : 'ok')}${row('FLOOD', flood ? 'FLOODING' : 'DRY', flood ? 'bad' : 'ok')}${row('TEAMS', `${E.TEAMS - e.repairs.length}/${E.TEAMS} FREE`)}`;
+    scrL.innerHTML = `<h5>RELAYS</h5>${Object.entries(e.relays).map(([r, on]) => `<i class="${on ? 'ok' : 'bad'}">${r}</i>`).join('')}`;
+    scrR.innerHTML = alarm ? '<b class="blink">ALARM</b>' : '<b class="ok">NORMAL</b>';
+    alarmV.hidden = doorLamp.hidden = !alarm;
+  }
   const api = {
     inQuarters: false, where: 'bridge',
     show(which) {
@@ -215,6 +236,7 @@ export function createScene(stage, { onOpen }) {
         return;
       }
       if (api.where === 'science') { updateScience(); return; }
+      if (api.where === 'engineering') { updateEng(); return; }
       if (api.where !== 'bridge') return;
       const s = sim.s;
       consoleApi.update(); updateStations();
