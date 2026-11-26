@@ -63,8 +63,8 @@ def main():
         check("a safe heading exists from the dock", r and r["clearNm"] >= 1, r)
         page.evaluate("document.querySelector('#pin').click()"); page.wait_for_timeout(600)
         page.locator(".comm-who", has_text="ARIA").first.tap(); page.wait_for_timeout(300)
-        if page.locator(".comm-line", has_text="Give an order").count() == 0: page.locator(".comm-line", has_text=re.compile("One more thing|I need something")).first.tap(); page.wait_for_timeout(300)
-        page.locator(".comm-line", has_text="Give an order").first.tap(); page.wait_for_timeout(300)
+        if page.locator(".comm-line", has_text="Orders").count() == 0: page.locator(".comm-line", has_text=re.compile("Something eling|I need something")).first.tap(); page.wait_for_timeout(300)
+        page.locator(".comm-line", has_text="Orders").first.tap(); page.wait_for_timeout(300)
         page.locator(".comm-line", has_text="take her to sea").first.tap(); page.wait_for_timeout(5500)
         r = js("const s=sim.s; return {docked:s.docked, thr:s.throttle, td:s.targetDepth, hdg:s.targetHeading}")
         check("take her to sea: undocked, surface, slow", r["docked"] is False and r["thr"] <= 0.35 and r["td"] == 0, r)
@@ -75,8 +75,8 @@ def main():
         page.locator(".comm-line", has_text="Someone else").first.tap(); page.wait_for_timeout(300)
         page.locator(".comm-who").filter(has_text="Marcus").first.tap() if page.locator(".comm-who", has_text="Marcus").count() else None
         page.wait_for_timeout(300)
-        if page.locator(".comm-line", has_text="Give an order").count() == 0: page.locator(".comm-line", has_text=re.compile("One more thing|I need something")).first.tap(); page.wait_for_timeout(300)   # first meeting intro
-        page.locator(".comm-line", has_text="Give an order").first.tap(); page.wait_for_timeout(300)
+        if page.locator(".comm-line", has_text="Orders").count() == 0: page.locator(".comm-line", has_text=re.compile("Something eling|I need something")).first.tap(); page.wait_for_timeout(300)   # first meeting intro
+        page.locator(".comm-line", has_text="Orders").first.tap(); page.wait_for_timeout(300)
         page.locator(".comm-line", has_text="Make your depth").first.tap(); page.wait_for_timeout(300)
         page.locator(".comm-line", has_text="1000 m").first.tap(); page.wait_for_timeout(400)
         td = js("return sim.s.targetDepth")

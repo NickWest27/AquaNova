@@ -29,3 +29,10 @@ Addendum to `TIME_CRUISE_AND_START.md`. Newer than the other docs where they dif
 
 ## Test fixes made on the way
 - `seafloor_test.py` pins 30x time and switches terrain protection off; `console_test.py` accepts any game year; `trials_flow.py` waits for the report upload.
+
+## The communicator menu, tidied (owner, 2026-11-27)
+- Reaching a crew member is meeting them: their introduction completes First Contact (no small talk needed).
+- Top menu for each crew member: **Ask about …** (topics and "Buttons on my pages"), **Orders …** (folders from `TREE` in `stations/crew.js`, each order shown only when it makes sense), **EMERGENCY** (from `EMERGENCY`, only real actions: ARIA the general alarm; Marcus all stop, all ahead flank, emergency dive; Ryan emergency blow, discharge fire suppression, close the bulkheads), then **Someone else** and **That's all**.
+- Gone: small talk, every placeholder order (security sweep, boarding party, reactor scram, medical alert and the like), the "Other orders" and "Not available yet" folders, duplicates and typos. The menu comes from the code only, so old saves (which keep their own copy of the crew's lines) get the tidy menu too.
+- Renamed: Report to my quarters is now Take me to my quarters; Passive listening mode is Go passive (with Go active); Run crew diagnostics is Crew health report; Ryan's Emergency surface is now a real Emergency blow (uses the air bank). Prepare for dive (Ryan) is gone: depth is Marcus's job.
+- Wording: each crew member greets you when the line opens (GREET); "Back", "Something else", "Someone else", "That's all", "Not yet" replace the longer lines.

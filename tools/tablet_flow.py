@@ -53,7 +53,7 @@ def main():
         check("pin opens crew comms", page.is_visible("#comm-pop .comm-page"))
         o = objs(); check("learn_communicator completed", "learn_communicator:completed" in o, o)
         page.wait_for_timeout(4000); page.screenshot(path=f"{SHOTS}/f-3comms.png")
-        page.tap(".comm-who >> text=ARIA"); page.wait_for_timeout(300); page.tap(".comm-line >> text=/One more thing|I need something/"); page.wait_for_timeout(300); page.tap(".comm-line >> text=Make small talk"); page.wait_for_timeout(300); page.tap(".comm-line >> text=Hello"); page.wait_for_timeout(500)
+        page.tap(".comm-who >> text=ARIA"); page.wait_for_timeout(800)   # reaching ARIA is meeting her: her introduction completes First Contact (no small talk)
         done = js("const g=(await import('./js/persist.js')).gameState;return g.getProperty('mission.completedIds')")
         check("First Contact completed", done and "meetTheCrew" in done, done)
         known = js("const g=(await import('./js/persist.js')).gameState;return g.getProperty('contacts.crew.science.known')")

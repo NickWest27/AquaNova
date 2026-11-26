@@ -45,12 +45,12 @@ def main():
         line("The Comms pages"); tap(); line("Contacts page"); tap()
         txt = page.inner_text(".comm-reply")
         check("the page guide gives numbered steps for the real buttons", "1. Open the Comms station." in txt and "Hail" in txt and "Scan band" in txt, txt[:200])
-        line("One more thing"); tap(); line("Ask about"); tap(); line("Comms tasks"); tap(); line("Send a report"); tap()
+        line("Something else"); tap(); line("Ask about"); tap(); line("Comms tasks"); tap(); line("Send a report"); tap()
         check("task guide: send a report", "Transmit report" in page.inner_text(".comm-reply"))
         # --- relevant orders only ---
         page.locator(".comm-line", has_text="Someone else").first.tap(); tap(); page.locator(".comm-who", has_text="Marcus").first.tap(); tap()
         if page.locator(".comm-reply", has_text="Marcus Chen").count(): line("I need something"); tap()
-        line("Give an order"); tap()
+        line("Orders"); tap()
         folders = [t.strip() for t in page.locator(".comm-line").all_inner_texts()]
         check("helm order folders are grouped", any(t.startswith("Depth") for t in folders) and any(t.startswith("Speed") for t in folders) and any(t.startswith("Heading") for t in folders), folders)
         check("Docking is not offered when we are at sea and not at a dock", not any(t.startswith("Docking") for t in folders), folders)

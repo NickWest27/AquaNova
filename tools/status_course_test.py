@@ -36,7 +36,7 @@ def main():
             if not page.locator(".comm-who").count() and page.locator(".comm-line", has_text="Someone else").count(): page.locator(".comm-line", has_text="Someone else").first.tap(); tap()
             page.locator(".comm-who", has_text=who).first.tap(timeout=5000); tap()
             if page.locator(".comm-line", has_text="I need something").count(): page.locator(".comm-line", has_text="I need something").first.tap(); tap()
-            page.locator(".comm-line", has_text="Give an order").first.tap(); tap()
+            page.locator(".comm-line", has_text="Orders").first.tap(); tap()
             page.locator(".comm-line", has_text=label).first.tap(); tap()
             t = page.locator(".comm-reply").first.inner_text()
             page.evaluate("document.querySelector('.comm-line:last-child') && 0")

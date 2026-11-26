@@ -19,6 +19,7 @@ import { orderTern, callBackTern, ternReport, launchTern, destinations } from '.
 import { TERN_SAFE_M, BAY_SAFE_KT, shuttle, bayDoorsOpen, setBayOverride, launchAllWskrs, bay as bayState } from '../bayops.js';
 import { toggleDock } from '../dock.js';
 import { alarmOn, soundAlarm, secureAlarm } from '../engineering.js';
+import * as E from '../engineering.js';
 import { say as crewSay, takeHeld, unreadFor, unreadCount, transcript, logLine, setOpenCrew } from '../notify.js';
 
 // First meeting with each crew member. Spoken once, saved in progress.met.<id>. {captain} = "Captain Surname".
@@ -33,6 +34,7 @@ const INTRO = {
 };
 
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
+const GREET = { executiveOfficer: 'Yes, Captain?', helm: 'Helm here, Captain.', sensors: 'Sensors, Captain.', engineering: 'Engineering. What do you need?', science: 'Patel here, Captain.', communications: 'Comms, Captain. Go ahead.', security: 'Kim here, Captain.' };   // when the line opens
 
 export const knownCrew = () => Object.values(gameState.getProperty('contacts.crew') || {})
   .filter((c) => c && c.id !== 'captain' && (c.known || unreadFor(c.id) > 0) && c.name);   // someone who has called in is reachable
@@ -74,22 +76,21 @@ const ORDERS = {
     return go();
   },
   'Make periscope depth': () => (docked() ? 'We are docked, Captain.' : dive(PERISCOPE_M, 'Periscope depth, aye.')),
-  'Prepare for dive': () => { if (docked()) return 'We are still docked, Captain.'; return dive(100, 'Making ready.'); },
   "Let's go home": () => {
     const dock = sim.dockPoi(); if (!dock) return 'No dock on the charts.';
     if (docked()) return 'We are already at the dock, Captain.';
     sim.setWpt(dock); sim.setDepth(0); sim.setThrottle(0.5); return `Course set for ${dock.name}. ${toward(sim.s, dock).nm.toFixed(1)} nautical miles.`;
   },
   'XO has the con': (ctx) => { setTimeout(() => ctx.openScene('sleepAway'), 400); return 'Aye, Captain. I have the con. Choose how long I keep it.'; },
-  'Report to my quarters': (ctx) => { setTimeout(() => ctx.openScene('quarters'), 500); return 'Acknowledged. Meet you there.'; },
-  'Sound General Alarm': () => { toast('GENERAL ALARM', 'error'); return 'General alarm sounded. All hands to stations.'; },
+  'Take me to my quarters': (ctx) => { setTimeout(() => ctx.openScene('quarters'), 500); return 'Of course, Captain. I will keep the watch.'; },
   'All stop': () => { sim.stop(); return 'All stop, aye.'; },
-  'All stop!': () => { sim.stop(); return 'All stop, aye.'; },
   'All ahead flank': () => { if (docked()) return 'We are docked, Captain.'; sim.setThrottle(1); return 'All ahead flank!'; },
   'Sound General Alarm': () => (soundAlarm('captain').ok ? 'Sounding the general alarm. All hands to emergency stations! Damage control teams are closing up, Captain.' : 'The general alarm is already sounding, Captain.'),
   'Secure from General Alarm': () => { const r = secureAlarm(); return r.ok ? 'Securing from general alarm. Normal lighting is back and the crew are standing down, Captain.' : r.why === 'casualty' ? 'Not yet, Captain. We still have fire or flooding aboard.' : 'There is no alarm sounding, Captain.'; },
-  'Emergency surface': () => { sim.setDepth(0); return 'Blowing ballast. Surfacing!'; },
-  'Emergency surfaace': () => { sim.setDepth(0); return 'Blowing ballast. Surfacing!'; },
+  'Emergency blow': () => { const r = E.blow(); return r.ok ? 'Emergency blow! Air into every tank. We are going up fast, Captain.' : { air: 'Not enough air in the bank for an emergency blow, Captain. It recharges near the surface.', offline: 'The ballast system is down, Captain. I cannot blow.', valve: 'The air bank valve is shut, Captain. Open it on the engineering computer.', surfaced: 'We are already on the surface, Captain.' }[r.why] || 'I cannot blow the tanks right now, Captain.'; },
+  'Discharge fire suppression': () => { const r = E.discharge(); return r.ok ? 'Suppression discharged. The fire is out, Captain.' : { nofire: 'There is no fire, Captain.', agent: 'We are out of suppression agent, Captain.', offline: 'Fire suppression is down, Captain.', valve: 'The suppression main valve is shut, Captain.' }[r.why] || 'I cannot discharge right now, Captain.'; },
+  'Close the bulkheads': () => { E.setBulkhead('fwd', false); E.setBulkhead('aft', false); return 'Bulkheads closed fore and aft, Captain. Any flooding is contained.'; },
+  'Open the bulkheads': () => { E.setBulkhead('fwd', true); E.setBulkhead('aft', true); return 'Bulkheads open, Captain.'; },
   'Emergency dive': () => { if (docked()) return 'We are docked, Captain.'; return dive(500, 'Diving!'); },
   'Full sensor sweep': () => { setSource('ship'); return startSweep() ? 'Full sweep, Captain. It takes about forty seconds to go round; contacts come up as the beam passes them.' : 'Sonar cannot sweep right now, Captain.'; },
   'Launch all WSKRs': () => {
@@ -111,14 +112,15 @@ const ORDERS = {
   'Stand down the relay': () => { const r = sim.standDownRelay(); return r.ok ? `${wskrName(r.wskr)} is rejoining the formation.` : 'There is no relay up, Captain.'; },
   'Transmit a report': () => {
     const r = startReport();
-    if (r.ok) return `Sending it on ${r.L.label}, Captain. About ${Math.ceil(r.eta)} seconds to upload, then we wait for O.E.R.A. to answer. The progress bar is on your screen.`;
+    if (r.ok) return `Sending it on ${r.L.label}, Captain. About ${Math.ceil(r.eta)} seconds to upload. The progress bar is on the Comms screen.`;
     if (r.why === 'busy') return 'A transmission is already under way, Captain.';
     return `No ${r.L.label} link, Captain: ${r.st.status.toLowerCase()}. The antenna must be near the surface. Raise it, or pick another source on the Comms controls.`;
   },
-  'Passive listening mode': () => { sim.s.sonar = false; sim.touch(); return 'Sonar secured. Listening passively.'; },
+  'Go passive': () => { sim.s.sonar = false; sim.touch(); return 'Active sonar off, Captain. We are listening only.'; },
+  'Go active': () => { sim.s.sonar = true; sim.touch(); return 'Active sonar on, Captain.'; },
   'Override the bay speed limit': () => (setBayOverride(true) ? 'Aye, Captain. The bay speed limit is overridden until the doors close.' : 'The outer doors are closed, Captain. No limit to override.'),
   'Restore the bay speed limit': () => (setBayOverride(false) ? 'Bay speed limit restored, Captain.' : 'The outer doors are closed, Captain.'),
-  'Run crew diagnostics': () => 'Crew diagnostics complete. Everyone aboard is healthy, Captain.',
+  'Crew health report': () => 'Everyone aboard is fit for duty, Captain. No one has reported sick.',
   'Request departure clearance': () => (docked() ? 'Woods Hole Harbor Control: you are cleared to depart at your discretion. Safe travels.' : 'Harbor Control: you are already underway, Captain.'),
 };
 // Orders that need a number. Each option runs when picked.
@@ -152,7 +154,7 @@ const works = (t, pleasantry) => pleasantry || t in ORDERS || t in PARAM;
 
 // ---------- The orders menu ----------
 // Orders sit in folders by what they do, and an order is only offered when it makes sense now: Dock or Undock, never both; Hug the floor or Stop hugging it.
-// F(folder label, ...items). O(order text, show). An order that is not listed here still appears, in "Other orders", so nothing is lost.
+// F(folder label, ...items). O(order text, show). Only orders listed here are offered (the old placeholder lines in saves are ignored).
 const F = (label, ...items) => ({ label, items });
 const O = (text, show = () => true) => ({ text, show });
 const relayOut = () => sim.s.wskrs.some((w) => w.mode === 'relay' && !w.dead);
@@ -161,7 +163,7 @@ const atDock = () => !!(sim.s.at && sim.s.at.type === 'dock');
 const underway = () => !sim.s.docked;
 const TREE = {
   executiveOfficer: () => [
-    F('Ship', O('Status Report'), O('Report to my quarters'), O('XO has the con')),
+    F('Ship', O('Status Report'), O('XO has the con'), O('Take me to my quarters')),
     F('Getting underway', O("Let's take her to sea", () => docked()), O("Let's go home", () => underway() && !!sim.dockPoi() && !atDock())),
   ],
   helm: () => [
@@ -173,12 +175,12 @@ const TREE = {
     F('Ship', O('Status report')),
   ],
   sensors: () => [
-    F('Sonar', O('Full sensor sweep', underway), O('Passive listening mode', () => !!sim.s.sonar)),
+    F('Sonar', O('Full sensor sweep', underway), O('Go passive', () => !!sim.s.sonar), O('Go active', () => !sim.s.sonar)),
     F('WSKRs', O('Launch all WSKRs', underway), O('Recall all WSKRs', () => sim.s.wskrs.length > 0), O('Set up a relay', () => underway() && !relayOut()), O('Stand down the relay', relayOut)),
     F('Ship', O('Status report')),
   ],
-  engineering: () => [F('Ship', O('Engineering status report'), O('Prepare for dive', underway), O('Emergency surface', () => underway() && sim.s.depth > 1))],
-  science: () => [F('Ship', O('Status report'), O('Run crew diagnostics'))],
+  engineering: () => [F('Ship', O('Engineering status report'), O('Open the bulkheads', () => { const b = E.eng().bulk; return !b.fwd || !b.aft; }))],
+  science: () => [F('Ship', O('Status report'), O('Crew health report'))],
   communications: () => [
     F('Reports', O('Transmit a report')),
     F('The Tern', O('Order the Tern to', ternOut), O('Call back the Tern', ternOut), O('Report on the Tern', ternOut)),
@@ -187,27 +189,25 @@ const TREE = {
   security: () => [F('The Tern', O('Launch the Tern to', () => !ternOut() && underway())), F('Ship', O('Status report'))],
 };
 
+// EMERGENCY: only orders that do something now, per crew member (owner, 2026-11-27). A crew member with none has no EMERGENCY folder.
+const EMERGENCY = {
+  executiveOfficer: () => [alarmOn() ? 'Secure from General Alarm' : 'Sound General Alarm'],
+  helm: () => (underway() ? ['All stop', 'All ahead flank', 'Emergency dive'] : []),
+  engineering: () => { const e = E.eng(); return [...(underway() && sim.s.depth > 1 ? ['Emergency blow'] : []), ...(e.fire ? ['Discharge fire suppression'] : []), ...(e.bulk.fwd || e.bulk.aft ? ['Close the bulkheads'] : [])]; },
+};
+
 export function mount(body, ctx, opts = {}) {
   body.classList.add('comm-menu');
   const crew = knownCrew();
   let page = 'crew', cur = null, cat = null, reply = null, greeted = false, param = null;
-  const mineP = () => gameState.getProperty('contacts.crew.captain.dialogueOptions.pleasantries') || ['Hello', 'Goodbye', 'Thank you'];
   // The menu is a tree of folders. A folder is { folder: true, label, title, kids }, a leaf is { label, run, cls }.
-  const orderLeaf = (t) => ({ label: t, cls: works(t) ? '' : 'stub', run: () => speak(t) });
-  const orderKids = () => {
-    const o = (cur && cur.dialogueOptions) || {}, id = cur && cur.id;
-    const all = o.commands || [];
-    const placed = new Set(), kids = [];
+  const orderLeaf = (t) => ({ label: t, run: () => speak(t) });
+  const orderKids = () => {   // the folders in TREE, each order shown only when it makes sense now
+    const id = cur && cur.id, kids = [];
     for (const f of (TREE[id] ? TREE[id]() : [])) {
-      const items = f.items.filter((i) => all.includes(i.text) || i.text in ORDERS || i.text in PARAM);
-      items.forEach((i) => placed.add(i.text));
-      const shown = items.filter((i) => i.show());
-      if (shown.length) kids.push({ folder: true, label: f.label, title: `${f.label} …`, kids: shown.map((i) => orderLeaf(i.text)) });
+      const shown = f.items.filter((i) => (i.text in ORDERS || i.text in PARAM) && i.show());
+      if (shown.length) kids.push({ folder: true, label: f.label, title: f.label, kids: shown.map((i) => orderLeaf(i.text)) });
     }
-    const rest = all.filter((t) => !placed.has(t) && (!(t in ORDERS || t in PARAM) || !TREE[id]));
-    const live = [...new Set(rest)].filter((t) => works(t)), stubs = [...new Set(rest)].filter((t) => !works(t));
-    if (live.length) kids.push({ folder: true, label: 'Other orders', title: 'Other orders …', kids: live.map(orderLeaf) });
-    if (stubs.length) kids.push({ folder: true, label: 'Not available yet', title: 'Not available yet …', kids: stubs.map(orderLeaf) });
     return kids;
   };
   const askKids = () => {
@@ -218,12 +218,10 @@ export function mount(body, ctx, opts = {}) {
     return kids;
   };
   const cats = () => {
-    const o = (cur && cur.dialogueOptions) || {};
     const top = [];
-    const pl = mineP(); if (pl.length) top.push({ folder: true, label: 'Make small talk', title: `Say to ${first(cur)}…`, kids: pl.map((t) => ({ label: t, run: () => speak(t) })) });
-    const ak = askKids(); if (ak.length) top.push({ folder: true, label: 'Ask about …', title: `Ask ${first(cur)} about…`, kids: ak });
-    const ok = orderKids(); if (ok.length) top.push({ folder: true, label: 'Give an order', title: `Order to ${first(cur)}…`, kids: ok });
-    let em = (o.emergency || []); if (cur.id === 'executiveOfficer') em = [alarmOn() ? 'Secure from General Alarm' : 'Sound General Alarm', ...em.filter((t) => !/general alarm/i.test(t))]; if (em.length) top.push({ folder: true, label: 'EMERGENCY', cls: 'danger', title: `Tell ${first(cur)}…`, kids: em.map((t) => ({ label: t, cls: works(t) ? '' : 'stub', run: () => speak(t) })) });
+    const ak = askKids(); if (ak.length) top.push({ folder: true, label: 'Ask about …', title: `Ask ${first(cur)} about`, kids: ak });
+    const ok = orderKids(); if (ok.length) top.push({ folder: true, label: 'Orders …', title: `Orders for ${first(cur)}`, kids: ok });
+    const em = EMERGENCY[cur.id] ? EMERGENCY[cur.id]() : []; if (em.length) top.push({ folder: true, label: 'EMERGENCY', cls: 'danger', title: 'EMERGENCY', kids: em.map((t) => ({ label: t, cls: 'danger', run: () => speak(t) })) });
     return top;
   };
   let trail = [];   // labels of the folders open now, outermost first. Looked up again on every draw, so the menu follows the ship's state.
@@ -237,17 +235,14 @@ export function mount(body, ctx, opts = {}) {
     if (done) logLine(cur.id, 'crew', done);
     reply = { said: text, text: done };
     page = 'reply';
-    if (cur.id === 'executiveOfficer') document.dispatchEvent(new CustomEvent('dialogue-complete', { detail: { characterId: cur.id, dialogueId: 'first_contact' } }));
     render();
   }
   function speak(text) {
     const o = cur.dialogueOptions || {};
     logLine(cur.id, 'you', text);   // before the order runs, so the running notes it starts land after it
-    const isOrder = works(text) || (o.commands || []).includes(text) || (o.emergency || []).includes(text);
-    if (!isOrder) { say(text, chatReply(cur.id, text, { mail: (gameState.getProperty('mission.inbox') || []).filter((m) => !m.read).length }) || fill(pick(o.pleasantries || ['Aye.'])), false); return; }
     if (PARAM[text]) { const p = PARAM[text](); param = { said: text, ...p }; page = 'param'; render(); return; }
     if (ORDERS[text]) { say(text, ORDERS[text](ctx, cur.id), false); return; }
-    reply = { said: text, text: 'That order is not available yet.', stub: true }; page = 'reply'; render();
+    reply = { said: text, text: 'Say again, Captain?', stub: true }; page = 'reply'; render();
   }
 
   // Earlier lines scroll above; the newest thing the crew member said is always the big reply block below.
@@ -267,6 +262,7 @@ export function mount(body, ctx, opts = {}) {
   /** Open the line to one crew member: their first meeting, a decision, what they were holding back, or the menu. */
   function pick(c) {
     cur = c; cat = null;
+    document.dispatchEvent(new CustomEvent('dialogue-complete', { detail: { characterId: c.id, dialogueId: 'first_contact' } }));   // reaching them is meeting them (tutorial)
     const met = !!gameState.getProperty('progress.met.' + c.id);
     if (c.id === 'executiveOfficer' && pendingDecisions().length) { gameState.updateProperty('progress.met.' + c.id, true); greeted = true; page = 'decision'; render(); return; }   // ARIA is waiting for an answer
     if (INTRO[c.id] && !met) { gameState.updateProperty('progress.met.' + c.id, true); greeted = true; logLine(c.id, 'crew', fill(INTRO[c.id])); reply = { said: null, text: fill(INTRO[c.id]) }; page = 'reply'; render(); return; }   // first meeting comes before anything they were holding back
@@ -279,37 +275,37 @@ export function mount(body, ctx, opts = {}) {
     let kids;
     if (!crew.length) kids = [el('div', { class: 'comm-head', text: 'No one else seems to be available right now…' })];
     else if (page === 'crew') {
-      kids = [el('div', { class: 'comm-head', text: 'Who would you like to reach out to?' }),
+      kids = [el('div', { class: 'comm-head', text: 'Who do you want to reach?' }),
         unreadCount() > 0 && el('div', { class: 'comm-waiting', text: 'You have messages waiting.' }),
         ...crew.map((c) => el('button', { class: 'comm-line comm-who', onclick: () => pick(c) }, el('span', { class: `avatar ${c.id === 'executiveOfficer' ? 'aria' : ''}${portrait(c.id) ? ' face' : ''}` }, portrait(c.id, 'avatar-face') || crewIcon(c.id) || initial(c)), el('span', {}, el('b', { text: c.name }), el('small', { text: c.role })), unreadFor(c.id) > 0 && el('span', { class: 'comm-badge', text: String(unreadFor(c.id)) })))];
     } else if (page === 'cat') {
-      kids = [logView(5), withFace(el('div', {}, el('div', { class: 'comm-head', text: `What is on your mind, Captain?` }), el('div', { class: 'comm-who-label', text: `${cur.name} · ${cur.role}` }))),
+      kids = [logView(5), withFace(el('div', {}, el('div', { class: 'comm-head', text: GREET[cur.id] || 'Yes, Captain?' }), el('div', { class: 'comm-who-label', text: `${cur.name} · ${cur.role}` }))),
         ...cats().map((f) => line(f.label, () => { trail = [f.label]; page = 'lines'; render(); }, f.cls || '')),
-        line('Actually, let me call someone else …', () => { page = 'crew'; render(); }, 'back')];
+        line('Someone else', () => { page = 'crew'; render(); }, 'back'), line("That's all", () => ctx.closeComm(), 'back')];
     } else if (page === 'lines') {
       const f = openFolder();
       if (!f) { trail = []; page = 'cat'; return render(); }
       kids = [el('div', { class: 'comm-head', text: f.title }),
         ...f.kids.map((k) => k.folder ? line(`${k.label}  ▸`, () => { trail.push(k.label); render(); }, k.cls || '') : line(k.label, k.run, k.cls || '')),
-        line('Belay that …', () => { trail.pop(); if (!trail.length) page = 'cat'; render(); }, 'back')];
+        line('Back', () => { trail.pop(); if (!trail.length) page = 'cat'; render(); }, 'back')];
     } else if (page === 'decision') {
       const d = pendingDecisions()[0];
       if (!d) { page = 'cat'; return render(); }
       kids = [withFace(el('div', { class: 'comm-reply' }, el('small', { text: cur.name }), el('p', { text: fill(d.text) }))),
         ...d.options.map((o) => line(o.label, () => { say(o.label, decide(d.id, o.id)); }, 'decide')),
-        line('Give me a moment …', () => { page = 'crew'; render(); }, 'back')];
+        line('Not yet', () => { page = 'crew'; render(); }, 'back')];
     } else if (page === 'param') {
       kids = [el('div', { class: 'comm-head', text: param.title }),
         el('div', { class: 'comm-chips' }, ...param.opts.map(([l, fn, custom]) => line(l, () => { if (custom) return custom((text) => say(`${param.said}: ${l.replace(/ …$/, '').replace(/^Custom /, '')}`, text)); const r = fn(ctx); if (r && typeof r === 'object') { param = { said: `${param.said}: ${l.replace(/ …$/, '')}`, ...r }; render(); } else say(`${param.said}: ${l}`, r); }, 'chip'))),
-        line('Belay that …', () => { page = 'lines'; render(); }, 'back')];
+        line('Back', () => { page = 'lines'; render(); }, 'back')];
     } else {
       const T = transcript(cur.id), last = T[T.length - 1], live = !reply.stub && !reply.held && last && last.from === 'crew' ? last.text : null;
       kids = [!reply.stub && logView(8, true),
         reply.said && !live && el('div', { class: 'comm-you', text: `You: ${reply.said}` }),
         withFace(el('div', { class: 'comm-reply' + (reply.stub ? ' stub' : '') }, el('small', { text: cur.name }), el('p', { text: live || reply.text }))),
-        line(reply.said ? `One more thing, ${first(cur)} …` : `I need something, ${first(cur)} …`, () => { page = 'cat'; render(); }, 'back'),
-        line('Someone else …', () => { page = 'crew'; render(); }, 'back'),
-        line("That's all. Out.", () => ctx.closeComm(), 'back')];
+        line(reply.said ? 'Something else' : `${first(cur)}, I need something`, () => { page = 'cat'; render(); }, 'back'),
+        line('Someone else', () => { page = 'crew'; render(); }, 'back'),
+        line("That's all", () => ctx.closeComm(), 'back')];
     }
     if (sceneOn()) {   // the retro dialogue screen: tap a choice, or tap the picture to end the call (app.js closes on a tap outside buttons and text)
       body.closest('#comm-pop')?.classList.add('rd-on');

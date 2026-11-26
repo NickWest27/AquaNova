@@ -61,7 +61,7 @@ def main():
         tap = lambda: page.wait_for_timeout(350)
         who("Nicole"); tap()
         if page.locator(".comm-reply", has_text="Nicole Brooks").count(): page.locator(".comm-line").first.tap(); tap()
-        line("Give an order"); tap()
+        line("Orders"); tap()
         line("The Tern"); tap()   # orders are grouped in folders (Reports, The Tern, Ship) since 2026-11-22
         line("Order the Tern to"); tap(); line("Hold position"); tap()
         check("Nicole passes an order to the Tern from the communicator", js("return sim.s.shuttle.mode") == "station", js("return sim.s.shuttle.mode"))

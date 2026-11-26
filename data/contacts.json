@@ -19,7 +19,7 @@
             "bio": "ARIA (Advanced Research and Interface Assistant) was built by O.E.R.A. on decades of deep-sea mission records, and designed to be a member of the crew, not a tool. She is calm and candid, and allowed to disagree with the Captain, on the record. She does not claim to feel anything, and the engineers who built her stopped arguing the point. She has been aboard longer than anyone, and she was in the room when Captain Voss was relieved. She has not said what she saw.",
             "image": "images/crew/AREA.png",
             "dialogueOptions": {
-                "commands": ["Report to my quarters", "XO has the con", "Status Report", "Let's take her to sea", "Let's go home"],
+                "commands": ["Status Report", "XO has the con", "Take me to my quarters", "Let's take her to sea", "Let's go home"],
                 "emergency": ["Sound General Alarm"],
                 "pleasantries": ["How may I assist you, Captain?", "How may I assist you, Commander?", "What's on your mind?", "All systems are nominal Captain.", "Yes, Captain?", "Yes, Commander?"]
             }
@@ -32,7 +32,7 @@
             "image": "images/crew/Marcus_Chen.png",
             "dialogueOptions": {
                 "commands": ["Make your depth", "Make periscope depth", "Come left", "Come right", "Make your heading", "Make your speed", "Override the bay speed limit", "Restore the bay speed limit"],
-                "emergency": ["All ahead flank", "All stop", "Emergency surfaace", "Emergency dive"],
+                "emergency": ["All stop", "All ahead flank", "Emergency dive"],
                 "pleasantries": ["Say the word Captain", "Smooth sailing, Captain", "Smooth sailing, Sir", "All systems are green Captain.", "Yes, Captain?", "Yes, Commander?"]
             }
         },
@@ -44,8 +44,8 @@
             "bio": "Left a hospital emergency department for a doctorate in marine biology, then kept doing both: ship's doctor on three long expeditions. Captain Voss chose her personally. Dr. Patel treats the sample freezer and the sick bay with equal seriousness, and reads a crew's health the way other people read the weather.",
             "image": "images/crew/sam_patel.png",
             "dialogueOptions": {
-                "commands": ["Report to Medical Bay", "Run crew diagnostics", "Prepare for dive operations"],
-                "emergency": ["Medical emergency alert", "Quarantine protocols"],
+                "commands": ["Status report", "Crew health report"],
+                "emergency": [],
                 "pleasantries": ["How are you feeling today?", "Any medical concerns?", "All crew members are healthy.", "Need anything from Medical?"]
             }
         },
@@ -56,8 +56,8 @@
             "bio": "Spent six years in a Navy submarine's sonar shack, listening to things that were almost always nothing, and learning to recognise the one in a hundred that was not. Quiet, thorough, and fond of the word \"probably\". He prefers to be certain before he reports a contact, which is a habit the Captain may want to discuss.",
             "image": "images/crew/alex_torres.png",
             "dialogueOptions": {
-                "commands": ["Full sensor sweep", "Passive listening mode"],
-                "emergency": ["Contact bearing unknown", "Sensor malfunction"],
+                "commands": ["Full sensor sweep", "Go passive", "Go active", "Launch all WSKRs", "Recall all WSKRs"],
+                "emergency": [],
                 "pleasantries": ["Sensors are clear", "What should I be looking for?", "Picking up some interesting readings", "All quiet on the scope"]
             }
         },
@@ -68,8 +68,8 @@
             "bio": "Came up through merchant ship engine rooms, then joined the team that commissioned the compact fusion plant at Woods Hole, and knows the Aqua Nova's plant better than its designers do. He fixes things with parts nobody planned to use. He shares a surname with the helmsman and no family, and both are tired of the question.",
             "image": "images/crew/riley_chen.png",
             "dialogueOptions": {
-                "commands": ["Engineering status report", "Prepare for dive", "Emergency surface"],
-                "emergency": ["Hull breach!", "Reactor scram!", "All stop!"],
+                "commands": ["Engineering status report", "Open the bulkheads"],
+                "emergency": ["Emergency blow", "Discharge fire suppression", "Close the bulkheads"],
                 "pleasantries": ["Engine room ready", "Systems nominal", "Just finished maintenance", "How's she handling?"]
             }
         },
@@ -80,8 +80,8 @@
             "bio": "Served in a Navy special warfare unit, then maritime boarding teams. Captain Voss insisted on him over the objections of O.E.R.A.'s science side, who did not want a weapons man on a research ship. Daniel's view is that a ship that goes deeper than anyone will eventually meet something it cannot talk to. Brief, courteous, and always watching the door.",
             "image": "images/crew/jordan_kim.png",
             "dialogueOptions": {
-                "commands": ["Security sweep", "Arm defensive systems", "Prepare boarding party"],
-                "emergency": ["Intruder alert", "Battle stations", "Lockdown procedures"],
+                "commands": ["Status report", "Launch the Tern to"],
+                "emergency": [],
                 "pleasantries": ["All secure", "No threats detected", "Standing ready", "Perimeter is clear"]
             }
         },
@@ -92,8 +92,8 @@
             "bio": "Trained as a signals officer, then spent four years running communications for a polar research station where the only link home was a satellite window twice a day. She knows exactly how much a delayed message can matter, and she is the first aboard to hear anything that comes in on the old frequencies.",
             "image": "images/crew/nicole_brooks.png",
             "dialogueOptions": {
-                "commands": ["Open channel", "Send message", "Monitor frequencies"],
-                "emergency": ["Mayday signal", "Emergency broadcast", "Comms blackout"],
+                "commands": ["Transmit a report", "Order the Tern to", "Call back the Tern", "Report on the Tern", "Status report"],
+                "emergency": [],
                 "pleasantries": ["Comms are clear", "Any messages to send?", "Channel is open", "Signal strength is good"]
             }
         }

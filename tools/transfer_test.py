@@ -29,7 +29,7 @@ def main():
         tap = lambda: page.wait_for_timeout(350)
         page.locator(".comm-who", has_text="Nicole").first.tap(); tap()
         if page.locator(".comm-line", has_text="I need something").count(): page.locator(".comm-line", has_text="I need something").first.tap(); tap()
-        page.locator(".comm-line", has_text="Give an order").first.tap(); tap()
+        page.locator(".comm-line", has_text="Orders").first.tap(); tap()
         check("Nicole has a Transmit a report order", page.locator(".comm-line", has_text="Transmit a report").count() == 1)
         page.locator(".comm-line", has_text="Transmit a report").first.tap(); tap()
         txt = page.locator(".comm-reply").first.inner_text()
