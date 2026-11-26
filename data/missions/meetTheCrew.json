@@ -135,7 +135,7 @@
         "objectiveId": "find_communicator",
         "seconds": 30
       },
-      "message": "{captain}, your quarters are off the main walkway. Your communicator pin is on the desk, and your PED is on the bed."
+      "message": "{captain}, your quarters are forward: out of the Launch Bay, along walkway AN-1 to A1, then the door on the right. Your communicator pin is on the desk, and your PED is on the bed."
     },
     {
       "condition": {

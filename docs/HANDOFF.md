@@ -4,20 +4,20 @@ Last updated: 2026-11-26. Branch to work on: `tablet`. Repo: NickWest27/AquaNova
 
 ## Owner's testing list (2026-11-26): WORK IN PROGRESS, tick items off here
 Rooms and signs
-- [ ] 1. New game starts in the launch bay; PED and pin stay in the quarters.
-- [ ] 2. Signs: Engineering door on walkway AN-1; the airlock.
-- [ ] 3. Small screen right of the airlock door: a bar that fills/empties with the pressure differential.
-- [ ] 4. Launch bay: the walkway tap area is over a window; the door is right of the fire extinguisher.
-- [ ] 5. Launch bay console shows blank: fix.
-- [ ] 6. AN-1: the walkway A1 tap area is too small; match the other walkway tap areas.
+- [x] 1. New game starts in the launch bay; PED and pin stay in the quarters.
+- [x] 2. Signs: Engineering door on walkway AN-1; the airlock.
+- [x] 3. Small screen right of the airlock door: a bar that fills/empties with the pressure differential.
+- [x] 4. Launch bay: the walkway tap area is over a window; the door is right of the fire extinguisher.
+- [x] 5. Launch bay console shows blank: fix. (Now a live screen: airlock, Remora, Tern, WSKRs, ship speed.)
+- [x] 6. AN-1: the walkway A1 tap area is too small; match the other walkway tap areas.
 Bridge
-- [ ] 7. Comms and sonar tap areas too big: only over the consoles.
-- [ ] 8. Tap areas on the crew members open their dialogue.
-- [ ] 9. Remove the bridge lower-display NAV page (track-up, sonar-like) from the game entirely; replace with a simpler version of the main-screen nav display (range rings out to the screen). The quarters screen uses the same.
-- [ ] 10. PED icon black fill does not fit its frame in the bridge view.
+- [x] 7. Comms and sonar tap areas too big: only over the consoles.
+- [x] 8. Tap areas on the crew members open their dialogue.
+- [x] 9. Remove the bridge lower-display NAV page (track-up, sonar-like) from the game entirely; replace with a simpler version of the main-screen nav display (range rings out to the screen). The quarters screen uses the same.
+- [x] 10. PED icon black fill does not fit its frame in the bridge view.
 Crew and messages
-- [ ] 11. A crew member who speaks opens their dialogue automatically (above station pages, below the PED). Remove the message line along the bottom.
-- [ ] 12. Communicator folder "Report an emergency" becomes "EMERGENCY".
+- [x] 11. A crew member who speaks opens their dialogue automatically (above station pages, below the PED). Remove the message line along the bottom. (Done for held messages and ARIA decisions; running notes such as 'Super cruise engaged' still use the bottom line, since they have nowhere else to go. Automated tests keep the old behaviour unless the URL has ?callin=1.)
+- [x] 12. Communicator folder "Report an emergency" becomes "EMERGENCY".
 - [ ] 13. "Ask about": each crew member lists the functions of the buttons on the pages they look after.
 Navigation
 - [ ] 14. Dest opens a waypoint pop-up: pick a known place, OR type lat/long, OR place + bearing + distance. Done / Cancel. No name, no depth.
@@ -25,7 +25,7 @@ Navigation
 - [ ] 16. Plot: plots the route avoiding land; speed and depth do not change.
 - [ ] 17. Missions with an area (Trials AO, patrol, search) draw the area box on the chart automatically. The Trials AO is no longer a destination point: the player makes a waypoint and sails into the box.
 Quarters
-- [ ] 18. The quarters screen is too high definition: lower the detail to suit the retro look.
+- [x] 18. The quarters screen is too high definition: lower the detail to suit the retro look.
 
 ## Starting a Claude Code session (owner's workflow since 2026-11-25)
 The owner works from an iPad and a phone, does not use git, and wants Claude to do all of it.

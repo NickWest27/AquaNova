@@ -142,8 +142,8 @@ function closePed() {
 
 // ---------- Communicator: a voice channel, shown as a blurred overlay over the current screen ----------
 let comm = null;
-async function toggleComm() {
-  if (comm) return closeComm();
+async function toggleComm(who = null) {
+  if (comm) { if (!who) return closeComm(); closeComm(); }   // opened on someone: start again on them
   if (commsLocked()) return;
   gameState.updateProperty('tutorial.communicator_opened', true); // "First Contact" step 3
   const root = $('#comm-pop'), body = el('div', { class: 'st-body' });
@@ -154,7 +154,7 @@ async function toggleComm() {
   root.hidden = false;
   try {
     modules.crew ||= await import('./stations/crew.js');
-    comm = { api: modules.crew.mount(body, ctx) };
+    comm = { api: modules.crew.mount(body, ctx, { who }) };
   } catch (e) { console.error('Communicator failed', e); toast('Could not open the communicator', 'error'); root.hidden = true; }
 }
 function closeComm() {
@@ -197,6 +197,7 @@ function updateChips() {
   if (current.chips.textContent !== txt) current.chips.textContent = txt;
 }
 function openScene(name) {
+  if (name.startsWith('talk-')) { const id = name.slice(5); if (gameState.getProperty(`contacts.crew.${id}`)) gameState.updateProperty(`contacts.crew.${id}.known`, true); return toggleComm(id); }   // a tap on a crew member in a room opens the line to them (meeting them in person makes them reachable)
   if (['bridge', 'walkway', 'walkway2', 'science', 'medbay', 'launchbay', 'engineering'].includes(name)) setTimeout(() => document.dispatchEvent(new CustomEvent('location-enter', { detail: { location: name } })), 0);
   if (name === 'quarters') {
     closeStation(); scene.show('quarters');
@@ -364,6 +365,10 @@ async function boot() {
     sim.start(); startExitSave(); startSync();
     gameState.addObserver(syncUI);
     $('#pin').addEventListener('click', toggleComm);
+    // A crew member with something to say opens the line to them (owner, 2026-11-27), unless the Captain is already talking to someone.
+    // Automated tests keep the old behaviour (the pin glows) unless they ask with ?callin=1.
+    const callIn = !navigator.webdriver || /[?&]callin=1/.test(location.search);
+    document.addEventListener('crew-call', (e) => { if (callIn && !comm && !commsLocked()) toggleComm(e.detail.id); });
     document.addEventListener('inbox-change', () => $('#pin').classList.toggle('unread', unreadCount() > 0));
     $('#ped-btn').hidden = !hasPed(); $('#ped-btn').addEventListener('click', togglePed);
     sim.on((type, data) => {
@@ -455,12 +460,12 @@ async function boot() {
         else say('engineering', `${k === 'shoal' ? 'We have run aground' : 'We touched bottom'}! Hull damage ${Math.round(data.damage)}%.`, 'error');
       }
     });
-    // A new game starts in Walkway A1 with the arrival form. Saves from before the form keep their PED and get no name.
+    // A new game starts in the Launch Bay (the Captain arrives by the Tern) with the arrival form. Saves from before the form keep their PED and get no name.
     const fresh = !getPlayer() && commsLocked();
     if (!fresh && !hasPed() && !getPlayer()) gameState.updateProperty('progress.got_ped', true);
     const skip = navigator.webdriver && !/[?&]intake=1/.test(location.search);   // automated tests skip the form
     if (fresh && !skip) {
-      openScene('walkway');
+      openScene('launchbay');
       runIntake({ dateText: clockText(), onDone: () => { checkpoint(); syncUI(); } });
     } else {
       if (fresh) { setPlayer('Alex', 'Mercer'); gameState.updateProperty('progress.got_ped', true); }

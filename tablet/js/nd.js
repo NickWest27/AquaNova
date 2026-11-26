@@ -10,7 +10,7 @@ const RANGES = [0.5, 1, 2, 4, 8, 16, 32, 64, 128, 256];   // the chart is about 
 
 // stage: the canvas sits inside the scaled 1920x1080 bridge stage. Sizes then come from layout (not the scaled
 // rectangle), and `units` makes text and markers bigger so they read at the stage's smaller on-screen size.
-export function createND(wrap, { onPick, stage = false, units = 1, contours = false, rings = true, craft = null, trackUp = false, focus = null, bigWskr = false, onWskr = null } = {}) {   // focus: () => a point to centre on (the ship keeps its place and, with trackUp, its heading is still up); bigWskr: WSKR diamonds carry their code; onWskr(q): a tap on a WSKR   // trackUp: the ship's heading is up (the map turns); contours stay north-up, so use it without them   // craft: () => { lat, lon, heading } centres the map on a craft (Remora, a WSKR) instead of the ship
+export function createND(wrap, { onPick, stage = false, units = 1, contours = false, rings = true, craft = null, trackUp = false, focus = null, bigWskr = false, onWskr = null, res = 1 } = {}) {   // res: canvas resolution factor (below 1 = chunky pixels, the quarters screen)   // focus: () => a point to centre on (the ship keeps its place and, with trackUp, its heading is still up); bigWskr: WSKR diamonds carry their code; onWskr(q): a tap on a WSKR   // trackUp: the ship's heading is up (the map turns); contours stay north-up, so use it without them   // craft: () => { lat, lon, heading } centres the map on a craft (Remora, a WSKR) instead of the ship
   const canvas = document.createElement('canvas');
   wrap.prepend(canvas);
   const ctx = canvas.getContext('2d');
@@ -20,7 +20,7 @@ export function createND(wrap, { onPick, stage = false, units = 1, contours = fa
   const nd = { range: 2, sel: null, selWskr: null, show: { ships: true, subs: true, base: true, orgs: true, labels: true }, w: 0, h: 0, canvas };
 
   function resize() {
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const dpr = Math.min(window.devicePixelRatio || 1, 2) * res;
     const r = wrap.getBoundingClientRect();
     const lw = wrap.offsetWidth || r.width, lh = wrap.offsetHeight || r.height;   // layout size
     const sc = lw ? r.width / lw : 1;                                               // the stage's or the page's scale
@@ -125,11 +125,14 @@ export function createND(wrap, { onPick, stage = false, units = 1, contours = fa
     if (contours) { if (trackUp) { ctx.save(); ctx.translate(cx, cy); ctx.rotate(-hd); ctx.translate(-cx, -cy); } drawSeafloor(w, h, R); if (trackUp) ctx.restore(); if (!rings) drawScale(w, h, R); }
     const shipPt = (() => { const t = turn(toward(c, s)), sc = R / nd.range; return { x: cx + t.dx * sc, y: cy - t.dy * sc }; })();   // where Aqua Nova is on this chart
     if (rings) {
+    // range rings at a quarter, half or the whole range setting, at most six, carried out to the corners of the screen (contacts are drawn that far too)
+    const far = Math.hypot(w / 2, h / 2), farNm = (far / R) * nd.range;
+    const stepNm = (nd.range / 4) * ([1, 2, 4, 8].find((m) => farNm / ((nd.range / 4) * m) <= 6) || 16), step = (stepNm / nd.range) * R, nR = Math.ceil(far / step);   // a ring always falls on the range setting
     ctx.lineWidth = 1.5; ctx.strokeStyle = 'rgba(100,255,218,0.25)';
-    for (let i = 1; i <= 4; i++) { ctx.beginPath(); ctx.arc(cx, cy, (R * i) / 4, 0, 6.2832); ctx.stroke(); }
-    ctx.beginPath(); ctx.moveTo(cx - R, cy); ctx.lineTo(cx + R, cy); ctx.moveTo(cx, cy - R); ctx.lineTo(cx, cy + R); ctx.stroke();
+    for (let i = 1; i <= nR; i++) { ctx.beginPath(); ctx.arc(cx, cy, step * i, 0, 6.2832); ctx.stroke(); }
+    ctx.beginPath(); ctx.moveTo(0, cy); ctx.lineTo(w, cy); ctx.moveTo(cx, 0); ctx.lineTo(cx, h); ctx.stroke();
     ctx.fillStyle = '#8fa6bd'; ctx.font = '600 14px ui-monospace, Menlo, monospace'; ctx.textAlign = 'left';
-    for (let i = 1; i <= 4; i++) ctx.fillText(((nd.range * i) / 4).toFixed(nd.range < 2 ? 2 : 1) + ' nm', cx + 6, cy - (R * i) / 4 + 16);
+    for (let i = 1; i <= nR; i++) { const x = cx + step * i * 0.7071 + 4, y = cy - step * i * 0.7071 - 4; if (x < w - 40 && y > 14) ctx.fillText(+(stepNm * i).toFixed(2) + ' nm', x, y); }   // labels on the north-east diagonal, clear of the cross
     ctx.textAlign = 'center'; ctx.fillStyle = '#64ffda'; ctx.font = '800 18px system-ui';
     if (trackUp) { const hh = (c.heading * Math.PI) / 180; ctx.fillText('N', cx - (R + 12) * Math.sin(hh), cy - (R + 12) * Math.cos(hh) + 6); } else ctx.fillText('N', cx, cy - R - 6);
     }

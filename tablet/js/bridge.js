@@ -54,7 +54,7 @@ export function createBridgeConsole({ top, main, display, center, left, right, o
     const make = (compact) => {
       const m = el('div', { class: 'bd bd-nav' + (compact ? ' compact' : '') });
       const wrap = el('div', { class: 'nd-stage' }); m.append(wrap);
-      const nd = (retro ? retro.createND : createND)(wrap, { stage: true, units: compact ? 1.25 : 1.7, contours: !compact, rings: compact, trackUp: compact, onPick: syncSel });   // the big main screen stays north up; the medium main display is track up
+      const nd = (retro ? retro.createND : createND)(wrap, { stage: true, units: compact ? 1.25 : 1.7, contours: !compact, rings: compact, onPick: syncSel });   // the big main screen stays north up; the medium main display is track up
       if (nds[0]) nd.setRange(nds[0].range);
       nd.sel = sel; nd.show = show; nds.push(nd); if (!compact) bigNd = nd;
       if (compact) return { m, update() { nd.redraw(); } };

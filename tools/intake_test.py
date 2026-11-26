@@ -21,7 +21,7 @@ def main():
         page.goto(base); page.wait_for_function("!document.getElementById('board-btn').disabled", timeout=20000)
         page.tap("#board-btn"); page.wait_for_timeout(900)
         js = lambda code: page.evaluate("(async()=>{const g=(await import('./js/persist.js')).gameState;" + code + "})()")
-        check("starts in walkway A1 with the form", page.is_visible(".signin") and page.is_visible(".scene.walkway:not([hidden])") or page.is_visible(".signin"))
+        check("starts in the Launch Bay with the form", page.is_visible(".signin") and page.is_visible(".scene.bay:not([hidden])"))
         check("PED button hidden before the PED is collected", not page.is_visible("#ped-btn"))
         page.screenshot(path=f"{SHOTS}/i-1form.png")
         check("scanner starts disabled", page.locator(".scanner").is_disabled())

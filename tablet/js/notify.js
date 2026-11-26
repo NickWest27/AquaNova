@@ -60,6 +60,7 @@ export function say(role, text, kind = '', opts = {}) {
   if (keepIt) {
     const id = CREW_ID[role] || role, l = (held.get(id) || []).filter((m) => !(opts.key && m.key === opts.key));
     l.push({ text: opts.keep || text, at: now, key: opts.key, valid: opts.valid, ttl: opts.ttl }); held.set(id, l.slice(-5)); emitChange();
+    setTimeout(() => document.dispatchEvent(new CustomEvent('crew-call', { detail: { id } })), 0);   // app.js opens the line to them
   }
   if (viewProbe.fn() && opts.notice) {   // bridge: ship-state notices go to the upper display. Voice never does; it uses the line at the foot of the screen like everywhere else.
     document.dispatchEvent(new CustomEvent('notice', { detail: { text: opts.notice, kind, who: w.name.split(' ').pop().toUpperCase() } }));
@@ -67,7 +68,7 @@ export function say(role, text, kind = '', opts = {}) {
   if (opts.action) { actionTick(); }   // a routine action report: a short tick, not the communicator
   else if (now - lastChirp > 20000) { lastChirp = now; stats.chirps++; chirp(); }
   stats.shown++;
-  consoleLine(`${w.name} · ${w.role}: ${text}${kind === 'mission' || kind === 'error' ? '  (tap the pin to answer)' : ''}`, kind);   // docked readout; the pin pulses for held messages
+  if (!keepIt) consoleLine(`${w.name} · ${w.role}: ${text}`, kind);   // a running note: the line at the foot of the screen. A held message opens the dialogue instead (app.js).
 
 }
 

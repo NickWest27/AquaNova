@@ -28,7 +28,7 @@ export function createSnrView({ bbtn }) {
   const rangeTxt = el('span', { class: 'rng' });
   const zoom = (d) => { const i = Math.max(0, Math.min(RANGES.length - 1, RANGES.indexOf(view.range) + d)); view.range = RANGES[i]; hooks.forEach((f) => f(view.range)); sim.touch(); };
 
-  function make(compact) {
+  function make(compact, res = 1) {   // res: canvas resolution factor (below 1 = chunky pixels)
     const m = el('div', { class: 'bd bd-snr' + (compact ? ' compact' : '') });
     const wrap = el('div', { class: 'snr-map' }), canvas = el('canvas'); wrap.append(canvas); const ctx = canvas.getContext('2d');
     const side = el('div', { class: 'snr-side' });
@@ -57,7 +57,7 @@ export function createSnrView({ bbtn }) {
 
     function draw(src, cons) {
       const r = canvas.parentNode.getBoundingClientRect(), lw = wrap.offsetWidth, lh = wrap.offsetHeight; if (!lw || !lh) return;
-      const sc = r.width / lw, dpr = Math.min(window.devicePixelRatio || 1, 2), cw = Math.round(lw * sc * dpr), ch = Math.round(lh * sc * dpr);
+      const sc = r.width / lw, dpr = Math.min(window.devicePixelRatio || 1, 2) * res, cw = Math.round(lw * sc * dpr), ch = Math.round(lh * sc * dpr);
       if (canvas.width !== cw || canvas.height !== ch) { canvas.width = cw; canvas.height = ch; canvas.style.width = lw + 'px'; canvas.style.height = lh + 'px'; }
       ctx.setTransform(canvas.width / lw, 0, 0, canvas.height / lh, 0, 0); W = lw; H = lh;
       const u = Math.max(0.8, Math.min(lw, lh) / 440), cx = lw / 2, cy = lh / 2, R = Math.min(lw, lh) / 2 - 22 * u, hd = (src.heading * Math.PI) / 180, range = view.range;

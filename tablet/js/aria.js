@@ -21,6 +21,7 @@ export function offerDecision(def) {
   if (d.made[def.id] || d.pending.some((p) => p.id === def.id)) return false;   // asked once only
   save({ ...d, pending: [...d.pending, def] });
   say('aria', def.text, 'mission', { hold: false, notice: 'ARIA NEEDS A DECISION', keep: def.text });
+  setTimeout(() => document.dispatchEvent(new CustomEvent('crew-call', { detail: { id: 'executiveOfficer' } })), 0);   // she opens the line with the question
   changed();
   return true;
 }

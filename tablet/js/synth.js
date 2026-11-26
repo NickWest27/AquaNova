@@ -20,13 +20,13 @@ function levelsFor(lo, hi, loaded) {
   return out;
 }
 
-export function createSynth(parent) {
+export function createSynth(parent, { scale = SCALE } = {}) {   // scale: canvas pixels per view pixel (the quarters screen uses less than 1: chunky, 90s)
   const canvas = document.createElement('canvas');
-  canvas.width = W * SCALE; canvas.height = H * SCALE; canvas.className = 'synth-canvas';
+  canvas.width = Math.round(W * scale); canvas.height = Math.round(H * scale); canvas.className = 'synth-canvas';
   parent.append(canvas);
   const g = canvas.getContext('2d');
   const api = { canvas, target: null, draw(craft) {
-    g.setTransform(SCALE, 0, 0, SCALE, 0, 0);
+    g.setTransform(scale, 0, 0, scale, 0, 0);
     const cx = W / 2, cy = H * 0.42, F = (W / 2) / Math.tan((FOV / 2) * Math.PI / 180), range = VIEW_NM;
     const grad = g.createLinearGradient(0, 0, 0, H); grad.addColorStop(0, '#0a0a52'); grad.addColorStop(cy / H, '#2a2ab0'); grad.addColorStop(1, '#0a0a52');
     g.fillStyle = grad; g.fillRect(0, 0, W, H);

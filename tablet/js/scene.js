@@ -7,6 +7,7 @@ import { createBridgeConsole } from './bridge.js';
 import { createQuartersScreen } from './quartersScreen.js';
 import { samples, sampleName, jobs, points, research, LABS, SAMPLE_KINDS } from './science.js';
 import { rovRange } from './rov.js';
+import { bay as bayState, shuttle } from './bayops.js';
 import { LINKS, linkState, activeLink } from './commsModel.js';
 
 const box = (cls, x, y, w, h, kids) => el('div', { class: `disp ${cls}`, style: `left:${x}px;top:${y}px;width:${w}px;height:${h}px` }, kids);
@@ -79,8 +80,10 @@ export function createScene(stage, { onOpen }) {
     slanted('', ctrD, 640, 160, [[657, 1164], [1266, 1164], [1310, 1335], [611, 1335]]),                    // centre pad: the page's own controls
     slanted('', rightD, 230, 200, [[1298, 1132], [1477, 1132], [1584, 1332], [1353, 1332]]),                // right pad: range and display buttons
     frame,
-    hs('COMMS', 84, 500, 468, 340, () => onOpen('comms'), 'top'),        // comms officer, left station
-    hs('SENSORS', 1368, 500, 468, 340, () => onOpen('sensors'), 'top'),  // sensors, right station
+    hs('COMMS', 240, 740, 280, 200, () => onOpen('comms'), 'top'),        // the comms console, left
+    hs('SENSORS', 1420, 740, 260, 200, () => onOpen('sensors'), 'top'),   // the sensors console, right
+    hs('NICOLE', 74, 640, 160, 210, () => onOpen('talk-communications'), 'top'),   // Nicole at comms: tap her to talk
+    hs('ALEX', 1690, 630, 190, 210, () => onOpen('talk-sensors'), 'top'),          // Alex at sensors
     hs('WALKWAY', 0, 1332, 1920, 108, () => onOpen('walkway'), 'mid'),   // the bottom edge leaves the bridge
   );
 
@@ -107,7 +110,7 @@ export function createScene(stage, { onOpen }) {
   // walkway hub (concept art A1): a tap area on each door, a lit sign on each black panel above a door.
   // Corners are the four corners of the glass in stage pixels (art is cropped to 1920x1080).
   const door = (label, x, y, w, h, target, tagged = false) => el('button', { class: `door${tagged ? ' tagged' : ''}`, style: `left:${x}px;top:${y}px;width:${w}px;height:${h}px`, 'aria-label': label, onclick: () => onOpen(target) }, tagged ? el('span', { text: label }) : null);
-  const sign = (text, corners, h = 120) => slanted('wsign-box', el('div', { class: 'wsign', style: `height:${h}px`, text }), 412, h, corners);
+  const sign = (text, corners, h = 120, size = 56) => slanted('wsign-box', el('div', { class: 'wsign', style: `height:${h}px;font-size:${size}px`, text }), 412, h, corners);
   const walkway = el('div', { class: 'scene walkway', hidden: true });
   walkway.append(
     artImg('walkway'),
@@ -124,8 +127,9 @@ export function createScene(stage, { onOpen }) {
     artImg('walkway2'),
     el('div', { class: 'an-sign one', style: 'left:840px;top:390px;width:252px;height:62px' }, el('div', { text: 'LAUNCH BAY' })),
     door('LAUNCH BAY', 769, 480, 384, 376, 'launchbay'),
+    sign('ENGINEERING', [[1551, 179], [1693, 128], [1703, 229], [1547, 301]], 150, 44),   // the black panel above the near right door
     door('ENGINEERING', 1575, 282, 188, 923, 'engineering'),
-    hs('A1 DECK ▼', 375, 1298, 1181, 142, () => onOpen('walkway'), 'mid'));
+    hs('A1 DECK ▼', 500, 1230, 920, 210, () => onOpen('walkway'), 'mid'));   // the same size as the AN-1 DECK tap area on A1
   // science lab (science.png, 1920x1080): five cut-outs hold live screens that open the stations they show. The door leads out to the walkway.
   const sci = { banner: el('div', { class: 'sciscr' }), samples: el('div', { class: 'sciscr' }), analysis: el('div', { class: 'sciscr' }), research: el('div', { class: 'sciscr' }), remora: el('div', { class: 'sciscr' }) };
   const sciFrame = artImg('science');
@@ -158,9 +162,16 @@ export function createScene(stage, { onOpen }) {
   // launch bay (TempLaunchbay art, 1920x1080, a temporary frame): the control console is on the left, the door to the walkway beyond it,
   // the inner airlock straight ahead, Remora and a second craft on their racks to the right. The ceiling map will show door and tether status.
   const bay = el('div', { class: 'scene bay', hidden: true });
+  // the owner's picture (1024x765; art px x 1.875 across, x 1.88 down, 2026-11-27): a live screen on the console, the AIRLOCK sign on the black
+  // panel above the inner airlock, and the small screen right of the airlock door shows the pressure difference (fills while the lock floods).
+  const lbScr = el('div', { class: 'escr main lbscr' });
+  const lockFill = el('i'), lockBar = el('div', { class: 'lock-bar', style: 'left:1121px;top:620px;width:42px;height:86px' }, lockFill);
   bay.append(artImg('launchbay'),
+    slanted('', lbScr, 300, 150, [[105, 696], [338, 686], [390, 808], [150, 846]]),        // the console's main screen
+    el('div', { class: 'an-sign one', style: 'left:784px;top:408px;width:347px;height:71px' }, el('div', { text: 'AIRLOCK' })),
+    lockBar,
     hs('BAY CONTROL', 0, 690, 525, 630, () => onOpen('bay'), 'mid'),                       // the console: doors, craft, charging
-    hs('◂ WALKWAY', 180, 225, 195, 415, () => onOpen('walkway2'), 'mid'),                  // the door to the walkway
+    hs('◂ WALKWAY', 425, 460, 145, 320, () => onOpen('walkway2'), 'mid'),                  // the door right of the fire extinguisher
     hs('INNER AIRLOCK', 730, 490, 470, 350, () => onOpen('bay-airlock'), 'mid', 'locked'), // not built yet
     hs('REMORA', 1275, 640, 645, 375, () => onOpen('remora'), 'mid'));                     // the craft on the racks
   // engineering (the owner's picture, 1024x765; art px x 1.875 across, x 1.88 down): the console and the power cores open Systems,
@@ -211,6 +222,15 @@ export function createScene(stage, { onOpen }) {
     // ROV Station
     put('remora', `<h4>ROV STATION</h4>${row('Remora', rovTxt)}${r ? row('Tether', tether + '%') : ''}${row('Storage', `${held} of 3`)}`);
   }
+  function updateBay() {
+    const b = bayState(), op = b.op, s = sim.s, sh = shuttle();
+    const f = op ? Math.min(1, op.t / (op.dur + (op.air || 0))) : 0, level = op ? (op.kind === 'launch' ? f : 1 - f) : 0;   // 0 = at ship pressure, 1 = flooded to sea pressure
+    const key = [Math.round(level * 20), op && op.kind, !!s.rov, sh.state, (s.wskrs || []).length, s.speed > 8].join();
+    if (cache.get('bay') === key) return; cache.set('bay', key);
+    lockFill.style.height = Math.round(level * 100) + '%'; lockBar.classList.toggle('cyc', !!op);
+    const row = (k, v, cls = '') => `<div class="${cls}"><span>${k}</span><b>${v}</b></div>`;
+    lbScr.innerHTML = `<h5>LAUNCH BAY</h5>${row('AIRLOCK', op ? (op.kind === 'launch' ? 'FLOODING' : 'DRAINING') : 'DRY', op ? 'bad' : 'ok')}${row('REMORA', s.rov ? 'OUT' : 'ABOARD')}${row('TERN', sh.state === 'bay' ? 'ABOARD' : 'OUT')}${row('WSKRS', `${4 - (s.wskrs || []).length}/4 ABOARD`)}${row('SHIP SPD', s.speed > 8 ? 'TOO FAST' : 'OK', s.speed > 8 ? 'bad' : 'ok')}`;
+  }
   function updateEng() {
     const e = E.eng(), s = sim.s, st = E.fusionOk() ? 'on' : e.on.fusion ? 'fault' : 'standby', flood = e.leak.fwd || e.leak.aft || e.flood.fwd > 0 || e.flood.aft > 0, alarm = !!e.fire || flood;
     const key = [st, Math.round(s.battery), !!e.fire, flood, e.repairs.length, ...Object.values(e.relays)].join();
@@ -240,6 +260,7 @@ export function createScene(stage, { onOpen }) {
       if (api.where === 'science') { updateScience(); return; }
       if (api.where === 'engineering') { updateEng(); return; }
       if (api.where === 'quarters') { qscreen.update(); return; }
+      if (api.where === 'launchbay') { updateBay(); return; }
       if (api.where !== 'bridge') return;
       const s = sim.s;
       consoleApi.update(); updateStations();

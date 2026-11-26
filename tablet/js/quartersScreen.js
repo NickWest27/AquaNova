@@ -1,6 +1,7 @@
 // The wall screen in the Captain's quarters: it cycles through pages that keep the Captain informed off watch.
 // NAV chart, forward view (synthetic vision once researched), passive sonar, WSKRs, ship status. A tap shows the next page.
 // Display only: nothing on it gives orders (the bridge and the communicator do that).
+// Low definition on purpose (owner, 2026-11-27): canvases drawn at about a third of the resolution and shown in big pixels, in the pixel font.
 import { sim, toward } from './sim.js';
 import { el } from './util.js';
 import { createND } from './nd.js';
@@ -28,7 +29,7 @@ export function createQuartersScreen(W, H) {
   { const wrap = el('div', { class: 'qs-nd' }), info = el('div', { class: 'qs-info' }); const node = el('div', { class: 'qs-page qs-nav' }, wrap, info);
     let nd = null;
     pages.push({ id: 'nav', title: 'NAVIGATION', node, ok: () => true, update() {
-      if (!nd) { nd = createND(wrap, { stage: true, units: 1.1, rings: true }); nd.setRange(8); }
+      if (!nd) { nd = createND(wrap, { stage: true, units: 1.6, rings: true, res: 0.3 }); nd.setRange(8); }
       nd.redraw();
       const s = sim.s, w = s.wpt, t = w ? toward(s, w) : null;
       info.innerHTML = row('SPD', s.speed.toFixed(1) + ' KT') + row('DEP', Math.round(s.depth) + ' M') + row('HDG', pad3(s.heading) + '°') + row('DEST', w ? w.name : 'NONE') + (t ? row('DIST', t.nm.toFixed(1) + ' NM') : '');
@@ -36,14 +37,14 @@ export function createQuartersScreen(W, H) {
   // VIEW: synthetic vision of the sea floor ahead
   { const node = el('div', { class: 'qs-page qs-view' }); let sy = null, last = 0;
     pages.push({ id: 'view', title: 'SYNTHETIC VISION', node, ok: synthOk, update() {
-      if (!sy) sy = createSynth(node);
+      if (!sy) sy = createSynth(node, { scale: 0.4 });
       if (Date.now() - last < 250) return; last = Date.now();
       const s = sim.s; sy.draw({ lat: s.lat, lon: s.lon, heading: s.heading, depth: s.depth, speed: s.speed });
     } }); }
   // SONAR: the passive sonar picture and its contact list
   { const node = el('div', { class: 'qs-page qs-snr' }); let v = null;
     pages.push({ id: 'snr', title: 'SONAR', node, ok: () => true, update() {
-      if (!v) { v = createSnrView({ bbtn: (t, f, c = '') => el('button', { class: 'bb ' + c, text: t, onclick: f }) }).make(true); node.append(v.m); }
+      if (!v) { v = createSnrView({ bbtn: (t, f, c = '') => el('button', { class: 'bb ' + c, text: t, onclick: f }) }).make(true, 0.3); node.append(v.m); }
       v.update();
     } }); }
   // WSKRS: where each drone is and how it is doing

@@ -187,7 +187,7 @@ const TREE = {
   security: () => [F('The Tern', O('Launch the Tern to', () => !ternOut() && underway())), F('Ship', O('Status report'))],
 };
 
-export function mount(body, ctx) {
+export function mount(body, ctx, opts = {}) {
   body.classList.add('comm-menu');
   const crew = knownCrew();
   let page = 'crew', cur = null, cat = null, reply = null, greeted = false, param = null;
@@ -223,7 +223,7 @@ export function mount(body, ctx) {
     const pl = mineP(); if (pl.length) top.push({ folder: true, label: 'Make small talk', title: `Say to ${first(cur)}…`, kids: pl.map((t) => ({ label: t, run: () => speak(t) })) });
     const ak = askKids(); if (ak.length) top.push({ folder: true, label: 'Ask about …', title: `Ask ${first(cur)} about…`, kids: ak });
     const ok = orderKids(); if (ok.length) top.push({ folder: true, label: 'Give an order', title: `Order to ${first(cur)}…`, kids: ok });
-    let em = (o.emergency || []); if (cur.id === 'executiveOfficer') em = [alarmOn() ? 'Secure from General Alarm' : 'Sound General Alarm', ...em.filter((t) => !/general alarm/i.test(t))]; if (em.length) top.push({ folder: true, label: 'Report an emergency', cls: 'danger', title: `Tell ${first(cur)}…`, kids: em.map((t) => ({ label: t, cls: works(t) ? '' : 'stub', run: () => speak(t) })) });
+    let em = (o.emergency || []); if (cur.id === 'executiveOfficer') em = [alarmOn() ? 'Secure from General Alarm' : 'Sound General Alarm', ...em.filter((t) => !/general alarm/i.test(t))]; if (em.length) top.push({ folder: true, label: 'EMERGENCY', cls: 'danger', title: `Tell ${first(cur)}…`, kids: em.map((t) => ({ label: t, cls: works(t) ? '' : 'stub', run: () => speak(t) })) });
     return top;
   };
   let trail = [];   // labels of the folders open now, outermost first. Looked up again on every draw, so the menu follows the ship's state.
@@ -264,6 +264,16 @@ export function mount(body, ctx) {
   /** What a crew member says, with their portrait beside it when there is one (static portrait + speech box). */
   const sceneOn = () => !!(cur && page !== 'crew' && scenePic(cur.id));   // 90s dialogue screen: their picture fills the box, a text box carries the talk
   const withFace = (node) => { const f = !sceneOn() && cur && portrait(cur.id, 'comm-face'); return f ? el('div', { class: 'comm-say' }, f, node) : node; };
+  /** Open the line to one crew member: their first meeting, a decision, what they were holding back, or the menu. */
+  function pick(c) {
+    cur = c; cat = null;
+    const met = !!gameState.getProperty('progress.met.' + c.id);
+    if (c.id === 'executiveOfficer' && pendingDecisions().length) { gameState.updateProperty('progress.met.' + c.id, true); greeted = true; page = 'decision'; render(); return; }   // ARIA is waiting for an answer
+    if (INTRO[c.id] && !met) { gameState.updateProperty('progress.met.' + c.id, true); greeted = true; logLine(c.id, 'crew', fill(INTRO[c.id])); reply = { said: null, text: fill(INTRO[c.id]) }; page = 'reply'; render(); return; }   // first meeting comes before anything they were holding back
+    const held = takeHeld(c.id);   // what they tried to tell the Captain while he was elsewhere
+    if (held.length) { greeted = true; reply = { said: null, text: held.map((h) => (/^Captain\b/.test(h) ? h : `Captain, ${h.charAt(0).toLowerCase()}${h.slice(1)}`)).join(' '), held: true }; page = 'reply'; } else page = 'cat';
+    render();
+  }
   function render() {
     setOpenCrew(!cur || page === 'crew' ? null : cur.id);   // while we are on the line with someone, what they say is read as it comes
     let kids;
@@ -271,15 +281,7 @@ export function mount(body, ctx) {
     else if (page === 'crew') {
       kids = [el('div', { class: 'comm-head', text: 'Who would you like to reach out to?' }),
         unreadCount() > 0 && el('div', { class: 'comm-waiting', text: 'You have messages waiting.' }),
-        ...crew.map((c) => el('button', { class: 'comm-line comm-who', onclick: () => {
-          cur = c; cat = null;
-          const met = !!gameState.getProperty('progress.met.' + c.id);
-          if (c.id === 'executiveOfficer' && pendingDecisions().length) { gameState.updateProperty('progress.met.' + c.id, true); greeted = true; page = 'decision'; render(); return; }   // ARIA is waiting for an answer
-          if (INTRO[c.id] && !met) { gameState.updateProperty('progress.met.' + c.id, true); greeted = true; logLine(c.id, 'crew', fill(INTRO[c.id])); reply = { said: null, text: fill(INTRO[c.id]) }; page = 'reply'; render(); return; }   // first meeting comes before anything they were holding back
-          const held = takeHeld(c.id);   // what they tried to tell the Captain while he was elsewhere
-          if (held.length) { greeted = true; reply = { said: null, text: held.map((h) => (/^Captain\b/.test(h) ? h : `Captain, ${h.charAt(0).toLowerCase()}${h.slice(1)}`)).join(' '), held: true }; page = 'reply'; } else page = 'cat';
-          render();
-        } }, el('span', { class: `avatar ${c.id === 'executiveOfficer' ? 'aria' : ''}${portrait(c.id) ? ' face' : ''}` }, portrait(c.id, 'avatar-face') || crewIcon(c.id) || initial(c)), el('span', {}, el('b', { text: c.name }), el('small', { text: c.role })), unreadFor(c.id) > 0 && el('span', { class: 'comm-badge', text: String(unreadFor(c.id)) })))];
+        ...crew.map((c) => el('button', { class: 'comm-line comm-who', onclick: () => pick(c) }, el('span', { class: `avatar ${c.id === 'executiveOfficer' ? 'aria' : ''}${portrait(c.id) ? ' face' : ''}` }, portrait(c.id, 'avatar-face') || crewIcon(c.id) || initial(c)), el('span', {}, el('b', { text: c.name }), el('small', { text: c.role })), unreadFor(c.id) > 0 && el('span', { class: 'comm-badge', text: String(unreadFor(c.id)) })))];
     } else if (page === 'cat') {
       kids = [logView(5), withFace(el('div', {}, el('div', { class: 'comm-head', text: `What is on your mind, Captain?` }), el('div', { class: 'comm-who-label', text: `${cur.name} · ${cur.role}` }))),
         ...cats().map((f) => line(f.label, () => { trail = [f.label]; page = 'lines'; render(); }, f.cls || '')),
@@ -317,6 +319,7 @@ export function mount(body, ctx) {
       body.replaceChildren(el('div', { class: 'comm-page' }, ...kids.filter(Boolean)));
     }
   }
-  render();
-  return { update() {}, destroy() { setOpenCrew(null); document.removeEventListener('crew-line', onLine); } };
+  const want = opts.who && crew.find((c) => c.id === opts.who);
+  if (want) pick(want); else render();   // opened on one person: a tap on them on the bridge, or they called in
+  return { who: () => (page === 'crew' || !cur ? null : cur.id), update() {}, destroy() { setOpenCrew(null); document.removeEventListener('crew-line', onLine); } };
 }
