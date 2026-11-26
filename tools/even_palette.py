@@ -16,7 +16,7 @@ ROOMS = ['bridge', 'walkway', 'walkway2', 'quarters', 'science', 'launchbay', 'm
 STRENGTH = 0.85   # 1 = match Engineering exactly; a little less keeps a trace of each room's own mood
 # Rooms whose source is soft and noisy (painted, not pixel art) are rebuilt as pixel art at Engineering's pixel size (2026-11-27):
 # denoise, shrink to the native grid, a limited palette, stray pixels removed, then blown back up in hard pixels. Saved as PNG.
-REPIXEL = ['walkway', 'walkway2', 'medbay']
+REPIXEL = []   # (tried 2026-11-27: the owner found it smudged; reverted)
 NATIVE = (341, 256)   # Engineering's art pixel: 1024 / 3 across
 PIX_COLOURS = 96
 

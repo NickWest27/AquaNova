@@ -32,6 +32,6 @@ Test for later decisions: does a choice make assets **more consistent** and **ch
 
 ## Picture consistency (2026-11-27)
 - Colour and brightness: every room is matched to Engineering (`tools/even_palette.py`, CIE Lab: lightness histogram, colour mean and spread, 85% strength). Originals in `art_src/rooms/`.
-- Pixel size: Engineering, quarters, science and the launch bay are pixel art with an art pixel of about 5.6 stage px (1024 / 3 across). Walkway A1, walkway AN-1 and the medbay were soft paintings with compression noise; they are rebuilt at the same grid (denoise, 341x256, 96 colours shared with Engineering, stray pixels removed, hard pixels) and saved as PNG.
+- Pixel size: Engineering, quarters, science and the launch bay are crisp pixel art (an art pixel about 5.6 stage px). Walkway A1, walkway AN-1 and the medbay are soft, noisy paintings. Rebuilding them as pixel art by filter (REPIXEL in the script) and sharpening were both tried on 2026-11-27: the owner found the rebuild smudged, and sharpening only adds noise. They stay as they are until they are redrawn.
 - Retro copies: 320x240, the 64-colour palette, no dithering, then stray single pixels removed (noisy sources used to turn into speckle).
 - For new art: ask for pixel art at 1024x768 with a 3 px pixel grid (about 341x256 art pixels), flat cel shading, cool blue-grey steel with amber and cyan accents, Engineering as the reference. Then put the file in `art_src/rooms/` and run the script.
