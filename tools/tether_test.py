@@ -52,6 +52,17 @@ def main():
         check("Remora cannot go out while the tether is being spliced (or she is unloading)", r in ("tetherfix", "rearm"), r)
         r = js("const s=sim.s; s.bay.rearm=null; s.bay.tetherFix.t=s.bay.tetherFix.dur; sim.step(1); return {fix:!!s.bay.tetherFix, launch:B.launchRemora().ok}")
         check("once the new tether is in, she can launch again", not r["fix"] and r["launch"], r)
+        # the crew have the con with Remora out and the ship under way: the XO holds the ship, brings her home, then carries on
+        r = js("""const s=sim.s, A=await import('./js/away.js'); s.bay={op:null,doorDmg:0,tubes:{}}; s.shuttle={state:'bay',bat:100,o2:100,mode:'follow',pilots:2,pax:0};
+          Object.assign(s,{lat:40.2,lon:-72.0,heading:0,speed:6,throttle:0.5,depth:60,targetDepth:60,cruise:false});
+          s.rov={lat:s.lat-0.6/60,lon:s.lon,heading:0,depth:60,cmd:{thr:0,turn:0,dive:0},job:null,cargo:[],auto:false,home:false}; A.armAway(8);
+          let maxNm=0, held=false; for(let i=0;i<4000&&s.rov;i++){ sim.step(1); if(s.rov) maxNm=Math.max(maxNm, toward(s,s.rov).nm); if(s.speed<0.5) held=true; }
+          const aboard=!s.rov; for(let i=0;i<200;i++) sim.step(1); const sp=s.speed, log=(sim.away&&sim.away.log||[]).map(e=>e.t); return {aboard, held, maxNm, sp, log, stop:sim.away&&sim.away.stop}""".replace("toward(", "(await import('./js/sim.js')).toward("))
+        check("XO: with Remora out the ship holds, she comes home and aboard, the tether never parts", r["aboard"] and r["held"] and r["maxNm"] < 1.0 and not r["stop"], r)
+        check("XO: then the ship carries on under way", r["sp"] > 2, r)
+        r = js("""const s=sim.s; s.rov={lat:s.lat-1.5/60,lon:s.lon,heading:0,depth:60,cmd:{thr:0,turn:0,dive:0},job:null,cargo:[],auto:false,home:false}; for(let i=0;i<5;i++) sim.step(1);
+          const st=sim.away&&sim.away.stop; const A=await import('./js/away.js'); A.wakeNow(); return st""")
+        check("XO: if the tether parts anyway the crew stop for the lost craft", r and r["kind"] == "craft" and r.get("name") == "Remora", r)
         check("no page errors", not errors, str(errors))
         browser.close()
     server.shutdown()

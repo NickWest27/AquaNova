@@ -3,6 +3,8 @@
 // real second, whatever the time compression), with standing orders for the crew:
 //   keep the course and speed; hold at the Area of Operations limit; stop on arrival, on a shoal, when supplies run low or a craft is lost;
 //   stand down after the Captain's limit (4 to 24 hours). Then ARIA gives a briefing.
+// Remora out on her tether (2026-11-25): the XO holds the ship, brings her home and takes her aboard before carrying on, so the tether
+//   never parts under way. If it parts anyway (she could not get home), the crew stop and wait, as for any lost craft.
 // Standing orders for a long sleep (owner, 2026-11-20): once the ship has stopped, if the Captain is still asleep an hour later,
 //   at a point of interest the science team take samples; and if a port is close by, an away team goes in the Tern for supplies.
 // Nothing random happens: only things the game can compute (sea floor, the limit, battery, air, hull, craft already launched).
@@ -12,7 +14,7 @@ import { enemyDock } from './reputation.js';
 import { seafloor } from './seafloor.js';
 import { gameState, checkpoint, snapshotSim } from './persist.js';
 import { requestSync } from './sync.js';
-import { SHUTTLE_NAME, SHUTTLE_KT, shuttle, shuttleRangeNm, shuttleHours, bay, dockList, REMORA_REARM_S, REMORA_UNLOAD_S } from './bayops.js';
+import { SHUTTLE_NAME, SHUTTLE_KT, shuttle, shuttleRangeNm, shuttleHours, bay, dockList, REMORA_REARM_S, REMORA_UNLOAD_S, recoverRemora, busy } from './bayops.js';
 import { addSample, pickKind, SAMPLE_KINDS } from './science.js';
 import { REMORA_STORE } from './rov.js';
 
@@ -96,6 +98,9 @@ const listener = (type, data) => {
   else if (type === 'shuttle-dead' || type === 'shuttle-o2-out') { note(`${SHUTTLE_NAME} is adrift.`); hold('craft'); if (a.stop) a.stop.name = SHUTTLE_NAME; }
   else if (type === 'mission-offer') { note(`A mission offer arrived: ${data.name}. The XO held the ship for your decision.`); hold('offer'); }
   else if (type === 'bay-door-damage') note('The bay doors took damage.');
+  else if (type === 'rov-snapped') { note('Remora\'s tether parted. She is out of contact.'); hold('craft'); if (a.stop) a.stop.name = 'Remora'; }
+  else if (type === 'rov-blocked' && a.rovHold) note('Remora stopped at shoal water on her way back. The crew held the ship for you.');
+  else if (type === 'tether-repaired') note('Engineering finished splicing the new tether.');
 };
 listener.keep = true;
 sim.on(listener);
@@ -117,7 +122,7 @@ function rules(a, s) {
     a.did.samples = true;
     const poi = st.kind === 'arrived' && s.pois.find((p) => p.name === st.name), b = bay();
     if (poi && poi.type !== 'dock' && !s.docked && a.endClock - s.clock >= REMORA_S) {
-      const free = !s.rov && !b.op && !b.rearm, tools = ['collector', 'drill'], got = [];
+      const free = !s.rov && !b.op && !b.rearm && !b.tetherFix, tools = ['collector', 'drill'], got = [];
       for (const tool of (free ? tools : ['spectrometer', 'laser', ...(poi.type === 'wreck' ? ['magnetometer'] : [])]).slice(0, free ? REMORA_STORE : 9)) { const k = pickKind(tool, poi); if (k && !got.includes(k)) { addSample(k, poi, tool); got.push(k); } }
       if (got.length) {
         const what = `${got.length === 1 ? 'a' : got.length} ${got.map((k) => SAMPLE_KINDS[k].label.toLowerCase()).join(' and ')} sample${got.length > 1 ? 's' : ''}`;
@@ -134,8 +139,19 @@ function rules(a, s) {
 }
 
 let lastCheck = 0;
+/** Remora out on her tether while the crew have the con: hold the ship (speed 0) and bring her home, take her aboard, then carry on. */
+function tendRemora(a, s) {
+  const r = s.rov;
+  if (!r || r.lost) { if (a.rovHold) { a.rovHold = false; if (!r) note('Remora is aboard. The ship carried on.'); } return; }
+  if (!a.rovHold) { a.rovHold = true; note('Remora was out on her tether. The XO held the ship and brought her home before getting under way.'); }
+  s.cruise = false;
+  if (!r.auto && !r.home && !r.job) sim.rovAuto();            // drive home (a tool job finishes first)
+  if (r.home && !busy()) recoverRemora();                   // alongside: take her aboard
+}
+sim.speedCaps.push(() => (sim.away && sim.away.rovHold ? 0 : null));   // the ship holds still while Remora comes home
 sim.hooks.push(() => {
   const a = sim.away, s = sim.s; if (!a) return;
+  tendRemora(a, s);
   const d = toward(a.last, s).nm; if (d > 0 && d < 5) a.nm += d; a.last = { lat: s.lat, lon: s.lon };   // distance covered
   if (s.clock - lastCheck < 60 && s.clock >= lastCheck) return;
   lastCheck = s.clock;

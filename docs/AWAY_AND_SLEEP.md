@@ -1,5 +1,7 @@
 # Sleep and "Crew has the con" (away mode)
 
+> **Checked 2026-11-25 against the newer systems.** WSKR launch bays: the crew slow the ship for a WSKR coming aboard (unchanged). **Remora out on her tether:** the XO holds the ship (speed 0), brings her home (auto return), takes her aboard, then carries on; the tether never parts under way. If it parts anyway, the crew stop for the lost craft (`craft`, Remora). The science team do not use Remora while a new tether is being spliced. Tests: `tools/tether_test.py` (XO checks), `away_test.py`, `dock_sleep_test.py`, `wskr_bay_test.py`.
+
 Status: **built 2026-11-20** (owner request: keep the sub moving while the iPad app is closed). Code: `tablet/js/away.js`, the Sleep dialog in `app.js`, `sim.away` in `persist.js`, the phone view in `ped/ped.js`. Test: `tools/away_test.py`. Updated the same day: the science team now use Remora, and supplies are plain supplies.
 
 ## The idea
