@@ -9,6 +9,7 @@ import { createScene } from './scene.js';
 import { say, hush, unreadCount, stats as notifyStats } from './notify.js';
 import { seafloor } from './seafloor.js';
 import { fileScan, scanned } from './findings.js';
+import './survey.js';   // site surveys run on the sim clock
 import './rov.js';
 import { SHUTTLE_NAME, BAY_SAFE_KT } from './bayops.js';
 import './tern.js';
@@ -372,6 +373,9 @@ async function boot() {
       else if (type === 'wskr-found') { const fresh = fileScan(data.poi); say('sensors', fresh ? `${wskrName(data.wskr)} has finished investigating ${data.poi.name}. Scan filed, Captain.` : `${wskrName(data.wskr)} re-checked ${data.poi.name}. Nothing new.`, 'mission'); }
       else if (type === 'rov-sample') { say('science', `Remora has a ${SAMPLE_KINDS[data.kind].label.toLowerCase()} sample from ${data.site}, Captain. Storage ${data.stored} of ${data.store}.${data.full ? ' She is full. Bring her home so we can unload her.' : ' Bring her home when you have what you came for, and she will deliver it to the lab.'}`, '', { action: true }); }
       else if (type === 'rov-arrived') say('science', `Remora is on station at ${data.name}, Captain. Take her down to the floor and take your sample.`, '', { action: true });
+      else if (type === 'survey-start') { /* told by the SONAR page */ }
+      else if (type === 'survey-done') say('sensors', `Survey of ${data.name} complete, Captain. The sea floor is charted in detail round it, and the survey is filed in Findings.`, 'mission', { notice: 'SURVEY COMPLETE' });
+      else if (type === 'survey-stopped' && data.why !== 'captain') say('sensors', `Survey of ${data.name} broken off, Captain: ${data.why === 'moved' ? 'we moved off station' : data.why === 'fast' ? 'we picked up speed' : 'we left the site'}.`, 'error');
       else if (type === 'rov-snapped') say('science', `The tether has parted, Captain! We have lost Remora, ${data.nm.toFixed(1)} miles astern. No control and no telemetry. The Tern can fetch her: Launch Bay, Fetch Remora. Engineering are splicing a new tether.`, 'error', { notice: 'TETHER PARTED' });
       else if (type === 'shuttle-fetched') say('helm', 'The Tern has Remora aboard, Captain. Bringing her home.', 'mission');
       else if (type === 'tether-repaired') say('science', 'Engineering: the new tether is spliced and tested. Remora can go out again once she is aboard.', '');

@@ -213,6 +213,16 @@
    "Find her, dive the Tern to her depth, dock at her hatch and ferry the crew out, four at a time.",
    "Reach her, then dock the Tern at her escape hatch and bring her crew home.",
    "Locate the submarine, dock with her and take off the crew."
+  ],
+  "situation.mapping": [
+   "The charts round {place}, {where}, are coarse.",
+   "{place} lies {where}. Our sea floor data there is old and patchy.",
+   "Nobody has charted {place}, {where}, in any detail."
+  ],
+  "ask.mapping": [
+   "Hold station at {place} and run a full site survey, then send us the chart.",
+   "Survey {place}: half an hour on station, and send the result.",
+   "We need a detailed survey of {place}. Hold station there for the survey and report."
   ]
  },
  "decisions": {

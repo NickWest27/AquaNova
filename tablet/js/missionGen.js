@@ -102,7 +102,7 @@ function findSite(rng, maxH) {
 /** Build one offer from a seed. Returns { def, offer } or null when nothing valid was found. */
 export function generate(seed, { type, compulsory, distress, reason: forced } = {}) {
   const g = st(), rng = mulberry(seed), s = sim.s, now = s.clock;
-  type = distress ? 'contact' : (type || pick(rng, ['contact', 'survey', 'patrol']));
+  type = distress ? 'contact' : (type || pick(rng, ['contact', 'survey', 'patrol', 'mapping']));   // mapping: a seabed survey (survey.js), 2026-11-26
   const id = `gen_${g.n + 1}`, vars = { captain: fill('{captain}') };
   let spot, poi = null, reason = null, urgency = 'routine', route = 0, req;
   if (type === 'contact') {
@@ -117,18 +117,18 @@ export function generate(seed, { type, compulsory, distress, reason: forced } = 
   } else {
     const site = findSite(rng, 9); if (!site) return null; poi = site.q; spot = { p: { lat: poi.lat, lon: poi.lon }, hours: site.hours }; req = pick(rng, ['oera_ops', 'university']);
   }
-  route = spot.hours; const R = P.requesters[req], comp = compulsory != null ? compulsory : (R.compulsory && (type === 'survey' || type === 'patrol') ? rng() < 0.5 : R.compulsory);
+  route = spot.hours; const R = P.requesters[req], comp = compulsory != null ? compulsory : (R.compulsory && (type === 'survey' || type === 'patrol' || type === 'mapping') ? rng() < 0.5 : R.compulsory);
   const loc = type === 'contact' && reason !== 'poaching' ? describeLoc(rng, spot.p) : describeLoc(rng, spot.p, { bearing: false }); if (type === 'contact' && reason !== 'poaching') spot.p = loc.p;
   const b = toward(s, spot.p), place = type === 'contact' && reason !== 'poaching' ? (poi ? `${poi.name}` : 'open water') : poi.name;
   const durH = type === 'patrol' ? pick(rng, [12, 24]) : 0, expiresH = distress ? 0.5 : type === 'patrol' ? 3 : type === 'contact' ? 1 + Math.floor(rng() * 2) : 12, deadlineH = distress ? Math.ceil((expiresH + route * 1.25 + 0.25) * 2) / 2 : type === 'contact' ? Math.ceil((expiresH + route * 1.6 + 1) * 2) / 2 : null;
   Object.assign(vars, { where: loc.text, duration: `${durH} hours`, place, nm: Math.round(b.nm), dir: compass(b.brg), hours: deadlineH && `${deadlineH} hours`, expires: expiresH < 1 ? `${expiresH * 60} minutes` : `${expiresH} hour${expiresH > 1 ? 's' : ''}` });
   const text = [take(g, rng, `open.${req}`, vars), '',
-    take(g, rng, type === 'contact' ? `situation.contact.${reason}` : type === 'patrol' ? 'situation.patrol' : 'situation.survey', vars),
-    take(g, rng, type === 'contact' ? `ask.contact.${reason}` : type === 'patrol' ? 'ask.patrol' : 'ask.survey', vars), '',
+    take(g, rng, type === 'contact' ? `situation.contact.${reason}` : type === 'patrol' ? 'situation.patrol' : type === 'mapping' ? 'situation.mapping' : 'situation.survey', vars),
+    take(g, rng, type === 'contact' ? `ask.contact.${reason}` : type === 'patrol' ? 'ask.patrol' : type === 'mapping' ? 'ask.mapping' : 'ask.survey', vars), '',
     take(g, rng, distress ? 'time.distress' : type === 'patrol' ? 'time.patrol' : deadlineH ? 'time.deadline' : 'time.soft', vars), take(g, rng, distress ? 'limit.distress' : 'limit.expires', vars),
     ...(distress ? [] : [take(g, rng, comp ? 'limit.compulsory' : 'limit.optional', vars)]), '', take(g, rng, `close.${req}`, vars), '', R.sign].join('\n');
-  const facts = `Reported position: ${loc.short}${type === 'survey' || type === 'patrol' ? ' (centre of the area)' : ''}. ${loc.how === 'bearing' ? 'Plot it from that place with a bearing and distance on the course page' : 'Enter it as a waypoint on the course page'}, then navigate there yourself. Travel about ${route < 1 ? Math.round(route * 60) + ' minutes' : route.toFixed(1) + ' hours'} by the planned route.`;
-  const name = type === 'patrol' ? `Patrol: ${poi.name}` : type === 'contact' ? { adrift: 'Vessel in trouble', lost_survey: 'Silent survey ship', poaching: 'Poachers in the closed area', patrol: `Patrol: ${poi && poi.name}`, sinking: 'MAYDAY: yacht sinking', survivors: 'MAYDAY: survivors in a raft', disabled_ship: 'MAYDAY: disabled ship', disabled_sub: 'MAYDAY: submarine on the bottom' }[reason] : `Survey: ${poi.name}`;
+  const facts = `Reported position: ${loc.short}${type === 'survey' || type === 'patrol' || type === 'mapping' ? ' (centre of the area)' : ''}. ${loc.how === 'bearing' ? 'Plot it from that place with a bearing and distance on the course page' : 'Enter it as a waypoint on the course page'}, then navigate there yourself. Travel about ${route < 1 ? Math.round(route * 60) + ' minutes' : route.toFixed(1) + ' hours'} by the planned route.`;
+  const name = type === 'patrol' ? `Patrol: ${poi.name}` : type === 'contact' ? { adrift: 'Vessel in trouble', lost_survey: 'Silent survey ship', poaching: 'Poachers in the closed area', patrol: `Patrol: ${poi && poi.name}`, sinking: 'MAYDAY: yacht sinking', survivors: 'MAYDAY: survivors in a raft', disabled_ship: 'MAYDAY: disabled ship', disabled_sub: 'MAYDAY: submarine on the bottom' }[reason] : type === 'mapping' ? `Seabed survey: ${poi.name}` : `Survey: ${poi.name}`;
   const objectives = type === 'patrol' ? [
     { id: 'arrive', description: `Enter the patrol area round ${poi.name} (${fmtPos(spot.p)})`, required: true, triggers: [{ type: 'property_at_least', property: `${KEY}Flags.${id}.inside`, value: 1 }] },
     { id: 'watch', description: 'Stay on station until the window ends', required: true, after: 'arrive', triggers: [{ type: 'property_at_least', property: `${KEY}Flags.${id}.served`, value: 1 }] },
@@ -143,6 +143,10 @@ export function generate(seed, { type, compulsory, distress, reason: forced } = 
     { id: 'decide', description: 'Decide how to handle the vessel', required: true, after: 'identify', triggers: [{ type: 'decision_made', decisionId: `${id}_d` }] },
     ...(REASONS[reason].distress ? [{ id: 'rescue', description: REASONS[reason].mode === 'dock' ? 'Take the crew off: dive the Tern to her depth, dock at her hatch, ferry them to the Aqua Nova or a friendly dock' : 'Take the crew off: bring the Tern up alongside, surfaced, and ferry them to the Aqua Nova or a friendly dock', required: true, after: 'decide', triggers: [{ type: 'property_at_least', property: `${KEY}Flags.${id}.rescued`, value: 1 }] }] : []),
     { id: 'report', description: 'Send your report to the requester from Comms', required: true, after: REASONS[reason].distress ? 'rescue' : 'decide', triggers: [{ type: 'report_sent' }] },
+  ] : type === 'mapping' ? [
+    { id: 'go', description: `Go to ${poi.name} (${fmtPos(spot.p)})`, required: true, triggers: [{ type: 'location_enter', location: poi.name.toLowerCase() }] },
+    { id: 'survey', description: 'Survey the site: hold station there and tap Survey site on the SONAR page (30 minutes)', required: true, after: 'go', triggers: [{ type: 'property_at_least', property: `mission.surveyed.p${poi.id}`, value: 99999 }] },   // value set at acceptance (count + 1)
+    { id: 'report', description: 'Send your survey from Comms', required: true, after: 'survey', triggers: [{ type: 'report_sent' }] },
   ] : [
     { id: 'go', description: `Go to ${poi.name} (${fmtPos(spot.p)})`, required: true, triggers: [{ type: 'location_enter', location: poi.name.toLowerCase() }] },
     { id: 'analyse', description: 'Take a sample there and analyse it in the Science Lab', required: true, after: 'go', triggers: [{ type: 'property_at_least', property: 'mission.science.stats.analysed', value: 99999 }] },   // value set at acceptance (baseline + 1)
@@ -194,6 +198,7 @@ export function acceptOffer(id) {
   if (g.active) { if (!g.defs[id].gen.distress) return false; finish(g.active, 'quit', { forced: true, key: 'quit_distress' }); }   // a distress call outranks any mission: break away, no penalty
   const def = g.defs[id];
   if (def.gen.type === 'survey') { const base = Number(gameState.getProperty('mission.science.stats.analysed')) || 0; def.objectives.find((o) => o.id === 'analyse').triggers[0].value = base + 1; }
+  if (def.gen.type === 'mapping') { const o = def.objectives.find((x) => x.id === 'survey'), prop = o.triggers[0].property; o.triggers[0].value = (Number(gameState.getProperty(prop)) || 0) + 1; }   // a fresh survey, not an old one
   if (g.pendingVessel) { g.vessels = [...g.vessels, g.pendingVessel]; traffic.scripted = g.vessels; delete g.pendingVessel; traffic.candKey = ''; }
   if (def.gen.type === 'patrol') {
     const o = g.offer, a = def.gen.area; g.patrol = { id, name: a.name, lat: a.lat, lon: a.lon, radius: a.radius, from: o.startAt, to: o.endAt, inside: 0, last: null, spawnAt: o.startAt + (1 + Math.random() * 2) * H, spawned: false };
@@ -338,7 +343,7 @@ function patrolTick(g, id, now) {
 }
 function onEnd(e) {   // the manager completed a generated mission: record the outcome the decision set
   const id = e.detail.id, g = st(); if (g.active !== id) return;
-  const def = g.defs[id]; finish(id, flag(id, 'outcome') || (def.gen.type === 'survey' ? 'survey' : def.gen.type === 'patrol' ? 'patrol' : 'document'));
+  const def = g.defs[id]; finish(id, flag(id, 'outcome') || (def.gen.type === 'survey' || def.gen.type === 'mapping' ? 'survey' : def.gen.type === 'patrol' ? 'patrol' : 'document'));
 }
 
 /** Call once after the mission manager and the reputation module are loaded. */

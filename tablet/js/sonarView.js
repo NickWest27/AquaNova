@@ -7,6 +7,7 @@
 import { sim, toward } from './sim.js';
 import { el } from './util.js';
 import { scanned, fileScan } from './findings.js';
+import { surveySite, surveying, startSurvey, stopSurvey, SURVEY_KT } from './survey.js';
 import { tell } from './notify.js';
 import { drawContact, contactSvg, frameColour } from './contactIcons.js';
 import { sources, source, setSource, contactsFor, selected, select, snr, sweeping, startSweep, stopSweep, startScan, canScan, toggleInvestigate, canInvestigate, SCAN_NM } from './sonar.js';
@@ -156,10 +157,13 @@ export function createSnrView({ bbtn }) {
   const sweepB = bbtn('Full sweep', () => { if (sweeping()) stopSweep(); else if (!startSweep()) return; side(); });
   const atSite = () => { const a = sim.s.at; return a && a.type !== 'dock' && !scanned(a) ? a : null; };   // the ship at a site it has not scanned yet
   const siteB = bbtn('Scan site', () => { const a = atSite(); if (a && fileScan(a)) tell('sensors', `Scan filed: ${a.name}`, 'mission'); side(); });
+  const survB = bbtn('Survey site', () => {   // hold station at a site for 30 minutes: a detailed chart and a survey finding (survey.js)
+    if (surveying()) { stopSurvey('captain'); side(); return; }
+    const x = startSurvey(); tell('sensors', x.ok ? `Surveying ${surveySite().name}, Captain. Thirty minutes. Hold station.` : x.why === 'fast' ? `Slow to ${SURVEY_KT} knots or less to survey` : 'Bring the ship to a site first', x.ok ? 'mission' : 'error'); side(); });
   const scanB = bbtn('Scan', () => { startScan(); side(); });
   const clearB = bbtn('Clear', () => { const st = snr(); if (st.sel) select(st.sel); side(); });
   const invB = bbtn('Investigate', () => { toggleInvestigate(); side(); sim.touch(); });
-  const r1 = el('div', { class: 'rowN' }, srcB, sweepB, siteB), r2 = el('div', { class: 'rowN' }, scanB, invB, clearB), srcList = el('div', { class: 'snr-srcs' });
+  const r1 = el('div', { class: 'rowN' }, srcB, sweepB, siteB, survB), r2 = el('div', { class: 'rowN' }, scanB, invB, clearB), srcList = el('div', { class: 'snr-srcs' });
   const c = el('div', { class: 'bc' }, r1, r2, srcList);
   let open = false, srcSig = '';
   function side() {
@@ -167,6 +171,7 @@ export function createSnrView({ bbtn }) {
     set(rangeTxt, view.range + ' NM');
     srcB.classList.toggle('on', open); sweepB.classList.toggle('on', !!st.sweep); sweepB.textContent = st.sweep ? 'Stop sweep' : 'Full sweep'; sweepB.disabled = !source().ok && !st.sweep;
     r2.hidden = !sel || open; r1.hidden = open; srcList.hidden = !open; siteB.hidden = !atSite();
+    const sv = surveying(); survB.hidden = !sv && !surveySite(); survB.classList.toggle('on', !!sv); survB.textContent = sv ? `Surveying ${Math.max(1, Math.ceil((sv.end - sim.s.clock) / 60))} min` : 'Survey site';
     scanB.disabled = !canScan(); scanB.textContent = st.scan ? 'Scanning' : 'Scan'; scanB.classList.toggle('on', !!st.scan);
     invB.disabled = !canInvestigate(); invB.classList.toggle('on', !!(sel && sel.inv.length)); invB.textContent = sel && sel.inv.length ? 'Investigating' : 'Investigate';
     const sig = open + '|' + st.src + '|' + srcs.map((x) => x.id + x.name + x.ok).join();
