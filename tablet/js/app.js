@@ -34,7 +34,7 @@ const STATIONS = {
   crew: { title: 'Communicator', icon: 'comms', hidden: true }, // opened from the pin, not the dock
 };
 const FILES = { sys: 'systems' };
-const WHERE = { bridge: 'Bridge', quarters: 'Quarters', walkway: 'Walkway', walkway2: 'Walkway AN-1', science: 'Science Lab', medbay: 'Medbay', launchbay: 'Launch Bay' };   // the back button returns to the room you came from
+const WHERE = { bridge: 'Bridge', quarters: 'Quarters', walkway: 'Walkway', walkway2: 'Walkway AN-1', science: 'Science Lab', medbay: 'Medbay', launchbay: 'Launch Bay', engineering: 'Engineering' };   // the back button returns to the room you came from
 const SYSTEM_TEXT = {
   communicator_tutorial: ['Communicator ready', 'Pin on. Tap the badge in the top-right corner to talk to your crew. ARIA, your executive officer, is waiting to hear from you.'],
 };
@@ -194,7 +194,7 @@ function updateChips() {
   if (current.chips.textContent !== txt) current.chips.textContent = txt;
 }
 function openScene(name) {
-  if (['bridge', 'walkway', 'walkway2', 'science', 'medbay', 'launchbay'].includes(name)) setTimeout(() => document.dispatchEvent(new CustomEvent('location-enter', { detail: { location: name } })), 0);
+  if (['bridge', 'walkway', 'walkway2', 'science', 'medbay', 'launchbay', 'engineering'].includes(name)) setTimeout(() => document.dispatchEvent(new CustomEvent('location-enter', { detail: { location: name } })), 0);
   if (name === 'quarters') {
     closeStation(); scene.show('quarters');
     document.dispatchEvent(new CustomEvent('location-enter', { detail: { location: 'quarters' } }));
@@ -210,7 +210,8 @@ function openScene(name) {
   else if (name === 'bay-airlock') say('engineering', 'The inner airlock is not wired up yet, Captain. Use the control console.');
   else if (name === 'lab-samples' || name === 'lab-analysis' || name === 'lab-research') { ctx.labTab = name.slice(4); ctx.labOnly = true; openStation('lab'); }   // a bench shows only its own page
   else if (name === 'lab') { ctx.labTab = 'samples'; ctx.labOnly = false; openStation('lab'); }   // the main computer offers all three
-  else if (name === 'engineering') say('aria', 'Engineering is not built yet, Captain. The engineering crew are on the communicator if you need them.');
+  else if (name === 'engineering') { closeStation(); scene.show('engineering'); }
+  else if (name === 'eng-bench') say('engineering', 'The workbench is not set up yet, Captain. Use the console for the ship\'s systems.');
   else if (name === 'pickup-ped') { gameState.updateProperty('progress.got_ped', true); }
   else if (name === 'pickup') document.dispatchEvent(new CustomEvent('item-pickup', { detail: { itemId: 'communicator' } }));
   else openStation(name);

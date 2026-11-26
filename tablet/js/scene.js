@@ -157,7 +157,15 @@ export function createScene(stage, { onOpen }) {
     hs('◂ WALKWAY', 180, 225, 195, 415, () => onOpen('walkway2'), 'mid'),                  // the door to the walkway
     hs('INNER AIRLOCK', 730, 490, 470, 350, () => onOpen('bay-airlock'), 'mid', 'locked'), // not built yet
     hs('REMORA', 1275, 640, 645, 375, () => onOpen('remora'), 'mid'));                     // the craft on the racks
-  stage.append(bridge, quarters, walkway, walkway2, science, medbay, bay);
+  // engineering (the owner's picture, 1024x765; art px x 1.875 across, x 1.88 down): the console and the power cores open Systems,
+  // the octagonal hatch goes back to walkway AN-1, the workbench is locked for now
+  const eng = el('div', { class: 'scene engineering', hidden: true });
+  eng.append(artImg('engineering'),
+    hs('ENGINEERING CONSOLE', 262, 828, 760, 600, () => onOpen('sys'), 'top'),
+    hs('POWER CORES', 1022, 301, 553, 420, () => onOpen('sys'), 'mid'),
+    hs('WORKBENCH', 1031, 725, 581, 273, () => onOpen('eng-bench'), 'mid', 'locked'),
+    hs('◂ WALKWAY', 553, 480, 253, 320, () => onOpen('walkway2'), 'mid'));
+  stage.append(bridge, quarters, walkway, walkway2, science, medbay, bay, eng);
   // Labels are hidden for immersion. Press and hold anywhere on the scene to show them (they stay a moment after release).
   { let t = null, off = null, shown = 0;
     const hide = () => { document.body.classList.remove('show-labels'); };
@@ -192,9 +200,9 @@ export function createScene(stage, { onOpen }) {
     inQuarters: false, where: 'bridge',
     show(which) {
       api.where = which; api.inQuarters = which === 'quarters';
-      document.body.classList.toggle('stage-4x3', ['bridge', 'walkway', 'quarters', 'science', 'launchbay', 'medbay'].includes(which));   // the retro scenes are 4:3, the others are still 16:9
+      document.body.classList.toggle('stage-4x3', ['bridge', 'walkway', 'quarters', 'science', 'launchbay', 'medbay', 'engineering'].includes(which));   // the retro scenes are 4:3, the others are still 16:9
       window.dispatchEvent(new Event('resize'));
-      bridge.hidden = which !== 'bridge'; quarters.hidden = which !== 'quarters'; walkway.hidden = which !== 'walkway'; walkway2.hidden = which !== 'walkway2'; science.hidden = which !== 'science'; medbay.hidden = which !== 'medbay'; bay.hidden = which !== 'launchbay';
+      bridge.hidden = which !== 'bridge'; quarters.hidden = which !== 'quarters'; walkway.hidden = which !== 'walkway'; walkway2.hidden = which !== 'walkway2'; science.hidden = which !== 'science'; medbay.hidden = which !== 'medbay'; bay.hidden = which !== 'launchbay'; eng.hidden = which !== 'engineering';
       cache.clear(); api.update();
     },
     update() {
