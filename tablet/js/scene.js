@@ -82,8 +82,8 @@ export function createScene(stage, { onOpen }) {
     frame,
     hs('COMMS', 240, 740, 280, 200, () => onOpen('comms'), 'top'),        // the comms console, left
     hs('SENSORS', 1420, 740, 260, 200, () => onOpen('sensors'), 'top'),   // the sensors console, right
-    hs('NICOLE', 74, 640, 160, 210, () => onOpen('talk-communications'), 'top'),   // Nicole at comms: tap her to talk
-    hs('ALEX', 1690, 630, 190, 210, () => onOpen('talk-sensors'), 'top'),          // Alex at sensors
+    hs('NICOLE', 0, 640, 238, 540, () => onOpen('talk-communications'), 'top'),   // Nicole at comms, head to chair back: tap her to talk
+    hs('ALEX', 1684, 630, 236, 550, () => onOpen('talk-sensors'), 'top'),          // Alex at sensors, head to chair back
     hs('WALKWAY', 0, 1332, 1920, 108, () => onOpen('walkway'), 'mid'),   // the bottom edge leaves the bridge
   );
 
