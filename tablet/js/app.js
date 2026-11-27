@@ -490,8 +490,8 @@ async function boot() {
       else if (type === 'survey-start') { /* told by the SONAR page */ }
       else if (type === 'survey-done') say('sensors', `Survey of ${data.name} complete, Captain. The sea floor is charted in detail round it, and the survey is filed in Findings.`, 'mission', { notice: 'SURVEY COMPLETE' });
       else if (type === 'survey-stopped' && data.why !== 'captain') say('sensors', `Survey of ${data.name} broken off, Captain: ${data.why === 'moved' ? 'we moved off station' : data.why === 'fast' ? 'we picked up speed' : 'we left the site'}.`, 'error');
-      else if (type === 'rov-snapped') say('science', `The tether has parted, Captain! We have lost Remora, ${data.nm.toFixed(1)} miles astern. No control and no telemetry. The outer door is closing, so the Tern can go for her: Launch Bay, Fetch Remora. Engineering will fit a new tether once she is back aboard.`, 'error', { notice: 'TETHER PARTED' });
-      else if (type === 'shuttle-fetched') say('helm', 'The Tern has Remora aboard, Captain. Bringing her home.', 'mission');
+      else if (type === 'rov-snapped') say('security', `Captain, Remora's tether has parted! She is ${data.nm.toFixed(1)} miles astern, no control and no telemetry. I am closing the outer door. The Tern can go for her: Launch Bay, Fetch Remora. Engineering will fit a new tether once she is back aboard.`, 'error', { notice: 'TETHER PARTED' });   // the launch bay is Lt. Washington's (owner, 2026-11-27)
+      else if (type === 'shuttle-fetched') say('security', 'The Tern has Remora in her cradle, Captain. Bringing them both home.', 'mission');
       else if (type === 'tether-repair-start') say('science', 'Engineering have Remora. A new tether takes about two hours, Captain.', '');
       else if (type === 'tether-repaired') say('science', 'Engineering: the new tether is fitted and tested. Remora is ready.', '');
       else if (type === 'rov-home') say('science', 'Remora is alongside, Captain. She is ready to be taken aboard.', '', { action: true });
@@ -520,12 +520,12 @@ async function boot() {
       else if (type === 'wskr-dead') say('sensors', `${wskrName(data)} has lost power and is adrift, Captain. Bring the ship alongside to recover it.`, 'mission');
       else if (type === 'shuttle-search-done') say('comms', `Aqua Nova, ${SHUTTLE_NAME}. Search pattern finished. Holding position and waiting for orders.`, 'mission');
       else if (type === 'wskr-search-done') say('sensors', `${wskrName(data)} has finished its search pattern and is rejoining the formation.`);
-      else if (type === 'bay-launched') say(data.craft === 'shuttle' ? 'helm' : data.craft === 'rov' ? 'science' : 'sensors', data.craft === 'shuttle' ? `${SHUTTLE_NAME} is away, Captain.` : data.craft === 'rov' ? 'Remora is away. The bay doors stay open for her tether until she is back aboard, Captain.' : `${wskrName(data)} is away.`, '', { action: true });
+      else if (type === 'bay-launched') say(data.craft === 'shuttle' ? 'security' : data.craft === 'rov' ? 'science' : 'sensors', data.craft === 'shuttle' ? `${SHUTTLE_NAME} is away, Captain.` : data.craft === 'rov' ? 'Remora is away. The bay doors stay open for her tether until she is back aboard, Captain.' : `${wskrName(data)} is away.`, '', { action: true });
       else if (type === 'speed-cap') say('helm', `Captain, the outer bay doors are open. I am holding us at ${data.kt} knots to protect the ship and the doors. Tell me to override the limit, or use Systems, if you want more.`, 'mission');
       else if (type === 'speed-override') say('helm', 'Limit overridden, Captain. Speed is yours until the doors close. Watch the bay.');
       else if (type === 'bay-warn') say('engineering', `Captain, the bay doors are open and she is taking a beating at ${Math.round(data.kt)} knots. Come below ${BAY_SAFE_KT}, if ya please.`, 'mission');
       else if (type === 'bay-door-damage') say('engineering', `Captain, ya killing the bay doors at this speed! I recommend we slow down. They are ${Math.round(data.pct)} percent gone, and only a dry dock fixes that.`, 'mission');
-      else if (type === 'bay-tether') say('engineering', `${wskrName(data)} is alongside, Captain, but Remora's tether is holding the bay doors open. Get her aboard first.`);
+      else if (type === 'bay-tether') say('sensors', `${wskrName(data)} is alongside, Captain, but Remora's tether is holding the bay doors open. Get her aboard first.`);
       else if (type === 'remora-aboard') say('science', `Remora is aboard. The team are unloading ${data.load} sample${data.load === 1 ? '' : 's'} and re-equipping her: about ${Math.ceil(data.dur / 60)} minutes.`, '', { action: true });
       else if (type === 'remora-ready') say('science', 'Remora is unloaded and re-equipped, Captain. She is ready to launch.', '', { action: true });
       else if (type === 'bay-wait') say('sensors', `${wskrName(data)} is alongside, Captain. Slow below ${BAY_SAFE_KT} knots and we will take it aboard.`);
@@ -533,8 +533,8 @@ async function boot() {
       else if (type === 'shuttle-landed') say('helm', `The away team is ashore at ${(data.dest || {}).name || 'the pier'}, ${SHUTTLE_NAME} is moored and charging. Recall her when they are ready.`);
       else if (type === 'shuttle-nolink') say('helm', `${SHUTTLE_NAME} has lost her radio link with one pilot aboard, Captain. She is turning back.`, 'mission');
       else if (type === 'shuttle-exchanged') say('helm', `Crew and supplies are across. ${SHUTTLE_NAME} is coming home.`);
-      else if (type === 'shuttle-alongside') say('helm', `${SHUTTLE_NAME} is alongside, Captain. Slow below ${BAY_SAFE_KT} knots and I will bring her in.`);
-      else if (type === 'shuttle-aboard') say('helm', `${SHUTTLE_NAME} is aboard and on charge.`);
+      else if (type === 'shuttle-alongside') say('security', `${SHUTTLE_NAME} is alongside, Captain. Get us below ${BAY_SAFE_KT} knots and I will bring her in.`);
+      else if (type === 'shuttle-aboard') say('security', `${SHUTTLE_NAME} is aboard, Captain. The bay is dry and she is on charge.`);
       else if (type === 'shuttle-low') say('helm', `${SHUTTLE_NAME} is down to her reserve, Captain. Bringing her home.`, 'mission');
       else if (type === 'shuttle-o2-low') say('helm', `${SHUTTLE_NAME}'s air is down to her reserve, Captain. Bringing her home.`, 'mission');
       else if (type === 'shuttle-o2-out') say('helm', `${SHUTTLE_NAME} is out of air, Captain, and drifting. Take the ship to her, fast.`, 'mission');
