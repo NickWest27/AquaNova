@@ -111,7 +111,7 @@ export function mount(host) {
       ['LOCK', st.up ? 'LOCKED' : st.fading ? 'WEAK' : 'LOST'], ['TRACKING', st.up ? 'ARMED' : 'STANDBY'], ['SIG SOURCE', st.tgt.name], ['ALPHA CHAN', st.up ? (L.tx ? 'SEND' : 'RCV') : 'IDLE'],
     ];
     rows.forEach(([k, v], i) => { sat[i][0].textContent = k; sat[i][1].textContent = v; });
-    bandRows.forEach(({ b, lamp, v }) => { const ok = antDepth(b.ant) <= b.max; lamp.className = 'lamp ' + (ok ? 'ok' : 'bad'); v.textContent = ok ? 'OPEN' : `≤ ${b.max} M`; });
+    bandRows.forEach(({ b, lamp, v }) => { const ok = antDepth(b.ant) <= b.max; lamp.className = 'lamp ' + (ok ? 'ok' : 'bad'); v.textContent = b.ant === 'hull' ? 'ANY DEPTH' : ok ? 'OPEN' : `≤ ${b.max} M`; });
     drawSpec(sts); drawMap(s, sts);
   }
   update();

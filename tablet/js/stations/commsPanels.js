@@ -90,18 +90,18 @@ export function mountContacts(host) {
     const list = (cm.contacts || []).filter((c) => c.kind === kind && isActive(c));
     const next = JSON.stringify([kind, cm.band, list.map((c) => [c.id, hailed().includes(c.id)]), cm.found, cm.log.length]);
     secBtn.textContent = cm.secure ? 'Secured' : 'Unsecured'; secBtn.classList.toggle('on', cm.secure);
-    freq.textContent = `${cm.mhz.toFixed(cm.band === 'HF' ? 3 : 3)} MHz`;
+    freq.textContent = cm.band === 'LPI' ? `${cm.mhz.toFixed(1)} kHz` : `${cm.mhz.toFixed(3)} MHz`;
     const here = (cm.contacts || []).find((c) => isActive(c) && c.band === cm.band && Math.abs(c.mhz - cm.mhz) < D().fine * 0.6);
     tuneNote.textContent = here && hailed().includes(here.id) ? `On ${here.name}.` : 'Match a contact\'s frequency, then hail.';
     msgLine.textContent = msg;
     if (next === sig) return;
     sig = next;
     kindBar.replaceChildren(...KINDS.map(([id, label]) => chip(label, kind === id, () => { kind = id; sig = ''; update(); })));   // only rebuilt when something changed: a button replaced between touch down and up never gets its tap
-    bandBar.replaceChildren(...Object.keys(DIAL).map((b) => chip(b, cm.band === b, () => { if (b !== cm.band) tune(b, { HF: 10, VHF: 158, UHF: 280 }[b]); sig = ''; update(); })));
+    bandBar.replaceChildren(...Object.keys(DIAL).map((b) => chip(b, cm.band === b, () => { if (b !== cm.band) tune(b, { HF: 10, VHF: 158, UHF: 280, LPI: 20 }[b]); sig = ''; update(); })));
     dir.replaceChildren(...(list.length ? list.map((c) => el('button', { class: 'cp-contact', onclick: () => { tune(c.band, c.mhz); msg = `Tuned to ${c.name}.`; } },
-      el('b', { text: c.name }), el('span', { class: 'cl-k', text: `${c.band} ${c.mhz.toFixed(3)} MHz  ·  ${c.range > 9999 ? 'via satellite' : `range ${c.range} nm`}` }))) : [el('div', { class: 'empty', text: 'No contacts of this kind.' })]));
+      el('b', { text: c.name }), el('span', { class: 'cl-k', text: c.band === 'LPI' ? `LPI ${c.mhz.toFixed(1)} kHz  ·  acoustic, any depth` : `${c.band} ${c.mhz.toFixed(3)} MHz  ·  ${c.range > 9999 ? 'via satellite' : `range ${c.range} nm`}` }))) : [el('div', { class: 'empty', text: 'No contacts of this kind.' })]));
     found.replaceChildren(...(cm.found.length ? cm.found.map((f) => el('button', { class: 'cp-contact' + (f.distress ? ' sos' : ''), onclick: () => { tune(cm.band, f.mhz); msg = `Tuned to ${f.mhz.toFixed(3)} MHz.`; } },
-      el('b', { text: `${f.mhz.toFixed(3)} MHz${f.name ? `  ${f.name}` : ''}` }), el('span', { class: 'cl-k', text: `${f.dB} dB · bearing ${String(f.brg).padStart(3, '0')}°${f.distress ? ' · DISTRESS SIGNAL' : ''}` }))) : [el('div', { class: 'cl-k', text: 'Run a scan to look for carriers.' })]));
+      el('b', { text: `${cm.band === 'LPI' ? f.mhz.toFixed(1) + ' kHz' : f.mhz.toFixed(3) + ' MHz'}${f.name ? `  ${f.name}` : ''}` }), el('span', { class: 'cl-k', text: `${f.dB} dB · bearing ${String(f.brg).padStart(3, '0')}°${f.distress ? ' · DISTRESS SIGNAL' : ''}` }))) : [el('div', { class: 'cl-k', text: 'Run a scan to look for carriers.' })]));
     const e = cm.log[0];
     callBox.replaceChildren(...(e ? [row('CALL ORIGIN:', 'AQN-101-' + new Date(timeBase.epoch).getUTCFullYear()), row('TO STATION:', authCode(e.id) + '-' + e.band), row('AUTH CODE:', authCode('aqn' + e.id)), row('LINK:', e.secure ? 'SECURED' : 'UNSECURED'), row('CALL ROUTE:', e.route), row('RANGE:', `${e.dist} NM`),
       el('p', { class: 'cp-reply' + (e.distress ? ' sos' : ''), text: `${e.name}: ${e.text}` })] : [el('div', { class: 'cl-k', text: 'No call yet.' })]));

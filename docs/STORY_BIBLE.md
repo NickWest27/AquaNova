@@ -19,6 +19,11 @@ Written 2026-11-19, brought up to date 2026-11-27. Sources: the Characters and C
 - **The escort:** while Sea Trials runs, the O.E.R.A. support ship *Seaward* and the cutter *CGC Vigilant* patrol the Trials AO on AIS (`trials.js`).
 - **Not built yet:** hostile contacts beyond the poacher and pirate factions in `data/world/factions.json`.
 
+## Ship technology (the sci-fi steps, owner 2026-11-27)
+- **Survey sensors:** the sea floor is mapped by the ship's own survey suite, not the sonar: 4 nm round her always, 12 nm during a full (mapping) sweep, which draws a lot of power.
+- **Sonar:** off, passive (listening) or active. Active pings spread like a ripple and hear twice as far, but everyone hears them: poachers run, hostiles come to look.
+- **LPI acoustic link** (low probability of intercept): a hull transducer whispers a spread-spectrum signal below the ocean's own noise. Any depth, no antenna, nobody hears it as a ping. Reaches the undersea colonies and mines: about 25 nm, or about 120 nm in the deep sound channel (600 to 1200 m). It does not reach the surface network; for that the ship needs an antenna near the surface, the comm buoy, or a relay (a WSKR or the Tern at the surface, within 10 nm).
+
 ## Areas of Operation (owner, 2026-11-20)
 The Aqua Nova is advanced enough that the nations behind O.E.R.A. will not let her go anywhere. The **Area of Operations** (AO) is the box the charter allows, and it is **political, not physical**: the ship could physically go further. In the game the AO is the charted area. **Outside it is a no-transgression zone**, drawn on the chart as a red hatched band with a dashed limit line.
 - **Where it is now:** 30°N to 42.4°N and 74.63°W to 0°W (Woods Hole, the shelf, Hudson Canyon, the abyssal plain, the Mid-Atlantic Ridge, the Azores and the Iberian coast), **minus the north-east block** (north of 40°N and east of 70°W) where there is no chart data yet. That block is red until the tiles arrive.

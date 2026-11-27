@@ -19,7 +19,7 @@ export const ANTS = {
 sim.s.ants = sim.s.ants || { mast: { set: 0, ext: 0 }, buoy: { set: 0, ext: 0 }, wire: { set: 0, ext: 0 } };
 export const ant = (k) => sim.s.ants[k];
 export const setAnt = (k, m) => { ant(k).set = Math.max(0, Math.min(ANTS[k].max, m)); };
-export const antDepth = (k, s = sim.s) => (s === sim.s && sim.relayUp && sim.relayUp() ? 0 : Math.max(0, s.depth - ant(k).ext));   // a relay WSKR at the surface stands in for the antenna
+export const antDepth = (k, s = sim.s) => (k === 'hull' ? 0 : s === sim.s && sim.relayUp && sim.relayUp() ? 0 : Math.max(0, s.depth - ant(k).ext));   // a relay WSKR at the surface stands in for the antenna
 sim.hooks.push((dt) => {
   for (const k in ANTS) {
     const a = ant(k), D = ANTS[k];
@@ -43,6 +43,7 @@ export const BANDS = [
   { id: 'HF', fr: '3-30 MHz', max: 5, mode: 'TX/RX', ant: 'mast' },
   { id: 'VHF', fr: '156-162 MHz', max: 5, mode: 'TX/RX', ant: 'mast' },
   { id: 'UHF', fr: '243-318 MHz', max: 15, mode: 'TX/RX', ant: 'buoy' },
+  { id: 'LPI', fr: '8-40 kHz', max: 99999, mode: 'TX/RX', ant: 'hull' },   // the quiet acoustic link (below): any depth, no antenna
   { id: 'LASER', fr: '470-540 nm', max: 15, mode: 'TX/RX', ant: 'mast' },
 ];
 
@@ -98,7 +99,15 @@ export const DIAL = {   // per band: tuning range, coarse and fine steps (MHz)
   HF: { min: 3, max: 30, coarse: 0.5, fine: 0.005 },
   VHF: { min: 156, max: 162, coarse: 0.5, fine: 0.025 },
   UHF: { min: 243, max: 318, coarse: 5, fine: 0.1 },
+  LPI: { min: 8, max: 40, coarse: 1, fine: 0.1, unit: 'kHz' },
 };
+// LPI: the quiet acoustic link (owner, 2026-11-27). A hull transducer whispers a spread-spectrum signal below the ocean's own noise: it works at
+// any depth with no antenna, nobody can hear it as a ping (it does not give the ship away, unlike active sonar), and it reaches the undersea
+// colonies and mines. Range LPI_NM, or LPI_SOFAR_NM when the ship is in the deep sound channel (SOFAR, SOFAR_M), where sound carries for miles.
+export const LPI_NM = 25, LPI_SOFAR_NM = 120, SOFAR_M = [600, 1200];
+export const lpiRange = (s = sim.s) => (s.depth >= SOFAR_M[0] && s.depth <= SOFAR_M[1] ? LPI_SOFAR_NM : LPI_NM);
+const UNDERSEA = new Set(['colony', 'mine']);   // places that live on the sea floor answer on LPI as well as VHF
+const rangeOf = (c) => (c.band === 'LPI' ? lpiRange() : c.range);
 export async function loadContacts() {
   if (cm.contacts) return cm.contacts;
   try {
@@ -109,6 +118,8 @@ export async function loadContacts() {
       const f = (sim.world.factions || {})[p.faction] || {};
       cm.contacts.push({ id: 'place-' + p.id, kind: p.kind === 'port' || p.kind === 'base' ? 'base' : 'org', name: p.name, band: 'VHF', mhz: p.mhz, lat: p.lat, lon: p.lon, range: 60, faction: p.faction,
         reply: p.reply || `${p.name}. ${f.name ? f.name + ' here. ' : ''}We read you, Aqua Nova.` });
+      if (UNDERSEA.has(p.kind)) cm.contacts.push({ id: 'lpi-' + p.id, kind: 'org', name: p.name, band: 'LPI', mhz: +(10 + Math.round((p.mhz - 156) * 40) / 10).toFixed(1), lat: p.lat, lon: p.lon, range: LPI_NM, faction: p.faction,
+        reply: (p.reply || `${p.name}. ${f.name ? f.name + ' here. ' : ''}We read you, Aqua Nova.`) + ' Good to hear a quiet voice down here.' });
     }
   } catch (e) { console.warn('comms contacts not loaded', e); cm.contacts = []; }
   return cm.contacts;
@@ -125,7 +136,7 @@ const sig = (c, s = sim.s) => Math.max(1, Math.round(44 - 16 * Math.log10(1 + di
 export function scan() {
   const s = sim.s;
   if (!bandOpen(cm.band)) { cm.found = []; return { ok: false, msg: `Antenna too deep for ${cm.band}.` }; }
-  cm.found = [...(cm.contacts || []), ...hailContacts()].filter((c) => isActive(c) && c.band === cm.band && distNm(s, c) <= c.range)
+  cm.found = [...(cm.contacts || []), ...hailContacts()].filter((c) => isActive(c) && c.band === cm.band && distNm(s, c) <= rangeOf(c))
     .map((c) => ({ id: c.id, mhz: c.mhz, dB: sig(c, s), brg: Math.round(bearing(s, c)), name: hailed().includes(c.id) || (c.vessel && c.vessel.ident) ? c.name : null, distress: !!c.distress }));
   return { ok: true, msg: cm.found.length ? `${cm.found.length} carrier${cm.found.length === 1 ? '' : 's'} found on ${cm.band}.` : `No carriers on ${cm.band}.` };
 }
@@ -135,8 +146,8 @@ export function hail() {
   const step = DIAL[cm.band].fine;
   const c = [...(cm.contacts || []), ...hailContacts()].find((x) => isActive(x) && x.band === cm.band && Math.abs(x.mhz - cm.mhz) < step * 0.6);
   if (!c) return { ok: false, msg: 'Only static. Nobody answers on this frequency.' };
-  if (distNm(s, c) > c.range) return { ok: false, msg: `A faint carrier, but too far to answer (${Math.round(distNm(s, c))} nm).` };
-  const entry = { at: s.clock, id: c.id, name: c.name, text: c.reply, secure: cm.secure, band: c.band, mhz: c.mhz, route: c.band === 'UHF' ? 'NORPAC CH 26-H' : `${c.band} DIRECT`, dist: Math.round(distNm(s, c)), distress: !!c.distress };
+  if (distNm(s, c) > rangeOf(c)) return { ok: false, msg: c.band === 'LPI' ? `Too far for LPI (${Math.round(distNm(s, c))} nm, range ${lpiRange()} nm). In the deep sound channel, ${SOFAR_M[0]} to ${SOFAR_M[1]} m, it carries ${LPI_SOFAR_NM} nm.` : `A faint carrier, but too far to answer (${Math.round(distNm(s, c))} nm).` };
+  const entry = { at: s.clock, id: c.id, name: c.name, text: c.reply, secure: cm.secure, band: c.band, mhz: c.mhz, route: c.band === 'UHF' ? 'NORPAC CH 26-H' : c.band === 'LPI' ? 'LPI ACOUSTIC (QUIET)' : `${c.band} DIRECT`, dist: Math.round(distNm(s, c)), distress: !!c.distress };
   cm.log = [entry, ...cm.log].slice(0, 6);
   if (c.vessel) c.vessel.ident = true;   // a ship that answers a hail gives its name
   if (!c.vessel && !hailed().includes(c.id)) gameState.updateProperty('mission.comms.hailed', [...hailed(), c.id]);
