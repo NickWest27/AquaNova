@@ -128,26 +128,30 @@ export function createScene(stage, { onOpen }) {
   // Corners are the four corners of the glass in stage pixels (art is cropped to 1920x1080).
   const door = (label, x, y, w, h, target, tagged = false) => el('button', { class: `door${tagged ? ' tagged' : ''}`, style: `left:${x}px;top:${y}px;width:${w}px;height:${h}px`, 'aria-label': label, onclick: () => onOpen(target) }, tagged ? el('span', { text: label }) : null);
   const sign = (text, corners, h = 120, size = 56) => slanted('wsign-box', el('div', { class: 'wsign', style: `height:${h}px;font-size:${size}px`, text }), 412, h, corners);
+  // Walkway A1 (the owner's picture of 2026-11-27, 1024x765; art px x 1.875 across, x 1.88 down): a straight corridor, the bridge at the end.
+  // Near left door Science, far left Medical, near right Quarters (the far right door is not used yet). Signs on the black panels above.
   const walkway = el('div', { class: 'scene walkway', hidden: true });
   walkway.append(
     artImg('walkway'),
-    // the owner's original picture (512x382, smooth), stretched to the 1920x1440 stage; walkway.png is the 320x240 palette-snapped copy. The BRIDGE sign is drawn by the game over the painted one
-    el('div', { class: 'an-sign one', style: 'left:836px;top:392px;width:248px;height:60px' }, el('div', { text: 'BRIDGE' })),   // drawn by the game: the painted sign is too small to survive the pixel art rebuild
-    door('SCIENCE', 150, 260, 230, 940, 'enter-science'),
-    door('MEDICAL', 380, 380, 110, 680, 'enter-medbay'),
-    door('QUARTERS', 1600, 300, 180, 900, 'quarters'),
-    door('BRIDGE', 780, 470, 380, 390, 'bridge'),
+    el('div', { class: 'an-sign one', style: 'left:853px;top:414px;width:216px;height:56px' }, el('div', { text: 'BRIDGE' })),
+    sign('SCIENCE', [[251, 70], [448, 201], [448, 314], [251, 182]], 150, 50),
+    sign('MEDICAL', [[463, 226], [566, 288], [566, 389], [463, 329]], 150, 50),
+    sign('QUARTERS', [[1472, 201], [1669, 70], [1669, 182], [1472, 314]], 150, 50),
+    door('SCIENCE', 190, 270, 210, 950, 'enter-science'),
+    door('MEDICAL', 455, 370, 115, 690, 'enter-medbay'),
+    door('QUARTERS', 1520, 270, 210, 950, 'quarters'),
+    door('BRIDGE', 820, 495, 320, 390, 'bridge'),
     hs('AN-1 DECK ▼', 500, 1230, 920, 210, () => onOpen('walkway2'), 'mid'));      // walk on to the next section
-  // walkway AN-1 (the owner's picture, 1024x765, 2026-11-26; art px x 1.875 across, x 1.88 down): the end door is the Launch Bay (lit sign in the
-  // panel above it), the near right door Engineering; the near left door is not used yet. The floor at the bottom goes back to A1.
+  // Walkway AN-1 (the owner's picture of 2026-11-27): the left end door is the Launch Bay, the near right door Engineering
+  // (the right end door, the near left door and the ladder are not used yet). The floor at the bottom goes back to A1.
   const walkway2 = el('div', { class: 'scene walkway2', hidden: true });
   walkway2.append(
     artImg('walkway2'),
-    el('div', { class: 'an-sign one', style: 'left:840px;top:390px;width:252px;height:62px' }, el('div', { text: 'LAUNCH BAY' })),
-    door('LAUNCH BAY', 769, 480, 384, 376, 'launchbay'),
-    sign('ENGINEERING', [[1551, 179], [1693, 128], [1703, 229], [1547, 301]], 150, 44),   // the black panel above the near right door
-    door('ENGINEERING', 1575, 282, 188, 923, 'enter-engineering'),
-    hs('A1 DECK ▼', 500, 1230, 920, 210, () => onOpen('walkway'), 'mid'));   // the same size as the AN-1 DECK tap area on A1
+    el('div', { class: 'an-sign one', style: 'left:600px;top:432px;width:163px;height:44px;font-size:21px;letter-spacing:.06em' }, el('div', { text: 'LAUNCH BAY' })),
+    door('LAUNCH BAY', 562, 479, 244, 320, 'launchbay'),
+    sign('ENGINEERING', [[1721, 329], [1866, 267], [1869, 344], [1723, 385]], 150, 40),   // the black panel above the near right door
+    door('ENGINEERING', 1697, 376, 206, 620, 'enter-engineering'),
+    hs('A1 DECK ▼', 500, 1230, 920, 210, () => onOpen('walkway'), 'mid'));
   // science lab (science.png, 1920x1080): five cut-outs hold live screens that open the stations they show. The door leads out to the walkway.
   const sci = { banner: el('div', { class: 'sciscr' }), samples: el('div', { class: 'sciscr' }), analysis: el('div', { class: 'sciscr' }), research: el('div', { class: 'sciscr' }), remora: el('div', { class: 'sciscr' }) };
   const sciFrame = artImg('science');
