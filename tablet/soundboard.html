@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#04101f">
+  <title>Aqua Nova Sound Board</title>
+  <link rel="icon" href="../favicon.ico" type="image/x-icon">
+  <style>
+    :root { --bg: #04101f; --panel: #0a1f33; --line: rgba(100,255,218,.3); --cyan: #64ffda; --text: #e6f1ff; --dim: #8fa6bd; --amber: #ffb020; --red: #ff5c5c; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.35 -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif; -webkit-user-select: none; user-select: none; touch-action: manipulation; }
+    header { position: sticky; top: 0; z-index: 2; background: var(--bg); border-bottom: 1px solid var(--line); padding: calc(env(safe-area-inset-top) + 10px) 16px 10px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+    h1 { margin: 0 12px 0 0; font: 800 20px ui-monospace, Menlo, monospace; letter-spacing: .12em; color: var(--cyan); }
+    .tool { min-height: 44px; padding: 0 14px; border-radius: 12px; border: 2px solid var(--line); background: var(--panel); color: var(--text); font: 600 15px inherit; font-family: inherit; }
+    .tool.stop { border-color: var(--red); color: var(--red); }
+    .vol { display: flex; align-items: center; gap: 8px; color: var(--dim); font-size: 14px; } .vol input { width: 140px; }
+    main { padding: 12px 16px calc(env(safe-area-inset-bottom) + 24px); max-width: 1200px; margin: 0 auto; }
+    h2 { font: 700 14px ui-monospace, Menlo, monospace; letter-spacing: .16em; color: var(--dim); margin: 18px 0 8px; text-transform: uppercase; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+    .pad { position: relative; display: flex; flex-direction: column; border-radius: 14px; border: 2px solid var(--line); background: var(--panel); overflow: hidden; }
+    .play { flex: 1; min-height: 88px; padding: 12px 14px 10px; border: 0; background: none; color: var(--text); text-align: left; font-family: inherit; display: flex; flex-direction: column; gap: 4px; }
+    .play:active, .pad.playing .play { background: rgba(100,255,218,.16); }
+    .pad.playing { border-color: var(--cyan); } .pad.loop.playing { border-color: var(--amber); }
+    .label { font: 700 18px inherit; font-family: inherit; color: var(--cyan); padding-right: 40px; }
+    .desc { font-size: 13px; color: var(--dim); padding-right: 40px; }
+    .id { font: 11px ui-monospace, Menlo, monospace; color: #4f6b85; }
+    .edit { position: absolute; top: 6px; right: 6px; width: 40px; height: 40px; border-radius: 10px; border: 1px solid var(--line); background: #072236; color: var(--dim); font-size: 18px; }
+    .pad input.rename { margin: 8px 10px 10px; min-height: 44px; border-radius: 10px; border: 2px solid var(--cyan); background: #031019; color: var(--text); font: 600 17px inherit; font-family: inherit; padding: 0 10px; -webkit-user-select: text; user-select: text; }
+    .tag { display: inline-block; margin-left: 6px; padding: 1px 6px; border-radius: 6px; font: 700 10px ui-monospace, monospace; letter-spacing: .1em; color: #04101f; background: var(--amber); vertical-align: middle; }
+    .note { color: var(--dim); font-size: 14px; margin: 6px 0 0; }
+    #toast { position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 16px); transform: translateX(-50%); background: #0a2036; border: 2px solid var(--cyan); color: var(--text); padding: 10px 16px; border-radius: 12px; opacity: 0; transition: opacity .2s; pointer-events: none; }
+    #toast.on { opacity: 1; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>AQUA NOVA · SOUND BOARD</h1>
+    <button class="tool stop" id="stop">Stop all</button>
+    <button class="tool" id="copy">Copy names</button>
+    <button class="tool" id="reset">Reset names</button>
+    <label class="vol">Volume <input type="range" id="vol" min="0" max="100" value="70"></label>
+  </header>
+  <main id="board">
+    <p class="note">Tap a sound to play it. Loops (marked LOOP) play until you tap them again. ✎ renames a sound; names are kept on this device. "Copy names" copies your list so you can paste it back to Claude. If you hear nothing on an iPad, check the side switch and volume.</p>
+  </main>
+  <div id="toast"></div>
+  <script type="module" src="js/soundboard.js"></script>
+</body>
+</html>

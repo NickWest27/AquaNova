@@ -30,6 +30,7 @@ PAGES = [
     "ui/captains-quarters/logbook/logbook.html",
     "ui/bridge/bridge.html",
     "tablet/index.html",
+    "tablet/soundboard.html",
     "tablet/retro/demo.html",
     "tablet/retro/index.html",
     "ped/index.html",
