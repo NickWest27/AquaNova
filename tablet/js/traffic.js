@@ -228,8 +228,12 @@ export function step() {
     const pos = ais ? { lat: p.lat, lon: p.lon, err: 0, hdg: p.hdg } : v.scanFixUntil > now ? { lat: p.lat, lon: p.lon, err: 0.1, hdg: p.hdg } : fix ? { lat: fix.lat, lon: fix.lon, err: fix.err } : vis ? { lat: p.lat, lon: p.lon, err: 0.05, hdg: p.hdg } : null;
     out.push({ v, lat: p.lat, lon: p.lon, hdg: p.hdg, nm: d, brg: b.brg, shown, ais, pos, lines: ears.map((e) => ({ src: e.src, from: e.from, brg: e.brg })), ear: ears.length ? ears[0].brg : null });
     if ((ais || heard) && (hostile || v.size >= 2 && d < 1) && !v.alerted && (hostile || v.ident)) {
-      v.alerted = true; const bb = String(Math.round(ears.length ? ears[0].brg : b.brg)).padStart(3, '0');
+      v.alerted = true; if (hostile && v.ident) v.identSaid = true; const bb = String(Math.round(ears.length ? ears[0].brg : b.brg)).padStart(3, '0');
       say('sensors', hostile ? `Captain, sonar contact bearing ${bb}. ${v.ident ? `${v.label}, ${v.factionName}. Hostile.` : 'Unidentified, no range yet, moving fast. I do not like it.'}` : `Captain, ${v.label.toLowerCase()} bearing ${bb}. Watch the traffic.`, hostile ? 'mission' : '', { notice: hostile ? 'HOSTILE CONTACT' : 'SURFACE TRAFFIC' });
+    }
+    if (hostile && v.alerted && v.ident && !v.identSaid && shown) {   // first heard unidentified, now we know who it is (owner, 2026-11-27: Alex reports hostiles)
+      v.identSaid = true; const bb = String(Math.round(ears.length ? ears[0].brg : b.brg)).padStart(3, '0');
+      say('sensors', `Captain, the contact bearing ${bb} is identified: ${v.label}, ${v.factionName}. Hostile.`, 'mission', { notice: 'HOSTILE IDENTIFIED' });
     }
     if (d < 0.05 && s.depth < c.draft_m[v.size] + c.collide_margin_m && now - v.hitAt > 60) collide(v, p, d);   // only on or just below the surface
   }

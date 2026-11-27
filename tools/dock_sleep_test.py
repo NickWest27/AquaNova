@@ -64,7 +64,7 @@ def main():
         page.tap('#station button:text-is("Dock")'); page.wait_for_timeout(5200)
         js("sim.s.at = null; sim.s.lat += 0.5")
         page.tap('#station button:text-is("Dock")'); page.wait_for_timeout(500)
-        said = page.evaluate("(async()=>(await import('./js/notify.js')).transcript('helm').map(l=>l.text).join(' '))()")   # Marcus's reply is in his communicator log
+        said = page.evaluate("(async()=>{const n=await import('./js/notify.js'); return [...(n.takeHeld('helm')||[]), ...n.transcript('helm').map(l=>l.text)].join(' ')})()")   # Marcus says why: held for his dialogue (it opens), or in his log
         check("docking away from a dock is refused", js("return sim.s.docked") is False and "dock" in said.lower(), said)
         page.tap("#station .st-head .btn"); page.wait_for_timeout(200)
 
