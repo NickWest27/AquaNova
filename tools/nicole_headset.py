@@ -14,23 +14,28 @@ alex = Image.open(os.path.join(SRC, 'sensors_scene.png')).convert('RGBA')
 CUP = (463, 360, 62, 68)   # centre x, y, radius x, y (outline included)
 BAND = [(347, 115), (409, 118), (452, 145), (474, 180), (484, 205), (487, 230), (488, 265), (494, 300),
         (463, 300), (461, 265), (458, 230), (450, 210), (440, 190), (423, 160), (398, 135), (362, 128), (347, 126)]
-mask = Image.new('L', alex.size, 0); md = ImageDraw.Draw(mask)
-cx, cy, rx, ry = CUP; md.ellipse([cx - rx, cy - ry, cx + rx, cy + ry], fill=255); md.polygon(BAND, fill=255)
-box = (340, 108, 530, 432)
-piece = alex.crop(box); piece.putalpha(mask.crop(box))
+def cut(shape):
+    m = Image.new('L', alex.size, 0); dd = ImageDraw.Draw(m); shape(dd); pc = alex.copy(); pc.putalpha(m); return pc.crop(m.getbbox())
+cx, cy, rx, ry = CUP
+cup = cut(lambda dd: dd.ellipse([cx - rx, cy - ry, cx + rx, cy + ry], fill=255)); cup_box = (cx - rx, cy - ry)
+band = cut(lambda dd: dd.polygon(BAND, fill=255)); band_box = (min(x for x, _ in BAND), min(y for _, y in BAND))
 
-# 2. onto Nicole: scaled to her head (Alex's head is about 300 px across, hers about 232), the cup centre on her ear
-K = 0.77
+# 2. onto Nicole. The band keeps her head's scale (KB) so it reaches over her hair; the cup is a little smaller (KC) so it clears her eye (owner).
+KB, KC = 0.77, 0.66
 scene = Image.open(os.path.join(SRC, 'communications_scene_v1.jpg')).convert('RGBA')
-small = piece.resize((round(piece.width * K), round(piece.height * K)), Image.NEAREST)
-ear = (410, 270)   # her near ear in the dialogue picture (1024 x 765)
-off = (round(ear[0] - (cx - box[0]) * K), round(ear[1] - (cy - box[1]) * K))
+ear = (416, 276)   # where the cup's centre goes: her near ear in the dialogue picture (1024 x 765)
+cup_s = cup.resize((round(cup.width * KC), round(cup.height * KC)), Image.NEAREST)
+cup_off = (round(ear[0] - (cx - cup_box[0]) * KC), round(ear[1] - (cy - cup_box[1]) * KC))
+joint = (476, 300)   # in Alex's picture: where the band's slider meets the top of the cup
+joint_n = (round(ear[0] + (joint[0] - cx) * KC), round(ear[1] + (joint[1] - cy) * KC))
+band_s = band.resize((round(band.width * KB), round(band.height * KB)), Image.NEAREST)
+band_off = (round(joint_n[0] - (joint[0] - band_box[0]) * KB), round(joint_n[1] - (joint[1] - band_box[1]) * KB))
 # the mic boom first (under the cup), in Alex's headset colours, from the bottom of the cup to her mouth
 d = ImageDraw.Draw(scene)
 p0, p1 = (ear[0] - 12, ear[1] + 40), (318, 338)
 d.line([p0, p1], fill=(8, 11, 17, 255), width=9); d.line([p0, p1], fill=(76, 92, 128, 255), width=3)
 d.ellipse([p1[0] - 9, p1[1] - 8, p1[0] + 9, p1[1] + 8], fill=(8, 11, 17, 255)); d.ellipse([p1[0] - 5, p1[1] - 4, p1[0] + 5, p1[1] + 4], fill=(56, 68, 98, 255))
-scene.alpha_composite(small, off)
+scene.alpha_composite(band_s, band_off); scene.alpha_composite(cup_s, cup_off)
 out = scene.convert('RGB'); out.save(os.path.join(OUT, 'communications_scene_original.jpg'), quality=92)
 snap(out.resize((320, 240), Image.LANCZOS)).save(os.path.join(OUT, 'communications_scene.png'))
 
