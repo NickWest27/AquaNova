@@ -922,9 +922,7 @@ input.mix { width: 100%; height: 2.4rem; accent-color: var(--cyan); }
 .rd-box .comm-reply { background: none; border: 0; padding: 0; margin: 0.1rem 0 0.4rem; text-align: left; } .rd-box .comm-reply p { font: 1.12rem/1.45 var(--mono); color: #e6f1ff; margin: 0; }
 .rd-box .comm-you { font: italic 0.95rem var(--mono); color: var(--dim); text-align: left; }
 .rd-box .comm-line { justify-content: flex-start; text-align: left; min-width: 0; width: 100%; min-height: 2.5rem; padding: 0.3rem 0.5rem; border: 0; border-radius: 2px; background: none; font: 1rem var(--mono); color: var(--cyan); }
-.rd-box .comm-line::before { content: '▶'; width: 1.2rem; flex: none; color: var(--amber); visibility: hidden; }
-.rd-box .comm-line:active, .rd-box .comm-line:focus-visible { background: rgba(100,255,218,0.14); } .rd-box .comm-line:active::before { visibility: visible; }
-.rd-box .comm-line:first-of-type::before { visibility: visible; }
+.rd-box .comm-line:active, .rd-box .comm-line:focus-visible { background: rgba(100,255,218,0.14); }
 .rd-box .comm-line.back { color: var(--dim); border: 0; }
 .rd-box .comm-line.danger { color: var(--red, #ff5c5c); }
 .rd-box .comm-chips { display: flex; flex-direction: column; }
@@ -1051,3 +1049,4 @@ button.route-row { width: 100%; text-align: left; color: var(--text); font: inhe
 .nav-prof .np-title { font-size: 15px; color: #8fa6bd; }
 .bt.compact .bt-place.note { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; font-size: 20px; line-height: 24px; letter-spacing: .02em; text-align: center; }
 .bt.compact .bt-place.note + .bt-pos { display: none; }
+/* no keyboard-style cursor arrow on the dialogue choices (owner, 2026-11-27: this is a touch screen); a press still highlights the line */
