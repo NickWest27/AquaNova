@@ -214,6 +214,11 @@ export function mount(body, ctx, opts = {}) {
   body.classList.add('comm-menu');
   const crew = knownCrew();
   let page = 'crew', cur = null, cat = null, reply = null, greeted = false, param = null;
+  // What the Captain is reading stays on screen; anything said meanwhile waits behind "Next message" (owner, 2026-11-27: a new line hijacked ARIA's introduction)
+  let readTo = 0;
+  const markRead = () => { readTo = cur ? transcript(cur.id).length : 0; };
+  const unread = () => (cur ? transcript(cur.id).map((l, i) => ({ ...l, i })).slice(readTo).filter((l) => l.from === 'crew') : []);
+  const nextLine = () => { const u = unread(); if (!u.length) return null; return line(`Next message${u.length > 1 ? ` (${u.length})` : ''}`, () => { reply = { said: null, text: u[0].text }; readTo = u[0].i + 1; page = 'reply'; render(); }); };
   // The menu is a tree of folders. A folder is { folder: true, label, title, kids }, a leaf is { label, run, cls }.
   const orderLeaf = (t) => ({ label: sayFor(t, cur && cur.id), run: () => speak(t) });
   const orderKids = () => {   // the folders in TREE, each order shown only when it makes sense now
@@ -249,7 +254,7 @@ export function mount(body, ctx, opts = {}) {
     if (you && text) logLine(cur.id, 'you', text);
     if (done) logLine(cur.id, 'crew', done);
     reply = { said: text, text: done };
-    page = 'reply';
+    page = 'reply'; markRead();
     render();
   }
   function speak(text) {
@@ -263,7 +268,7 @@ export function mount(body, ctx, opts = {}) {
 
   // Earlier lines scroll above; the newest thing the crew member said is always the big reply block below.
   const logView = (n, dropLast = false) => {
-    let L = transcript(cur.id).slice(-n); if (dropLast && L.length && L[L.length - 1].from === 'crew') L = L.slice(0, -1);
+    let L = transcript(cur.id).slice(0, readTo || undefined).slice(-n); if (dropLast && L.length && L[L.length - 1].from === 'crew') L = L.slice(0, -1);   // only what has been read: newer lines wait behind Next message
     if (!L.length) return null;
     const box = el('div', { class: 'comm-log' }, ...L.map((l) => l.from === 'you' ? el('div', { class: 'cl you', text: `You: ${l.text}` }) : el('div', { class: 'cl crew' }, el('small', { text: first(cur) }), l.text)));
     requestAnimationFrame(() => { box.scrollTop = box.scrollHeight; });
@@ -277,14 +282,14 @@ export function mount(body, ctx, opts = {}) {
   const withFace = (node) => { const f = !sceneOn() && cur && portrait(cur.id, 'comm-face'); return f ? el('div', { class: 'comm-say' }, f, node) : node; };
   /** Open the line to one crew member: their first meeting, a decision, what they were holding back, or the menu. */
   function pick(c) {
-    cur = c; cat = null;
+    cur = c; cat = null; readTo = 0;
     document.dispatchEvent(new CustomEvent('dialogue-complete', { detail: { characterId: c.id, dialogueId: 'first_contact' } }));   // reaching them is meeting them (tutorial)
     const met = !!gameState.getProperty('progress.met.' + c.id);
-    if (c.id === 'executiveOfficer' && pendingDecisions().length) { gameState.updateProperty('progress.met.' + c.id, true); greeted = true; page = 'decision'; render(); return; }   // ARIA is waiting for an answer
-    if (INTRO[c.id] && !met) { gameState.updateProperty('progress.met.' + c.id, true); greeted = true; logLine(c.id, 'crew', fill(INTRO[c.id])); reply = { said: null, text: fill(INTRO[c.id]) }; page = 'reply'; render(); return; }   // first meeting comes before anything they were holding back
+    if (c.id === 'executiveOfficer' && pendingDecisions().length) { gameState.updateProperty('progress.met.' + c.id, true); greeted = true; page = 'decision'; markRead(); render(); return; }   // ARIA is waiting for an answer
+    if (INTRO[c.id] && !met) { gameState.updateProperty('progress.met.' + c.id, true); greeted = true; logLine(c.id, 'crew', fill(INTRO[c.id])); reply = { said: null, text: fill(INTRO[c.id]) }; page = 'reply'; markRead(); render(); return; }   // first meeting comes before anything they were holding back
     const held = takeHeld(c.id);   // what they tried to tell the Captain while he was elsewhere
     if (held.length) { greeted = true; reply = { said: null, text: held.map((h) => (/^Captain\b/.test(h) ? h : `Captain, ${h.charAt(0).toLowerCase()}${h.slice(1)}`)).join(' '), held: true }; page = 'reply'; } else page = 'cat';
-    render();
+    markRead(); render();
   }
   function render() {
     setOpenCrew(!cur || page === 'crew' ? null : cur.id);   // while we are on the line with someone, what they say is read as it comes
@@ -296,6 +301,7 @@ export function mount(body, ctx, opts = {}) {
         ...crew.map((c) => el('button', { class: 'comm-line comm-who', onclick: () => pick(c) }, el('span', { class: `avatar ${c.id === 'executiveOfficer' ? 'aria' : ''}${portrait(c.id) ? ' face' : ''}` }, portrait(c.id, 'avatar-face') || crewIcon(c.id) || initial(c)), el('span', {}, el('b', { text: c.name }), el('small', { text: c.role })), unreadFor(c.id) > 0 && el('span', { class: 'comm-badge', text: String(unreadFor(c.id)) })))];
     } else if (page === 'cat') {
       kids = [logView(5), withFace(el('div', {}, el('div', { class: 'comm-head', text: GREET[cur.id] || 'Yes, Captain?' }), el('div', { class: 'comm-who-label', text: `${cur.name} · ${cur.role}` }))),
+        nextLine(),
         ...cats().map((f) => line(sub(f.label), () => { trail = [f.label]; page = 'lines'; render(); }, f.cls || '')),
         line('Call another station', () => { page = 'crew'; render(); }, 'back'), line("That's all", () => ctx.closeComm(), 'back')];
     } else if (page === 'lines') {
@@ -315,10 +321,10 @@ export function mount(body, ctx, opts = {}) {
         el('div', { class: 'comm-chips' }, ...param.opts.map(([l, fn, custom]) => line(l, () => { if (custom) return custom((text) => say(`${param.said}: ${l.replace(/ …$/, '').replace(/^Custom /, '')}`, text)); const r = fn(ctx); if (r && typeof r === 'object') { param = { said: `${param.said}: ${l.replace(/ …$/, '')}`, ...r }; render(); } else say(`${param.said}: ${l}`, r); }, 'chip'))),
         line('Back', () => { page = 'lines'; render(); }, 'back')];
     } else {
-      const T = transcript(cur.id), last = T[T.length - 1], live = !reply.stub && !reply.held && last && last.from === 'crew' ? last.text : null;
       kids = [!reply.stub && logView(8, true),
-        reply.said && !live && el('div', { class: 'comm-you', text: `You: ${reply.said}` }),
-        withFace(el('div', { class: 'comm-reply' + (reply.stub ? ' stub' : '') }, el('small', { text: cur.name }), el('p', { text: live || reply.text }))),
+        reply.said && el('div', { class: 'comm-you', text: `You: ${reply.said}` }),
+        withFace(el('div', { class: 'comm-reply' + (reply.stub ? ' stub' : '') }, el('small', { text: cur.name }), el('p', { text: reply.text }))),
+        nextLine(),
         line(reply.said ? 'Something else' : `${first(cur)}, I need something`, () => { page = 'cat'; render(); }, 'back'),
         line('Call another station', () => { page = 'crew'; render(); }, 'back'),
         line("That's all", () => ctx.closeComm(), 'back')];
