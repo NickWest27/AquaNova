@@ -14,6 +14,8 @@ const humLevel = (speed) => (0.06 + 0.08 * Math.min(1, Math.max(0, speed / 12)))
 const level = () => (pref.on ? pref.vol * 0.8 : 0);
 
 export const getSound = () => ({ ...pref });
+/** The live context and master volume, for music (theme.js); null until sound has started. */
+export const audioOut = () => (ac && master ? { ac, master } : null);
 export function setSound(next) {
   Object.assign(pref, next); save();
   if (master) master.gain.setTargetAtTime(level(), ac.currentTime, 0.05);

@@ -7,7 +7,8 @@ import { sim, clockText, TIMESCALE, TIME_SCALES, setTimeScale } from '../sim.js'
 import { gameState, saveManager } from '../persist.js';
 import { syncNow, requestSync, syncState, onSyncChange } from '../sync.js';
 import { getConfig, connect as connectSync, clearConfig, makeJournalEntry, newTask, isJournal } from '../../../utils/ledgerSync.js';
-import { getSound, setSound, chirp, ping, mailZoom, testSound, audioState } from '../audio.js';
+import { getSound, setSound, chirp, ping, mailZoom, testSound, audioState, audioOut, initAudio } from '../audio.js';
+import { playTheme, stopTheme, themePlaying } from '../theme.js';
 import { knownCrew } from './crew.js';
 import missionManager from '../../../game/systems/missionManager.js';
 
@@ -174,7 +175,8 @@ export function mount(body, ctx) {
       const sound = el('div', { class: 'card setting' }, el('div', { class: 'lbl', text: 'Sound' }),
         el('div', { class: 'row' },
           el('button', { class: 'btn', text: snd.on ? 'Turn sound off' : 'Turn sound on', onclick: () => { setSound({ on: !getSound().on }); if (getSound().on) chirp(); render(); } }),
-          el('button', { class: 'btn primary', text: 'Test sound', onclick: () => { const st = testSound(); toast(`Sound engine: ${st.state}`); setTimeout(render, 400); } })),
+          el('button', { class: 'btn primary', text: 'Test sound', onclick: () => { const st = testSound(); toast(`Sound engine: ${st.state}`); setTimeout(render, 400); } }),
+          el('button', { class: 'btn', text: themePlaying() ? 'Stop theme' : 'Play theme', onclick: () => { if (themePlaying()) { stopTheme(); render(); return; } initAudio(); const o = audioOut(); if (o && playTheme(o.ac, o.master)) { toast('Beneath the Waves'); setTimeout(render, 300); } else toast('Sound is not running yet', 'warn'); } })),
         slider('Master', 'vol', chirp), slider('Ship', 'hum'), slider('Ambient', 'ambient'), slider('Communicator', 'comm', chirp), slider('Notices', 'notice', ping), slider('Interface', 'ui', () => mailZoom(true)),
         el('p', { text: `Sound engine: ${audioState().state}. If you hear nothing, turn the ringer switch off mute and raise the volume.` }));
 
