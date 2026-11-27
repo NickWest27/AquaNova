@@ -73,6 +73,8 @@ export function createScene(stage, { onOpen }) {
   // Every screen sits behind its hole; the frame is on top. Measured from the holes: main window, top strip, centre display, the three desk
   // pads (one row of buttons each), Nicole's and Alex's monitors, and Marcus's two small helm monitors.
   const hmL = el('div', { class: 'bstn helmmini' }), hmR = el('div', { class: 'bstn helmmini' });
+  const keyCap = (t, corners) => slanted('keycap', el('div', { class: 'keycap-t', text: t }), 40, 28, corners);   // a + or − printed on a yellow key
+  const tpLamp = el('div', { class: 'tp-lamp' + (consoleApi.dsp ? ' on' : ''), style: 'left:1339px;top:1169px;width:34px;height:9px' });   // the little lamp above the trackpad: lit while DSP is on
   bridge.append(
     el('div', { class: 'bridge-base' }),
     box('bmainbox', 244, 196, 1430, 524, [mainD]),                                                       // the big window
@@ -82,9 +84,9 @@ export function createScene(stage, { onOpen }) {
     slanted('', stnR, 200, 92, rect(1508, 700, 1663, 772)),                                              // Alex's monitor: sensors
     slanted('', hmL, 150, 96, rect(728, 781, 827, 845)),                                                 // Marcus's left monitor: heading and speed
     slanted('', hmR, 150, 96, rect(1095, 781, 1194, 845)),                                               // Marcus's right monitor: depth and floor
-    slanted('', leftD, 592, 125, rect(240, 1310, 684, 1404)),                                            // left pad: the page selector
-    slanted('', ctrD, 690, 125, rect(701, 1310, 1219, 1404)),                                            // centre pad: the page's own controls
-    slanted('', rightD, 590, 125, rect(1234, 1310, 1676, 1404)),                                         // right pad: range, display and more
+    slanted('', leftD, 592, 125, [[297, 1310], [690, 1310], [658, 1406], [240, 1406]]),                                // left pad: the page selector
+    slanted('', ctrD, 690, 125, [[723, 1310], [1193, 1310], [1220, 1406], [698, 1406]]),                                 // centre pad: the page's own controls
+    slanted('', rightD, 590, 125, [[1230, 1310], [1620, 1310], [1679, 1406], [1260, 1406]]),                                // right pad: range, display and more
     frame,
     hs('COMMS', 250, 690, 270, 300, () => onOpen('comms'), 'top'),        // the comms console, left
     hs('SENSORS', 1400, 690, 270, 300, () => onOpen('sensors'), 'top'),   // the sensors console, right
@@ -93,6 +95,12 @@ export function createScene(stage, { onOpen }) {
     hs('MARCUS', 860, 700, 200, 330, () => onOpen('talk-helm'), 'top'),           // Marcus at the helm, centre
     hs('HELM', 700, 760, 150, 110, () => onOpen('helm'), 'top'),                  // his left monitor opens the Helm station
     hs('◂ WALKWAY', 0, 1130, 230, 310, () => onOpen('walkway'), 'mid'),          // the bottom-left corner leaves the bridge
+    // desk controls drawn in the art (owner, 2026-11-27): the two yellow keys left of the centre display step the range; the round trackpad right of it is DSP
+    keyCap('+', [[532, 1176], [565, 1176], [558, 1202], [525, 1202]]), keyCap('−', [[516, 1226], [551, 1226], [544, 1254], [509, 1254]]),
+    tpLamp,
+    hs('RANGE +', 478, 1161, 125, 55, () => consoleApi.zoom(-1), 'top', 'desk-key'),
+    hs('RANGE −', 464, 1216, 125, 64, () => consoleApi.zoom(1), 'bottom', 'desk-key'),
+    hs('DSP', 1322, 1161, 150, 118, () => { consoleApi.toggleDsp(); tpLamp.classList.toggle('on', consoleApi.dsp); }, 'top', 'desk-key'),
   );
 
 

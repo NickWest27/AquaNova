@@ -10,10 +10,10 @@ Note (2026-11-25): the retro reskin changed only the frame art and the screen po
 | **Left desk panel** | **Page selection**: NAV, HLM, TAC, SNR, VW, SYS |
 | **Centre display** | Shows the selected page |
 | **Centre controls** | Controls that belong to the selected page |
-| **Right desk panel** | **View settings** of the selected page, always **a bank of six** (two rows of three). A page with fewer than six buttons leaves **blank place holders** (dim, dead). DSP is on every page. |
+| **Right desk panel** | **View settings** of the selected page, always **a bank of six** (two rows of three). A page with fewer than six buttons leaves **blank place holders** (dim, dead). DSP is not on the pads: it is the round trackpad right of the centre display (2026-11-27). |
 | Main screen, top strip, Comms and Sensors mini screens | Unchanged for now |
 
-Code: each page gives `v: [buttons]`; the console adds DSP (and PAN, SHW on NAV), pads to six with `.bbtn.blank`, and builds the two rows.
+Code: each page gives `v: [buttons]`; the console adds PAN and SHW on NAV, pads to six with `.bbtn.blank`, and builds the two rows.
 
 **One master range (2026-11-23).** The range − and + on the right desk is one range for the whole console: NAV and SNR, the centre display and the main screen all show the same range, whichever page or screen it is pressed on. Steps: 0.5, 1, 2, 4, 8, 16, 32, 64, 128, 256 nm. It starts at 8 nm. Code: `nd.setRange` for NAV (all copies), `view.range` in `sonarView.js` for SNR, linked by `setSnrRange` and `onSnrRange` in `bridge.js`. A new page with a range must join this link. (The Sensors station's SNR tab shares the SNR value.)
 
@@ -38,7 +38,7 @@ Old page ids `helm` and `view` are now `hlm` and `vw`. The old per-page right-de
 
 **Manual control** (Port, Stbd, the heading dial, a heading order) drops the course (the destination clears) but **keeps the route**. Plot again returns to it. Fixes the ship passes leave the route. At the last fix the route is empty and the ship stops.
 
-**View settings (right desk).** − , range readout, + (master range); DSP (show this display on the main screen), PAN (arrows replace the controls), SHW (switches replace the controls): **Ships, Subs, Base, Orgs, Labels**. Ships are the traffic contacts, Base is the docks. **Subs and Orgs switch nothing yet** (no such contacts exist). **Labels** turns the ship labels (and the bearing numbers on bearing-only lines) off and on; place names stay. Six slots, all used.
+**View settings (right desk).** − , range readout, + (master range); PAN (arrows replace the controls), SHW (switches replace the controls): **Ships, Subs, Base, Orgs, Labels**. Ships are the traffic contacts, Base is the docks. **Subs and Orgs switch nothing yet** (no such contacts exist). **Labels** turns the ship labels (and the bearing numbers on bearing-only lines) off and on; place names stay. Six slots, all used.
 
 **On the chart:** amber dashed line through the route (dim straight preview until plotted), a cross and name for each waypoint, a small square labelled TPn for each turn point.
 
@@ -51,7 +51,7 @@ Old page ids `helm` and `view` are now `hlm` and `vw`. The old per-page right-de
 
 **Trend vectors:** show where the value will be in `TREND_S` = 3 seconds (constant at the top of the tape code, owner may tune it). The vector **never goes past the set value**: ordering 10 kt, the vector stops at 10 kt. Same for the vertical-speed vector and the set depth.
 
-**View settings (right desk).** DSP, five blanks.
+**View settings (right desk).** Six blanks (DSP is the trackpad).
 
 ## Route model (sim)
 - `s.fixes`: the route (ordered fixes). `s.wpt`: the destination, always the last fix, set only while a course is plotted. `s.route`: steering points (the fixes and the turn points). `s.wpN`: the WP counter.
@@ -74,6 +74,8 @@ Old page ids `helm` and `view` are now `hlm` and `vw`. The old per-page right-de
 
 ## Bridge frame of 2026-11-27
 - The owner's new picture: Marcus at the centre helm below the window, Nicole at comms (left), Alex at sensors (right). Screens behind holes (`scene.js`, stage px): main window 244,196 1430x524; top strip 604,73 710x96; centre display 664-1256 x 1065-1248; Nicole's monitor (comms links), Alex's monitor (sensors), Marcus's two small monitors (HDG/SPD, DEP/FLR); three desk pads at y 1310-1404 (left 240-684, centre 701-1219, right 1234-1676).
-- The pads are wide and short: **one row each**. Left: the six pages. Centre: the page's controls (HLM: Port, Stbd, Stop, Slow, Fast). Right: six slots (NAV: range, DSP, PAN, SHW; HLM: Up, Dn, Srfc, NOE, Cruise, DSP).
+- The pads are wide and short: **one row each**. Left: the six pages. Centre: the page's controls (HLM: Port, Stbd, Stop, Slow, Fast). Right: six slots (NAV: range, PAN, SHW; HLM: Up, Dn, Srfc, NOE, Cruise).
+- Desk controls in the art (owner, 2026-11-27): the two yellow keys left of the centre display are RANGE + (top) and RANGE − (bottom), with + and − printed on them; the round trackpad right of it is **DSP** (show the selected page on the main screen; its small lamp lights cyan while on). The pads are warped to the holes' slant (`scene.js`).
+- The overhead panel is the bridge's status strip: place (or a notice) on top, position · date and time · BAT below. The screen-edge status strip is hidden on the bridge.
 - Tap areas: COMMS and SENSORS on the consoles, NICOLE, ALEX and MARCUS on the crew, HELM on Marcus's left monitor, WALKWAY in the bottom-left corner.
 - On the bridge the status strip (day, position, objective, battery) sits at the top, over the ceiling, so it does not cover the desk.

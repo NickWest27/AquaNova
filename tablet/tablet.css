@@ -1057,7 +1057,12 @@ button.route-row { width: 100%; text-align: left; color: var(--text); font: inhe
 .bright .msc .bbtn.sym { font-size: 40px; } .bright .msc { padding: 12px 12px; } .bctl .bc { padding: 12px 16px; }
 .bright .msc .rngbox .rng { font-size: 26px; } .bright .msc .rngbox small { font-size: 13px; }
 .bstn.helmmini { font-size: 26px; line-height: 1.5; padding: 8px 12px; } .bstn.helmmini div { display: flex; justify-content: space-between; } .bstn.helmmini b { color: var(--cyan); }
-body.on-bridge .dock { bottom: auto; top: calc(env(safe-area-inset-top) + 0.15rem); padding-right: 15.5rem; }
+body.on-bridge .dock { display: none; }   /* the overhead panel carries the status on the bridge (owner, 2026-11-27) */
 /* the pads' ends are angled under the frame: keep the outer buttons clear of them */
-.bleft .selector { padding: 12px 18px 12px 46px; } .bright .msc { padding: 12px 46px 12px 14px; } .bctl .bc { padding: 12px 24px; }
+.bleft .selector { padding: 12px 18px; } .bright .msc { padding: 12px 18px; } .bctl .bc { padding: 12px 20px; }   /* the pads are warped to the holes' slant now */
 body.on-bridge .dock-status { background: rgba(3,14,24,.82); border-radius: 0 0 10px 10px; padding: 2px 12px; }
+
+/* desk keys drawn in the bridge art (owner, 2026-11-27): + and − printed on the yellow range keys, the DSP lamp above the trackpad */
+.keycap { pointer-events: none; } .keycap-t { width: 40px; height: 28px; display: flex; align-items: center; justify-content: center; font: 900 30px/1 var(--mono); color: #1a1204; }
+.tp-lamp { position: absolute; pointer-events: none; border-radius: 3px; background: transparent; }
+.tp-lamp.on { background: #64ffda; box-shadow: 0 0 10px #64ffda; }

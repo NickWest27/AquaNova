@@ -20,7 +20,7 @@ with sync_playwright() as p:
     tap = lambda t: pg.locator(f'.bbtn:visible:text-is("{t}")').first.dispatch_event("click")
     tap("SNR"); pg.wait_for_timeout(300)
     check("SNR shows the passive sonar page", pg.locator(".bd-snr:visible").count() >= 1 and "PASSIVE SONAR" in pg.inner_text(".bd-snr:visible .snr-head"))
-    check("right desk: range -, readout, +, DSP and two blanks", pg.locator(".msc:visible .bbtn").count() == 5 and pg.locator(".msc:visible .bbtn.blank").count() == 2)
+    check("right desk: range -, readout, + and three blanks (DSP is the desk trackpad)", pg.locator(".msc:visible .bbtn").count() == 5 and pg.locator(".msc:visible .bbtn.blank").count() == 3)
     # a quiet sea: nothing yet. Then a big ship 2.5 nm north.
     js("traffic = T.traffic; const s=sim.s; const k=Math.cos(s.lat*Math.PI/180)*60; const at=(n,e)=>({lat:s.lat+n/60,lon:s.lon+e/k}); window.__at=at; const A=at(2.5,0); traffic.cand=[{id:'t:1',kind:'cargo',faction:'cargo',factionName:'Merchant',stance:'neutral',label:'Container ship',size:3,kt:10,A,B:A,L:1,phase:0,boldness:0,ais:false,bias:0,name:'MV Test',mhz:156,reply:0,ident:false,alerted:true,dyn:null,hitAt:-1e9}]; traffic.candKey=(()=>{const c=traffic.cfg.cell_nm;return Math.floor(s.lon/(c/(60*0.82)))+','+Math.floor(s.lat/(c/60))})()".replace("traffic = T.traffic;","const traffic=T.traffic;"))
     js("for(let i=0;i<3;i++) sim.step(1)"); pg.wait_for_timeout(200)
@@ -138,7 +138,7 @@ with sync_playwright() as p:
     check("full sweep takes about 36 s (10 degrees a second) plus short pauses, then its effect ends", 36 <= r["took"] <= 60 and r["effectOver"], r)
     pg.screenshot(path=R + "/tools/shots/sonar_station.png")
     # DSP puts it on the main screen
-    tap("DSP"); pg.wait_for_timeout(300)
+    pg.locator('.hs[aria-label="DSP"]').dispatch_event("click"); pg.wait_for_timeout(300)   # the round trackpad on the desk
     check("DSP shows the sonar page on the main screen", pg.locator(".bm-view .bd-snr:visible").count() == 1)
     pg.screenshot(path=R + "/tools/shots/sonar.png")
     check("no page errors", not errs, str(errs))

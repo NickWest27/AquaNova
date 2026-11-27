@@ -294,7 +294,8 @@ export function createBridgeConsole({ top, main, display, center, left, right, o
   }
   views.nav.nds.forEach((n) => n.setRange(8)); setSnrRange(8);   // the master range starts at 8 nm on every page
   left.append(sel);
-  // Right desk: the view settings of the page that is up. DSP is on every page (the main screen shows that page, or the nav map).
+  // Right desk: the view settings of the page that is up. DSP (the main screen shows that page, or the nav map) is the round trackpad
+  // right of the centre display (scene.js; owner 2026-11-27), and range is also on the two yellow keys left of it.
   // NAV also has PAN (arrows replace the controls) and SHW (switches replace the controls).
   const dspBs = [], panBs = [], shwBs = [];
   const mkBtn = (label, list, toggle) => { const b = bbtn(label, toggle); list.push(b); return b; };
@@ -302,7 +303,7 @@ export function createBridgeConsole({ top, main, display, center, left, right, o
   const BANK = 6;   // the right desk is a bank of six slots in one row; a page with fewer buttons leaves blank place holders
   const blank = () => Object.assign(bbtn('', () => {}, 'blank'), { disabled: true, tabIndex: -1 });
   for (const id of order) {
-    const items = [...views[id].v, mkBtn('DSP', dspBs, () => flip('dsp')), ...(id === 'nav' ? [mkBtn('PAN', panBs, () => flip('pan')), mkBtn('SHW', shwBs, () => flip('shw'))] : [])];
+    const items = [...views[id].v, ...(id === 'nav' ? [mkBtn('PAN', panBs, () => flip('pan')), mkBtn('SHW', shwBs, () => flip('shw'))] : [])];
     while (items.length < BANK) items.push(blank());
     views[id].vc = el('div', { class: 'bc msc' }, el('div', { class: 'rowN' }, ...items.slice(0, BANK)));   // one row of six: the desk pads are wide and short
     right.append(views[id].vc);
@@ -334,7 +335,7 @@ export function createBridgeConsole({ top, main, display, center, left, right, o
     if (note && Date.now() - note.at > NOTE_HOLD) note = null;
     set(tPlace, note ? note.text : s.docked ? 'DOCKED' + (s.at ? ' · ' + s.at.name.toUpperCase() : '') : s.at ? s.at.name.toUpperCase() : s.wpt ? 'EN ROUTE: ' + s.wpt.name.toUpperCase() : 'OPEN WATER');
     const cls = 'bt-place' + (note ? ' note' : '') + (note && note.kind ? ' ' + note.kind : ''); if (tPlace.className !== cls) tPlace.className = cls;   // a notice wraps onto two lines and takes the whole panel
-    set(tPos, `${deg(s.lat, 'N', 'S', 2)}  ${deg(s.lon, 'E', 'W', 3)}  ·  ${gameDateText()}`);
+    set(tPos, `${deg(s.lat, 'N', 'S', 2)}  ${deg(s.lon, 'E', 'W', 3)}  ·  ${gameDateText().slice(0, -3)}  ·  BAT ${Math.round(s.battery)}%`);   // the overhead panel is the bridge's status strip (the screen-edge strip hides here)
     big[mainId].update(); if (current !== mainId) small[current].update(); else small[current].update();
     views[current].side();
     const showProf = mainId === 'nav' && !retro; irWrap.hidden = showProf; profBox.hidden = !showProf;
@@ -348,5 +349,6 @@ export function createBridgeConsole({ top, main, display, center, left, right, o
 
   let saved = 'nav'; try { saved = localStorage.getItem(KEY) || 'nav'; } catch (e) { /* ignore */ }
   select(saved);
-  return { select, update, get current() { return current; }, get main() { return mainId; }, nds: views.nav.nds };
+  return { select, update, get current() { return current; }, get main() { return mainId; }, get dsp() { return dspOn; }, nds: views.nav.nds,
+    toggleDsp: () => flip('dsp'), zoom: (dir) => views.nav.zoom(dir) };   // the trackpad and the yellow range keys in the desk art
 }
