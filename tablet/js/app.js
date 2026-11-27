@@ -316,17 +316,32 @@ function showSystemDialogue(id) {
 }
 document.addEventListener('show-dialogue', (e) => { if (e.detail.characterId === 'system') showSystemDialogue(e.detail.dialogueId); });
 document.addEventListener('comms-message', (e) => { if (boarded) say('comms', 'Captain, sorry to interrupt, but we have an incoming message.', 'mission', { notice: 'INCOMING MESSAGE', keep: `We have an incoming message from ${e.detail.from}. It is waiting at the Comms station.` }); syncUI(); });
-document.addEventListener('task-started', (e) => {   // ARIA says plainly that a new task has begun and where to find it (a little later, so other chatter does not bury it)
-  if (!boarded || !e.detail.name || e.detail.tutorial) return;   // a tutorial lesson starts quietly: the PED lists it
-  setTimeout(() => say('aria', `New task, {captain}: ${e.detail.name}. The steps are in your PED, under Tasks.`, 'mission', { notice: `NEW TASK: ${e.detail.name.toUpperCase()}` }), 2500);
-});
+let lastReportAt = -1e9; document.addEventListener('report-sent', () => { lastReportAt = Date.now(); });
+// A new mission starts quietly (owner, 2026-11-27): it is in the PED under Missions and Tasks, and its orders come by mail.
 document.addEventListener('mission-notify', (e) => {
   if (!boarded || e.detail.tutorial) return;   // tutorial steps are ticked off in the PED without ARIA announcing them
   if (e.detail.subtitle === 'Objective Complete') {   // ARIA keeps it short: done, and what is next
     const next = objectives().find((o) => o.status !== 'completed');
     say('aria', next ? `Objective complete. Next: ${next.description.replace(/[.\s]+$/, '')}.` : 'Objective complete.', 'mission', { hold: false }); return;
   }
-  say('aria', `${e.detail.title} — ${e.detail.subtitle}`, 'mission', { hold: false });
+  if (e.detail.subtitle !== 'Mission Complete!') return;   // no "New Mission Started" from ARIA
+  // ARIA congratulates the Captain once the mission is done. Most missions end with the report to OERA, so she waits a few seconds to come in
+  // after Nicole's "Report is out". This only speaks: the report's transfer and OERA's reply mail keep their own timing (transfer.js).
+  const name = e.detail.title;
+  setTimeout(() => {   // decided after the wait: the report-sent event can reach the mission manager before it reaches the line below
+    const reported = Date.now() - lastReportAt < 15000;   // did this mission end with the report going out?
+    const lines = reported ? [
+      `Well done, {captain}. ${name} is complete, and OERA has your report.`,
+      `That is ${name} finished and reported, {captain}. A good piece of work. The crew did well, and so did you.`,
+      `${name} is complete and the report is with OERA, {captain}. Nicely done.`,
+    ] : [
+      `Well done, {captain}. ${name} is complete.`,
+      `That is ${name} finished, {captain}. A good piece of work. The crew did well, and so did you.`,
+      `${name} is complete, {captain}. Nicely done.`,
+    ];
+    let h = 0; for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+    say('aria', lines[h % lines.length], 'mission');
+  }, 5000);
 });   // objectives live in the PDA Tasks, not the communicator
 
 function firstVisit(poi) {
