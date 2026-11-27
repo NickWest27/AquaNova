@@ -17,4 +17,8 @@ check('goal on land snaps to nearby water', (() => { const q = planRoute(A, { la
 const wall = (lat, lon) => !(Math.abs(lon + 72) < 0.02 && Math.abs(lat - 40) < 0.5 && Math.abs(lat - 40.4) > 0.03);
 r = planRoute({ lat: 40, lon: -72.1 }, { lat: 40, lon: -71.9 }, wall);
 check('finds the gap in a wall', r && r.length >= 1 && routeLength({ lat: 40, lon: -72.1 }, r) < 90, r && routeLength({ lat: 40, lon: -72.1 }, r));
+// a long trip (over 120 nm) round an island must not fall off the edge of the search grid (bug found 2026-11-27: Woods Hole to the Trials AO)
+const farIsland = (lat, lon) => !(Math.abs(lat - 40.6) < 0.1 && Math.abs(lon + 70.7) < 0.15);
+r = planRoute({ lat: 41.52, lon: -70.67 }, { lat: 39.6, lon: -70.75 }, farIsland);
+check('a 115+ nm trip round an island is found', Array.isArray(r) && r.length >= 1, JSON.stringify(r));
 console.log(fails ? '\nFAILED' : '\nAll checks passed.'); process.exit(fails ? 1 : 0);

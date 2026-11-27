@@ -6,11 +6,14 @@
 const NM = 60, CELL = 0.005;   // grid cell in degrees of latitude (about 0.3 nm)
 
 export function planRoute(from, to, passable, { pad = 0.3, inflate = true, maxSnapCells = 8 } = {}) {
-  const midLat = (from.lat + to.lat) / 2, kx = Math.cos((midLat * Math.PI) / 180), dLon = CELL / kx;
+  const midLat = (from.lat + to.lat) / 2, kx = Math.cos((midLat * Math.PI) / 180);
+  // the grid is at most 400 cells each way: on a long trip the cells grow so the whole trip fits (before 2026-11-27 a trip of more than
+  // about 120 nm fell off the edge of the grid and was reported as blocked)
+  const span = Math.max(Math.abs(from.lat - to.lat) + 2 * pad, Math.abs(from.lon - to.lon) * kx + 2 * pad), CELLD = Math.max(CELL, span / 398), dLon = CELLD / kx;
   const lat0 = Math.min(from.lat, to.lat) - pad, lon0 = Math.min(from.lon, to.lon) - pad / kx;
-  const W = Math.min(400, Math.ceil((Math.abs(from.lon - to.lon) + (2 * pad) / kx) / dLon) + 1), H = Math.min(400, Math.ceil((Math.abs(from.lat - to.lat) + 2 * pad) / CELL) + 1);
-  const cellOf = (p) => [Math.round((p.lon - lon0) / dLon), Math.round((p.lat - lat0) / CELL)];
-  const at = (cx, cy) => ({ lat: lat0 + cy * CELL, lon: lon0 + cx * dLon });
+  const W = Math.min(400, Math.ceil((Math.abs(from.lon - to.lon) + (2 * pad) / kx) / dLon) + 1), H = Math.min(400, Math.ceil((Math.abs(from.lat - to.lat) + 2 * pad) / CELLD) + 1);
+  const cellOf = (p) => [Math.round((p.lon - lon0) / dLon), Math.round((p.lat - lat0) / CELLD)];
+  const at = (cx, cy) => ({ lat: lat0 + cy * CELLD, lon: lon0 + cx * dLon });
   const inGrid = (cx, cy) => cx >= 0 && cy >= 0 && cx < W && cy < H;
   const [sx, sy] = cellOf(from), [gx0, gy0] = cellOf(to);
   const raw = new Int8Array(W * H).fill(-1);
