@@ -100,8 +100,8 @@ const ORDERS = {
   'Recall all WSKRs': () => { const n = sim.recallWskrs(); return n ? `Recalling ${n === 1 ? 'the WSKR' : `all ${n} WSKRs`}, aye. The bay takes each one aboard when we are under ${BAY_SAFE_KT} knots.` : 'No WSKRs are out, Captain.'; },
   'Hug the floor': () => { const r = sim.setHug(true); return r.ok ? `Hugging the floor, aye. I will hold ${HUG_ALT} metres off the bottom and follow it.` : r.why === 'docked' ? 'We are docked, Captain.' : 'Not enough water here to hug the floor, Captain. I need at least ' + HUG_MIN_FLOOR + ' metres under us.'; },
   'Stop hugging the floor': () => { if (!sim.s.hug) return 'We are not following the floor, Captain.'; sim.setHug(false); return `Leaving the floor, aye. Holding ${Math.round(sim.s.depth)} metres.`; },
-  'Engage super cruise': () => { const r = sim.setCruise(true); return r.ok ? 'Super cruise engaged. Hold on to something, Captain.' : cruiseWhy(r.why); },
-  'Disengage super cruise': () => { sim.setCruise(false); return 'Super cruise disengaged. Back to normal cruise.'; },
+  'Engage super cruise': () => { const r = sim.setCruise(true); return r.ok ? 'Spooling up the drive, Captain. Eight seconds.' : cruiseWhy(r.why); },
+  'Disengage super cruise': () => { sim.setCruise(false); return 'Out of super cruise, aye. Easing back to the jets.'; },
   'Set up a relay': () => {
     if (GATES_ON && !research.has('wskr-orders')) return 'We have not got the relay procedures yet, Captain. Science needs to finish the WSKR orders research.';
     const r = sim.setupRelay();

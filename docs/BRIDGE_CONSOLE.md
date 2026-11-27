@@ -70,3 +70,4 @@ Old page ids `helm` and `view` are now `hlm` and `vw`. The old per-page right-de
 - The **Fix** button is gone (Route + does the same).
 - **Mission areas** are amber boxes on every chart (`nd.js`): a mission's `"area": { name, lat0, lat1, lon0, lon1 }` (the Trials AO) and patrol areas (dashed until the window opens; the inside test is the same box, `missionGen.js`). An area is never a destination: the player makes a waypoint inside it.
 - The lower display's NAV page is north up (track up is gone from the bridge), with range rings at a quarter, half or the whole range setting carried out to the corners. The WSKR station's chart keeps track up.
+- (2026-11-27, later) The Route editor has **Edit** for the selected waypoint (it opens in degrees and minutes). The waypoint dialog reads every position back in degrees and minutes (39.54 is 39°32.4′, not 39°54′).

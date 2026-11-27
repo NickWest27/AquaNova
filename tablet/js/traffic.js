@@ -13,7 +13,7 @@ import { say } from './notify.js';
 const NM = 60, LON_K = 0.82;   // nm per degree of latitude; a fixed squash so cells are roughly square in the mid-latitudes
 /** Gates other modules set: is the VHF mast up high enough to hear AIS? */
 export const gates = { ais: () => true };
-export const traffic = { cfg: null, cells: new Map(), cand: [], scripted: [], candKey: '', active: [], sunk: new Set(), known: new Map(), recent: new Map(), rand: Math.random, ready: false, stats: { active: 0, cells: 0, ms: 0 }, lastClock: null };
+export const traffic = { cfg: null, cells: new Map(), cand: [], scripted: [], escorts: [], candKey: '', active: [], sunk: new Set(), known: new Map(), recent: new Map(), rand: Math.random, ready: false, stats: { active: 0, cells: 0, ms: 0 }, lastClock: null };
 const mulberry = (a) => () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
 const mix = (seed, x, y) => (Math.imul(seed ^ 0x9E3779B1, 0x85EBCA6B) ^ Math.imul(x, 73856093) ^ Math.imul(y, 19349663)) | 0;
 const pick = (rng, a) => a[Math.floor(rng() * a.length)];
@@ -178,7 +178,7 @@ export function step() {
     traffic.candKey = key; traffic.stats.cells = (2 * reach + 1) ** 2;
   }
   const near = [];
-  for (const v of traffic.scripted.length ? traffic.cand.concat(traffic.scripted) : traffic.cand) {   // scripted: vessels a generated mission placed
+  for (const v of traffic.scripted.length || traffic.escorts.length ? traffic.cand.concat(traffic.scripted, traffic.escorts) : traffic.cand) {   // scripted: vessels a generated mission placed; escorts: the trials escort (trials.js)
     if (traffic.sunk.has(v.id)) continue;
     let p = posAt(v, now), d = dist(s, p);
     if (v.dyn) {   // a reacting vessel is moved a step at a time; far away it goes back to its leg

@@ -6,12 +6,21 @@ import { gameState, addLogEntry } from './persist.js';
 import { offerDecision, pendingDecisions } from './aria.js';
 import { tell } from './notify.js';
 import { eng, SYSTEMS } from './engineering.js';
+import { traffic } from './traffic.js';
+
+// The escort (owner, 2026-11-27): while Sea Trials runs, two friendly ships patrol the Trials AO on AIS, as Admiral Okafor's letter promised.
+// A: one end of the patrol leg, B: the other, L: its length in nm (posAt in traffic.js walks it back and forth).
+const ESCORTS = [
+  { id: 'esc:seaward', name: 'OERA Seaward', kind: 'research', faction: 'oera', factionName: 'O.E.R.A.', stance: 'friendly', label: 'Support ship', size: 3, kt: 8, A: { lat: 39.82, lon: -71.17 }, B: { lat: 39.82, lon: -70.83 }, L: 15.7, phase: 0.2, boldness: 0, ais: true, bias: 0, escort: true },
+  { id: 'esc:vigilant', name: 'CGC Vigilant', kind: 'patrol', faction: 'civil', factionName: 'Civil Harbour Authority', stance: 'friendly', label: 'Patrol cutter', size: 2, kt: 14, A: { lat: 40.02, lon: -70.95 }, B: { lat: 39.78, lon: -71.05 }, L: 15.4, phase: 0.7, boldness: 0, ais: true, bias: 0, escort: true },
+];
+const trialsRunning = () => (gameState.getProperty('mission.objectives') || []).some((o) => o.missionId === 'seaTrials');
 
 export const TRIALS = {
   deep: { obj: 'seaTrials_deep', who: 'engineering', name: 'Chief Doyle', base: 300, unit: 'm', levels: [450, 600], risk: [0.2, 0.45], hit: ['bulkheads', 'ballast'],
-    ask: (b, t) => `{captain}, Chief Doyle reports she is holding well at ${b} metres. Hull strain is low and the seals are dry. He asks permission to take her down to ${t} metres.`,
+    ask: (b, t) => `{captain}, Chief Doyle reports she is holding well at ${b} metres. Hull strain is low and the seals are dry. The certificate says 300, but she was built for the trenches, and the data would help the next step. He asks permission to take her down to ${t} metres.`,
     ok: (t) => `${t} metres, Captain. The hull is groaning a little, which is what hulls do. Nothing is leaking. That is the deepest the Aqua Nova has ever been.`,
-    record: (t) => `Ship record: test dive to ${t} metres in the Trials AO, ${t - 300} metres past the rated test depth.` },
+    record: (t) => `Ship record: test dive to ${t} metres in the Trials AO, ${t - 300} metres past her first certification step. The strain data goes to the classification society.` },
   speed: { obj: 'seaTrials_speed', who: 'helm', name: 'Marcus', base: MAX_KT, unit: 'kt', levels: [15.5, 17], risk: [0.2, 0.45], hit: ['propulsion'],
     ask: (b, t) => `{captain}, Marcus has her at ${b} knots on the hydro-jets and says she has more in her. Chief Doyle can run the jets past their rating. He asks permission to try for ${t} knots.`,
     ok: (t) => `${t} knots on the jets, Captain. Faster than the models said. The jets are hot but happy.`,
@@ -88,4 +97,4 @@ function check() {
 /** Tests: skip the breather between offers. */
 export const skipWait = () => { waitUntil = 0; };
 let acc = 0;
-sim.hooks.push((dt) => { acc += dt; if (acc < 1) return; acc = 0; try { check(); } catch (e) { console.warn('trials', e); } });
+sim.hooks.push((dt) => { acc += dt; if (acc < 1) return; acc = 0; try { traffic.escorts = trialsRunning() ? ESCORTS : []; check(); } catch (e) { console.warn('trials', e); } });

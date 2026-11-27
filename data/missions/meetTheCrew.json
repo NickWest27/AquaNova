@@ -107,7 +107,8 @@
     },
     {
       "type": "start_mission",
-      "missionId": "shipTour"
+      "missionId": "shipTour",
+      "delaySeconds": 8
     }
   ],
   "followUpMissions": [],

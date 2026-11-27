@@ -13,7 +13,9 @@ with sync_playwright() as p:
     st="""(async()=>{const m=(await import('../game/systems/missionManager.js')).default;const g=(await import('./js/persist.js')).gameState;
       const o=g.getProperty('mission.objectives')||[];return {active:[...m.activeMissions],done:[...(g.getProperty('mission.completed')||[])],obj:o.filter(x=>/nav|ship|meet/i.test(x.id)).map(x=>x.id+':'+x.status),flags:g.getProperty('progress.flags')}})()"""
     pg.evaluate("""(async()=>{const m=(await import('../game/systems/missionManager.js')).default;for(const id of ['meetTheCrew','shipTour','seaTrials']) m.forceCompleteMission&&m.forceCompleteMission(id); m.startMission('navLesson'); const {sim}=await import('./js/sim.js'); sim.s.docked=false; sim.s.at=sim.s.pois.find(p=>p.name==='Vineyard Ledge'); sim.s.lat=sim.s.at.lat; sim.s.lon=sim.s.at.lon})()""");pg.wait_for_timeout(1500)
-    pg.evaluate("window.__aq.scene('bridge')");pg.wait_for_timeout(300);pg.evaluate("window.__aq.open('nav')");pg.wait_for_timeout(6000)
+    pg.evaluate("window.__aq.scene('bridge')");pg.wait_for_timeout(300);pg.evaluate("window.__aq.open('nav')");pg.wait_for_timeout(1000)
+    pg.evaluate("window.__aq.open('sensors')");pg.wait_for_timeout(500)   # one step at a time (2026-11-27): the steps before 'arrive' are done first
+    pg.evaluate("(async()=>{const g=(await import('./js/persist.js')).gameState; for (const k of ['wskr_out','swept']) { g.updateProperty('tutorial.'+k,true); g.updateProperty('progress.flags',{...(g.getProperty('progress.flags')||{}),[k]:true}); } })()");pg.wait_for_timeout(8000)
     r=pg.evaluate(st); ok='navLesson_arrive:completed' in r['obj'] and r['flags'].get('arrived_ledge'); print(('ok   ' if ok else 'FAIL ')+'Charting a Course counts a ship that is already at Vineyard Ledge as plotted and arrived', '' if ok else r)
     b.close()
 srv.shutdown(); sys.exit(0 if ok else 1)

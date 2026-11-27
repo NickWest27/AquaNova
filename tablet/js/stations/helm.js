@@ -19,7 +19,7 @@ export function mount(body) {
   const dockBtn = el('button', { class: 'btn chip', text: 'Dock', onclick: () => toggleDock(() => thr.set(0)) });
   const cruiseBtn = el('button', { class: 'btn chip', text: 'Super cruise', onclick: () => {
     const r = sim.setCruise(!sim.s.cruise);
-    tell('helm', r.ok ? (sim.s.cruise ? `Super cruise engaged, Captain. Up to ${SUPER_KT} knots.` : 'Super cruise disengaged.') : cruiseWhy(r.why), r.ok ? '' : 'error'); } });
+    tell('helm', r.ok ? (sim.s.cruise ? `Spooling up the drive, Captain. Up to ${SUPER_KT} knots once she bites.` : 'Out of super cruise. Easing back.') : cruiseWhy(r.why), r.ok ? '' : 'error'); } });
   const hugBtn = el('button', { class: 'btn chip', text: 'Hug floor', onclick: () => {
     if (sim.s.hug) { sim.setHug(false); tell('helm', `Leaving the floor, Captain. Holding ${Math.round(sim.s.depth)} metres.`); return; }
     const r = sim.setHug(true);

@@ -54,6 +54,8 @@ def main():
         page.tap('#station button:text-is("Dock")'); page.wait_for_timeout(5200)
         check("undocking from the Helm completes the objective", "undock:completed" in objs(), objs())
         page.tap("#station .st-head .btn"); page.wait_for_timeout(200)
+        js("const S=(await import('./js/sim.js')).sim; S.s.wpt={lat:39.9,lon:-71.0,name:'WP1'}; return 1"); page.wait_for_timeout(6000)   # a course into the AO box
+        o = objs(); check("one step at a time: plot is current, the rest wait", "plot:completed" in o and "dive:active" in o and "arrive:waiting" in o and "speed:waiting" in o, o)
         fly(60, 6.5); page.wait_for_timeout(300)
         o = objs(); check("dive completes; the trials wait for the AO", "dive:completed" in o and "speed:completed" not in o, o)
         js("const S=(await import('./js/sim.js')).sim; Object.assign(S.s,{lat:39.9,lon:-71.0}); S.step(1);"); page.wait_for_timeout(6500)

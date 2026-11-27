@@ -23,3 +23,8 @@ Written 2026-11-20. The owner's brief: the Aqua Nova is a **sister ship of the S
 ## Not built
 - ARIA or Ryan topic about the reactors and drive.
 - Any name for the drive in the UI.
+
+## Super cruise handling (owner, 2026-11-27)
+- Engaging super cruise sets full power and **spools up for 8 s** (`SPOOL_S` in `sim.js`): the ship holds jet speed, then the drive bites (helm: "Drive is spooled").
+- Speed **eases** in and out of super cruise: fast while far from the target, gentle as it closes (about 14 to 95 kt in 15 s, 100 to 7 kt in about 20 s).
+- **Any other power setting** (helm lever, Slow, Fast, Stop, a speed order) drops super cruise.

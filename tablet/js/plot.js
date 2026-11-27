@@ -7,6 +7,8 @@ import { seafloor } from './seafloor.js';
 import { el, modal, pad, toast } from './util.js';
 import { resolveTarget, DEFAULT_LEG_NM } from './plotmath.js';
 
+/** Degrees and minutes, the way a chart writes it: 39°54.0'N. */
+const dm = (v, pos, neg, w) => { const a = Math.abs(v), d = Math.floor(a), m = (a - d) * 60; return `${String(d).padStart(w, '0')}°${m.toFixed(1).padStart(4, '0')}′${v >= 0 ? pos : neg}`; };
 const env = () => ({ ship: sim.s, pois: sim.s.pois, inside: seafloor.inside, floorAt: seafloor.depthAt });
 
 /** preselect: a marker already picked on the map. onPlotted runs after the course is set.
@@ -15,15 +17,15 @@ export function openPlotDialog({ preselect = null, onPlotted, onFix = null, titl
   let mode = preselect ? 'poi' : 'latlon';
   const known = el('select', { id: 'pc-known' }, sim.s.pois.map((p) => el('option', { value: String(p.id), text: p.name })));
   if (preselect) known.value = String(preselect.id);
-  const lat = el('input', { type: 'text', id: 'pc-lat', placeholder: 'e.g. 39.45 or 39 27 N', autocomplete: 'off', autocapitalize: 'characters' });
-  const lon = el('input', { type: 'text', id: 'pc-lon', placeholder: 'e.g. -72.25 or 72 15 W', autocomplete: 'off', autocapitalize: 'characters' });
+  const lat = el('input', { type: 'text', id: 'pc-lat', placeholder: '39 54 N (deg min) or 39.9 (decimal)', autocomplete: 'off', autocapitalize: 'characters' });
+  const lon = el('input', { type: 'text', id: 'pc-lon', placeholder: '071 00 W (deg min) or -71.0', autocomplete: 'off', autocapitalize: 'characters' });
   const place = el('select', { id: 'pc-place' }, el('option', { value: 'ship', text: 'Own ship' }), sim.s.pois.map((p) => el('option', { value: String(p.id), text: p.name })));
   place.value = preselect ? String(preselect.id) : 'ship';
   const brg = el('input', { type: 'text', id: 'pc-brg', inputmode: 'decimal', placeholder: 'optional, 0 to 360', autocomplete: 'off' });
   const dist = el('input', { type: 'text', id: 'pc-dist', inputmode: 'decimal', placeholder: `optional, default ${DEFAULT_LEG_NM} nm`, autocomplete: 'off' });
   const fixName = el('input', { type: 'text', id: 'pc-name', placeholder: 'optional, e.g. Rendezvous', autocomplete: 'off' });
   const fixDepth = el('input', { type: 'text', id: 'pc-depth', inputmode: 'decimal', placeholder: 'optional, metres', autocomplete: 'off' });
-  if (initial) { lat.value = String(+initial.lat.toFixed(4)); lon.value = String(+initial.lon.toFixed(4)); fixName.value = initial.name; if (initial.depth != null) fixDepth.value = String(initial.depth); }
+  if (initial) { const dmIn = (v, pos, neg) => { const x = Math.abs(v), d = Math.floor(x); return `${d} ${((x - d) * 60).toFixed(2)} ${v >= 0 ? pos : neg}`; }; lat.value = dmIn(initial.lat, 'N', 'S'); lon.value = dmIn(initial.lon, 'E', 'W'); fixName.value = initial.name; if (initial.depth != null) fixDepth.value = String(initial.depth); }
   const row = (label, node) => el('label', { class: 'pc-row' }, el('span', { text: label }), node);
   const msg = el('div', { class: 'pc-msg' });
   const llBox = el('div', { class: 'pc-box' }, row('Latitude', lat), row('Longitude', lon));
@@ -64,7 +66,7 @@ export function openPlotDialog({ preselect = null, onPlotted, onFix = null, titl
     const empty = mode === 'latlon' ? !lat.value.trim() && !lon.value.trim() : false;
     const r = current();
     if (empty) { msg.textContent = ''; msg.className = 'pc-msg'; return; }
-    if (r.ok) { const t = toward(sim.s, r.point); msg.textContent = `From the ship: bearing ${pad(t.brg)}°, ${t.nm.toFixed(1)} nm`; msg.className = 'pc-msg ok'; }
+    if (r.ok) { const t = toward(sim.s, r.point); msg.textContent = `${dm(r.point.lat, 'N', 'S', 2)}  ${dm(r.point.lon, 'E', 'W', 3)}  ·  from the ship ${pad(t.brg)}°, ${t.nm.toFixed(1)} nm`; msg.className = 'pc-msg ok'; }   // read back in degrees and minutes: 39.54 is 39°32.4', not 39°54'
     else { msg.textContent = r.error; msg.className = 'pc-msg bad'; }
   }
   function setMode(m) { mode = m; kBox.hidden = m !== 'poi'; llBox.hidden = m !== 'latlon'; plBox.hidden = m !== 'place'; tabK.classList.toggle('on', m === 'poi'); tabLL.classList.toggle('on', m === 'latlon'); tabPl.classList.toggle('on', m === 'place'); preview(); }

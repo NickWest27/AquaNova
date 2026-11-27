@@ -35,7 +35,8 @@
           "property": "tutorial.plotted_ao",
           "value": true
         }
-      ]
+      ],
+      "after": "undock"
     },
     {
       "id": "dive",
@@ -48,7 +49,7 @@
           "value": 30
         }
       ],
-      "after": "undock"
+      "after": "plot"
     },
     {
       "id": "arrive",
@@ -61,7 +62,7 @@
           "value": true
         }
       ],
-      "after": "plot",
+      "after": "dive",
       "onComplete": [
         {
           "type": "unlock_room",
@@ -86,7 +87,7 @@
             "id": "oera-welcome-ao",
             "from": "Admiral Okafor, O.E.R.A.",
             "subject": "Welcome to the AO",
-            "text": "{captain},\n\nWelcome to the AO. There are friendly vessels in the area while testing is being conducted. You may be the most formidable ship out there, but not everyone wants to see you succeed. The Aqua Nova is still untested and your crew still new.\n\nYou are to push the limits of speed and figure out where they are. Computer models and theory can only take us so far. The Aqua Nova has a state-of-the-art hull skin, designed for high-speed supercavitation, paired with a new hydro-jet propulsion system and a quantum fusion drive to power you. You should be able to get over 100 knots.\n\nChief Doyle has signed off the engineering computer and super cruise. Take her to her test depth of 300 meters, run her at full speed, then engage super cruise. The shelf is shallow to the north, so run south over deep water. When you are done, come up to 15 meters or shallower and send us your trials report.\n\nAdmiral Catherine Okafor\nDirector of Operations, O.E.R.A."
+            "text": "{captain},\n\nWelcome to the AO. There are friendly vessels in the area while testing is being conducted. You may be the most formidable ship out there, but not everyone wants to see you succeed. The Aqua Nova is still untested and your crew still new.\n\nYou are to push the limits of speed and figure out where they are. Computer models and theory can only take us so far. The Aqua Nova has a state-of-the-art hull skin, designed for high-speed supercavitation, paired with a new hydro-jet propulsion system and a quantum fusion drive to power you. You should be able to get over 100 knots.\n\nChief Doyle has signed off the engineering computer and super cruise. Take her to 300 meters, the first step of her depth certification, run her at full speed, then engage super cruise. The shelf is shallow to the north, so run south over deep water. When you are done, come up to 15 meters or shallower and send us your trials report.\n\nAdmiral Catherine Okafor\nDirector of Operations, O.E.R.A."
           }
         }
       ]
@@ -106,7 +107,7 @@
     },
     {
       "id": "deep",
-      "description": "Dive to the test depth of 300 m",
+      "description": "Dive to 300 m, the first depth certification step",
       "required": true,
       "triggers": [
         {
@@ -115,7 +116,7 @@
           "value": 295
         }
       ],
-      "after": "arrive"
+      "after": "eng"
     },
     {
       "id": "speed",
@@ -128,7 +129,7 @@
           "value": 13
         }
       ],
-      "after": "arrive"
+      "after": "deep"
     },
     {
       "id": "cruise",
@@ -141,7 +142,7 @@
           "value": 99
         }
       ],
-      "after": "eng"
+      "after": "speed"
     },
     {
       "id": "surface",
@@ -189,7 +190,8 @@
     },
     {
       "type": "start_mission",
-      "missionId": "navLesson"
+      "missionId": "navLesson",
+      "delaySeconds": 30
     }
   ],
   "hints": [

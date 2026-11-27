@@ -22,6 +22,7 @@ export const SCRUB_DAYS = 90;   // the Aqua Nova carries scrubbers for about thr
 export const CRUSH_M = 11000, DEEPEST_KNOWN_M = 10935, PERISCOPE_M = 10;   // crush depth: a little more than the Challenger Deep
 export const SURFACE_M = 3, SURFACE_KT = 7;   // above 3 m the ship is on the surface, where she is limited to 7 knots (built for sub-sea movement)
 /** Super cruise: Aqua Nova can run at 100 kt in deep water. It drops out on its own when the water ahead is shallow. WSKRs have one too (120 kt). */
+export const SPOOL_S = 8;   // seconds for super cruise to spool up
 export const SUPER_KT = 100, SUPER_MIN_FLOOR = 120, SUPER_LOOK_NM = [3, 6, 9], WSKR_SUPER_KT = 120, WSKR_FAR_NM = 6;
 const NM_PER_DEG_LAT = 60;
 const POI_RADIUS_NM = 0.3;
@@ -91,7 +92,7 @@ sim.setCruise = (on) => {
   if (s.battery <= 0) return { ok: false, why: 'power' };
   for (const f of sim.cruiseGate || []) { const why = f(); if (why) return { ok: false, why }; }   // e.g. the fusion drive offline (engineering.js)
   if (!superWaterAhead()) return { ok: false, why: 'shallow' };
-  s.cruise = true; sim.touch(); return { ok: true };
+  s.cruise = true; s.spool = 0; s.throttle = 1; sim.touch(); return { ok: true };   // super cruise is a power setting of its own: full, after the spool-up
 };
 /** Is there deep water under the ship and along the heading (3, 6 and 9 nm ahead)? */
 function superWaterAhead() {
@@ -104,7 +105,7 @@ function superWaterAhead() {
   }
   return true;
 }
-sim.setThrottle = (v) => { if (sim.s.docked) return; sim.s.throttle = clamp(v, 0, 1); sim.touch(); };
+sim.setThrottle = (v) => { if (sim.s.docked) return; if (sim.s.cruise) { sim.s.cruise = false; sim.emit('cruise-off', { why: 'throttle' }); } sim.s.throttle = clamp(v, 0, 1); sim.touch(); };   // any other power setting drops super cruise
 sim.setHeading = (h) => { sim.s.targetHeading = norm360(h); sim.touch(); };
 sim.setDepth = (d) => { if (sim.s.docked) return; sim.s.hug = false; sim.s.avoiding = false; sim.s.targetDepth = clamp(d, 0, 6000); sim.touch(); };   // a depth order ends "hug the floor"
 /** "Hug the floor": the helm keeps the ship HUG_ALT metres above the sea floor, looking ahead along the course so it climbs before a rise. */
@@ -196,7 +197,7 @@ sim.plotSearch = (spec, datum) => {
   return { ok: true, n: wps.length, nm: lengthPattern(wps, s) };
 };
 sim.clearRoute = () => { const s = sim.s; s.fixes = []; s.wpt = null; s.route = []; sim.touch(); };
-sim.stop = () => { sim.s.throttle = 0; sim.touch(); };   // speed only: a plotted course stays
+sim.stop = () => { if (sim.s.cruise) { sim.s.cruise = false; sim.emit('cruise-off', { why: 'throttle' }); } sim.s.throttle = 0; sim.touch(); };   // speed only: a plotted course stays
 sim.cancelCourse = () => { sim.s.wpt = null; sim.touch(); };   // steering by hand: speed stays and the Route is kept
 /** WSKRs: autonomous remote sensors. They hold a ring formation round the ship (better readings, stereoscopic data),
  *  can be sent to investigate a site, and can be recalled. Launched only from the Sensors station. Up to 4.
@@ -512,7 +513,13 @@ const stepOnce = (dt) => {
   // hugging a steep floor: slow down until the climb or dive needed to follow it is one the ship can make
   if (s.hug && s.hugG > 0.05 && (s.hugG > 0.85 * PITCH_TAN || s.hugG * KT_MPS * s.speed > 0.85 * MAX_DIVE_MPS)) wantKt = Math.min(wantKt, Math.max(1, (0.85 * (s.hugG > 0.85 * PITCH_TAN ? HOVER_MPS : MAX_DIVE_MPS)) / (s.hugG * KT_MPS)));
   if (s.wpt) wantKt = Math.min(wantKt, autopilotCap(Math.abs(turn), capDist));
-  s.speed += clamp(wantKt - s.speed, -(s.speed > MAX_KT ? 6 : 2) * dt * pace(), (s.cruise ? 3 : 1.2) * dt * pace());
+  // super cruise spools up first (like a turbo: SPOOL_S seconds at full jets before the drive bites), then speed eases in and out:
+  // fast while far from the target, gentle as it closes (owner, 2026-11-27)
+  if (s.cruise) { const was = s.spool || 0; s.spool = Math.min(1, was + (dt * pace()) / SPOOL_S); if (was < 1 && s.spool >= 1) sim.emit('cruise-spooled', {}); if (s.spool < 1) wantKt = Math.min(wantKt, MAX_KT); }
+  else s.spool = 0;
+  { const d = wantKt - s.speed, fast = s.speed > MAX_KT + 0.5 || wantKt > MAX_KT + 0.5;
+    const up = fast ? Math.max(0.6, d * 0.16) : 1.2, down = fast ? Math.max(0.8, -d * 0.12) : 2;
+    s.speed += clamp(d, -down * dt * pace(), up * dt * pace()); }
   // depth
   if (s.hug) {
     const hold = s.docked || !seafloor.ready ? null : hugHold(), t = hold ? hold.t : null;

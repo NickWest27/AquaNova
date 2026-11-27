@@ -32,7 +32,7 @@ class MissionManager {
         // Messages promised by finished missions (safe to repeat: an id is delivered once)
         for (const id of this.completedMissions) {
             const m = this.missions.get(id);
-            if (m && m.onComplete) this.executeActions(m.onComplete.filter(a => a.type === 'send_message'));
+            if (m && m.onComplete) this.executeActions(m.onComplete.filter(a => a.type === 'send_message' || (a.type === 'start_mission' && a.delaySeconds)));   // and follow-on missions still waiting to start
         }
         this.checkAutoStartMissions();
         
@@ -146,7 +146,7 @@ class MissionManager {
             id: `${missionId}_${obj.id}`,
             missionId: missionId,
             description: obj.description,
-            status: 'active',
+            status: obj.after ? 'waiting' : 'active',   // one task at a time: a step with "after" waits until that step is done (owner, 2026-11-27)
             required: obj.required || false
         }));
         
@@ -276,6 +276,9 @@ class MissionManager {
         
         objective.status = 'completed';
         objective.completedAt = new Date().toISOString();
+        const def = this.missions.get(missionId);   // the steps that were waiting for this one are now the current task
+        for (const d of ((def && def.objectives) || [])) if (d.after === objectiveId) { const o = objectives.find((x) => x.id === `${missionId}_${d.id}`); if (o && o.status === 'waiting') o.status = 'active'; }
+        setTimeout(() => { if (this.checkTriggers) this.checkTriggers(); }, 0);   // a step already done before its turn (logbook opened early) counts at once
         
         gameStateInstance.updateProperty('mission.objectives', objectives);
         
@@ -365,6 +368,13 @@ class MissionManager {
                     this.sendMessage(action.delaySeconds ? { ...action.message, delaySeconds: action.delaySeconds } : action.message);
                     break;
                 case 'start_mission':
+                    if (action.delaySeconds && !this.activeMissions.has(action.missionId) && !this.completedMissions.has(action.missionId)) {   // a breather before the next task (owner, 2026-11-27); the due time is saved, so a reload keeps it
+                        const ps = { ...(gameStateInstance.getProperty('mission.pendingStarts') || {}) };
+                        if (ps[action.missionId] == null) { ps[action.missionId] = Date.now() + action.delaySeconds * 1000 * (this.delayScale ?? 1); gameStateInstance.updateProperty('mission.pendingStarts', ps); }
+                        const wait = ps[action.missionId] - Date.now();
+                        this._scheduled ||= new Set();
+                        if (wait > 0) { const key = 'start:' + action.missionId; if (!this._scheduled.has(key)) { this._scheduled.add(key); setTimeout(() => { this._scheduled.delete(key); this.executeActions([{ ...action, delaySeconds: 0 }]); }, wait); } break; }
+                    }
                     if (this.startMission(action.missionId)) {   // a lesson or follow-on that starts by itself: tell the player
                         const m = this.missions.get(action.missionId);
                         document.dispatchEvent(new CustomEvent('task-started', { detail: { missionId: action.missionId, name: m && m.name, tutorial: !!(m && m.tutorial) } }));

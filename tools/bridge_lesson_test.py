@@ -24,9 +24,11 @@ with sync_playwright() as p:
     # a WSKR scans the ledge (the ship is not there yet), then the ship arrives: the scan step still counts
     pg.evaluate("""(async()=>{const sim=(await import('./js/sim.js')).sim;const L=sim.s.pois.find(p=>p.name==='Vineyard Ledge');sim.emit('wskr-found',{wskr:{n:1},poi:L})})()""")
     pg.wait_for_timeout(500)
+    pg.evaluate("(async()=>{const g=(await import('./js/persist.js')).gameState; for (const k of ['opened_sensors','wskr_out','swept']) { g.updateProperty('tutorial.'+k,true); g.updateProperty('progress.flags',{...(g.getProperty('progress.flags')||{}),[k]:true}); } })()")   # the steps before arrive (one at a time since 2026-11-27)
     pg.evaluate("""(async()=>{const sim=(await import('./js/sim.js')).sim;const L=sim.s.pois.find(p=>p.name==='Vineyard Ledge');sim.s.at=L;sim.s.lat=L.lat;sim.s.lon=L.lon})()""")
     pg.wait_for_timeout(7000)
-    check("a scan filed by a WSKR completes the scan step", "navLesson_scan:completed" in pg.evaluate(st))
+    r = pg.evaluate(st); done = pg.evaluate("(async()=>{const m=(await import('../game/systems/missionManager.js')).default; return m.completedMissions.has('navLesson')})()")
+    check("a scan filed by a WSKR completes the scan step (and with it the lesson)", "navLesson_scan:completed" in r or done)
     check("no page errors", not errs)
     b.close()
 srv.shutdown(); sys.exit(1 if fails else 0)

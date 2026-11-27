@@ -28,7 +28,7 @@ def main():
         # before the tour: ARIA says to call her
         check("before the tour ARIA says to call her", "communicator" in js("return U.excuse('helm')"), js("return U.excuse('helm')"))
         # the Captain has read the logbook and taken the PED; then the tour starts
-        js("g.updateProperty('progress.read_welcome', true); g.updateProperty('progress.got_ped', true); m.forceCompleteMission('meetTheCrew'); return 1"); page.wait_for_timeout(2500)
+        js("m.delayScale = 0.01; g.updateProperty('progress.read_welcome', true); g.updateProperty('progress.got_ped', true); m.forceCompleteMission('meetTheCrew'); return 1"); page.wait_for_timeout(2500)
         st = js("return (g.getProperty('mission.objectives')||[]).filter(o=>o.missionId==='shipTour').map(o=>o.id+':'+o.status)")
         check("logbook and PED steps count at once", "shipTour_log:completed" in st and "shipTour_ped:completed" in st, st)
         ex = js("return U.excuse('helm')")

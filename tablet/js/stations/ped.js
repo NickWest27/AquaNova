@@ -114,7 +114,8 @@ export function mount(body, ctx) {
       const live = saveManager.getPedTasks().filter((t) => !t.deleted);
       const objs = gameState.getProperty('mission.objectives') || [];
       const groups = missionManager.getActiveMissions().filter(Boolean).map((m) => [m, objs.filter((o) => o.missionId === m.id)]).filter(([, o]) => o.length);
-      return [...groups.flatMap(([m, o]) => [el('div', { class: 'lbl', text: m.name }), ...o.map((x) => el('div', { class: `card task mission-obj ${x.status === 'completed' ? 'done' : ''}` }, el('span', { class: 'dot' }), el('span', { text: x.description })))]),
+      return [...groups.flatMap(([m, o]) => { const shown = o.filter((x) => x.status !== 'waiting'), more = o.length - shown.length;   // done steps and the current one; the rest wait their turn
+        return [el('div', { class: 'lbl', text: m.name }), ...shown.map((x) => el('div', { class: `card task mission-obj ${x.status === 'completed' ? 'done' : ''}` }, el('span', { class: 'dot' }), el('span', { text: x.description }))), ...(more ? [el('div', { class: 'empty', text: `${more} more step${more === 1 ? '' : 's'} to come` })] : [])]; }),
         ...(groups.length ? [] : [el('div', { class: 'lbl', text: 'Mission tasks' }), el('div', { class: 'empty', text: 'No mission tasks. Accept a mission to see its tasks here.' })]),
         el('div', { class: 'lbl', text: 'My tasks' }),
         el('div', { class: 'row' }, input, el('button', { class: 'btn primary', text: 'Add', onclick: add })),

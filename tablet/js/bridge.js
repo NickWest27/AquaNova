@@ -93,7 +93,7 @@ export function createBridgeConsole({ top, main, display, center, left, right, o
       refresh();
     }, 'go');
     // The Route editor (owner, 2026-11-27): starts at the ship's present position; waypoints below it. Tap a row to select it.
-    // + adds a waypoint after the selected one (the waypoint dialog), - deletes it, up and down move it. Done keeps the changes, Cancel drops them.
+    // + adds a waypoint after the selected one (the waypoint dialog), - deletes it, up and down move it, Edit changes it. Done keeps the changes, Cancel drops them.
     // Plot then plots it round the land; speed and depth do not change. Turn points are the helm's own and are not listed.
     function openRoute() {
       const work = [...sim.s.fixes]; let at = work.length - 1, close = () => {};
@@ -105,17 +105,18 @@ export function createBridgeConsole({ top, main, display, center, left, right, o
           rows.push(el('button', { class: 'route-row' + (i === at ? ' sel' : ''), onclick: () => { at = i; draw(); } },
             el('div', { class: 'grow' }, el('b', { text: `${i + 1}  ${f.name}${i === work.length - 1 ? '  (DEST)' : ''}` }), el('small', { text: `${pad(t.brg)}°  ${t.nm.toFixed(1)} nm` })))); });
         list.replaceChildren(...rows);
-        minus.disabled = at < 0; up.disabled = at <= 0; down.disabled = at < 0 || at >= work.length - 1;
+        minus.disabled = edit.disabled = at < 0; up.disabled = at <= 0; down.disabled = at < 0 || at >= work.length - 1;
       };
       const mv = (d) => { const j = at + d; if (at < 0 || j < 0 || j >= work.length) return; [work[at], work[j]] = [work[j], work[at]]; at = j; draw(); };
       const plus = el('button', { class: 'btn chip sym', text: '+', 'aria-label': 'Add a waypoint', onclick: () => fixDialog({ title: 'New waypoint', action: 'Done', onFix: (f) => { work.splice(at + 1, 0, f); at += 1; draw(); } }) });
       const minus = el('button', { class: 'btn chip sym', text: '−', 'aria-label': 'Delete the waypoint', onclick: () => { if (at < 0) return; work.splice(at, 1); at = Math.min(at, work.length - 1); draw(); } });
       const up = el('button', { class: 'btn chip sym', text: '▲', 'aria-label': 'Move up', onclick: () => mv(-1) });
       const down = el('button', { class: 'btn chip sym', text: '▼', 'aria-label': 'Move down', onclick: () => mv(1) });
+      const edit = el('button', { class: 'btn chip', text: 'Edit', 'aria-label': 'Edit the waypoint', onclick: () => { const f = work[at]; if (!f) return; fixDialog({ title: `Edit ${f.name}`, action: 'Done', initial: f.type === 'waypoint' ? f : null, onFix: (nf) => { work[at] = f.type === 'waypoint' && nf.type === 'waypoint' ? { ...nf, id: f.id, name: f.name } : nf; draw(); } }); } });
       const done = el('button', { class: 'btn primary', text: 'Done', onclick: () => { sim.s.fixes = work; sim.s.wpt = null; sim.s.route = []; sim.touch(); close(); refresh(); } });   // a changed Route is plotted again with Plot
       const cancel = el('button', { class: 'btn', text: 'Cancel', onclick: () => close() });
       draw();
-      close = modal({ title: 'Route', body: el('div', {}, list, el('div', { class: 'row route-btns' }, plus, minus, up, down, done, cancel)), actions: [] });
+      close = modal({ title: 'Route', body: el('div', {}, list, el('div', { class: 'row route-btns' }, plus, minus, up, down, edit, done, cancel)), actions: [] });
     }
     // SHW: switches for what the NAV display draws. They replace the controls while SHW is on.
     const showSw = (key, label) => { const b = bbtn(label, () => { show[key] = !show[key]; nds.forEach((n) => n.redraw()); paint(); }); const paint = () => b.classList.toggle('on', !!show[key]); paint(); return b; };
@@ -191,7 +192,7 @@ export function createBridgeConsole({ top, main, display, center, left, right, o
       const r = sim.setHug(true);
       tell('helm', r.ok ? 'Nap of the earth, Captain. Ten metres off the bottom.' : r.why === 'docked' ? 'We are docked, Captain.' : 'Not enough water here to follow the floor, Captain.');
     });
-    const cruiseB = bbtn('Cruise', () => { const r = sim.setCruise(!sim.s.cruise); tell('helm', r.ok ? (sim.s.cruise ? 'Super cruise engaged, Captain.' : 'Super cruise disengaged.') : cruiseWhy(r.why)); });
+    const cruiseB = bbtn('Cruise', () => { const r = sim.setCruise(!sim.s.cruise); tell('helm', r.ok ? (sim.s.cruise ? 'Spooling up the drive, Captain.' : 'Out of super cruise. Easing back.') : cruiseWhy(r.why)); });
     const c = el('div', { class: 'bc' },
       el('div', { class: 'rowN' }, bbtn('Port', () => turn(-10)), bbtn('Stbd', () => turn(10)), bbtn('Stop', () => sim.stop(), 'stop'), bbtn('Slow', () => thr(-0.1)), bbtn('Fast', () => thr(0.1))),
       el('div', { class: 'rowN' }, bbtn('Up', () => dep(-50)), bbtn('Dn', () => dep(50)), bbtn('Srfc', () => sim.setDepth(0)), noeB, cruiseB));
