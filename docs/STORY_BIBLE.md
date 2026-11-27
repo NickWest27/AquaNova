@@ -47,7 +47,7 @@ The Aqua Nova is advanced enough that the nations behind O.E.R.A. will not let h
   - ARIA: no body. A glowing blue holographic brain of linked nodes over a projector ring.
   - Marcus Chen (picture of 2026-11-27): mid-thirties, short dark-brown hair, warm brown skin, a dry half-smile and one raised eyebrow; over the shoulder at the helm, hand on the yoke, an old dive watch; navy uniform with the ship's patch.
   - Dr. Samira Patel: long dark curly hair tied back, white lab coat over the navy uniform; in the lab with a tablet and a sample tube.
-  - Nicole Brooks: at the comms station (a stand-in picture; the owner wants an over-the-shoulder pose like Marcus).
+  - Nicole Brooks: brown hair in a low ponytail, a headset with a mic boom (as on the bridge); at the comms station (a stand-in picture; the owner wants an over-the-shoulder pose like Marcus).
   - Ryan Doyle (picture of 2026-11-27): early fifties, red-brown hair going grey, freckled ruddy face, a pencil behind his ear, coveralls with the sleeves rolled, a red rag in his back pocket, a Saint Christopher medal; one hand on the reactor casing; behind him a wrench taped to the bulkhead, "DO NOT TOUCH. LUCKY."
   - Andre Washington (picture of 2026-11-27): about forty, very tall and broad, close-cropped greying hair, short beard; arms folded, the Corps emblem on the right forearm, a column of names and the daughter's anchor-whale on the left; in the launch bay with the Tern behind him.
   - Alex Torres (picture of 2026-11-27): about thirty, dark wavy hair, olive skin, dark steady eyes, headphones on; over the shoulder at the sensors console, a calm half-smile.
