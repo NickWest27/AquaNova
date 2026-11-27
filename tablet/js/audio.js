@@ -18,9 +18,10 @@ export const getSound = () => ({ ...pref });
 /** The live context and master volume, for music (theme.js); null until sound has started. */
 export const audioOut = () => (ac && master ? { ac, master } : null);
 /** A sound effect from sfx.js through the Effects volume. */
-export function sfx(name, vol = 1) { if (!ac || !pref.on) return 0; return playSfx(ac, master, name, { vol: vol * (pref.fx ?? 0.8) }); }
+export function sfx(name, vol = 1) { if (window.__sfxLog) window.__sfxLog.push(name); if (!ac || !pref.on) return 0;   // __sfxLog: tests list what played
+ return playSfx(ac, master, name, { vol: vol * (pref.fx ?? 0.8) }); }
 /** A looping sound effect; returns { stop() }. */
-export function sfxLoop(name, vol = 1) { if (!ac || !pref.on) return { stop() {}, setVol() {} }; return loopSfx(ac, master, name, { vol: vol * (pref.fx ?? 0.8) }); }
+export function sfxLoop(name, vol = 1) { if (window.__sfxLog) window.__sfxLog.push('loop:' + name); if (!ac || !pref.on) return { stop() {}, setVol() {} }; return loopSfx(ac, master, name, { vol: vol * (pref.fx ?? 0.8) }); }
 /** An interface sound (sfx.js) at its slider's level: bus = comm, ui or notice. */
 const uiSound = (name, bus) => { if (!ac || !pref.on) return; const v = pref[bus] ?? 1; if (v < 0.002) return; playSfx(ac, master, name, { vol: v, t: ac.currentTime }); };
 // Water past the hull (owner, 2026-11-27: the old fan loop sounded like it): silent when stopped, louder with speed, on the Ship slider.

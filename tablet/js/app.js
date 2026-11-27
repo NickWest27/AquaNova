@@ -13,7 +13,7 @@ import './survey.js';   // site surveys run on the sim clock
 import './engineering.js';   // the ship's systems, damage and repairs
 import './trials.js';   // pushing the trials in the Trials AO: records, and a risk of light damage
 import './rov.js';
-import { SHUTTLE_NAME, BAY_SAFE_KT } from './bayops.js';
+import { SHUTTLE_NAME, BAY_SAFE_KT, bay } from './bayops.js';
 import './tern.js';
 import './commsModel.js';
 import { tickLab, SAMPLE_KINDS, awardSurveyBonus } from './science.js';
@@ -28,7 +28,7 @@ import { isCommissioned, excuse } from './unlocks.js';
 import { isOpen, visit, LOCKED } from './rooms.js';
 sim.cruiseGate = sim.cruiseGate || []; sim.cruiseGate.push(() => (isCommissioned('cruise') ? null : 'commission'));   // super cruise is commissioned in the trials area
 import { initMissionLog } from './missionLog.js';
-import { initAudio, updateHum, chirp, ping, sfx, sfxLoop } from './audio.js';
+import { initAudio, updateHum, chirp, ping, sfx, sfxLoop, getSound } from './audio.js';
 import { gameState, saveManager, loadGame, liveNav, startExitSave, saveBeforeSleep, checkpoint, restoreSim } from './persist.js';
 import { makeJournalEntry } from '../../utils/ledgerSync.js';
 
@@ -410,7 +410,6 @@ async function boot() {
       else if (type === 'depth-cap') sfx('depthAlarm');
       else if (type === 'sonar-contact' && sim.s.clock - (sfxAt.contact ?? -1e9) > 4) { sfxAt.contact = sim.s.clock; sfx('sonarContact', 0.7); }   // at most one blip every 4 game seconds
       else if (type === 'sonar-lost' && sim.s.clock - (sfxAt.lost ?? -1e9) > 4) { sfxAt.lost = sim.s.clock; sfx('sonarLost', 0.6); }
-      else if (type === 'bay-op' && data && data.craft !== 'wskr') sfx(data.kind === 'launch' ? 'airlockFlood' : 'airlockDrain', 0.8);   // the launch bay floods to launch, drains on recovery
       else if (type === 'bay-launched') sfx(data && data.craft === 'wskr' ? 'torpedoLaunch' : 'bubbles', 0.8);   // a WSKR leaves its tube; the Tern or Remora clears the bay
     });
     // diving and surfacing, and the hull at depth
@@ -423,6 +422,37 @@ async function boot() {
       if (s.depth >= 400 && s.clock >= nextCreak) { if (nextCreak) sfx('hullCreak', Math.min(1, 0.4 + (s.depth - 400) / 500)); nextCreak = s.clock + 90 + Math.random() * 150; }   // the hull talks below 400 m, every few minutes
     });
     document.addEventListener('comms-message', () => sfx('teletype', 0.6));   // a message coming in
+    // The launch bay cycle (owner, 2026-11-27): hatches are quick, equalising the pressure takes most of the cycle. Cues are at fractions of the op
+    // (game time, so they follow time compression). Launch: inner hatch open, close, flood, outer hatch open, the craft goes, outer hatch closes.
+    // Recovery: outer hatch open, the craft comes in, outer hatch closes, pump out, inner hatch open, close. Full volume in the launch bay, distant elsewhere.
+    const BAY_PLAN = { launch: [[0, 'hatchOpen'], [0.1, 'hatchClose'], [0.15, 'airlockFlood'], [0.15, 'loop:bayFlood'], [0.76, 'stop'], [0.78, 'hatchOpen']],
+      recover: [[0, 'hatchOpen'], [0.12, 'hatchClose'], [0.17, 'airlockDrain'], [0.17, 'loop:bayPump'], [0.82, 'stop'], [0.85, 'hatchOpen'], [0.95, 'hatchClose']] };
+    let bayCue = null;
+    const bayVol = () => (lastRoom === 'launchbay' ? 1 : 0.3);
+    sim.on((type) => {
+      if (type !== 'tick') return;
+      const op = bay().op;
+      if (bayCue && bayCue.op !== op) {   // the op ended (or a new one began)
+        if (bayCue.loop) bayCue.loop.stop();
+        if (!op && bayCue.op.kind === 'launch' && bayCue.op.t >= bayCue.op.dur) setTimeout(() => sfx('hatchClose', bayVol()), 2500);   // the craft is away: outer hatch shuts
+        bayCue = null;
+      }
+      if (!op || !BAY_PLAN[op.kind]) return;
+      const f = op.t / (op.dur + (op.air || 0));
+      if (!bayCue) {   // joined mid-cycle (a reload): skip what is past, but pick up a flood or pump that is still running
+        const plan = BAY_PLAN[op.kind], past = plan.filter(([at]) => at < f - 0.02), stopAt = (plan.find(([, w]) => w === 'stop') || [1])[0];
+        bayCue = { op, done: new Set(past.map(([at, w]) => at + w)), loop: null };
+        const lp = past.find(([, w]) => w.startsWith('loop:')); if (lp && f < stopAt) bayCue.loop = sfxLoop(lp[1].slice(5), bayVol());
+      }
+      for (const [at, what] of BAY_PLAN[op.kind]) {
+        if (f < at || bayCue.done.has(at + what)) continue;
+        bayCue.done.add(at + what);
+        if (what === 'stop') { if (bayCue.loop) { bayCue.loop.stop(); bayCue.loop = null; } }
+        else if (what.startsWith('loop:')) bayCue.loop = sfxLoop(what.slice(5), bayVol());
+        else sfx(what, bayVol());
+      }
+      if (bayCue.loop && bayCue.loop.setVol) bayCue.loop.setVol(bayVol() * (getSound().fx ?? 0.8));   // walking into or out of the bay
+    });
     sim.on((type, data) => {
       if (type === 'tick') {
         const s = sim.s;

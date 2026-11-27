@@ -21,6 +21,8 @@ export const SFX_LIST = {
   torpedoLaunch: 'Torpedo or launch tube: air burst, whoosh, bubbles',
   doorOpen: 'Power-assisted door opening: hiss, servo whine up, clunk',
   doorClose: 'Power-assisted door closing: servo whine down, thunk, seal hiss',
+  hatchOpen: 'Launch bay hatch opening: clamps release, hydraulic hiss, a heavy grind, a boom as it stops',
+  hatchClose: 'Launch bay hatch closing: the grind, a deep boom, clamps locking',
   airlockFlood: 'Airlock flooding: rising rumble and gurgle',
   airlockDrain: 'Airlock draining: falling gurgle and suck',
   ballastBlow: 'Emergency blow: a huge hiss and roar of air',
@@ -50,19 +52,25 @@ export const SFX_LIST = {
   shipHum: 'LOOP Ship hum: the systems drone under everything',
   ventilation: 'LOOP Ventilation: soft room air',
   engineRoom: 'LOOP Engine room: the fusion plant hum, pumps thumping, hiss',
+  bayFlood: 'LOOP Launch bay flooding: water pouring in, gurgling, the hull taking the weight (the game holds it for most of the cycle)',
+  bayPump: 'LOOP Launch bay pumping out: pumps thumping, water draining, air hissing in',
   radioStatic: 'LOOP Radio static with crackle',
   reactorHum: 'LOOP Reactor hum: deep pulsing drone',
 };
 
 // ---------- the kit ----------
-function kit(ctx, out, vol = 1) {
+function kit(ctx, out, vol = 1, drive = 0) {
   const bus = ctx.createGain(); bus.gain.value = vol;
+  // heavy hits (owner, 2026-11-27: still too quiet on the iPad): soft saturation. Low thuds grow harmonics a small speaker can play,
+  // and the level can go up without hard clipping. drive = how hard (0 = off). The 0.62 leaves headroom (the crush and filters add a little).
+  let into = bus;
+  if (drive) { const sat = ctx.createWaveShaper(), c = new Float32Array(2048), n = Math.tanh(drive); for (let i = 0; i < 2048; i++) { const x = (i / 2047) * 2 - 1; c[i] = 0.62 * Math.tanh(drive * x) / n; } sat.curve = c; sat.oversample = '2x'; bus.connect(sat); into = sat; }
   // 16-bit grit: a gentle bit-crush and the top end rolled off
   const crush = ctx.createWaveShaper(); const curve = new Float32Array(1024);
   for (let i = 0; i < 1024; i++) { const x = (i / 1023) * 2 - 1; curve[i] = Math.round(x * 48) / 48; }
   crush.curve = curve;
   const top = ctx.createBiquadFilter(); top.type = 'lowpass'; top.frequency.value = 11000;
-  bus.connect(crush); crush.connect(top); top.connect(out);
+  into.connect(crush); crush.connect(top); top.connect(out);
   // SNES echo: a delay with darkened feedback
   const echoIn = ctx.createGain(); echoIn.gain.value = 0.22;
   const dly = ctx.createDelay(1.5); dly.delayTime.value = 0.18;
@@ -171,6 +179,21 @@ const SHOTS = {
     hiss(k, t + 0.62, 0.35, 0.15, 'highpass', 2500, 0.7, 0.2, 0.01);
     return 1.1;
   },
+  hatchOpen(k, t) {   // a pressure hatch, much heavier than a room door (owner, 2026-11-27: the launch bay cycle)
+    for (const dt of [0, 0.12, 0.22]) { thud(k, t + dt, 300, 140, 0.12, 0.35); hiss(k, t + dt, 0.04, 0.3, 'bandpass', 2500, 2, 0.2, 0.001); }   // clamps let go
+    hiss(k, t + 0.3, 0.5, 0.3, 'highpass', 2000, 0.7, 0.3, 0.01);   // hydraulics
+    const g = tone(k, 'sawtooth', 55, t + 0.4, 1.6, 0.12, 0.3, 0.2, 0.2); g.frequency.linearRampToValueAtTime(75, t + 2);   // the hatch grinding round
+    const r = hiss(k, t + 0.4, 1.6, 0.18, 'bandpass', 500, 3, 0.3, 0.2); for (let i = 0; i < 14; i++) r.frequency.setValueAtTime(350 + Math.random() * 400, t + 0.4 + i * 0.11);
+    thud(k, t + 2.05, 110, 40, 0.7, 0.8);   // the stop
+    return 2.8;
+  },
+  hatchClose(k, t) {
+    const g = tone(k, 'sawtooth', 75, t, 1.5, 0.12, 0.3, 0.2, 0.15); g.frequency.linearRampToValueAtTime(55, t + 1.5);
+    const r = hiss(k, t, 1.5, 0.18, 'bandpass', 500, 3, 0.3, 0.2); for (let i = 0; i < 13; i++) r.frequency.setValueAtTime(350 + Math.random() * 400, t + i * 0.11);
+    thud(k, t + 1.55, 100, 35, 0.9, 0.9); hiss(k, t + 1.55, 0.15, 0.4, 'lowpass', 900, 0.7, 0.4, 0.001);   // the hatch seats
+    for (const dt of [1.9, 2.0, 2.1]) thud(k, t + dt, 320, 150, 0.1, 0.35);   // clamps lock
+    return 2.6;
+  },
   airlockFlood(k, t) {
     const fl = hiss(k, t, 3, 0.3, 'lowpass', 300, 1, 0.4, 0.6); fl.frequency.setValueAtTime(250, t); fl.frequency.linearRampToValueAtTime(1100, t + 2.8);
     for (let i = 0; i < 18; i++) { const t0 = t + 0.4 + i * 0.14 + Math.random() * 0.06; const o = tone(k, 'sine', 180 + Math.random() * 220, t0, 0.07, 0.08, 0.5); o.frequency.exponentialRampToValueAtTime(600, t0 + 0.07); }
@@ -254,6 +277,26 @@ const LOOPS = {
     pump();
     return () => { live = false; for (const s of src) s.stop(); };
   },
+  bayFlood(k) {   // water pouring into the bay, for as long as the game holds it
+    const ctx = k.ctx, src = [];
+    const n = k.noise(), lp = k.filter('lowpass', 700, 0.8), g = k.gain(0.35); n.connect(lp); lp.connect(g); k.send(g, 0.3); n.start(); src.push(n);
+    const n2 = k.noise(), bp = k.filter('bandpass', 1400, 1.2), g2 = k.gain(0.08); n2.connect(bp); bp.connect(g2); k.send(g2, 0.2); n2.start(); src.push(n2);
+    const lfo = k.osc('sine', 0.23), ld = k.gain(250); lfo.connect(ld); ld.connect(lp.frequency); lfo.start(); src.push(lfo);   // the pour surges
+    let t = ctx.currentTime + 0.2, live = true;
+    const glug = () => { if (!live) return; while (t < (k.offline ? 8 : ctx.currentTime + 2)) { const f = 150 + Math.random() * 250, o = tone(k, 'sine', f, t, 0.08, 0.07, 0.5); o.frequency.exponentialRampToValueAtTime(f * 2.4, t + 0.08); if (Math.random() < 0.12) thud(k, t, 70, 40, 0.6, 0.15); t += 0.09 + Math.random() * 0.25; } if (!k.offline) setTimeout(glug, 1000); };   // gurgles, now and then the hull taking the weight
+    glug();
+    return () => { live = false; for (const x of src) x.stop(); };
+  },
+  bayPump(k) {   // the pumps clearing the bay and air hissing back in
+    const ctx = k.ctx, src = [];
+    const n = k.noise(), lp = k.filter('lowpass', 450, 0.8), g = k.gain(0.22); n.connect(lp); lp.connect(g); k.send(g, 0.2); n.start(); src.push(n);
+    const a = k.noise(), hp = k.filter('highpass', 3000, 0.7), ag = k.gain(0.05); a.connect(hp); hp.connect(ag); k.send(ag, 0.1); a.start(); src.push(a);
+    const m = k.osc('sawtooth', 47), ml = k.filter('lowpass', 260, 1), mg = k.gain(0.06); m.connect(ml); ml.connect(mg); k.send(mg, 0); m.start(); src.push(m);
+    let t = ctx.currentTime + 0.1, live = true;
+    const beat = () => { if (!live) return; while (t < (k.offline ? 8 : ctx.currentTime + 2)) { thud(k, t, 120, 55, 0.3, 0.3); const f = 500 - Math.random() * 200, o = tone(k, 'sine', f, t + 0.3, 0.1, 0.05, 0.5); o.frequency.exponentialRampToValueAtTime(f * 0.4, t + 0.4); t += 0.7; } if (!k.offline) setTimeout(beat, 1000); };   // pump strokes, water sucked away
+    beat();
+    return () => { live = false; for (const x of src) x.stop(); };
+  },
   radioStatic(k) {
     const ctx = k.ctx, n = k.noise(), bp = k.filter('bandpass', 1800, 0.6), g = k.gain(0.12); n.connect(bp); bp.connect(g); k.send(g, 0); n.start();
     let live = true; const crackle = () => { if (!live) return; const t = ctx.currentTime + Math.random() * 0.3; hiss(k, t, 0.02 + Math.random() * 0.04, 0.2, 'highpass', 4000, 0.7, 0, 0.001); setTimeout(crackle, 80 + Math.random() * 250); };
@@ -277,11 +320,12 @@ const LOOPS = {
 };
 
 // level of each sound so they sit together in the game (from rendered peaks, 2026-11-27): alarms and crashes loud, interface ticks soft, loops low
-const LEVEL = {"generalAlarm": 1.25, "fireAlarm": 2.69, "collisionAlarm": 3.18, "depthAlarm": 1.15, "sonarPing": 1.17, "sonarContact": 2.27, "sonarLost": 2.5, "impact": 0.5, "crash": 0.45, "hullCreak": 1.6, "torpedoLaunch": 0.5, "doorOpen": 0.8, "doorClose": 0.73, "airlockFlood": 1.67, "airlockDrain": 1.84, "ballastBlow": 0.56, "radioSquelch": 1.18, "radioBeep": 1.36, "powerUp": 1.3, "powerDown": 1.3, "cruiseEngage": 0.86, "bubbles": 2.86, "splash": 1.0, "buttonPress": 1.8, "buttonError": 1.54, "teletype": 2.14, "distantExplosion": 0.55, "hullFlow": 0.92, "shipHum": 0.6, "ventilation": 0.8, "engineRoom": 0.71, "radioStatic": 0.56, "reactorHum": 0.56};
+const LEVEL = {"generalAlarm": 1.25, "fireAlarm": 2.69, "collisionAlarm": 3.18, "depthAlarm": 1.15, "sonarPing": 1.17, "sonarContact": 2.27, "sonarLost": 2.5, "impact": 3, "crash": 3, "hullCreak": 1.6, "torpedoLaunch": 0.5, "doorOpen": 0.8, "doorClose": 0.73, "hatchOpen": 1.0, "hatchClose": 1.0, "bayFlood": 0.9, "bayPump": 1.0, "airlockFlood": 1.67, "airlockDrain": 1.84, "ballastBlow": 0.56, "radioSquelch": 1.18, "radioBeep": 1.36, "powerUp": 1.3, "powerDown": 1.3, "cruiseEngage": 0.86, "bubbles": 2.86, "splash": 1.0, "buttonPress": 1.8, "buttonError": 1.54, "teletype": 2.14, "distantExplosion": 2.5, "hullFlow": 0.92, "shipHum": 0.6, "ventilation": 0.8, "engineRoom": 0.71, "radioStatic": 0.56, "reactorHum": 0.56};
+const DRIVE = { impact: 5, crash: 5, distantExplosion: 4 };   // soft saturation for the heavy hits (see kit)
 /** Play a one-shot. Returns its length in seconds (0 if the name is unknown). */
 export function playSfx(ctx, out, name, { t = ctx.currentTime + 0.02, vol = 1 } = {}) {
   const f = SHOTS[name]; if (!f || !ctx || !out) return 0;
-  const k = kit(ctx, out, vol * (LEVEL[name] || 1)); return f(k, t);
+  const k = kit(ctx, out, vol * (LEVEL[name] || 1), DRIVE[name] || 0); return f(k, t);
 }
 /** Start a loop. Returns { stop() } (fades out). */
 export function loopSfx(ctx, out, name, { vol = 1 } = {}) {

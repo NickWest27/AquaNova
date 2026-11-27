@@ -9,11 +9,11 @@ export const GROUPS = [
   ['Alarms', ['generalAlarm', 'fireAlarm', 'collisionAlarm', 'depthAlarm']],
   ['Sonar', ['sonarPing', 'sonarContact', 'sonarLost']],
   ['Hull and impacts', ['impact', 'crash', 'hullCreak', 'distantExplosion']],
-  ['Machinery', ['doorOpen', 'doorClose', 'airlockFlood', 'airlockDrain', 'ballastBlow', 'powerUp', 'powerDown', 'cruiseEngage', 'torpedoLaunch']],
+  ['Machinery', ['doorOpen', 'doorClose', 'hatchOpen', 'hatchClose', 'airlockFlood', 'airlockDrain', 'ballastBlow', 'powerUp', 'powerDown', 'cruiseEngage', 'torpedoLaunch']],
   ['Radio and consoles', ['radioSquelch', 'radioBeep', 'buttonPress', 'buttonError', 'teletype']],
   ['Interface', ['commChirp', 'mailOpen', 'mailClose', 'actionTick', 'noticePing', 'dataUp', 'dataDown', 'dataDone', 'dataFail']],
   ['Water', ['bubbles', 'splash']],
-  ['Loops', ['hullFlow', 'shipHum', 'ventilation', 'engineRoom', 'radioStatic', 'reactorHum']],
+  ['Loops', ['hullFlow', 'shipHum', 'ventilation', 'bayFlood', 'bayPump', 'engineRoom', 'radioStatic', 'reactorHum']],
 ];
 const load = () => { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { return {}; } };
 const save = (o) => { try { localStorage.setItem(KEY, JSON.stringify(o)); } catch (e) { /* private window: names last until reload */ } };
