@@ -41,12 +41,16 @@ export function createND(wrap, { onPick, stage = false, units = 1, contours = fa
   const WSKR_NM = 3;
   // Sonar sets how much of the sea floor is mapped in detail: sonar on 4 nm, off 0.8 nm (echo sounder only), active sweep 8 nm.
   const fineNm = (s) => sim.fineNm(s);
-  const shade = (l) => (l === 0 ? 'rgba(255,214,120,0.9)' : l > -100 ? 'rgba(130,215,255,0.40)' : l > -500 ? 'rgba(90,170,255,0.45)' : 'rgba(110,130,255,0.55)');
+  // Land and shallows (owner, 2026-11-27): the coast (0 m) is a bold dark yellow; water 20 m deep or less is outlined in light yellow (from the fine
+  // charts, so only where we have charted). Deeper contours stay blue.
+  const LAND = '#d4a000', SHALLOW = 'rgba(255,240,165,0.8)';
+  const shade = (l) => (l === 0 ? LAND : l > -100 ? 'rgba(130,215,255,0.40)' : l > -500 ? 'rgba(90,170,255,0.45)' : 'rgba(110,130,255,0.55)');
   function strokeLevels(levels, p, w, h, fine, ox = 0, oy = 0) {
     for (const lv of levels) {
       if (fine && (lv.l === 0 || !(lv.l > -200 || (lv.l > -1000 ? lv.l % 20 === 0 : lv.l > -3500 ? lv.l % 50 === 0 : lv.l % 100 === 0)))) continue;   // 10 m on the shelf, then every 20 m to 1000 m, 50 m to 3500 m and 100 m below: finer than before so the deep canyon keeps its detail
-      ctx.strokeStyle = fine ? (lv.l % 100 === 0 ? 'rgba(130,200,255,0.55)' : 'rgba(110,190,230,0.26)') : shade(lv.l);
-      ctx.lineWidth = lv.l === 0 ? 1.8 : fine ? 0.9 : 1.1; ctx.beginPath();
+      const shallow = fine && lv.l >= -20;
+      ctx.strokeStyle = shallow ? SHALLOW : fine ? (lv.l % 100 === 0 ? 'rgba(130,200,255,0.55)' : 'rgba(110,190,230,0.26)') : shade(lv.l);
+      ctx.lineWidth = lv.l === 0 ? 3 : shallow ? 1.4 : fine ? 0.9 : 1.1; ctx.beginPath();
       for (const ln of lv.lines) {
         const a = ln.a, n = a.length / 2;
         if (p.x(ln.x1) < -20 - ox || p.x(ln.x0) > w + 20 + ox || p.y(ln.y0) < -20 - oy || p.y(ln.y1) > h + 20 + oy) continue;   // outside the view
