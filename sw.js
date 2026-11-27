@@ -2,7 +2,7 @@
    falls back to the saved copy when offline or slow. Covers the iPad game (tablet/) and the
    iPhone PED (ped/). Only same-origin GET requests are handled: GitHub sync calls go straight to
    the network. Run `python3 tools/update_sw.py` after adding or renaming files. */
-const VERSION = 'cd67c8b3ee';
+const VERSION = '03e487e78d';
 const CACHE = 'aquanova-' + VERSION;
 const ASSETS = [
  "tablet/",
@@ -262,6 +262,10 @@ const ASSETS = [
  "tablet/retro/assets/crew/communications_original.jpg",
  "tablet/retro/assets/crew/communications_scene.png",
  "tablet/retro/assets/crew/communications_scene_original.jpg",
+ "tablet/retro/assets/crew/engineering.png",
+ "tablet/retro/assets/crew/engineering_original.jpg",
+ "tablet/retro/assets/crew/engineering_scene.png",
+ "tablet/retro/assets/crew/engineering_scene_original.jpg",
  "tablet/retro/assets/crew/executiveOfficer.png",
  "tablet/retro/assets/crew/executiveOfficer_original.jpg",
  "tablet/retro/assets/crew/executiveOfficer_scene.png",
@@ -274,6 +278,10 @@ const ASSETS = [
  "tablet/retro/assets/crew/science_original.jpg",
  "tablet/retro/assets/crew/science_scene.png",
  "tablet/retro/assets/crew/science_scene_original.jpg",
+ "tablet/retro/assets/crew/security.png",
+ "tablet/retro/assets/crew/security_original.jpg",
+ "tablet/retro/assets/crew/security_scene.png",
+ "tablet/retro/assets/crew/security_scene_original.jpg",
  "tablet/retro/assets/engineering.png",
  "tablet/retro/assets/engineering_original.jpg",
  "tablet/retro/assets/launchbay.png",
