@@ -10,6 +10,7 @@ import { getConfig, connect as connectSync, clearConfig, makeJournalEntry, newTa
 import { getSound, setSound, chirp, ping, mailZoom, testSound, audioState, audioOut, initAudio, sfx } from '../audio.js';
 import { playTheme, stopTheme, themePlaying } from '../theme.js';
 import { knownCrew } from './crew.js';
+import { openSoundBoard } from '../soundboardKit.js';
 import missionManager from '../../../game/systems/missionManager.js';
 
 let appVersion = '…';
@@ -176,7 +177,8 @@ export function mount(body, ctx) {
         el('div', { class: 'row' },
           el('button', { class: 'btn', text: snd.on ? 'Turn sound off' : 'Turn sound on', onclick: () => { setSound({ on: !getSound().on }); if (getSound().on) chirp(); render(); } }),
           el('button', { class: 'btn primary', text: 'Test sound', onclick: () => { const st = testSound(); toast(`Sound engine: ${st.state}`); setTimeout(render, 400); } }),
-          el('button', { class: 'btn', text: themePlaying() ? 'Stop theme' : 'Play theme', onclick: () => { if (themePlaying()) { stopTheme(); render(); return; } initAudio(); const o = audioOut(); if (o && playTheme(o.ac, o.master)) { toast('Beneath the Waves'); setTimeout(render, 300); } else toast('Sound is not running yet', 'warn'); } })),
+          el('button', { class: 'btn', text: themePlaying() ? 'Stop theme' : 'Play theme', onclick: () => { if (themePlaying()) { stopTheme(); render(); return; } initAudio(); const o = audioOut(); if (o && playTheme(o.ac, o.master)) { toast('Beneath the Waves'); setTimeout(render, 300); } else toast('Sound is not running yet', 'warn'); } }),
+          el('button', { class: 'btn', text: 'Sound board', onclick: () => { initAudio(); openSoundBoard(() => { initAudio(); const o = audioOut(); return o ? { ac: o.ac, out: o.master } : null; }, toast); } })),
         slider('Master', 'vol', chirp), slider('Ship', 'hum'), slider('Ambient', 'ambient'), slider('Communicator', 'comm', chirp), slider('Notices', 'notice', ping), slider('Interface', 'ui', () => mailZoom(true)), slider('Effects', 'fx', () => sfx('doorOpen')),
         el('p', { text: `Sound engine: ${audioState().state}. If you hear nothing, turn the ringer switch off mute and raise the volume.` }));
 
