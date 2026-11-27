@@ -73,7 +73,7 @@ export function linkState(L, s = sim.s) {
 }
 // Nicole reports when the ship loses its last link to the surface, and when one comes back (owner, 2026-11-27). The links that can send are
 // SAT-COM, LASER and HF (VLF only receives). A relay (a WSKR or the Tern at the surface) or the comm buoy floated up keeps the link (antDepth), so no message then. A change must hold for 10 game seconds, so a link fading at the edge of range does not chatter.
-// A short line (communicator log and the pin; the overhead panel on the bridge), not a dialogue: it happens every time the ship dives.
+// Lost opens her dialogue (it matters: no mail, no reports); back is a short line (owner, 2026-11-27).
 let surf = null, surfSince = 0;
 sim.hooks.push(() => {
   const s = sim.s; if (s.docked) { surf = null; return; }
@@ -83,8 +83,9 @@ sim.hooks.push(() => {
   if (now !== surf.up) { surf.up = now; surfSince = s.clock; }
   if (surf.up !== surf.said && s.clock - surfSince >= 10) {
     surf.said = surf.up;
-    say('comms', surf.up ? `Surface link is back${sim.relayUp && sim.relayUp() ? ' through the relay' : ''}, Captain: ${up.map((L) => L.label).join(', ')}.` : 'We have lost our link to the surface, Captain. Float the comm buoy, put a WSKR up as a relay, or bring us shallower, and I will have it back.',
-      surf.up ? '' : 'warn', { feedback: true });
+    if (surf.up) say('comms', `Surface link back${sim.relayUp && sim.relayUp() ? ' through the relay' : ''}: ${up.map((L) => L.label).join(', ')}.`, '', { feedback: true });   // short: a notice on the bridge, the pin elsewhere
+    else say('comms', 'Captain, we have lost our link to the surface. No mail and no reports until we get it back. Float the comm buoy, put a WSKR up as a relay, or bring us shallower.',
+      'warn', { key: 'surface-link', valid: () => !!surf && !surf.up });   // her dialogue opens; if the link is back before it is read, it is dropped
   }
 });
 export const canTransmit = () => { const L = activeLink(), st = linkState(L); return { L, st, ok: st.up && L.tx }; };

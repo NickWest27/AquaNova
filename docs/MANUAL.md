@@ -260,7 +260,7 @@ Raise them on **Comms → Controls**. The **mast** comes in above 8 kt, the **co
 
 ### Staying in touch when deep
 - **Float the comm buoy**, **put a WSKR up as a relay**, or **put the Tern up as a relay** (both within 10 nm).
-- **Nicole tells you** when the ship loses her last surface link, and when one is back (after 10 seconds, so a flickering link does not chatter).
+- **Nicole tells you** when the ship loses her last surface link: her message opens, with what to do. If the link comes back before you read it, she drops it. When the link is back she gives a short notice. (Each waits 10 seconds, so a flickering link does not chatter.)
 
 ### LPI: the quiet undersea link
 A spread-spectrum signal **below the ocean's own noise**. It works at any depth, needs no antenna, and **nobody hears it** (unlike active sonar, it does not give you away). It reaches **undersea colonies and mines**: about **25 nm**, or about **120 nm in the deep sound channel** (600 to 1200 m down). It does not reach the surface network.
