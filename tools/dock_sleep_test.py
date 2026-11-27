@@ -64,7 +64,8 @@ def main():
         page.tap('#station button:text-is("Dock")'); page.wait_for_timeout(5200)
         js("sim.s.at = null; sim.s.lat += 0.5")
         page.tap('#station button:text-is("Dock")'); page.wait_for_timeout(500)
-        check("docking away from a dock is refused", js("return sim.s.docked") is False and "dock" in page.inner_text("#console-line").lower())
+        said = page.evaluate("(async()=>(await import('./js/notify.js')).transcript('helm').map(l=>l.text).join(' '))()")   # Marcus's reply is in his communicator log
+        check("docking away from a dock is refused", js("return sim.s.docked") is False and "dock" in said.lower(), said)
         page.tap("#station .st-head .btn"); page.wait_for_timeout(200)
 
         # --- early wake-up: oxygen falls below 30% during a long sleep ---

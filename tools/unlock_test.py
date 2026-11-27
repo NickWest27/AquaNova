@@ -28,7 +28,8 @@ def main():
         page, errors = boot(browser, base + "?locked=1")
         page.evaluate("window.__aq.open('wskr')"); page.wait_for_timeout(500)
         check("locked: WSKR page stays closed", not page.is_visible("#station"))
-        check("locked: excuse is shown", "not been commissioned" in page.inner_text("#console-line"), page.inner_text("#console-line"))
+        ex = page.evaluate("(async()=>((await import('./js/notify.js')).takeHeld('executiveOfficer')||[]).join(' '))()")   # ARIA holds it: her dialogue opens with it
+        check("locked: excuse is shown", "not been commissioned" in ex, ex)
         page.evaluate("window.__aq.open('log')"); page.wait_for_timeout(500)
         check("locked: the logbook is always open", page.is_visible("#station"))
         page.evaluate("(async()=>{const m=(await import('../game/systems/missionManager.js')).default; m.executeActions([{type:'unlock_station',station:'wskr'}]);})()")

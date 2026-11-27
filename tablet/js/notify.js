@@ -2,7 +2,7 @@
 // the relevant crew member calls in: a communicator chirp and a short message under the top edge.
 // Anti-spam: the chirp sounds at most once every 20 s; messages from the same person within 8 s replace each other.
 import { fill } from './player.js';
-import { viewProbe, consoleLine } from './util.js';
+import { viewProbe } from './util.js';
 import { gameState } from './persist.js';
 import { chirp, ping, actionTick } from './audio.js';
 
@@ -76,10 +76,11 @@ export function say(role, text, kind = '', opts = {}) {
   if (opts.action) { actionTick(); }   // a routine action report: a short tick, not the communicator
   else if (now - lastChirp > 20000) { lastChirp = now; stats.chirps++; chirp(); }
   stats.shown++;
-  if (!keepIt) {   // a short line (the reply to a button press): on the bridge it is a notice on the overhead console; elsewhere the line at the foot of the screen
+  if (!keepIt) {   // a short line (the reply to a button press): on the bridge a notice on the overhead console. Nothing at the foot of the screen
+    // any more (owner, 2026-11-27): the line is in that crew member's communicator log, and the pin pulses, unless the Captain is talking to them.
     if (viewProbe.fn()) document.dispatchEvent(new CustomEvent('notice', { detail: { text: `${w.name.split(' ').pop().toUpperCase()}: ${text}`, kind } }));
-    else consoleLine(`${w.name} · ${w.role}: ${text}`, kind);
-  }   // a running note: the line at the foot of the screen. A held message opens the dialogue instead (app.js).
+    else if (CREW_ID[role] !== openCrew) document.dispatchEvent(new CustomEvent('pin-pulse'));
+  }
 
 }
 

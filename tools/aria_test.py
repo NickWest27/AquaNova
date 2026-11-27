@@ -29,7 +29,7 @@ def main():
         def line():   # what the crew said: the line at the foot of the screen (button replies) or what ARIA holds for her dialogue (2026-11-27)
             held = js("return (await import('./js/notify.js')).takeHeld('executiveOfficer')") or []
             if held: seen["t"] = "ARIA · Executive Officer: " + " ".join(held)
-            con = page.inner_text("#console-line") or ""
+            con = js("const n=await import('./js/notify.js'); return ['helm','executiveOfficer','sensors','engineering','science','communications','security'].flatMap(id=>n.transcript(id).slice(-1).map(l=>(id==='helm'?'Marcus Chen · Helm: ':'')+l.text)).join(' ')") or ""   # no line at the foot of the screen any more: the crew member's communicator log
             return seen["t"] + " | " + con
         # locked station: ARIA explains (a message that opens her dialogue), no toast machinery
         page.evaluate("window.__aq.open('helm')"); page.wait_for_timeout(400)

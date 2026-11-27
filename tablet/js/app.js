@@ -102,6 +102,7 @@ const syncUI = frameThrottle(() => {
   pin.hidden = locked;
   if (!locked) { pin.classList.remove('ring'); void pin.offsetWidth; pin.classList.add('ring'); if (!quiet) chirp(); }
 });
+document.addEventListener('pin-pulse', () => { const pin = $('#pin'); if (pin.hidden) return; pin.classList.remove('ring'); void pin.offsetWidth; pin.classList.add('ring'); });   // a crew line that is not shown: the pin pulses
 
 // ---------- scene scaling: one transform ----------
 const PAGE_W = 1024, PAGE_H = 768;   // station pages: 4:3, the stage's 1920x1440 / 1.875
