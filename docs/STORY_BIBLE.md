@@ -45,10 +45,12 @@ The Aqua Nova is advanced enough that the nations behind O.E.R.A. will not let h
 
 - **Appearance** (portraits in `tablet/retro/assets/crew/`, sources in `art_src/crew/`; one look per person, keep new art to it):
   - ARIA: no body. A glowing blue holographic brain of linked nodes over a projector ring.
-  - Marcus Chen: short dark hair, warm brown skin, a calm half-smile; seen over his shoulder at the helm console, navy uniform with the ship's patch.
+  - Marcus Chen (picture of 2026-11-27): mid-thirties, short dark-brown hair, warm brown skin, a dry half-smile and one raised eyebrow; over the shoulder at the helm, hand on the yoke, an old dive watch; navy uniform with the ship's patch.
   - Dr. Samira Patel: long dark curly hair tied back, white lab coat over the navy uniform; in the lab with a tablet and a sample tube.
   - Nicole Brooks: at the comms station (a stand-in picture; the owner wants an over-the-shoulder pose like Marcus).
-  - Still to draw: Alex Torres; Ryan Doyle (red-brown hair, freckles, sleeves rolled, grease on the hands, fifties); Andre Washington (very tall and broad, close-cropped hair, tattooed forearms, the uniform a size too small at the shoulders).
+  - Ryan Doyle (picture of 2026-11-27): early fifties, red-brown hair going grey, freckled ruddy face, a pencil behind his ear, coveralls with the sleeves rolled, a red rag in his back pocket, a Saint Christopher medal; one hand on the reactor casing; behind him a wrench taped to the bulkhead, "DO NOT TOUCH. LUCKY."
+  - Andre Washington (picture of 2026-11-27): about forty, very tall and broad, close-cropped greying hair, short beard; arms folded, the Corps emblem on the right forearm, a column of names and the daughter's anchor-whale on the left; in the launch bay with the Tern behind him.
+  - Still to draw: Alex Torres (about thirty, lean, a little round-shouldered from the sonar shack, short black hair flattened by the headset he never takes off, olive skin, dark steady half-closed eyes, sleeves pushed up, an old Navy sonar-tech pin on the collar; over the shoulder at the sensors console, hand on a volume knob, mid-listen).
 
 - **Where they work** (the Captain meets them there, then can call them): bridge = Marcus (helm), Nicole (comms, left console), Alex (sensors, right console; may move to a sonar room off the bridge if Marcus takes the right console); launch bay = Lt. Washington; science lab and sick bay = Dr. Patel; engineering = Chief Doyle; ARIA everywhere.
 

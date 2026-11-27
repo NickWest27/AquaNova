@@ -7,7 +7,7 @@ import os, sys, json
 from PIL import Image
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SRC, OUT = os.path.join(ROOT, 'art_src', 'crew'), os.path.join(ROOT, 'tablet', 'retro', 'assets', 'crew')
-FACE = { 'helm': (800, 80, 540), 'executiveOfficer': (60, 120, 720), 'science': (560, 20, 300) }
+FACE = { 'helm': (330, 110, 400), 'executiveOfficer': (60, 120, 720), 'science': (560, 20, 300), 'engineering': (560, 60, 380), 'security': (920, 40, 360) }   # helm: the over-the-shoulder picture of 2026-11-27 (the first one is helm_scene_v1.png)
 def snap(img):
     d = json.load(open(os.path.join(ROOT, 'data', 'palette.json'))); c = d if isinstance(d, list) else d.get('colors', d)
     pal = [tuple(int(h[i:i + 2], 16) for i in (1, 3, 5)) for h in c]; flat = [v for p in pal for v in p]; flat += flat[:3] * (256 - len(pal))

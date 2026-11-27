@@ -1066,3 +1066,9 @@ body.on-bridge .dock-status { background: rgba(3,14,24,.82); border-radius: 0 0 
 .keycap { pointer-events: none; } .keycap-t { width: 40px; height: 28px; display: flex; align-items: center; justify-content: center; font: 900 30px/1 var(--mono); color: #1a1204; }
 .tp-lamp { position: absolute; pointer-events: none; border-radius: 3px; background: transparent; }
 .tp-lamp.on { background: #64ffda; box-shadow: 0 0 10px #64ffda; }
+
+/* dialogue box placements for the crew scenes of 2026-11-27 (SCENE_BOX in art.js) */
+.rd.box-right-short .rd-box { bottom: 30%; }   /* Marcus: clear of his hand on the yoke */
+.rd.box-bottom .rd-box { left: 3%; right: 3%; top: 60%; bottom: 3%; display: grid; grid-template-columns: 1fr 1fr; grid-auto-rows: min-content; column-gap: 1.4rem; row-gap: 0; align-content: start; background: rgba(2, 10, 18, 0.9); }   /* Chief Doyle: across the lower third, the choices in two columns */
+.rd.box-bottom .rd-box > * { grid-column: 1 / -1; } .rd.box-bottom .rd-box > .comm-line { grid-column: auto; min-height: 2.2rem; }   /* the choices in two columns */
+.rd.box-bottom .rd-box > .comm-chips { display: grid; grid-template-columns: 1fr 1fr; column-gap: 1.4rem; }
