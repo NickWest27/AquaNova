@@ -76,7 +76,10 @@ export function say(role, text, kind = '', opts = {}) {
   if (opts.action) { actionTick(); }   // a routine action report: a short tick, not the communicator
   else if (now - lastChirp > 20000) { lastChirp = now; stats.chirps++; chirp(); }
   stats.shown++;
-  if (!keepIt) consoleLine(`${w.name} · ${w.role}: ${text}`, kind);   // a running note: the line at the foot of the screen. A held message opens the dialogue instead (app.js).
+  if (!keepIt) {   // a short line (the reply to a button press): on the bridge it is a notice on the overhead console; elsewhere the line at the foot of the screen
+    if (viewProbe.fn()) document.dispatchEvent(new CustomEvent('notice', { detail: { text: `${w.name.split(' ').pop().toUpperCase()}: ${text}`, kind } }));
+    else consoleLine(`${w.name} · ${w.role}: ${text}`, kind);
+  }   // a running note: the line at the foot of the screen. A held message opens the dialogue instead (app.js).
 
 }
 

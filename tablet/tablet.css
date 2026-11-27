@@ -1039,3 +1039,15 @@ button.route-row { width: 100%; text-align: left; color: var(--text); font: inhe
 .rd.box-left .rd-box { left: 3%; right: 53%; }
 .rd.box-side-left .rd-box { left: 1.5%; right: 63%; top: 5%; bottom: 5%; }
 .rd.box-side-left .rd-box { background: rgba(2, 10, 18, 0.9); }
+
+/* bigger text on the bridge (owner, 2026-11-27): the overhead console and the nav position log */
+.bt.compact .bt-place { font-size: 23px; line-height: 26px; } .bt.compact .bt-pos { font-size: 17px; line-height: 22px; }
+.bt.compact .bt-note { font-size: 18px; line-height: 21px; }
+.bt.compact .bt-title.big, .bt.compact .bt-title.mid { font-size: 28px; line-height: 32px; } .bt.compact .bt-title.small { font-size: 23px; line-height: 26px; }
+.bd-nav:not(.compact) .nav-log { width: 580px; font-size: 22px; line-height: 1.3; padding: 6px 12px; }
+.nav-log .nl-place { max-width: 540px; }
+/* the vertical profile belongs to the nav screen: its background, its thin cyan line, its label colour */
+.nav-prof { background: rgba(3,18,28,.72); border: 1px solid rgba(100,255,218,.3); border-radius: 6px; }
+.nav-prof .np-title { font-size: 15px; color: #8fa6bd; }
+.bt.compact .bt-place.note { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; font-size: 20px; line-height: 24px; letter-spacing: .02em; text-align: center; }
+.bt.compact .bt-place.note + .bt-pos { display: none; }

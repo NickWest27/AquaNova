@@ -51,7 +51,7 @@ export function checkHints() {
       const prev = def && def.after ? objs.find((o) => o.id === `${mid}_${def.after}`) : null;
       if (!entry || entry.status === 'completed' || (def.after && !(prev && prev.status === 'completed'))) { since.delete(oid); return; }
       if (!since.has(oid)) since.set(oid, now);
-      if (now - since.get(oid) >= c.seconds * 1000 * scale) {
+      if (now - since.get(oid) >= Math.max(60, c.seconds) * 1000 * scale) {   // a hint never comes sooner than a minute (owner, 2026-11-27)
         gameState.updateProperty('progress.hintsShown', [...shown(), key]);
         say('aria', h.message, 'mission', { hold: false });   // heard at once; not kept for later
       }

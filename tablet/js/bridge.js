@@ -38,7 +38,7 @@ export function createBridgeConsole({ top, main, display, center, left, right, o
   SHORT = retro ? retro.short || null : null;   // retro: { createND } swaps in the pixel chart of the retro skin
   // ---------- top display ----------
   // Two lines, centred. Line 1: the ship's state ("Arrival at ...", "Bay door opening", "Incoming message"); line 2: position, date and time.
-  // Voice from the crew never shows here (it goes to the line at the foot of the screen).
+  // Short crew lines (the reply to a button press) show here as notices; anything longer opens the crew member's dialogue.
   const tPlace = el('div', { class: 'bt-place' }), tPos = el('div', { class: 'bt-pos' });
   top.append(tPlace, tPos);
   const NOTE_HOLD = 6000; let note = null;
@@ -327,8 +327,8 @@ export function createBridgeConsole({ top, main, display, center, left, right, o
   function update() {
     const s = sim.s;
     if (note && Date.now() - note.at > NOTE_HOLD) note = null;
-    set(tPlace, note ? note.text.toUpperCase() : s.docked ? 'DOCKED' + (s.at ? ' · ' + s.at.name.toUpperCase() : '') : s.at ? s.at.name.toUpperCase() : s.wpt ? 'EN ROUTE: ' + s.wpt.name.toUpperCase() : 'OPEN WATER');
-    const cls = 'bt-place' + (note && note.kind ? ' ' + note.kind : ''); if (tPlace.className !== cls) tPlace.className = cls;
+    set(tPlace, note ? note.text : s.docked ? 'DOCKED' + (s.at ? ' · ' + s.at.name.toUpperCase() : '') : s.at ? s.at.name.toUpperCase() : s.wpt ? 'EN ROUTE: ' + s.wpt.name.toUpperCase() : 'OPEN WATER');
+    const cls = 'bt-place' + (note ? ' note' : '') + (note && note.kind ? ' ' + note.kind : ''); if (tPlace.className !== cls) tPlace.className = cls;   // a notice wraps onto two lines and takes the whole panel
     set(tPos, `${deg(s.lat, 'N', 'S', 2)}  ${deg(s.lon, 'E', 'W', 3)}  ·  ${gameDateText()}`);
     big[mainId].update(); if (current !== mainId) small[current].update(); else small[current].update();
     views[current].side();

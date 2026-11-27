@@ -30,10 +30,10 @@ export function createProfile(parent, { w: W = 360, h: H = 216 } = {}) {
     const bot = [1, 1.5, 2, 3, 5, 10].map((k) => k * mag).find((v) => v >= need);
     const L = 8, R = W - 52, T = 8, B = H - 24, px = (i) => L + ((R - L) * i) / N, py = (m) => T + ((B - T) * (m - top)) / (bot - top);
     ctx.setTransform(SCALE, 0, 0, SCALE, 0, 0);
-    ctx.fillStyle = '#04202e'; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = '#03121c'; ctx.fillRect(0, 0, W, H);   // the nav screen's own background (nd.js)
     // depth scale on the right
     const step = [10, 20, 50, 100, 200, 500, 1000, 2000].find((v) => (bot - top) / v <= 5) || 2000;
-    ctx.font = '13px monospace'; ctx.textBaseline = 'middle'; ctx.textAlign = 'left'; ctx.strokeStyle = 'rgba(120,200,220,.25)'; ctx.lineWidth = 1; ctx.fillStyle = '#7fb6c6';
+    ctx.font = '600 14px ui-monospace, Menlo, monospace'; ctx.textBaseline = 'middle'; ctx.textAlign = 'left'; ctx.strokeStyle = 'rgba(100,255,218,.16)'; ctx.lineWidth = 1; ctx.fillStyle = '#8fa6bd';   // the nav screen's ring and label colours
     for (let m = Math.ceil(top / step) * step; m < bot; m += step) { const y = py(m); ctx.beginPath(); ctx.moveTo(L, y); ctx.lineTo(R, y); ctx.stroke(); ctx.fillText(String(m), R + 6, y); }
     // terrain
     let worst = 'ok';
@@ -45,10 +45,10 @@ export function createProfile(parent, { w: W = 360, h: H = 216 } = {}) {
       if (!started) { ctx.moveTo(px(i), B); ctx.lineTo(px(i), y); started = true; } else ctx.lineTo(px(i), y);
       if (i === N || pts[i + 1] == null) ctx.lineTo(px(i), B);
     }
-    ctx.fillStyle = '#6b5a3c'; ctx.fill();
+    { const gr = ctx.createLinearGradient(0, T, 0, B); gr.addColorStop(0, 'rgba(70,140,200,.55)'); gr.addColorStop(1, 'rgba(20,60,100,.55)'); ctx.fillStyle = gr; ctx.fill(); }   // the sea floor in the chart's contour blues
     ctx.beginPath(); started = false;
     for (let i = 0; i <= N; i++) { const v = pts[i]; if (v == null) { started = false; continue; } const y = Math.min(B, py(Math.max(v, 0))); if (!started) { ctx.moveTo(px(i), y); started = true; } else ctx.lineTo(px(i), y); }
-    ctx.strokeStyle = '#d9c28f'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.strokeStyle = 'rgba(130,200,255,.85)'; ctx.lineWidth = 2; ctx.stroke();
     // hazard shading: the part of the terrain close to the ship's depth
     for (let i = 0; i <= N; i++) {
       const g = gap(pts[i]); if (g == null) continue;
@@ -64,7 +64,7 @@ export function createProfile(parent, { w: W = 360, h: H = 216 } = {}) {
     ctx.beginPath(); ctx.moveTo(L + 18, ys); ctx.lineTo(R, ys); ctx.stroke(); ctx.setLineDash([]);
     ctx.fillStyle = '#e8fbff'; ctx.beginPath(); ctx.moveTo(L + 18, ys); ctx.lineTo(L, ys - 6); ctx.lineTo(L + 3, ys); ctx.lineTo(L, ys + 6); ctx.closePath(); ctx.fill();
     // distance ticks
-    ctx.textBaseline = 'top'; ctx.textAlign = 'center'; ctx.fillStyle = '#7fb6c6'; ctx.font = '12px monospace';
+    ctx.textBaseline = 'top'; ctx.textAlign = 'center'; ctx.fillStyle = '#8fa6bd'; ctx.font = '600 13px ui-monospace, Menlo, monospace';
     for (let k = 0; k <= 2; k++) { const x = L + ((R - L) * k) / 2; ctx.fillText(k === 0 ? 'NOW' : (rangeNm * k / 2).toFixed(rangeNm < 4 ? 1 : 0) + ' nm', Math.min(Math.max(x, 22), R - 12), B + 4); }
     api.warn = worst;
   } };
