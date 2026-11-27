@@ -60,7 +60,9 @@ export function say(role, text, kind = '', opts = {}) {
   // Everything a crew member says opens the dialogue with them (owner, 2026-11-27), except the instant reply to a button the Captain just
   // pressed (tell(), opts.feedback) and routine action ticks (opts.action): those stay a short line at the foot of the screen.
   // A line marked hold: false (a hint, "Objective complete") is kept only briefly, so it is never shown late.
-  const keepIt = !!CREW_ID[role] && !opts.feedback && !opts.action && CREW_ID[role] !== openCrew;
+  // A line too long for the bridge's overhead panel (or a quick look at the pin) is a message, not a notice (owner, 2026-11-27): it opens the dialogue.
+  const LONG = 80;
+  const keepIt = !!CREW_ID[role] && (!(opts.feedback || opts.action) || text.length > LONG) && CREW_ID[role] !== openCrew;
   if (keepIt && opts.hold === false && !opts.ttl) opts = { ...opts, ttl: 30 };
   if (CREW_ID[role]) {
     if (!keepIt) logLine(CREW_ID[role], 'crew', text);   // the running notes belong in their communicator too. A kept message is filed when it is read.

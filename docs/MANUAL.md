@@ -93,6 +93,8 @@ You can reach a crew member only after you have met them in their room. Until th
 ### Messages
 - **Important messages open the conversation** with that crew member. If you are reading, a new line waits behind **Continue**; nothing is lost.
 - **Short replies** (to a button you pressed) and routine reports do not open a conversation. On the bridge they show on the **overhead panel**; elsewhere they go into that crew member's history and the **pin pulses**.
+- Anything longer than a short line opens the conversation instead, so nothing important is squeezed onto the panel.
+- **Warnings on the panel:** red for damage and errors (it flashes), amber for cautions.
 
 ### Who tells you what
 - **ARIA:** hints (after a minute or so), locked doors, mission congratulations, the general alarm.

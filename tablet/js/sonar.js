@@ -10,7 +10,7 @@ import { sim, toward, wskrName } from './sim.js';
 import { traffic, sonarNm, snrGain, triangulate, onFile, probName } from './traffic.js';
 import { seafloor } from './seafloor.js';
 import { affiliation, placeAffiliation } from './contactIcons.js';
-import { tell } from './notify.js';
+import { tell, say } from './notify.js';   // tell: the reply to a tap; say: a report that comes later (it opens the dialogue)
 
 export const SWEEP_DPS = 10, SWEEP_PAUSE_S = 2, SCAN_S = 10, SCAN_NM = 6, LOST_S = 120;
 const SIZE_CLASS = ['small craft', 'small vessel', 'medium vessel', 'large vessel'];
@@ -117,8 +117,8 @@ function finishScan(sc, now) {
   const nm = real ? toward(ls, real).nm : 99;
   if (nm <= (c.onFile ? traffic.cfg.sensing.sweep_nm_known : SCAN_NM)) {   // a signature on file is recognised further out
     if (c.kind === 'ship') { c.ref.scanFixUntil = now + 180; c.ref.ident = true; } else instState.set(c.ref.id, { ...(instState.get(c.ref.id) || {}), scanFixUntil: now + 180, named: true });
-    tell('sensors', `Scan complete, Captain. Contact bearing ${String(Math.round(c.bearing)).padStart(3, '0')}, range ${nm.toFixed(1)} miles. Fix and identity updated.`);
-  } else tell('sensors', `Scan complete, Captain. That contact is too far for more detail. Closer than ${SCAN_NM} miles, or from a WSKR that is nearer.`);
+    say('sensors', `Scan complete, Captain. Contact bearing ${String(Math.round(c.bearing)).padStart(3, '0')}, range ${nm.toFixed(1)} miles. Fix and identity updated.`);
+  } else say('sensors', `Scan complete, Captain. That contact is too far for more detail. Closer than ${SCAN_NM} miles, or from a WSKR that is nearer.`);
 }
 const listener = (id) => sources().find((x) => x.id === id);
 /** Is bearing b inside the sweep step from a0 up to a1 (a1 may pass 360)? */
@@ -163,7 +163,7 @@ function step() {
   let sw = st.sweep;
   if (sw) {
     let t = now - sw.t; sw.t = now;
-    const done = () => { tell('sensors', 'Full sweep complete, Captain. The chart is filled in to twelve miles round us.'); st.sweep = sw = null; s.sweepUntil = now + 5; };
+    const done = () => { tell('sensors', 'Full sweep complete. Chart filled in to 12 miles.'); st.sweep = sw = null; s.sweepUntil = now + 5; };
     while (t > 0 && sw) {
       if (sw.pause > 0) { const u = Math.min(t, sw.pause); sw.pause -= u; t -= u; if (sw.pause <= 0 && sw.az >= 360) done(); continue; }
       const a = Math.min(t, 1); sw.az += a * SWEEP_DPS; t -= a;
@@ -173,7 +173,7 @@ function step() {
   for (const w of s.wskrs) {   // a WSKR on a contact reports when it has identified it
     const tr = w.mode === 'trail' && w.trail; if (!tr || tr.said || tr.kind !== 'ship') continue;
     const a = traffic.active.find((x) => String(x.v.id) === tr.id);
-    if (a && a.v.ident) { tr.said = true; tell('sensors', `${wskrName(w)} has identified the contact, Captain: ${a.v.name}, ${a.v.label.toLowerCase()}, ${a.v.factionName}.`, a.v.stance === 'hostile' ? 'mission' : ''); }
+    if (a && a.v.ident) { tr.said = true; say('sensors', `${wskrName(w)} has identified the contact, Captain: ${a.v.name}, ${a.v.label.toLowerCase()}, ${a.v.factionName}.`, a.v.stance === 'hostile' ? 'mission' : ''); }
   }
   if (st.scan && now >= st.scan.until) finishScan(st.scan, now);
 }
@@ -191,8 +191,8 @@ sim.hooks.push(() => {
   const list = contactsFor('ship');
   for (const w of s.wskrs) if (w.mode === 'trail' && w.auto && w.trail) {
     const c = list.find((x) => x.id === w.trail.kind + ':' + w.trail.id);
-    if (toward(s, w).nm > AUTO_LEASH_NM) { w.auto = false; sim.orderWskr(w.n, 'escort'); tell('sensors', `${wskrName(w)} is breaking off the chase at ${AUTO_LEASH_NM} miles, Captain, and returning to the screen. Send it to investigate if you want it to go further.`); continue; }
-    if (c && c.ident) { w.auto = false; sim.orderWskr(w.n, 'escort'); tell('sensors', `${wskrName(w)} has identified it as ${c.name}, Captain, and is back on the screen.`); }
+    if (toward(s, w).nm > AUTO_LEASH_NM) { w.auto = false; sim.orderWskr(w.n, 'escort'); say('sensors', `${wskrName(w)} is breaking off the chase at ${AUTO_LEASH_NM} miles, Captain, and returning to the screen. Send it to investigate if you want it to go further.`); continue; }
+    if (c && c.ident) { w.auto = false; sim.orderWskr(w.n, 'escort'); say('sensors', `${wskrName(w)} has identified it as ${c.name}, Captain, and is back on the screen.`); }
   }
   const free = s.wskrs.filter((w) => w.mode === 'escort' && !w.dead && !w.arrived);
   if (free.length < 2) return;
@@ -201,5 +201,5 @@ sim.hooks.push(() => {
   const near = free.sort((a, b) => toward(a, c.pos).nm - toward(b, c.pos).nm)[0];
   const w = sim.trailWskr({ kind: 'ship', id: c.ref.id }, near.n); if (!w) return;
   w.auto = true; s.wskrChased = [...(s.wskrChased || []), c.id].slice(-200);
-  tell('sensors', `${wskrName(w)} is closing on an unidentified contact, bearing ${String(Math.round(c.bearing)).padStart(3, '0')}, Captain.`);
+  say('sensors', `${wskrName(w)} is closing on an unidentified contact, bearing ${String(Math.round(c.bearing)).padStart(3, '0')}, Captain.`);
 });

@@ -1075,3 +1075,8 @@ body.on-bridge .dock-status { background: rgba(3,14,24,.82); border-radius: 0 0 
 
 /* no status strip at the foot (or top) of the screen (owner, 2026-11-27); the bridge's overhead panel carries the status */
 .dock { display: none !important; }
+
+/* overhead panel notices (owner, 2026-11-27): an error is a red warning, a caution amber */
+.bt.compact .bt-place.note.error { color: #fff; background: rgba(190, 28, 28, 0.6); border-radius: 6px; box-shadow: 0 0 18px rgba(255, 60, 60, 0.55); animation: bt-alert 1s ease-in-out 3; }
+.bt.compact .bt-place.note.warn { color: #1a1204; background: rgba(255, 176, 32, 0.85); border-radius: 6px; }
+@keyframes bt-alert { 50% { background: rgba(255, 50, 50, 0.85); } }

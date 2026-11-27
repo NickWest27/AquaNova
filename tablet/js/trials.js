@@ -4,7 +4,8 @@
 import { sim, MAX_KT, SUPER_KT } from './sim.js';
 import { gameState } from './persist.js';
 import { offerDecision, pendingDecisions } from './aria.js';
-import { tell } from './notify.js';
+import { tell, say } from './notify.js';
+import { sfx } from './audio.js';
 import { eng, SYSTEMS } from './engineering.js';
 import { traffic } from './traffic.js';
 
@@ -67,7 +68,7 @@ function check() {
     const hold = (why, text) => { if (said.wait !== pk + why) { said.wait = pk + why; tell(T.who, text, 'mission'); } };
     if (kind === 'deep') {
       const max = sim.deepest();
-      if (max != null && max < target) { if (!saidShallow) { saidShallow = true; tell('engineering', `Not enough water under us for ${target} metres, Captain. Head south over deeper water and I will take her down.`); } return; }
+      if (max != null && max < target) { if (!saidShallow) { saidShallow = true; say('engineering', `Not enough water under us for ${target} metres, Captain. Head south over deeper water and I will take her down.`); } return; }
       if (s.targetDepth < target) sim.setDepth(target);
     } else {
       s.overdrive = { kind, f: target / T.base };
@@ -85,7 +86,8 @@ function check() {
       const e = eng(), id = T.hit[Math.floor(Math.random() * T.hit.length)], d = Math.round(DMG[0] + Math.random() * (DMG[1] - DMG[0]));
       e.health[id] = Math.max(0, e.health[id] - d);
       const name = SYSTEMS.find((x) => x.id === id).name;
-      tell('engineering', `We made ${target} ${T.unit}, Captain, but we paid for it. ${name} took ${d}% damage. It is on the engineering computer for a repair team. I would not push her any further today.`, 'error');
+      sfx('impact');   // something gave (owner, 2026-11-27: damage must be heard, seen in red and reported)
+      say('engineering', `We made ${target} ${T.unit}, Captain, but we paid for it. ${name} took ${d}% damage. It is on the engineering computer for a repair team. I would not push her any further today.`, 'error', { notice: `DAMAGE: ${name.toUpperCase()} ${d}%` });
       put({ ...t, push: null, [kind]: { level: level + 1, done: true } });
     } else {
       tell(T.who, T.ok(target), 'mission');
