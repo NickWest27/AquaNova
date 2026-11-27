@@ -13,36 +13,40 @@ Aqua Nova sound effects reel (tablet/js/sfx.js)
 0:34.0  torpedoLaunch    Torpedo or launch tube: air burst, whoosh, bubbles
 0:37.6  doorOpen         Power-assisted door opening: hiss, servo whine up, clunk
 0:39.8  doorClose        Power-assisted door closing: servo whine down, thunk, seal hiss
-0:42.1  hatchOpen        Launch bay hatch opening: clamps release, hydraulic hiss, a heavy grind, a boom as it stops
-0:46.1  hatchClose       Launch bay hatch closing: the grind, a deep boom, clamps locking
-0:49.9  airlockFlood     Airlock flooding: rising rumble and gurgle
-0:54.5  airlockDrain     Airlock draining: falling gurgle and suck
-0:58.7  ballastBlow      Emergency blow: a huge hiss and roar of air
-1:03.7  radioSquelch     Radio squelch: a short burst of noise and a click
-1:05.2  radioBeep        Radio roger beep
-1:06.7  powerUp          Power up: a turbine spooling up, whine and rushing air (super cruise spool-up)
-1:11.7  powerDown        Power down: the turbine running down, a last clunk (super cruise off)
-1:16.3  cruiseEngage     Super cruise bites: a deep whoosh and a rising tone
-1:20.3  bubbles          Bubbles
-1:22.9  splash           Surface splash
-1:25.7  buttonPress      Console button: a crisp tick
-1:27.0  buttonError      Console refusal: a low double buzz
-1:28.7  teletype         Teletype chatter for incoming text
-1:31.1  distantExplosion A distant underwater explosion: a deep boom, the pressure wave, a long rumble
-1:37.3  commChirp        Communicator: two quick rising trills
-1:39.0  mailOpen         Message opens: rising window ticks
-1:40.6  mailClose        Message closes: falling window ticks
-1:42.2  actionTick       Action done: one short low tick
-1:43.5  noticePing       Notice: a soft ping
-1:45.0  dataUp           Data uplink: quick climbing chirps
-1:46.8  dataDown         Data downlink: quick falling chirps
-1:48.5  dataDone         Transfer finished: three rising notes
-1:50.2  dataFail         Transfer failed: two falling notes
-1:51.8  hullFlow         LOOP Water past the hull: rushing flow (in the game it gets louder with speed)
-1:59.0  shipHum          LOOP Ship hum: the systems drone under everything
-2:06.2  ventilation      LOOP Ventilation: soft room air
-2:13.4  engineRoom       LOOP Engine room: the fusion plant hum, pumps thumping, hiss
-2:20.6  bayFlood         LOOP Launch bay flooding: water pouring in, gurgling, the hull taking the weight (the game holds it for most of the cycle)
-2:27.8  bayPump          LOOP Launch bay pumping out: pumps thumping, water draining, air hissing in
-2:35.0  radioStatic      LOOP Radio static with crackle
-2:42.2  reactorHum       LOOP Reactor hum: deep pulsing drone
+0:42.1  dockBump         Docking: the hull settles against the berth fenders
+0:44.7  dockClamps       Docking clamps latching: four heavy metallic clamps, one after another, ringing
+0:48.9  clampRelease     Docking clamps releasing: hydraulic hiss and four lighter clunks
+0:52.3  shorePower       Shore power connector: a heavy clunk and the supply humming up
+0:55.4  hatchOpen        Launch bay hatch opening: clamps release, hydraulic hiss, a heavy grind, a boom as it stops
+0:59.4  hatchClose       Launch bay hatch closing: the grind, a deep boom, clamps locking
+1:03.2  airlockFlood     Airlock flooding: rising rumble and gurgle
+1:07.8  airlockDrain     Airlock draining: falling gurgle and suck
+1:12.0  ballastBlow      Emergency blow: a huge hiss and roar of air
+1:17.0  radioSquelch     Radio squelch: a short burst of noise and a click
+1:18.5  radioBeep        Radio roger beep
+1:20.0  powerUp          Power up: a turbine spooling up, whine and rushing air (super cruise spool-up)
+1:25.0  powerDown        Power down: the turbine running down, a last clunk (super cruise off)
+1:29.6  cruiseEngage     Super cruise bites: a deep whoosh and a rising tone
+1:33.6  bubbles          Bubbles
+1:36.2  splash           Surface splash
+1:39.0  buttonPress      Console button: a crisp tick
+1:40.3  buttonError      Console refusal: a low double buzz
+1:42.0  teletype         Teletype chatter for incoming text
+1:44.4  distantExplosion A distant underwater explosion: a deep boom, the pressure wave, a long rumble
+1:50.6  commChirp        Communicator: two quick rising trills
+1:52.3  mailOpen         Message opens: rising window ticks
+1:53.9  mailClose        Message closes: falling window ticks
+1:55.5  actionTick       Action done: one short low tick
+1:56.8  noticePing       Notice: a soft ping
+1:58.2  dataUp           Data uplink: quick climbing chirps
+2:00.0  dataDown         Data downlink: quick falling chirps
+2:01.8  dataDone         Transfer finished: three rising notes
+2:03.5  dataFail         Transfer failed: two falling notes
+2:05.1  hullFlow         LOOP Water past the hull: rushing flow (in the game it gets louder with speed)
+2:12.3  shipHum          LOOP Ship hum: the systems drone under everything
+2:19.5  ventilation      LOOP Ventilation: soft room air
+2:26.7  engineRoom       LOOP Engine room: the fusion plant hum, pumps thumping, hiss
+2:33.9  bayFlood         LOOP Launch bay flooding: water pouring in, gurgling, the hull taking the weight (the game holds it for most of the cycle)
+2:41.1  bayPump          LOOP Launch bay pumping out: pumps thumping, water draining, air hissing in
+2:48.3  radioStatic      LOOP Radio static with crackle
+2:55.5  reactorHum       LOOP Reactor hum: deep pulsing drone

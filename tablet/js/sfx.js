@@ -21,6 +21,10 @@ export const SFX_LIST = {
   torpedoLaunch: 'Torpedo or launch tube: air burst, whoosh, bubbles',
   doorOpen: 'Power-assisted door opening: hiss, servo whine up, clunk',
   doorClose: 'Power-assisted door closing: servo whine down, thunk, seal hiss',
+  dockBump: 'Docking: the hull settles against the berth fenders',
+  dockClamps: 'Docking clamps latching: four heavy metallic clamps, one after another, ringing',
+  clampRelease: 'Docking clamps releasing: hydraulic hiss and four lighter clunks',
+  shorePower: 'Shore power connector: a heavy clunk and the supply humming up',
   hatchOpen: 'Launch bay hatch opening: clamps release, hydraulic hiss, a heavy grind, a boom as it stops',
   hatchClose: 'Launch bay hatch closing: the grind, a deep boom, clamps locking',
   airlockFlood: 'Airlock flooding: rising rumble and gurgle',
@@ -179,6 +183,34 @@ const SHOTS = {
     hiss(k, t + 0.62, 0.35, 0.15, 'highpass', 2500, 0.7, 0.2, 0.01);
     return 1.1;
   },
+  // docking (owner, 2026-11-27: metallic thuds)
+  dockBump(k, t) {
+    thud(k, t, 90, 45, 0.9, 0.7); hiss(k, t, 0.5, 0.25, 'lowpass', 400, 0.8, 0.3, 0.02);
+    const c = tone(k, 'sawtooth', 60, t + 0.2, 0.8, 0.06, 0.4, 0.1, 0.3); c.frequency.linearRampToValueAtTime(48, t + 1);   // the hull creaks as it takes the weight
+    return 1.4;
+  },
+  dockClamps(k, t) {
+    [0, 0.45, 0.8, 1.3].forEach((dt, i) => {
+      const t0 = t + dt;
+      thud(k, t0, 260 - i * 15, 85, 0.35, 0.8); thud(k, t0 + 0.01, 120, 45, 0.6, 0.6);   // the clamp jaw slams home
+      hiss(k, t0, 0.05, 0.4, 'bandpass', 3000, 1.5, 0.3, 0.001);
+      for (const [f, v, d] of [[387, 0.07, 0.9], [913, 0.05, 0.6], [1612, 0.03, 0.4], [2390, 0.02, 0.3]]) { const o = k.osc('triangle', f * (1 + i * 0.03)), g = k.gain(); o.connect(g); k.hit(g, t0 + 0.005, v, d); k.send(g, 0.6); o.start(t0); o.stop(t0 + d + 0.1); }   // steel ringing (inharmonic)
+    });
+    thud(k, t + 1.8, 70, 30, 1.2, 0.6);   // the whole hull settles
+    return 3;
+  },
+  clampRelease(k, t) {
+    hiss(k, t, 0.6, 0.3, 'highpass', 1800, 0.7, 0.3, 0.02);
+    [0.3, 0.6, 0.95, 1.25].forEach((dt, i) => { const t0 = t + dt; thud(k, t0, 200, 90, 0.25, 0.5); for (const [f, v] of [[421, 0.04], [1033, 0.025]]) { const o = k.osc('triangle', f * (1 - i * 0.03)), g = k.gain(); o.connect(g); k.hit(g, t0, v, 0.5); k.send(g, 0.5); o.start(t0); o.stop(t0 + 0.6); } });
+    hiss(k, t + 1.4, 0.5, 0.15, 'highpass', 2500, 0.7, 0.3, 0.05);
+    return 2.2;
+  },
+  shorePower(k, t) {
+    thud(k, t, 180, 70, 0.4, 0.8); hiss(k, t, 0.04, 0.35, 'bandpass', 2800, 2, 0.2, 0.001);
+    const h = tone(k, 'sawtooth', 50, t + 0.2, 1.4, 0.07, 0.2, 0.5, 0.4); h.frequency.linearRampToValueAtTime(60, t + 1.6);
+    const h2 = tone(k, 'square', 120, t + 0.3, 1.3, 0.025, 0.2, 0.5, 0.4); h2.frequency.linearRampToValueAtTime(120.5, t + 1.6);
+    return 1.9;
+  },
   hatchOpen(k, t) {   // a pressure hatch, much heavier than a room door (owner, 2026-11-27: the launch bay cycle)
     for (const dt of [0, 0.12, 0.22]) { thud(k, t + dt, 300, 140, 0.12, 0.35); hiss(k, t + dt, 0.04, 0.3, 'bandpass', 2500, 2, 0.2, 0.001); }   // clamps let go
     hiss(k, t + 0.3, 0.5, 0.3, 'highpass', 2000, 0.7, 0.3, 0.01);   // hydraulics
@@ -320,8 +352,8 @@ const LOOPS = {
 };
 
 // level of each sound so they sit together in the game (from rendered peaks, 2026-11-27): alarms and crashes loud, interface ticks soft, loops low
-const LEVEL = {"generalAlarm": 1.25, "fireAlarm": 2.69, "collisionAlarm": 3.18, "depthAlarm": 1.15, "sonarPing": 1.17, "sonarContact": 2.27, "sonarLost": 2.5, "impact": 3, "crash": 3, "hullCreak": 1.6, "torpedoLaunch": 0.5, "doorOpen": 0.8, "doorClose": 0.73, "hatchOpen": 1.0, "hatchClose": 1.0, "bayFlood": 0.9, "bayPump": 1.0, "airlockFlood": 1.67, "airlockDrain": 1.84, "ballastBlow": 0.56, "radioSquelch": 1.18, "radioBeep": 1.36, "powerUp": 1.3, "powerDown": 1.3, "cruiseEngage": 0.86, "bubbles": 2.86, "splash": 1.0, "buttonPress": 1.8, "buttonError": 1.54, "teletype": 2.14, "distantExplosion": 2.5, "hullFlow": 0.92, "shipHum": 0.6, "ventilation": 0.8, "engineRoom": 0.71, "radioStatic": 0.56, "reactorHum": 0.56};
-const DRIVE = { impact: 5, crash: 5, distantExplosion: 4 };   // soft saturation for the heavy hits (see kit)
+const LEVEL = {"generalAlarm": 1.25, "fireAlarm": 2.69, "collisionAlarm": 3.18, "depthAlarm": 1.15, "sonarPing": 1.17, "sonarContact": 2.27, "sonarLost": 2.5, "impact": 3, "crash": 3, "hullCreak": 1.6, "torpedoLaunch": 0.5, "doorOpen": 0.8, "doorClose": 0.73, "dockBump": 2, "dockClamps": 1.6, "clampRelease": 1.2, "shorePower": 1.0, "hatchOpen": 1.0, "hatchClose": 1.0, "bayFlood": 0.9, "bayPump": 1.0, "airlockFlood": 1.67, "airlockDrain": 1.84, "ballastBlow": 0.56, "radioSquelch": 1.18, "radioBeep": 1.36, "powerUp": 1.3, "powerDown": 1.3, "cruiseEngage": 0.86, "bubbles": 2.86, "splash": 1.0, "buttonPress": 1.8, "buttonError": 1.54, "teletype": 2.14, "distantExplosion": 2.5, "hullFlow": 0.92, "shipHum": 0.6, "ventilation": 0.8, "engineRoom": 0.71, "radioStatic": 0.56, "reactorHum": 0.56};
+const DRIVE = { impact: 5, crash: 5, distantExplosion: 4, dockClamps: 3, dockBump: 3 };   // soft saturation for the heavy hits (see kit)
 /** Play a one-shot. Returns its length in seconds (0 if the name is unknown). */
 export function playSfx(ctx, out, name, { t = ctx.currentTime + 0.02, vol = 1 } = {}) {
   const f = SHOTS[name]; if (!f || !ctx || !out) return 0;

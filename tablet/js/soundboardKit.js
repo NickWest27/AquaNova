@@ -10,6 +10,7 @@ export const GROUPS = [
   ['Sonar', ['sonarPing', 'sonarContact', 'sonarLost']],
   ['Hull and impacts', ['impact', 'crash', 'hullCreak', 'distantExplosion']],
   ['Machinery', ['doorOpen', 'doorClose', 'hatchOpen', 'hatchClose', 'airlockFlood', 'airlockDrain', 'ballastBlow', 'powerUp', 'powerDown', 'cruiseEngage', 'torpedoLaunch']],
+  ['Docking', ['dockBump', 'dockClamps', 'clampRelease', 'shorePower']],
   ['Radio and consoles', ['radioSquelch', 'radioBeep', 'buttonPress', 'buttonError', 'teletype']],
   ['Interface', ['commChirp', 'mailOpen', 'mailClose', 'actionTick', 'noticePing', 'dataUp', 'dataDown', 'dataDone', 'dataFail']],
   ['Water', ['bubbles', 'splash']],

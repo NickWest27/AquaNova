@@ -199,12 +199,13 @@ function updateChips() {
   const txt = `SPD ${s.speed.toFixed(1)} · DEP ${Math.round(s.depth)} · HDG ${pad(s.heading)}`;
   if (current.chips.textContent !== txt) current.chips.textContent = txt;
 }
-// a power-assisted door between rooms, and the engine room's own noise while the Captain is in it
+// a power-assisted door between rooms (opens, then shuts behind), and the engine room's own noise while the Captain is in it
 const ROOMS = ['bridge', 'walkway', 'walkway2', 'quarters', 'science', 'medbay', 'launchbay', 'engineering'];
 let lastRoom = null, engineLoop = null;
 function roomSound(name) {
   if (!ROOMS.includes(name)) return;
-  if (lastRoom && lastRoom !== name) sfx('doorOpen');
+  const walk = (r) => r === 'walkway' || r === 'walkway2';   // the two walkways join with no door between them
+  if (lastRoom && lastRoom !== name && !(walk(lastRoom) && walk(name))) { sfx('doorOpen'); setTimeout(() => sfx('doorClose'), 1300); }   // through the door, and it shuts behind (owner, 2026-11-27)
   lastRoom = name;
   if (name === 'engineering' && !engineLoop) engineLoop = sfxLoop('engineRoom', 0.8);
   else if (name !== 'engineering' && engineLoop) { engineLoop.stop(); engineLoop = null; }
