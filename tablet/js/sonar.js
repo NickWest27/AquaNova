@@ -140,6 +140,7 @@ function step() {
     }
     if (ears.length) { const fix = ss.scanFixUntil > now ? { lat: p.lat, lon: p.lon, err: 0.1 } : triangulate(ears); insts.push({ p, ears, pos: fix }); }
   }
+  const before = new Set(Object.values(mem).flatMap((m) => [...m.keys()]));   // for the new-contact and contact-lost blips (app.js)
   for (const L of list) {
     if (!mem[L.id]) mem[L.id] = new Map();
     const m = mem[L.id];
@@ -152,6 +153,9 @@ function step() {
   for (const id of [...since.keys()]) if (!heard.has(id)) since.delete(id);
   for (const id of heard) if (!since.has(id)) since.set(id, now);
   for (const id of Object.keys(mem)) if (!list.some((x) => String(x.id) === id)) delete mem[id];   // a WSKR that is gone
+  const after = new Set(Object.values(mem).flatMap((m) => [...m.keys()]));
+  for (const id of after) if (!before.has(id)) sim.emit('sonar-contact', { id });
+  for (const id of before) if (!after.has(id)) sim.emit('sonar-lost', { id });
   const cur = list.find((x) => x.id === st.src);
   if (!cur || !cur.ok) { if (!cur) st.src = 'ship'; if (st.sweep) st.sweep = null; }
   if (st.sel && !contactsFor(st.src).some((c) => c.id === st.sel)) st.sel = null;

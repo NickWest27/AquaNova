@@ -1,34 +1,44 @@
 Aqua Nova sound effects reel (tablet/js/sfx.js)
 
 0:00.0  generalAlarm     General alarm: a rising naval "whoop" klaxon, three times
-0:04.8  battleStations   General quarters gong: a two-tone bell, bong-bong, repeated
-0:10.6  fireAlarm        Fire alarm: a fast two-tone warble
-0:14.0  collisionAlarm   Collision alarm: rapid high beeps
-0:17.0  depthAlarm       Depth warning: a low pulsing tone
-0:20.6  sonarPing        Active sonar ping with its long echo
-0:25.0  sonarContact     New sonar contact: a two-note rising blip
-0:27.0  sonarLost        Contact lost: a two-note falling blip
-0:29.0  impact           Impact: a heavy hull thud
-0:31.6  crash            Crash: metal on rock, a ringing scrape
-0:35.6  hullCreak        Hull groan under pressure
-0:39.6  torpedoLaunch    Torpedo or launch tube: air burst, whoosh, bubbles
-0:43.2  doorOpen         Power-assisted door opening: hiss, servo whine up, clunk
-0:45.4  doorClose        Power-assisted door closing: servo whine down, thunk, seal hiss
-0:47.7  airlockFlood     Airlock flooding: rising rumble and gurgle
-0:52.3  airlockDrain     Airlock draining: falling gurgle and suck
-0:56.5  ballastBlow      Emergency blow: a huge hiss and roar of air
-1:01.5  radioSquelch     Radio squelch: a short burst of noise and a click
-1:03.0  radioBeep        Radio roger beep
-1:04.5  powerUp          Power up: a rising whine and arpeggio (super cruise spool-up)
-1:08.5  powerDown        Power down: a falling whine
-1:12.3  cruiseEngage     Super cruise bites: a deep whoosh and a rising tone
-1:16.3  bubbles          Bubbles
-1:18.9  splash           Surface splash
-1:21.7  buttonPress      Console button: a crisp tick
-1:23.0  buttonError      Console refusal: a low double buzz
-1:24.7  teletype         Teletype chatter for incoming text
-1:27.1  distantExplosion A distant underwater explosion: a low boom and rumble
-1:32.8  fan              LOOP Ventilation fan: soft whirr and air
-1:40.0  engineRoom       LOOP Engine room: the fusion plant hum, pumps thumping, hiss
-1:47.2  radioStatic      LOOP Radio static with crackle
-1:54.4  reactorHum       LOOP Reactor hum: deep pulsing drone
+0:04.8  fireAlarm        Fire alarm: a fast two-tone warble
+0:08.2  collisionAlarm   Collision alarm: rapid high beeps
+0:11.2  depthAlarm       Depth warning: a low pulsing tone
+0:14.8  sonarPing        Active sonar ping with its long echo
+0:19.2  sonarContact     New sonar contact: a two-note rising blip
+0:21.2  sonarLost        Contact lost: a two-note falling blip
+0:23.2  impact           Impact: a heavy hull thud with a crack
+0:26.0  crash            Crash: a heavy double hit and a grinding scrape of metal on rock
+0:29.6  hullCreak        Hull groan under pressure: a slow bending moan, creaks, a pop
+0:34.0  torpedoLaunch    Torpedo or launch tube: air burst, whoosh, bubbles
+0:37.6  doorOpen         Power-assisted door opening: hiss, servo whine up, clunk
+0:39.8  doorClose        Power-assisted door closing: servo whine down, thunk, seal hiss
+0:42.1  airlockFlood     Airlock flooding: rising rumble and gurgle
+0:46.7  airlockDrain     Airlock draining: falling gurgle and suck
+0:50.9  ballastBlow      Emergency blow: a huge hiss and roar of air
+0:55.9  radioSquelch     Radio squelch: a short burst of noise and a click
+0:57.4  radioBeep        Radio roger beep
+0:58.9  powerUp          Power up: a turbine spooling up, whine and rushing air (super cruise spool-up)
+1:03.9  powerDown        Power down: the turbine running down, a last clunk (super cruise off)
+1:08.5  cruiseEngage     Super cruise bites: a deep whoosh and a rising tone
+1:12.5  bubbles          Bubbles
+1:15.1  splash           Surface splash
+1:17.9  buttonPress      Console button: a crisp tick
+1:19.2  buttonError      Console refusal: a low double buzz
+1:20.9  teletype         Teletype chatter for incoming text
+1:23.3  distantExplosion A distant underwater explosion: a deep boom, the pressure wave, a long rumble
+1:29.5  commChirp        Communicator: two quick rising trills
+1:31.2  mailOpen         Message opens: rising window ticks
+1:32.8  mailClose        Message closes: falling window ticks
+1:34.4  actionTick       Action done: one short low tick
+1:35.7  noticePing       Notice: a soft ping
+1:37.2  dataUp           Data uplink: quick climbing chirps
+1:39.0  dataDown         Data downlink: quick falling chirps
+1:40.8  dataDone         Transfer finished: three rising notes
+1:42.4  dataFail         Transfer failed: two falling notes
+1:44.0  hullFlow         LOOP Water past the hull: rushing flow (in the game it gets louder with speed)
+1:51.2  shipHum          LOOP Ship hum: the systems drone under everything
+1:58.4  ventilation      LOOP Ventilation: soft room air
+2:05.6  engineRoom       LOOP Engine room: the fusion plant hum, pumps thumping, hiss
+2:12.8  radioStatic      LOOP Radio static with crackle
+2:20.0  reactorHum       LOOP Reactor hum: deep pulsing drone

@@ -6,13 +6,14 @@ import { playTheme, stopTheme, themePlaying } from './theme.js';
 
 const KEY = 'aquaNova_sfxLabels';
 export const GROUPS = [
-  ['Alarms', ['generalAlarm', 'battleStations', 'fireAlarm', 'collisionAlarm', 'depthAlarm']],
+  ['Alarms', ['generalAlarm', 'fireAlarm', 'collisionAlarm', 'depthAlarm']],
   ['Sonar', ['sonarPing', 'sonarContact', 'sonarLost']],
   ['Hull and impacts', ['impact', 'crash', 'hullCreak', 'distantExplosion']],
   ['Machinery', ['doorOpen', 'doorClose', 'airlockFlood', 'airlockDrain', 'ballastBlow', 'powerUp', 'powerDown', 'cruiseEngage', 'torpedoLaunch']],
   ['Radio and consoles', ['radioSquelch', 'radioBeep', 'buttonPress', 'buttonError', 'teletype']],
+  ['Interface', ['commChirp', 'mailOpen', 'mailClose', 'actionTick', 'noticePing', 'dataUp', 'dataDown', 'dataDone', 'dataFail']],
   ['Water', ['bubbles', 'splash']],
-  ['Loops', ['fan', 'engineRoom', 'radioStatic', 'reactorHum']],
+  ['Loops', ['hullFlow', 'shipHum', 'ventilation', 'engineRoom', 'radioStatic', 'reactorHum']],
 ];
 const load = () => { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { return {}; } };
 const save = (o) => { try { localStorage.setItem(KEY, JSON.stringify(o)); } catch (e) { /* private window: names last until reload */ } };

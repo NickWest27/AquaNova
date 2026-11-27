@@ -395,16 +395,34 @@ async function boot() {
     document.addEventListener('inbox-change', () => $('#pin').classList.toggle('unread', unreadCount() > 0));
     $('#ped-btn').hidden = !hasPed(); $('#ped-btn').addEventListener('click', togglePed);
     // sound effects (sfx.js, 2026-11-27): the moments that should be heard
+    const sfxAt = {};
     sim.on((type, data) => {
       if (type === 'general-alarm' && data.on) sfx('generalAlarm');
-      else if (type === 'bump') sfx(data && data.damage >= 10 ? 'crash' : 'impact');
+      else if (type === 'bump') { if (data && data.damage) sfx(data.damage >= 10 ? 'crash' : 'impact'); }   // only a real hit (not the map-edge stop or the AO warning)
       else if (type === 'eng-fire') sfx('fireAlarm');
       else if (type === 'eng-leak') sfx('collisionAlarm');
       else if (type === 'cruise-on') sfx('powerUp');
       else if (type === 'cruise-spooled') sfx('cruiseEngage');
       else if (type === 'eng-blow') sfx('ballastBlow');
       else if (type === 'sonar-sweep') sfx('sonarPing');
+      // more of the library wired in (owner, 2026-11-27)
+      else if (type === 'cruise-off') sfx('powerDown');
+      else if (type === 'depth-cap') sfx('depthAlarm');
+      else if (type === 'sonar-contact' && sim.s.clock - (sfxAt.contact ?? -1e9) > 4) { sfxAt.contact = sim.s.clock; sfx('sonarContact', 0.7); }   // at most one blip every 4 game seconds
+      else if (type === 'sonar-lost' && sim.s.clock - (sfxAt.lost ?? -1e9) > 4) { sfxAt.lost = sim.s.clock; sfx('sonarLost', 0.6); }
+      else if (type === 'bay-op' && data && data.craft !== 'wskr') sfx(data.kind === 'launch' ? 'airlockFlood' : 'airlockDrain', 0.8);   // the launch bay floods to launch, drains on recovery
+      else if (type === 'bay-launched') sfx(data && data.craft === 'wskr' ? 'torpedoLaunch' : 'bubbles', 0.8);   // a WSKR leaves its tube; the Tern or Remora clears the bay
     });
+    // diving and surfacing, and the hull at depth
+    let wasDeep = null, nextCreak = 0;
+    sim.on((type) => {
+      if (type !== 'tick') return;
+      const s = sim.s, deep = s.depth > 3;
+      if (wasDeep !== null && deep !== wasDeep && !s.docked) sfx(deep ? 'bubbles' : 'splash', 0.7);   // vents open as she goes under; she breaks the surface
+      wasDeep = deep;
+      if (s.depth >= 400 && s.clock >= nextCreak) { if (nextCreak) sfx('hullCreak', Math.min(1, 0.4 + (s.depth - 400) / 500)); nextCreak = s.clock + 90 + Math.random() * 150; }   // the hull talks below 400 m, every few minutes
+    });
+    document.addEventListener('comms-message', () => sfx('teletype', 0.6));   // a message coming in
     sim.on((type, data) => {
       if (type === 'tick') {
         const s = sim.s;
