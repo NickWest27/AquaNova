@@ -1,54 +1,42 @@
 #!/usr/bin/env python3
-"""Nicole's headset (owner, 2026-11-27: she wears one on the bridge, so her communicator pictures should too).
-Draws a pixel-art headset (headband, ear cups, mic boom) onto the originals kept in art_src/crew/communications_*_v1.jpg, on each picture's
-own pixel grid, and writes the game's files: communications_original.jpg (face), communications_scene_original.jpg, and the Retro copies.
-   python3 tools/nicole_headset.py"""
+"""Nicole's headset (owner, 2026-11-27): the headphones are cut from Alex's dialogue picture (art_src/crew/sensors_scene.png: the band and the
+ear cup with their black outline), scaled to Nicole's head and put on her near ear in her dialogue picture, with a mic boom as on the bridge.
+Her crew-list face is then cropped from that picture (like the other crew faces), so the two always match.
+Original kept as art_src/crew/communications_scene_v1.jpg.   python3 tools/nicole_headset.py"""
 import os, sys
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFilter
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, 'tools')); from crew_art import snap
 SRC, OUT = os.path.join(ROOT, 'art_src', 'crew'), os.path.join(ROOT, 'tablet', 'retro', 'assets', 'crew')
-# colours taken from Alex's headphones (his portrait) and the bridge frame: slate blue, a light rim, a dark inner ring
-INK, BAND, BAND_HI, RIM, CUP, RING, FACE, HI = (8, 11, 17, 255), (72, 86, 120, 255), (140, 154, 190, 255), (122, 136, 172, 255), (70, 84, 118, 255), (34, 42, 64, 255), (88, 102, 138, 255), (170, 184, 216, 255)
 
-def headset(size, cell, band, cups, mic):
-    """Round padded headphones like Alex's (owner, 2026-11-27), drawn one square per art pixel, then blown up in hard pixels.
-    band: (ellipse box, start and end angle, thickness in art pixels); cups: [(cx, cy, w, h)] in the picture's pixels; mic: (from, to) or None."""
-    W, H = size; w, h = W // cell, H // cell
-    im = Image.new('RGBA', (w, h), (0, 0, 0, 0)); d = ImageDraw.Draw(im)
-    s = lambda v: [round(x / cell) for x in v]
-    (bx0, by0, bx1, by1), a0, a1, th = band
-    box = s((bx0, by0, bx1, by1))
-    d.arc(box, a0, a1, fill=INK, width=th + 2)
-    d.arc([box[0] + 1, box[1] + 1, box[2] - 1, box[3] - 1], a0 + 1, a1 - 1, fill=BAND, width=th)
-    d.arc([box[0] + 2, box[1] + 2, box[2] - 2, box[3] - 2], a0 + 3, a1 - 3, fill=BAND_HI, width=1)
-    if mic:
-        (x0, y0), (x1, y1) = mic; p0, p1 = s((x0, y0)), s((x1, y1))
-        d.line([*p0, *p1], fill=INK, width=3); d.line([*p0, *p1], fill=BAND, width=1)
-        d.ellipse([p1[0] - 2, p1[1] - 2, p1[0] + 2, p1[1] + 2], fill=INK); d.ellipse([p1[0] - 1, p1[1] - 1, p1[0] + 1, p1[1] + 1], fill=RING)
-    for (cx, cy, cw, ch) in cups:
-        x0, y0, x1, y1 = s((cx - cw / 2, cy - ch / 2, cx + cw / 2, cy + ch / 2))
-        d.rectangle([(x0 + x1) // 2 - 2, y0 - 3, (x0 + x1) // 2 + 2, y0 + 2], fill=INK); d.rectangle([(x0 + x1) // 2 - 1, y0 - 2, (x0 + x1) // 2 + 1, y0 + 1], fill=RIM)   # the slider into the band
-        d.ellipse([x0, y0, x1, y1], fill=INK)                              # outline
-        d.ellipse([x0 + 1, y0 + 1, x1 - 1, y1 - 1], fill=RIM)              # the padded rim
-        d.ellipse([x0 + 2, y0 + 2, x1 - 2, y1 - 2], fill=CUP)
-        ix = max(2, (x1 - x0) // 4); iy = max(2, (y1 - y0) // 4)
-        d.ellipse([x0 + ix, y0 + iy, x1 - ix, y1 - iy], fill=RING)         # the dark inner ring
-        d.ellipse([x0 + ix + 1, y0 + iy + 1, x1 - ix - 1, y1 - iy - 1], fill=FACE)
-        d.arc([x0 + 1, y0 + 1, x1 - 1, y1 - 1], 120, 220, fill=HI, width=1)   # a highlight on the rim
-    return im.resize((w * cell, h * cell), Image.NEAREST)
+# 1. the cut-out, in Alex's picture pixels (1448 x 1086): the ear cup (an ellipse) and the band (a polygon round the stripe and its outline)
+alex = Image.open(os.path.join(SRC, 'sensors_scene.png')).convert('RGBA')
+CUP = (463, 360, 62, 68)   # centre x, y, radius x, y (outline included)
+BAND = [(347, 115), (409, 118), (452, 145), (474, 180), (484, 205), (487, 230), (488, 265), (494, 300),
+        (463, 300), (461, 265), (458, 230), (450, 210), (440, 190), (423, 160), (398, 135), (362, 128), (347, 126)]
+mask = Image.new('L', alex.size, 0); md = ImageDraw.Draw(mask)
+cx, cy, rx, ry = CUP; md.ellipse([cx - rx, cy - ry, cx + rx, cy + ry], fill=255); md.polygon(BAND, fill=255)
+box = (340, 108, 530, 432)
+piece = alex.crop(box); piece.putalpha(mask.crop(box))
 
-def apply(src, dst, cell, band, cups, mic):
-    base = Image.open(os.path.join(SRC, src)).convert('RGBA')
-    ov = headset(base.size, cell, band, cups, mic); base.alpha_composite(ov, (0, 0))
-    out = base.convert('RGB'); out.save(os.path.join(OUT, dst), quality=92); return out
+# 2. onto Nicole: scaled to her head (Alex's head is about 300 px across, hers about 232), the cup centre on her ear
+K = 0.77
+scene = Image.open(os.path.join(SRC, 'communications_scene_v1.jpg')).convert('RGBA')
+small = piece.resize((round(piece.width * K), round(piece.height * K)), Image.NEAREST)
+ear = (410, 270)   # her near ear in the dialogue picture (1024 x 765)
+off = (round(ear[0] - (cx - box[0]) * K), round(ear[1] - (cy - box[1]) * K))
+# the mic boom first (under the cup), in Alex's headset colours, from the bottom of the cup to her mouth
+d = ImageDraw.Draw(scene)
+p0, p1 = (ear[0] - 12, ear[1] + 40), (318, 338)
+d.line([p0, p1], fill=(8, 11, 17, 255), width=9); d.line([p0, p1], fill=(76, 92, 128, 255), width=3)
+d.ellipse([p1[0] - 9, p1[1] - 8, p1[0] + 9, p1[1] + 8], fill=(8, 11, 17, 255)); d.ellipse([p1[0] - 5, p1[1] - 4, p1[0] + 5, p1[1] + 4], fill=(56, 68, 98, 255))
+scene.alpha_composite(small, off)
+out = scene.convert('RGB'); out.save(os.path.join(OUT, 'communications_scene_original.jpg'), quality=92)
+snap(out.resize((320, 240), Image.LANCZOS)).save(os.path.join(OUT, 'communications_scene.png'))
 
-# the face (1024 x 1024, art pixels about 16 px): band over the crown, cups on both ears, the mic from her right cup toward her mouth
-face = apply('communications_face_v1.jpg', 'communications_original.jpg', 8,
-             ((222, 64, 802, 980), 194, 346, 4), [(262, 510, 110, 200), (762, 510, 110, 200)], ((292, 600), (430, 690)))
+# 3. her face for the crew list: a square crop of the dialogue picture
+FACE = (178, 52, 336)   # left, top, size: hair to chin
+face = out.crop((FACE[0], FACE[1], FACE[0] + FACE[2], FACE[1] + FACE[2]))
+face.resize((512, 512), Image.LANCZOS).save(os.path.join(OUT, 'communications_original.jpg'), quality=90)
 snap(face.resize((64, 64), Image.LANCZOS)).save(os.path.join(OUT, 'communications.png'))
-# the dialogue picture (1024 x 765, art pixels about 4 px): three-quarter view, the cup on her near ear (viewer right), the band over her hair
-scene = apply('communications_scene_v1.jpg', 'communications_scene_original.jpg', 4,
-              ((204, 76, 432, 560), 222, 352, 4), [(410, 272, 76, 90)], ((396, 312), (318, 338)))   # the far ear is hidden behind her head: no far cup
-snap(scene.resize((320, 240), Image.LANCZOS)).save(os.path.join(OUT, 'communications_scene.png'))
 print('Nicole has her headset')
