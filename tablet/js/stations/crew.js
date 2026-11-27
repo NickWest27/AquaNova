@@ -214,7 +214,7 @@ export function mount(body, ctx, opts = {}) {
   body.classList.add('comm-menu');
   const crew = knownCrew();
   let page = 'crew', cur = null, cat = null, reply = null, greeted = false, param = null;
-  // What the Captain is reading stays on screen; anything said meanwhile waits behind "Next message" (owner, 2026-11-27: a new line hijacked ARIA's introduction)
+  // What the Captain is reading stays on screen; anything said meanwhile waits behind "Continue" (owner, 2026-11-27: a new line hijacked ARIA's introduction)
   let readTo = 0;
   const markRead = () => { readTo = cur ? transcript(cur.id).length : 0; };
   const unread = () => (cur ? transcript(cur.id).map((l, i) => ({ ...l, i })).slice(readTo).filter((l) => l.from === 'crew') : []);
@@ -268,7 +268,7 @@ export function mount(body, ctx, opts = {}) {
 
   // Earlier lines scroll above; the newest thing the crew member said is always the big reply block below.
   const logView = (n, dropLast = false) => {
-    let L = transcript(cur.id).slice(0, readTo || undefined).slice(-n); if (dropLast && L.length && L[L.length - 1].from === 'crew') L = L.slice(0, -1);   // only what has been read: newer lines wait behind Next message
+    let L = transcript(cur.id).slice(0, readTo || undefined).slice(-n); if (dropLast && L.length && L[L.length - 1].from === 'crew') L = L.slice(0, -1);   // only what has been read: newer lines wait behind Continue
     if (!L.length) return null;
     const box = el('div', { class: 'comm-log' }, ...L.map((l) => l.from === 'you' ? el('div', { class: 'cl you', text: `You: ${l.text}` }) : el('div', { class: 'cl crew' }, el('small', { text: first(cur) }), l.text)));
     requestAnimationFrame(() => { box.scrollTop = box.scrollHeight; });
