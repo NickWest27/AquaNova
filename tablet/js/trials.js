@@ -2,7 +2,7 @@
 // reports how she is doing and, through ARIA, asks to push a little further. Each step that works sets a ship record (logbook).
 // Each step risks light damage to a system, which then shows on the engineering computer for repair. Two steps per trial; damage ends it.
 import { sim, MAX_KT, SUPER_KT } from './sim.js';
-import { gameState, addLogEntry } from './persist.js';
+import { gameState } from './persist.js';
 import { offerDecision, pendingDecisions } from './aria.js';
 import { tell } from './notify.js';
 import { eng, SYSTEMS } from './engineering.js';
@@ -70,7 +70,7 @@ function check() {
     // reached
     s.overdrive = null; saidShallow = false;
     const hurt = Math.random() < T.risk[level];
-    const rec = { ...records() }, key = kind; if (!(rec[key] >= target)) { rec[key] = target; gameState.updateProperty('progress.records', rec); addLogEntry(T.record(target), { type: 'discovery_log', tags: ['record', 'trials'], canRevert: false }); }
+    const rec = { ...records() }, key = kind; if (!(rec[key] >= target)) { rec[key] = target; gameState.updateProperty('progress.records', rec); const fs = (gameState.getProperty('mission.discoveries') || []).filter((f) => f.id !== `record-${kind}`); gameState.updateProperty('mission.discoveries', [...fs, { id: `record-${kind}`, name: 'Ship record', description: T.record(target), type: 'record' }]); }   // the record goes to PED Findings, not the logbook
     if (hurt) {
       const e = eng(), id = T.hit[Math.floor(Math.random() * T.hit.length)], d = Math.round(DMG[0] + Math.random() * (DMG[1] - DMG[0]));
       e.health[id] = Math.max(0, e.health[id] - d);

@@ -70,7 +70,7 @@ export function mount(body, ctx) {
   function render() {
     const lb = book();
     title.textContent = lb ? lb.name : 'No logbook';
-    const entries = lb && lb.entries ? [...lb.entries].reverse() : [];
+    const entries = lb && lb.entries ? [...lb.entries].filter((e) => !['journal', 'discovery_log'].includes(e.logbook && e.logbook.type)).reverse() : [];   // mission reports and the Captain's own entries; notes live in the PED (journal, findings)
     list.replaceChildren(...(entries.length ? entries.map((e) => {
       const l = e.logbook, tasks = l.tasks || [];   // a logbook entry is a document: it lists its tasks and never crosses them out
       return el('div', { class: 'card entry' },

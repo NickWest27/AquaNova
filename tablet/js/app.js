@@ -29,7 +29,8 @@ import { isOpen, visit, LOCKED } from './rooms.js';
 sim.cruiseGate = sim.cruiseGate || []; sim.cruiseGate.push(() => (isCommissioned('cruise') ? null : 'commission'));   // super cruise is commissioned in the trials area
 import { initMissionLog } from './missionLog.js';
 import { initAudio, updateHum, chirp, ping } from './audio.js';
-import { gameState, loadGame, liveNav, startExitSave, saveBeforeSleep, checkpoint, addLogEntry, restoreSim } from './persist.js';
+import { gameState, saveManager, loadGame, liveNav, startExitSave, saveBeforeSleep, checkpoint, restoreSim } from './persist.js';
+import { makeJournalEntry } from '../../utils/ledgerSync.js';
 
 const STATIONS = {
   nav: { title: 'Navigation', icon: 'nav' }, helm: { title: 'Helm', icon: 'helm' }, sys: { title: 'Systems', icon: 'sys' },
@@ -313,7 +314,7 @@ function firstVisit(poi) {
   const key = poi.name.toLowerCase().replace(/\s+/g, '_');
   if (seen.includes(key)) return;
   gameState.updateProperty('progress.areasExplored', [...seen, key]);
-  addLogEntry(`Arrived at ${poi.name}. ${poi.text}`, { type: 'discovery_log', tags: ['arrival', poi.type], canRevert: false }); // a note, not a save point
+  try { saveManager.addJournal(makeJournalEntry(`Arrived at ${poi.name}. ${poi.text}`)); } catch (e) { console.warn('journal', e); }   // a note in the PED journal, not the logbook (owner, 2026-11-27)
 }
 
 // ---------- boot ----------
