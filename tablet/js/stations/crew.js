@@ -218,7 +218,7 @@ export function mount(body, ctx, opts = {}) {
   let readTo = 0;
   const markRead = () => { readTo = cur ? transcript(cur.id).length : 0; };
   const unread = () => (cur ? transcript(cur.id).map((l, i) => ({ ...l, i })).slice(readTo).filter((l) => l.from === 'crew') : []);
-  const nextLine = () => { const u = unread(); if (!u.length) return null; return line(`Next message${u.length > 1 ? ` (${u.length})` : ''}`, () => { reply = { said: null, text: u[0].text }; readTo = u[0].i + 1; page = 'reply'; render(); }); };
+  const nextLine = () => { const u = unread(); if (!u.length) return null; return line(`Continue${u.length > 1 ? ` (${u.length})` : ''}`, () => { reply = { said: null, text: u[0].text }; readTo = u[0].i + 1; page = 'reply'; render(); }); };
   // The menu is a tree of folders. A folder is { folder: true, label, title, kids }, a leaf is { label, run, cls }.
   const orderLeaf = (t) => ({ label: sayFor(t, cur && cur.id), run: () => speak(t) });
   const orderKids = () => {   // the folders in TREE, each order shown only when it makes sense now
