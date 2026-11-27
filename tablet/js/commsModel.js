@@ -71,7 +71,7 @@ export function linkState(L, s = sim.s) {
   return { up, fading: status === 'FADING', dB, status, tgt, brg, dist, elev, g, eff, aim, off, tol };
 }
 // Nicole reports when the ship loses its last link to the surface, and when one comes back (owner, 2026-11-27). The links that can send are
-// SAT-COM, LASER and HF (VLF only receives). A change must hold for 10 game seconds, so a link fading at the edge of range does not chatter.
+// SAT-COM, LASER and HF (VLF only receives). A relay (a WSKR or the Tern at the surface) or the comm buoy floated up keeps the link (antDepth), so no message then. A change must hold for 10 game seconds, so a link fading at the edge of range does not chatter.
 // A short line (communicator log and the pin; the overhead panel on the bridge), not a dialogue: it happens every time the ship dives.
 let surf = null, surfSince = 0;
 sim.hooks.push(() => {
@@ -82,7 +82,7 @@ sim.hooks.push(() => {
   if (now !== surf.up) { surf.up = now; surfSince = s.clock; }
   if (surf.up !== surf.said && s.clock - surfSince >= 10) {
     surf.said = surf.up;
-    say('comms', surf.up ? `Surface link is back, Captain: ${up.map((L) => L.label).join(', ')}.` : 'We have lost our link to the surface, Captain. Nothing goes out until an antenna is near the surface again.',
+    say('comms', surf.up ? `Surface link is back${sim.relayUp && sim.relayUp() ? ' through the relay' : ''}, Captain: ${up.map((L) => L.label).join(', ')}.` : 'We have lost our link to the surface, Captain. Float the comm buoy, put a WSKR up as a relay, or bring us shallower, and I will have it back.',
       surf.up ? '' : 'warn', { feedback: true });
   }
 });
