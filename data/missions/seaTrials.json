@@ -39,19 +39,6 @@
       "after": "undock"
     },
     {
-      "id": "dive",
-      "description": "Dive deeper than 30 m for the passage south (stay above 300 m until you reach the AO)",
-      "required": true,
-      "triggers": [
-        {
-          "type": "property_at_least",
-          "property": "navigation.depth",
-          "value": 30
-        }
-      ],
-      "after": "plot"
-    },
-    {
       "id": "arrive",
       "description": "Sail into the Trials AO, about 100 nm south (no faster than 15 knots)",
       "required": true,
@@ -62,7 +49,7 @@
           "value": true
         }
       ],
-      "after": "dive",
+      "after": "plot",
       "onComplete": [
         {
           "type": "unlock_room",

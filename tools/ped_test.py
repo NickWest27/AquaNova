@@ -34,7 +34,7 @@ def main():
         check("missions: completed list shows Know Your Ship", "Know Your Ship" in t, t[:400])
         js("M.startMission('seaTrials'); return 1"); page.wait_for_timeout(400); tab("Tasks")
         t = text(); check("tasks: objectives of the accepted mission", "Undock" in t and "SEA TRIALS" in t, t[:300])
-        tab("Missions"); t = text(); check("missions: Sea Trials moves to active with progress", "of 10 tasks done" in t, t[:300])
+        tab("Missions"); t = text(); check("missions: Sea Trials moves to active with progress", "of 9 tasks done" in t, t[:300])
         tab("Contacts"); t = text(); check("contacts: nobody listed before they are met", "Marcus Chen" not in t and "Commander ARIA" not in t and "not met the crew" in t, t[:200])
         page.evaluate("(async()=>{const g=(await import('./js/persist.js')).gameState; g.updateProperty('progress.met.executiveOfficer', true); g.updateProperty('progress.met.helm', true);})()"); tab("Status"); tab("Contacts")
         t = text(); check("contacts: known crew with a bio", "Commander ARIA" in t and "Advanced Research" in t and "Marcus Chen" in t, t[:200])

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Missions by message: First Contact delivers the sea trials orders, the player accepts them in Comms,
-and the commissioning trip follows: undock, dive, the Trials AO, engineering, depth, speed, super cruise, surface, report.
+and the commissioning trip follows: undock, the Trials AO, engineering, depth, speed, super cruise, surface, report.
 Run from repo root:  python3 tools/trials_flow.py
 """
 import os, sys, shutil, importlib.util
@@ -44,7 +44,7 @@ def main():
         check("message text and Accept button show after opening", page.is_visible("text=Trials AO") and page.is_visible('button:text-is("Accept mission")'))
         page.screenshot(path=f"{SHOTS}/m-1message.png")
         page.tap('button:text-is("Accept mission")'); page.wait_for_timeout(500)
-        o = objs(); check("mission started with 10 objectives", len(o) == 10, o)
+        o = objs(); check("mission started with 9 objectives", len(o) == 9, o)
         check("accepted state shown", page.is_visible("text=Mission accepted"))
         page.tap("#station .st-head .btn"); page.wait_for_timeout(200)
         check("glow stops once read", "glow" not in (page.locator('.hs[aria-label="COMMS"]').get_attribute("class") or ""))
@@ -55,9 +55,9 @@ def main():
         check("undocking from the Helm completes the objective", "undock:completed" in objs(), objs())
         page.tap("#station .st-head .btn"); page.wait_for_timeout(200)
         js("const S=(await import('./js/sim.js')).sim; S.s.wpt={lat:39.9,lon:-71.0,name:'WP1'}; return 1"); page.wait_for_timeout(6000)   # a course into the AO box
-        o = objs(); check("one step at a time: plot is current, the rest wait", "plot:completed" in o and "dive:active" in o and "arrive:waiting" in o and "speed:waiting" in o, o)
+        o = objs(); check("one step at a time: plot done, the passage to the AO is current, the rest wait", "plot:completed" in o and "arrive:active" in o and "speed:waiting" in o, o)
         fly(60, 6.5); page.wait_for_timeout(300)
-        o = objs(); check("dive completes; the trials wait for the AO", "dive:completed" in o and "speed:completed" not in o, o)
+        o = objs(); check("under way at 60 m: the trials wait for the AO", "arrive:active" in o and "speed:completed" not in o, o)
         js("const S=(await import('./js/sim.js')).sim; Object.assign(S.s,{lat:39.9,lon:-71.0}); S.step(1);"); page.wait_for_timeout(6500)
         o = objs(); check("at the Trials AO: plot and arrive complete", "plot:completed" in o and "arrive:completed" in o, o)
         check("the Welcome to the AO orders arrive", "oera-welcome-ao" in js(G + "return (g.getProperty('mission.inbox')||[]).map(m=>m.id)"))
