@@ -1,0 +1,34 @@
+Aqua Nova sound effects reel (tablet/js/sfx.js)
+
+0:00.0  generalAlarm     General alarm: a rising naval "whoop" klaxon, three times
+0:04.8  battleStations   General quarters gong: a two-tone bell, bong-bong, repeated
+0:10.6  fireAlarm        Fire alarm: a fast two-tone warble
+0:14.0  collisionAlarm   Collision alarm: rapid high beeps
+0:17.0  depthAlarm       Depth warning: a low pulsing tone
+0:20.6  sonarPing        Active sonar ping with its long echo
+0:25.0  sonarContact     New sonar contact: a two-note rising blip
+0:27.0  sonarLost        Contact lost: a two-note falling blip
+0:29.0  impact           Impact: a heavy hull thud
+0:31.6  crash            Crash: metal on rock, a ringing scrape
+0:35.6  hullCreak        Hull groan under pressure
+0:39.6  torpedoLaunch    Torpedo or launch tube: air burst, whoosh, bubbles
+0:43.2  doorOpen         Power-assisted door opening: hiss, servo whine up, clunk
+0:45.4  doorClose        Power-assisted door closing: servo whine down, thunk, seal hiss
+0:47.7  airlockFlood     Airlock flooding: rising rumble and gurgle
+0:52.3  airlockDrain     Airlock draining: falling gurgle and suck
+0:56.5  ballastBlow      Emergency blow: a huge hiss and roar of air
+1:01.5  radioSquelch     Radio squelch: a short burst of noise and a click
+1:03.0  radioBeep        Radio roger beep
+1:04.5  powerUp          Power up: a rising whine and arpeggio (super cruise spool-up)
+1:08.5  powerDown        Power down: a falling whine
+1:12.3  cruiseEngage     Super cruise bites: a deep whoosh and a rising tone
+1:16.3  bubbles          Bubbles
+1:18.9  splash           Surface splash
+1:21.7  buttonPress      Console button: a crisp tick
+1:23.0  buttonError      Console refusal: a low double buzz
+1:24.7  teletype         Teletype chatter for incoming text
+1:27.1  distantExplosion A distant underwater explosion: a low boom and rumble
+1:32.8  fan              LOOP Ventilation fan: soft whirr and air
+1:40.0  engineRoom       LOOP Engine room: the fusion plant hum, pumps thumping, hiss
+1:47.2  radioStatic      LOOP Radio static with crackle
+1:54.4  reactorHum       LOOP Reactor hum: deep pulsing drone

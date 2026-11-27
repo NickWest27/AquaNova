@@ -92,7 +92,7 @@ sim.setCruise = (on) => {
   if (s.battery <= 0) return { ok: false, why: 'power' };
   for (const f of sim.cruiseGate || []) { const why = f(); if (why) return { ok: false, why }; }   // e.g. the fusion drive offline (engineering.js)
   if (!superWaterAhead()) return { ok: false, why: 'shallow' };
-  s.cruise = true; s.spool = 0; s.throttle = 1; sim.touch(); return { ok: true };   // super cruise is a power setting of its own: full, after the spool-up
+  s.cruise = true; s.spool = 0; s.throttle = 1; sim.touch(); sim.emit('cruise-on', {}); return { ok: true };   // super cruise is a power setting of its own: full, after the spool-up
 };
 /** Is there deep water under the ship and along the heading (3, 6 and 9 nm ahead)? */
 function superWaterAhead() {

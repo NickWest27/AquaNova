@@ -28,7 +28,7 @@ import { isCommissioned, excuse } from './unlocks.js';
 import { isOpen, visit, LOCKED } from './rooms.js';
 sim.cruiseGate = sim.cruiseGate || []; sim.cruiseGate.push(() => (isCommissioned('cruise') ? null : 'commission'));   // super cruise is commissioned in the trials area
 import { initMissionLog } from './missionLog.js';
-import { initAudio, updateHum, chirp, ping } from './audio.js';
+import { initAudio, updateHum, chirp, ping, sfx, sfxLoop } from './audio.js';
 import { gameState, saveManager, loadGame, liveNav, startExitSave, saveBeforeSleep, checkpoint, restoreSim } from './persist.js';
 import { makeJournalEntry } from '../../utils/ledgerSync.js';
 
@@ -157,6 +157,7 @@ async function toggleComm(who = null) {
   try {
     modules.crew ||= await import('./stations/crew.js');
     comm = { api: modules.crew.mount(body, ctx, { who }) };
+    sfx('radioSquelch', 0.7);
   } catch (e) { console.error('Communicator failed', e); toast('Could not open the communicator', 'error'); root.hidden = true; }
 }
 function closeComm() {
@@ -198,6 +199,16 @@ function updateChips() {
   const txt = `SPD ${s.speed.toFixed(1)} · DEP ${Math.round(s.depth)} · HDG ${pad(s.heading)}`;
   if (current.chips.textContent !== txt) current.chips.textContent = txt;
 }
+// a power-assisted door between rooms, and the engine room's own noise while the Captain is in it
+const ROOMS = ['bridge', 'walkway', 'walkway2', 'quarters', 'science', 'medbay', 'launchbay', 'engineering'];
+let lastRoom = null, engineLoop = null;
+function roomSound(name) {
+  if (!ROOMS.includes(name)) return;
+  if (lastRoom && lastRoom !== name) sfx('doorOpen');
+  lastRoom = name;
+  if (name === 'engineering' && !engineLoop) engineLoop = sfxLoop('engineRoom', 0.8);
+  else if (name !== 'engineering' && engineLoop) { engineLoop.stop(); engineLoop = null; }
+}
 function openScene(name) {
   if (name.startsWith('enter-')) {   // a door into a room the story may not have opened yet
     const room = name.slice(6);
@@ -205,6 +216,7 @@ function openScene(name) {
     name = room;
   }
   visit(name);   // the people who work here are now on the communicator
+  roomSound(name);
   if (name.startsWith('talk-')) { const id = name.slice(5); if (gameState.getProperty(`contacts.crew.${id}`)) gameState.updateProperty(`contacts.crew.${id}.known`, true); return toggleComm(id); }   // a tap on a crew member in a room opens the line to them (meeting them in person makes them reachable)
   if (['bridge', 'walkway', 'walkway2', 'science', 'medbay', 'launchbay', 'engineering'].includes(name)) setTimeout(() => document.dispatchEvent(new CustomEvent('location-enter', { detail: { location: name } })), 0);
   if (name === 'quarters') {
@@ -382,6 +394,17 @@ async function boot() {
     document.addEventListener('crew-call', (e) => { if (callIn && !comm && !commsLocked()) toggleComm(e.detail.id); });
     document.addEventListener('inbox-change', () => $('#pin').classList.toggle('unread', unreadCount() > 0));
     $('#ped-btn').hidden = !hasPed(); $('#ped-btn').addEventListener('click', togglePed);
+    // sound effects (sfx.js, 2026-11-27): the moments that should be heard
+    sim.on((type, data) => {
+      if (type === 'general-alarm' && data.on) sfx('generalAlarm');
+      else if (type === 'bump') sfx(data && data.damage >= 10 ? 'crash' : 'impact');
+      else if (type === 'eng-fire') sfx('fireAlarm');
+      else if (type === 'eng-leak') sfx('collisionAlarm');
+      else if (type === 'cruise-on') sfx('powerUp');
+      else if (type === 'cruise-spooled') sfx('cruiseEngage');
+      else if (type === 'eng-blow') sfx('ballastBlow');
+      else if (type === 'sonar-sweep') sfx('sonarPing');
+    });
     sim.on((type, data) => {
       if (type === 'tick') {
         const s = sim.s;

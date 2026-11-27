@@ -5,7 +5,7 @@
 // iPad Safari starts sound only after a tap, so initAudio() runs from the "Board" button.
 const KEY = 'aquaNova_sound';
 let ac = null, master = null, humGain = null, humFilter = null, ambGain = null;
-const DEFAULTS = { on: true, vol: 0.6, hum: 0.25, ambient: 0.6, comm: 1, notice: 1, ui: 1 };   // hum = the Ship slider
+const DEFAULTS = { on: true, vol: 0.6, hum: 0.25, ambient: 0.6, comm: 1, notice: 1, ui: 1, fx: 0.8 };   // fx = the Effects slider (sfx.js)   // hum = the Ship slider
 const pref = (() => { try { return Object.assign({ ...DEFAULTS }, JSON.parse(localStorage.getItem(KEY))); } catch (e) { return { ...DEFAULTS }; } })();
 const ambLevel = () => 0.1 * pref.ambient;
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(pref)); } catch (e) { /* ignore */ } };
@@ -16,6 +16,11 @@ const level = () => (pref.on ? pref.vol * 0.8 : 0);
 export const getSound = () => ({ ...pref });
 /** The live context and master volume, for music (theme.js); null until sound has started. */
 export const audioOut = () => (ac && master ? { ac, master } : null);
+/** A sound effect from sfx.js through the Effects volume. */
+export function sfx(name, vol = 1) { if (!ac || !pref.on || !fxMod) return 0; return fxMod.playSfx(ac, master, name, { vol: vol * (pref.fx ?? 0.8) }); }
+/** A looping sound effect; returns { stop() }. */
+export function sfxLoop(name, vol = 1) { if (!ac || !pref.on || !fxMod) return { stop() {} }; return fxMod.loopSfx(ac, master, name, { vol: vol * (pref.fx ?? 0.8) }); }
+let fxMod = null; import('./sfx.js').then((m) => { fxMod = m; });
 export function setSound(next) {
   Object.assign(pref, next); save();
   if (master) master.gain.setTargetAtTime(level(), ac.currentTime, 0.05);

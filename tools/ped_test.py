@@ -41,7 +41,7 @@ def main():
         check("contacts: unmet crew hidden", "Andre Washington" not in t)
         tab("Settings"); t = text()
         check("settings: no sync details card", "SYNC DETAILS" not in t.upper() and "SYNC WITH THE IPHONE PED" in t.upper() and "How to connect" in t)
-        check("settings: sound sliders", page.locator("#ped-pop input.mix").count() == 6, page.locator("#ped-pop input.mix").count())
+        check("settings: sound sliders (Master, Ship, Ambient, Communicator, Notices, Interface, Effects)", page.locator("#ped-pop input.mix").count() == 7, page.locator("#ped-pop input.mix").count())
         for lbl in ["Master", "Ship", "Ambient", "Communicator", "Notices", "Interface"]: check("slider " + lbl, lbl in t)
         page.evaluate("(()=>{const i=document.querySelectorAll('#ped-pop input.mix')[2]; i.value=30; i.dispatchEvent(new Event('input'));})()")
         check("ambient slider is saved", abs(page.evaluate("JSON.parse(localStorage.getItem('aquaNova_sound')).ambient") - 0.3) < 0.01)
