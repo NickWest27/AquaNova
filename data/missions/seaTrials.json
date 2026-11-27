@@ -40,7 +40,7 @@
     },
     {
       "id": "dive",
-      "description": "Dive below 30 m (no deeper than 300 m on the way)",
+      "description": "Dive deeper than 30 m for the passage south (stay above 300 m until you reach the AO)",
       "required": true,
       "triggers": [
         {
@@ -107,7 +107,7 @@
     },
     {
       "id": "deep",
-      "description": "Dive to 300 m, the first depth certification step",
+      "description": "In the AO, take her down to 300 m: the first depth certification step",
       "required": true,
       "triggers": [
         {
