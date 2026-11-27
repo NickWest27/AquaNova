@@ -2,7 +2,7 @@
    falls back to the saved copy when offline or slow. Covers the iPad game (tablet/) and the
    iPhone PED (ped/). Only same-origin GET requests are handled: GitHub sync calls go straight to
    the network. Run `python3 tools/update_sw.py` after adding or renaming files. */
-const VERSION = 'ae3005d000';
+const VERSION = '1c883be0a8';
 const CACHE = 'aquanova-' + VERSION;
 const ASSETS = [
  "tablet/",
