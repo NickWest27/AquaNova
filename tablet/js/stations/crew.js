@@ -3,7 +3,8 @@ import { pendingDecisions, decide } from '../aria.js';
 import { fill } from '../player.js';
 import { reply as chatReply, statusReport } from '../chat.js';
 import { startSweep, setSource } from '../sonar.js';
-import { sim, toward, wskrName, HUG_ALT, HUG_MIN_FLOOR, PERISCOPE_M, cruiseWhy } from '../sim.js';
+import { sim, toward, wskrName, HUG_ALT, HUG_MIN_FLOOR, PERISCOPE_M, cruiseWhy, MAX_KT } from '../sim.js';
+import { records } from '../trials.js';
 import { GATES_ON } from '../unlocks.js';
 import { research } from '../science.js';
 import { el, toast } from '../util.js';
@@ -129,7 +130,15 @@ const PARAM = {
   'Come left': () => ({ title: 'Come left …', opts: [5, 10, 20, 45, 90].map((d) => [`${d}°`, () => { sim.setHeading(sim.s.targetHeading - d); sim.s.wpt = null; return `Coming left to ${hdgText(sim.s.targetHeading)}, aye.`; }]) }),
   'Come right': () => ({ title: 'Come right …', opts: [5, 10, 20, 45, 90].map((d) => [`${d}°`, () => { sim.setHeading(sim.s.targetHeading + d); sim.s.wpt = null; return `Coming right to ${hdgText(sim.s.targetHeading)}, aye.`; }]) }),
   'Make your heading': () => ({ title: 'Make your heading …', opts: HEADINGS.map(([l, v]) => [l, () => { sim.setHeading(v); sim.s.wpt = null; return `Steering ${hdgText(v)}, aye.`; }]) }),
-  'Make your speed': () => ({ title: 'Make your speed …', opts: [['All stop', 0], ['20%', 0.2], ['40%', 0.4], ['60%', 0.6], ['80%', 0.8], ['Flank', 1]].map(([l, v]) => [l, () => { if (docked()) return 'We are docked, Captain.'; if (v) sim.setThrottle(v); else sim.stop(); return v ? `Speed ${Math.round(v * 100)} percent, aye.` : 'All stop, aye.'; }]) }),
+  'Make your speed': () => {   // in knots (owner, 2026-11-27), with the fastest the jets were run in the trials when that beat their rating
+    const rec = records().speed, kts = [['All stop', 0], ['5 knots', 5], ['8 knots (bay safe)', 8], ['10 knots', 10], [`Full: ${MAX_KT} knots`, MAX_KT], ...(rec > MAX_KT ? [[`Max tested: ${rec} knots`, rec]] : [])];
+    return { title: 'Make your speed …', opts: kts.map(([l, kt]) => [l, () => {
+      if (docked()) return 'We are docked, Captain.';
+      if (!kt) { sim.stop(); return 'All stop, aye.'; }
+      if (kt > MAX_KT) { sim.setThrottle(1, { kind: 'speed', f: kt / MAX_KT }); return `${kt} knots, aye. That is past the jets' rating, Captain, but we have done it before.`; }
+      sim.setThrottle(kt / MAX_KT); return `Making ${kt} knots, aye.`;
+    }]) };
+  },
 };
 // The Tern: by radio through Nicole when she is out, through Security when she is in the bay.
 const destOpts = (run) => destinations().map((d) => [`Go to ${d.name}`, () => run(d)]);

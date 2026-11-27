@@ -50,19 +50,29 @@ function offer(kind, level) {
 }
 
 let saidShallow = false, waitUntil = 0;
+const said = { start: null, wait: null };
+const START = {
+  deep: (t) => `Taking her down to ${t} metres, Captain. Nice and slow. I will tell you when we are there.`,
+  speed: (t) => `Opening up the jets, Captain. Going for ${t} knots. I will tell you when we make it.`,
+  cruise: (t) => `Pushing the drive to ${t} knots, Captain. Hold on to something.`,
+};
 function check() {
   const s = sim.s, t = st();
   // a push in progress: drive the ship there, then see what happened
   if (t.push) {
     const { kind, level } = t.push, T = TRIALS[kind], target = T.levels[level];
+    // the one doing it says so himself (owner, 2026-11-27: "Marcus is on it" and then nothing); and says what is holding him, once
+    const pk = kind + level;
+    if (said.start !== pk) { said.start = pk; said.wait = null; tell(T.who, START[kind](target), 'mission'); }
+    const hold = (why, text) => { if (said.wait !== pk + why) { said.wait = pk + why; tell(T.who, text, 'mission'); } };
     if (kind === 'deep') {
       const max = sim.deepest();
       if (max != null && max < target) { if (!saidShallow) { saidShallow = true; tell('engineering', `Not enough water under us for ${target} metres, Captain. Head south over deeper water and I will take her down.`); } return; }
       if (s.targetDepth < target) sim.setDepth(target);
     } else {
       s.overdrive = { kind, f: target / T.base };
-      if (kind === 'cruise' && !s.cruise) return;   // waits until super cruise is engaged
-      if (kind === 'speed' && s.cruise) return;     // the jets alone: not in super cruise
+      if (kind === 'cruise' && !s.cruise) { hold('cruise', `Engage super cruise when you are ready, Captain, and I will push her to ${target} knots. Run south, over deep water.`); return; }   // waits until super cruise is engaged
+      if (kind === 'speed' && s.cruise) { hold('jets', `Take us out of super cruise, Captain. This one is on the hydro-jets alone. Then I will open them up to ${target} knots.`); return; }     // the jets alone: not in super cruise
       s.throttle = 1;
     }
     const v = kind === 'deep' ? s.depth : s.speed;

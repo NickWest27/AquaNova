@@ -105,7 +105,7 @@ function superWaterAhead() {
   }
   return true;
 }
-sim.setThrottle = (v) => { if (sim.s.docked) return; if (sim.s.cruise) { sim.s.cruise = false; sim.emit('cruise-off', { why: 'throttle' }); } sim.s.throttle = clamp(v, 0, 1); sim.touch(); };   // any other power setting drops super cruise
+sim.setThrottle = (v, over = null) => { if (sim.s.docked) return; sim.s.overdrive = over; if (sim.s.cruise) { sim.s.cruise = false; sim.emit('cruise-off', { why: 'throttle' }); } sim.s.throttle = clamp(v, 0, 1); sim.touch(); };   // any other power setting drops super cruise
 sim.setHeading = (h) => { sim.s.targetHeading = norm360(h); sim.touch(); };
 sim.setDepth = (d) => { if (sim.s.docked) return; sim.s.hug = false; sim.s.avoiding = false; sim.s.targetDepth = clamp(d, 0, 6000); sim.touch(); };   // a depth order ends "hug the floor"
 /** "Hug the floor": the helm keeps the ship HUG_ALT metres above the sea floor, looking ahead along the course so it climbs before a rise. */
