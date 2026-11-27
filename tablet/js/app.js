@@ -62,7 +62,7 @@ applyZoom();
 const objectives = () => gameState.getProperty('mission.objectives') || [];
 const objStatus = (id) => (objectives().find((o) => o.id === id) || {}).status;
 const hasPed = () => gameState.getProperty('progress.got_ped') === true;   // the PED lies on the bed until you take it
-const commsLocked = () => objStatus('meetTheCrew_pickup_communicator') === 'active';
+const commsLocked = () => ['active', 'waiting'].includes(objStatus('meetTheCrew_pickup_communicator'));   // not picked up yet (the step waits its turn behind 'find the communicator' since 2026-11-27)
 // Real play is silent (no chirps, no ARIA) until the communicator pin is picked up. Automated tests skip the sign-in and are not hushed unless ?intake=1.
 hush.fn = () => commsLocked() && !(navigator.webdriver && !/[?&]intake=1/.test(location.search));
 
@@ -335,7 +335,7 @@ function syncLessonFlags() {
   const inAO = (p) => !!(p && box && p.lat >= box.lat0 && p.lat <= box.lat1 && p.lon >= box.lon0 && p.lon <= box.lon1);
   if (inAO(s.wpt) || (inAO(s) && objStatus('seaTrials_plot'))) flag('plotted_ao');
   if (inAO(s) && objStatus('seaTrials_arrive') === 'active') flag('arrived_ao');
-  if (objStatus('seaTrials_arrive') === 'active' && !limitsWarned && (s.depth > 305 || s.speed > 15.5)) { limitsWarned = true; say('aria', `${s.depth > 305 ? 'We are below 300 metres' : 'We are over 15 knots'}, Captain. Our orders are 15 knots and 300 metres until we reach the trials area.`, 'error'); }
+  if (['active', 'waiting'].includes(objStatus('seaTrials_arrive')) && !limitsWarned && (s.depth > 305 || s.speed > 15.5)) { limitsWarned = true; say('aria', `${s.depth > 305 ? 'We are below 300 metres' : 'We are over 15 knots'}, Captain. Our orders are 15 knots and 300 metres until we reach the trials area.`, 'error'); }
   const ledgePoi = s.pois.find(ledge); if (ledgePoi && scanned(ledgePoi)) { flag('scanned'); flag('scanned_ledge'); }   // a scan filed by the ship or by a WSKR
   missions.checkTriggers();
 }
