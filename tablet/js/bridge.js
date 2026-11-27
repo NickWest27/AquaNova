@@ -8,6 +8,7 @@
 // Sized in the 1920x1080 stage. Only the visible displays are updated.
 import { sim, toward, gameDateText, clockText, cruiseWhy } from './sim.js';
 import { createND } from './nd.js';
+import { routeLength } from './route.js';
 import { createDial } from './ui.js';
 import { el, pad, modal, toast } from './util.js';
 import { createProfile } from './profile.js';
@@ -65,7 +66,10 @@ export function createBridgeConsole({ top, main, display, center, left, right, o
         const s = sim.s;
         set(logTime, clockText());
         set(logCur, `${deg(s.lat, 'N', 'S', 2)} ${deg(s.lon, 'E', 'W', 3)}`); set(logPlace, s.at ? s.at.name : 'Open water');
-        if (s.wpt) { const t = toward(s, s.wpt); set(logDest, s.wpt.name); set(logEta, `${t.nm.toFixed(1)} nm · ETA ${etaText(t.nm, s.speed)}`); } else { set(logDest, 'none'); set(logEta, ''); }
+        if (s.wpt) {   // distance along the route still to go (round the land, through the waypoints), at the speed the helm is set to (owner, 2026-11-27)
+          const nm = s.route && s.route.length ? routeLength(s, s.route) : toward(s, s.wpt).nm, kt = s.throttle * sim.maxKt() > 0.5 ? s.throttle * sim.maxKt() : s.speed;
+          set(logDest, s.wpt.name); set(logEta, `${nm.toFixed(1)} nm · ETA ${etaText(nm, kt)}`);
+        } else { set(logDest, 'none'); set(logEta, ''); }
         nd.redraw();
       } };
     };
