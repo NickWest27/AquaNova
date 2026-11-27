@@ -65,7 +65,7 @@ export function createScene(stage, { onOpen }) {
     mini(stnL, 'stnL', `<h5>COMMS · LINKS</h5>${LINKS.map((L) => { const st = linkState(L); return `<div class="${st.up ? 'ok' : st.fading ? 'warn' : 'bad'}"><span>${L === act ? '▸' : ' '}${L.n} ${L.label}</span><b>${st.status}</b></div>`; }).join('')}`);
     const near = s.sonar ? s.pois.map((p) => ({ p, ...toward(s, p) })).sort((a, b) => a.nm - b.nm)[0] : null;
     const inRange = s.sonar ? s.pois.filter((p) => toward(s, p).nm <= 4).length : 0, sweeping = s.clock < (s.sweepUntil || 0);
-    mini(stnR, 'stnR', `<h5>SENSORS</h5><div class="${s.sonar ? 'ok' : 'bad'}"><span>SONAR</span><b>${sweeping ? 'SWEEPING' : s.sonar ? 'ACTIVE' : 'OFF'}</b></div><div><span>CONTACTS</span><b>${s.sonar ? inRange + ' in 4 nm' : '—'}</b></div><div><span>WSKRS</span><b>${s.wskrs.length} of 4 out</b></div><div><span>NEAREST</span><b>${near ? near.p.name.slice(0, 11) + ' ' + near.nm.toFixed(1) : '—'}</b></div>`);
+    mini(stnR, 'stnR', `<h5>SENSORS</h5><div class="${s.sonar ? 'ok' : 'bad'}"><span>SONAR</span><b>${!s.sonar ? 'OFF' : s.sonarActive ? 'ACTIVE' : 'PASSIVE'}${sweeping ? ' · MAP' : ''}</b></div><div><span>CONTACTS</span><b>${s.sonar ? inRange + ' in 4 nm' : '—'}</b></div><div><span>WSKRS</span><b>${s.wskrs.length} of 4 out</b></div><div><span>NEAREST</span><b>${near ? near.p.name.slice(0, 11) + ' ' + near.nm.toFixed(1) : '—'}</b></div>`);
   }
   topD.classList.add('compact');
   const rect = (x0, y0, x1, y1) => [[x0, y0], [x1, y0], [x1, y1], [x0, y1]];

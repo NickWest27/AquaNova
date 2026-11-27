@@ -72,7 +72,7 @@ def main():
         s1 = js("return sf.chartedCount()")
         js("sim.s.sonar=true; sim.s.lat=40.5; sim.s.lon=-72.0; sim.step(0.1)")
         s2 = js("return sf.chartedCount()")
-        check("sonar off charts a small patch, sonar on a larger one", 0 < s1 - s0 < (s2 - s1) / 5, (s0, s1, s2))
+        check("mapping uses the survey sensors, not the sonar: the same patch with the sonar off or on (owner, 2026-11-27)", s1 - s0 > 0 and abs((s1 - s0) - (s2 - s1)) <= 0.1 * (s2 - s1), (s0, s1, s2))
         check("no console errors", not errors, errors)
         browser.close()
     server.shutdown()

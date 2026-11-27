@@ -71,20 +71,23 @@ with sync_playwright() as p:
     js("sim.orderWskr(1,'escort'); sim.trailWskr({kind:'ship',id:'t:1'},1); T.traffic.cand[0].dyn=null; T.traffic.cand=[]; for(let i=0;i<14;i++) sim.step(10)")
     check("a contact lost for two minutes is given up", js("return sim.s.wskrs[0].mode") == "escort")
     js("T.traffic.cand.push({id:'t:1',kind:'cargo',faction:'cargo',factionName:'Merchant',stance:'neutral',label:'Container ship',size:3,kt:10,A:window.__at(2.5,0),B:window.__at(2.5,0),L:1,phase:0,boldness:0,ais:false,bias:0,name:'MV Test',mhz:156,reply:0,ident:false,alerted:true,dyn:null,hitAt:-1e9}); S.snr().sel=null; sim.s.wskrs=[]")
-    # full sweep doubles the sensitivity: a ship at 6 nm (out of the 4.8 nm ear) is found
+    # active sonar (owner, 2026-11-27) doubles the hearing once its ripple has passed: a small ship at 10 nm (out of the passive ear) is found
     js("const A=window.__at(10,0); const v=T.traffic.cand[0]; v.A=A; v.B=A; v.size=0; v.ident=false; T.traffic.known.delete(v.id); v.scanFixUntil=0; sim.s.wskrs=[]; for(let i=0;i<3;i++) sim.step(1)")
     n0 = js("return S.contactsFor('ship').filter(c=>c.id==='ship:t:1').filter(c=>!c.lost).length")
-    tap("Full sweep"); pg.wait_for_timeout(200); js("sim.step(1)")
+    tap("Active"); pg.wait_for_timeout(200); js("sim.step(1)")
+    nEarly = js("return S.contactsFor('ship').filter(c=>c.id==='ship:t:1').filter(c=>!c.lost).length")   # the ripple has not reached it yet
+    js("for(let i=0;i<9;i++) sim.step(1)")
     n1 = js("return S.contactsFor('ship').filter(c=>c.id==='ship:t:1').filter(c=>!c.lost).length")
-    check("out of range: no contact; the sweep finds it", n0 == 0 and n1 == 1, f"{n0} {n1}")
-    js("for(let i=0;i<20;i++) sim.step(1)")
+    check("out of range passive; active finds it once the ripple has spread that far", n0 == 0 and nEarly == 0 and n1 == 1, f"{n0} {nEarly} {n1}")
+    check("the SNR page says ACTIVE SONAR", "ACTIVE SONAR" in pg.inner_text(".bd-snr:visible .snr-head"), pg.inner_text(".bd-snr:visible .snr-head"))
+    r = js("let n=0; const f=(t)=>{ if(t==='sonar-ping') n++; }; sim.on(f); for(let i=0;i<41;i++) sim.step(1); return {n, power: sim.s.power}")
+    check("active pings every 20 s", r["n"] == 2, r)
+    tap("Full sweep"); pg.wait_for_timeout(200); js("for(let i=0;i<20;i++) sim.step(1)")
     az = js("return S.snr().sweep.az"); check("the sweep turns ten degrees a second", 190 <= az <= 215, str(az))
-    js("const sw=S.snr().sweep, b=S.contactsFor('ship').filter(c=>c.id==='ship:t:1')[0].bearing; sw.az=((b-0.5)+360)%360; sw.seen=new Set(); sw.pause=0; sw.t=sim.s.clock; sim.step(1)")
-    check("the sweep pauses on a contact for 2 s", 0 < js("return S.snr().sweep.pause") <= 2)
     js("S.snr().sweep.az=359.5")
     js("for(let i=0;i<12;i++) sim.step(1)")
     check("a finished sweep clears itself", js("return S.snr().sweep") is None)
-    js("sim.s.sweepUntil=0; for(let i=0;i<4;i++) sim.step(1)")   # a full sweep also doubles the sonar range for 30 min: switch that off to test the fade
+    js("sim.setSonarMode('passive'); for(let i=0;i<4;i++) sim.step(1)")   # back to passive: the far contact drops out
     check("the faint contact stays on the list a while, marked as faded", js("const c=S.contactsFor('ship').filter(c=>c.id==='ship:t:1'); return c.length===1&&c[0].lost"))
     js("T.traffic.cand[0].size=3")
     # every listener feeds every display: with the ship's sonar off, a ship only the WSKR hears still shows, as a bearing from the WSKR
@@ -127,14 +130,21 @@ with sync_playwright() as p:
       const far=window.__at(40,0); v.A=far; v.B=far; for(let i=0;i<20;i++) sim.step(1); const mid=on(); const midStale=!!(mid&&mid.stale);
       for(let i=0;i<60;i++) sim.step(1); const gone=!on(); T.traffic.cand=T.traffic.cand.filter(x=>x!==v); return {heard, midStale, gone}""")
     check("chart memory: a contact that drops out stays on the chart, faded, then goes after a minute", r["heard"] and r["midStale"] and r["gone"], r)
-    # the full sweep: a faint contact to the south comes up only when the beam passes 180, and the sweep is over in under a minute
-    r = js("""const s=sim.s; s.at=null; S.setSource('ship'); S.stopSweep(); const A=window.__at(-8,0); const v={id:'t:s',kind:'cargo',faction:'cargo',factionName:'Merchant',stance:'neutral',label:'Skiff',size:0,kt:0,A,B:A,L:1,phase:0,boldness:0,ais:false,bias:0,name:'Faint',mhz:156,reply:0,ident:false,alerted:true,dyn:null,hitAt:-1e9};
-      T.traffic.cand.push(v); for(let i=0;i<2;i++) sim.step(1); const heard=()=>S.contactsFor('ship').some(c=>c.id==='ship:t:s'&&!c.lost);
-      const before=heard(); S.startSweep(); const t0=s.clock; let at90=null, at200=null;
-      for(let i=0;i<120&&S.snr().sweep;i++){ sim.step(1); const az=S.snr().sweep?S.snr().sweep.az:999; if(at90===null&&az>=90&&az<170) at90=heard(); if(at200===null&&az>=200&&az<300) at200=heard(); }
-      const took=s.clock-t0, effectOver=s.clock>=(s.sweepUntil||0); T.traffic.cand=T.traffic.cand.filter(x=>x!==v); return {before,at90,at200,took,effectOver}""")
-    check("full sweep: a faint contact comes up only once the beam passes its bearing", r["before"] is False and r["at90"] is False and r["at200"] is True, r)
-    check("full sweep takes about 36 s (10 degrees a second) plus short pauses, then its effect ends", 36 <= r["took"] <= 60 and r["effectOver"], r)
+    # the full sweep is a mapping sweep (owner, 2026-11-27): a big power draw, the chart filled in to 12 nm, done in about 36 s; it does not help hearing
+    r = js("""const s=sim.s; s.at=null; S.setSource('ship'); S.stopSweep(); sim.setSonarMode('passive'); sim.step(1); const p0=s.power, f0=sim.fineNm();
+      S.startSweep(); sim.step(1); const p1=s.power, f1=sim.fineNm(); const t0=s.clock; for(let i=0;i<120&&S.snr().sweep;i++) sim.step(1);
+      const took=s.clock-t0; for(let i=0;i<10;i++) sim.step(1); return {p0,p1,f0,f1,took,f2:sim.fineNm()}""")
+    check("full sweep: a big power draw while it runs", r["p1"] - r["p0"] >= 25, r)
+    check("full sweep: the chart fills in to 12 nm (4 nm normally), then back", r["f0"] == 4 and r["f1"] == 12 and r["f2"] == 4, r)
+    check("full sweep takes about 36 s", 34 <= r["took"] <= 40, r)
+    # active costs: a poacher inside 24 nm runs, a hostile inside 36 nm comes for us
+    r = js("""const s=sim.s, at=window.__at; const mk=(id,kind,n)=>({id,kind,faction:'x',factionName:'X',stance:'hostile',label:kind==='poacher'?'Poacher':'Raider',size:2,kt:12,A:at(n,0),B:at(n,0),L:1,phase:0,boldness:kind==='poacher'?1:0,ais:false,bias:0,name:id,mhz:156,reply:0,ident:false,alerted:true,dyn:null,hitAt:-1e9});
+      const P=mk('t:p','poacher',-15), H=mk('t:r','raider',-20); sim.step(1); T.traffic.cand.push(P,H);   // south, at sea (north is Cape Cod)
+      const d=(v)=>{ const p=T.posAt(v,s.clock); const dy=(p.lat-s.lat)*60, dx=(p.lon-s.lon)*60*Math.cos(s.lat*Math.PI/180); return Math.hypot(dx,dy); };
+      const p0=d(P), h0=d(H); sim.setSonarMode('active'); for(let i=0;i<120;i++) sim.step(1); const out={spooked:!!P.spooked, drawn:!!H.drawn, p0, p1:d(P), h0, h1:d(H)};
+      sim.setSonarMode('passive'); T.traffic.cand=T.traffic.cand.filter(x=>x!==P&&x!==H); return out""")
+    check("active ping: a poacher hears it and runs (bold or not)", r["spooked"] and r["p1"] > r["p0"], r)
+    check("active ping: a hostile hears it and comes for us", r["drawn"] and r["h1"] < r["h0"], r)
     pg.screenshot(path=R + "/tools/shots/sonar_station.png")
     # DSP puts it on the main screen
     pg.locator('.hs[aria-label="DSP"]').dispatch_event("click"); pg.wait_for_timeout(300)   # the round trackpad on the desk

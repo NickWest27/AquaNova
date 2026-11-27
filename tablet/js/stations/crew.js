@@ -91,7 +91,7 @@ const ORDERS = {
   'Close the bulkheads': () => { E.setBulkhead('fwd', false); E.setBulkhead('aft', false); return 'Bulkheads closed fore and aft, Captain. Any flooding is contained.'; },
   'Open the bulkheads': () => { E.setBulkhead('fwd', true); E.setBulkhead('aft', true); return 'Bulkheads open, Captain.'; },
   'Emergency dive': () => { if (docked()) return 'We are docked, Captain.'; return dive(500, 'Diving!'); },
-  'Full sensor sweep': () => { setSource('ship'); return startSweep() ? 'Full sweep, Captain. It takes about forty seconds to go round; contacts come up as the beam passes them.' : 'Sonar cannot sweep right now, Captain.'; },
+  'Full sensor sweep': () => { setSource('ship'); return startSweep() ? 'Full mapping sweep, Captain. About forty seconds to go round, and it draws a lot of power. The chart fills in out to twelve miles.' : 'We cannot sweep right now, Captain.'; },
   'Launch all WSKRs': () => {
     const r = launchAllWskrs();
     if (r.ok) return `Launching ${r.count === 1 ? 'the last WSKR' : `all ${r.count} WSKRs`}, aye. The bay takes a minute each, so they go out one after another.`;
@@ -115,8 +115,9 @@ const ORDERS = {
     if (r.why === 'busy') return 'A transmission is already under way, Captain.';
     return `No ${r.L.label} link, Captain: ${r.st.status.toLowerCase()}. The antenna must be near the surface. Raise it, or pick another source on the Comms controls.`;
   },
-  'Go passive': () => { sim.s.sonar = false; sim.touch(); return 'Active sonar off, Captain. We are listening only.'; },
-  'Go active': () => { sim.s.sonar = true; sim.touch(); return 'Active sonar on, Captain.'; },
+  'Go passive': () => { sim.setSonarMode('passive'); return 'Active sonar off, Captain. Passive, listening only.'; },
+  'Go active': () => { sim.setSonarMode('active'); return 'Going active, Captain. We will hear a long way out, but everyone out there will hear us too. Poachers will run, and anything hostile will know where we are.'; },
+  'Sonar off': () => { sim.setSonarMode('off'); return 'Sonar off, Captain. We are deaf past a mile, and we will lose our contacts.'; },
   'Override the bay speed limit': () => (setBayOverride(true) ? 'Aye, Captain. The bay speed limit is overridden until the doors close.' : 'The outer doors are closed, Captain. No limit to override.'),
   'Restore the bay speed limit': () => (setBayOverride(false) ? 'Bay speed limit restored, Captain.' : 'The outer doors are closed, Captain.'),
   'Crew health report': () => 'Everyone is fit for duty, Captain. A couple of stiff necks from the bunks, nothing I need to see twice. Morale is good.',
@@ -152,8 +153,8 @@ ORDERS['Report on the Tern'] = () => ternReport();
 const SAY = {
   'Status Report': 'How is the ship, ARIA?', 'XO has the con': 'You have the con.',
   'Engineering status report': 'How is she running, Ryan?', 'Crew health report': "How's the crew?",
-  'Full sensor sweep': 'Give me a full sweep.', 'Launch all WSKRs': 'Launch the WSKRs.', 'Recall all WSKRs': 'Bring the WSKRs home.',
-  'Go passive': 'Go passive. Active sonar off.', 'Go active': 'Go active.', 'Set up a relay': 'Put a WSKR up as a relay.', 'Stand down the relay': 'Bring the relay down.',
+  'Full sensor sweep': 'Give me a full mapping sweep.', 'Launch all WSKRs': 'Launch the WSKRs.', 'Recall all WSKRs': 'Bring the WSKRs home.',
+  'Go passive': 'Go passive.', 'Go active': 'Go active.', 'Sonar off': 'Switch the sonar off.', 'Set up a relay': 'Put a WSKR up as a relay.', 'Stand down the relay': 'Bring the relay down.',
   'Transmit a report': 'Send our report to OERA.', 'Order the Tern to': 'Tell the Tern to …', 'Call back the Tern': 'Bring the Tern home.', 'Report on the Tern': "How's the Tern doing?",
   'Launch the Tern to': 'Get the Tern ready to go to …', 'Request departure clearance': 'Ask the harbour for departure clearance.',
   'Make your depth': 'Take us to …', 'Make your heading': 'Steer …', 'Make your speed': 'Make our speed …', 'Make periscope depth': 'Periscope depth.',
@@ -189,7 +190,7 @@ const TREE = {
     F('Ship', O('Status report')),
   ],
   sensors: () => [
-    F('Sonar', O('Full sensor sweep', underway), O('Go passive', () => !!sim.s.sonar), O('Go active', () => !sim.s.sonar)),
+    F('Sonar', O('Full sensor sweep', underway), O('Go passive', () => !sim.s.sonar || !!sim.s.sonarActive), O('Go active', () => !sim.s.sonarActive), O('Sonar off', () => !!sim.s.sonar)),
     F('WSKRs', O('Launch all WSKRs', underway), O('Recall all WSKRs', () => sim.s.wskrs.length > 0), O('Set up a relay', () => underway() && !relayOut()), O('Stand down the relay', relayOut)),
     F('Ship', O('Status report')),
   ],

@@ -212,7 +212,7 @@ const REPORT = {
   helm: (c, s) => [c.docked ? 'Helm report, Captain. We are docked and the lines are secure.' : `Helm report, Captain. Heading ${String(c.hdg).padStart(3, '0')}, ${c.kt} knots, ${c.depth} metres${c.under != null ? `, ${c.under} metres under the keel` : ''}.`,
     `Throttle is at ${Math.round(s.throttle * 100)} percent. Ordered depth is ${Math.round(s.targetDepth)} metres.`, courseLine(s, c),
     s.hug ? 'We are following the sea floor.' : null, s.avoiding ? 'I am holding off the floor ahead of us, above your ordered depth.' : null, c.cruise ? 'Super cruise is engaged.' : null],
-  sensors: (c, s) => [`Sensors report, Captain. ${s.sonar ? (s.sweepUntil > s.clock ? 'Active sweep is running.' : 'Sonar is active.') : 'We are listening passively.'}`,
+  sensors: (c, s) => [`Sensors report, Captain. ${!s.sonar ? 'The sonar is off. We are deaf past a mile.' : s.sonarActive ? 'We are pinging active.' : 'We are listening passively.'}${s.snr && s.snr.sweep ? ' A mapping sweep is running.' : ''}`,
     c.floor != null ? `The floor is ${c.floor} metres below the surface here.` : null,
     `${c.wskrs ? (c.wskrs === 1 ? 'One WSKR is' : c.wskrs + ' WSKRs are') + ' out: ' + (s.wskrs || []).map((w) => wskrName(w)).join(', ') + '.' : 'No WSKRs are out.'}`,
     c.rov ? 'Remora is on the tether.' : null, `${(s.pois || []).filter((p) => toward(s, p).nm <= 4).length} known contacts within four miles.`],
@@ -230,7 +230,7 @@ const REPORT = {
 const fullReport = (c, s) => [`Status report, ${'{captain}'}. ${c.docked ? `We are docked${c.place ? ' at ' + c.place : ''} on shore power.` : `We are ${c.place ? 'at ' + c.place + ', ' : ''}heading ${String(c.hdg).padStart(3, '0')} at ${c.kt} knots, ${c.depth} metres down${c.under != null ? ` with ${c.under} under the keel` : ''}.`}`,
   courseLine(s, c), `Battery ${c.bat} percent, oxygen ${c.o2} percent, hull ${c.hull} percent. Power draw is ${Math.round(s.power || 0)} kilowatts.`,
   [c.cruise ? 'Super cruise is on.' : null, s.hug ? 'Helm is following the floor.' : null, s.avoiding ? 'Helm is holding us off the floor ahead.' : null].filter(Boolean).join(' ') || null,
-  `Sonar is ${s.sonar ? 'active' : 'passive'}. ${c.wskrs ? (c.wskrs === 1 ? 'One WSKR is' : c.wskrs + ' WSKRs are') + ' out.' : 'No WSKRs are out.'}${c.rov ? ' Remora is out.' : ''}`,
+  `Sonar is ${!s.sonar ? 'off' : s.sonarActive ? 'active' : 'passive'}. ${c.wskrs ? (c.wskrs === 1 ? 'One WSKR is' : c.wskrs + ' WSKRs are') + ' out.' : 'No WSKRs are out.'}${c.rov ? ' Remora is out.' : ''}`,
   ['LASER', 'SAT-COM', 'HF'].map((k) => c.links[k] && `${k} ${c.links[k].up ? 'up, ' + c.links[k].dB + ' dB' : c.links[k].fading ? 'fading' : 'no carrier'}`).filter(Boolean).join(', ').replace(/^/, 'Links: ') + '.',
   c.mail ? `${c.mail === 1 ? 'One message is' : c.mail + ' messages are'} waiting at Comms.` : 'No mail waiting.',
   c.objective ? `Current objective: ${c.objective}` : null, 'Crew are healthy and all stations report ready.'].filter(Boolean).join(' ');

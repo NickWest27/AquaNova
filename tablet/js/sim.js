@@ -35,7 +35,7 @@ export const sim = {
     lat: 41.5223, lon: -70.6709, heading: 0, targetHeading: 0,
     throttle: 0, speed: 0, depth: 0, targetDepth: 0,
     battery: 100, oxygen: 100, hull: 100, co2: 0.04, temp: 4.1, power: 0,
-    ballast: 100, comms: true, sonar: true, lights: true, pois: [], wpt: null, fixes: [], wpN: 0, route: [], routeSnapped: false, _routeFor: null, at: null,
+    ballast: 100, comms: true, sonar: true, sonarActive: false, pingAt: -1e9, activeSince: 0, lights: true, pois: [], wpt: null, fixes: [], wpN: 0, route: [], routeSnapped: false, _routeFor: null, at: null,
     clock: 6 * 3600, docked: false, damage: 0, floor: null, wskrs: [], cruise: false, hug: false, wskrForm: 'loose', wskrAuto: true, wskrChased: [], wskrDepth: 'auto', sweepUntil: 0,     // clock = game seconds since Day 1 00:00
   },
   listeners: new Set(),
@@ -143,8 +143,23 @@ const hugHold = () => {
   }
   return { t: Math.max(0, t), g };
 };
-/** Radius (nm) the ship charts in fine detail: sonar on 4, off 0.8 (echo sounder only), active sweep 8. */
-sim.fineNm = (s = sim.s) => (s.clock < (s.sweepUntil || 0) ? 8 : s.sonar ? 4 : 0.8);
+/** Radius (nm) the ship charts in fine detail: 4 nm, from the mapping sensors (not the sonar: owner, 2026-11-27), 12 during a full sweep. */
+sim.fineNm = (s = sim.s) => (s.clock < (s.sweepUntil || 0) ? 12 : 4);
+// Sonar modes (owner, 2026-11-27): OFF (s.sonar false: about 1 nm, contacts are lost), PASSIVE (listening: the normal setting) and ACTIVE.
+// Active pings every ACTIVE_PING_S. Each ping is a ripple spreading out at RIPPLE_NMPS; once the first ripple has passed a vessel, it is heard
+// ACTIVE_GAIN times further. The cost: everyone hears the ping. Poachers run, hostiles come to look (traffic.js, on 'sonar-ping').
+export const ACTIVE_PING_S = 20, RIPPLE_NMPS = 1.5, ACTIVE_GAIN = 2;
+export const sonarMode = (s = sim.s) => (!s.sonar ? 'off' : s.sonarActive ? 'active' : 'passive');
+sim.setSonarMode = (mode) => {
+  const s = sim.s;
+  if (mode === 'off') { s.sonar = false; s.sonarActive = false; }
+  else { s.sonar = true; const go = mode === 'active'; if (go && !s.sonarActive) { s.activeSince = s.clock; s.pingAt = s.clock; sim.emit('sonar-ping', {}); } s.sonarActive = go; }
+  sim.touch(); return sonarMode(s);
+};
+/** How far the current ping has spread (nm), or null when not active. */
+sim.rippleNm = (s = sim.s) => (s.sonar && s.sonarActive ? (s.clock - s.pingAt) * RIPPLE_NMPS : null);
+/** Out to here the active sonar is working (the first ripple's reach since going active). */
+sim.activeReach = (s = sim.s) => (s.sonar && s.sonarActive ? (s.clock - (s.activeSince || 0)) * RIPPLE_NMPS : 0);
 export const WSKR_CHART_NM = 3;
 /** Record what the ship and the WSKRs can see as charted (the fog of war lifts for good). */
 function chartSurroundings() {
@@ -485,6 +500,10 @@ sim.etaHours = (maxHours = 96) => {
 };
 
 sim.hooks = [];   // extra per-step work added by other modules (the Science ROV)
+sim.hooks.push(() => {   // active sonar pings on a clock; with the sonar off it stops
+  const s = sim.s; if (!s.sonar) { s.sonarActive = false; return; }
+  if (s.sonarActive && s.clock - s.pingAt >= ACTIVE_PING_S) { s.pingAt = s.clock; sim.emit('sonar-ping', {}); }
+});
 const stepOnce = (dt) => {
   const s = sim.s;
   s.clock += dt * TIMESCALE;
@@ -577,7 +596,7 @@ const stepOnce = (dt) => {
   for (const h of sim.hooks) h(dt);
   chartSurroundings();
   // systems
-  s.power = Math.min(100, 8 + (Math.min(s.speed, MAX_KT) / MAX_KT) * 70 + (s.lights ? 5 : 0) + (s.sonar ? 4 : 0) + Math.max(0, s.speed - MAX_KT) / (SUPER_KT - MAX_KT) * 18);
+  s.power = Math.min(100, 8 + (Math.min(s.speed, MAX_KT) / MAX_KT) * 70 + (s.lights ? 5 : 0) + (s.sonar ? 4 : 0) + (s.sonar && s.sonarActive ? 6 : 0) + (s.snr && s.snr.sweep ? 30 : 0) + Math.max(0, s.speed - MAX_KT) / (SUPER_KT - MAX_KT) * 18);
   if (s.docked) { // shore power and air: about 20% battery and 30% oxygen per game hour
     const gh = (dt * TIMESCALE) / 3600;
     s.battery = clamp(s.battery + 20 * gh, 0, 100); s.oxygen = clamp(s.oxygen + 30 * gh, 0, 100);

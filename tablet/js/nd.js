@@ -136,6 +136,8 @@ export function createND(wrap, { onPick, stage = false, units = 1, contours = fa
     ctx.textAlign = 'center'; ctx.fillStyle = '#64ffda'; ctx.font = '800 18px system-ui';
     if (trackUp) { const hh = (c.heading * Math.PI) / 180; ctx.fillText('N', cx - (R + 12) * Math.sin(hh), cy - (R + 12) * Math.cos(hh) + 6); } else ctx.fillText('N', cx, cy - R - 6);
     }
+    { const rip = sim.rippleNm(s); if (rip != null && rip < nd.range * 1.6) {   // active sonar: the ping's ripple spreading out from the ship
+      const rr = (rip / nd.range) * R; ctx.save(); ctx.globalAlpha = Math.max(0, 1 - rip / (nd.range * 1.6)); ctx.strokeStyle = '#9ff3ff'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(shipPt.x, shipPt.y, rr, 0, 6.2832); ctx.stroke(); ctx.restore(); } }
     if (trackUp) { ctx.fillStyle = '#8fa6bd'; ctx.font = '700 14px ui-monospace, Menlo, monospace'; ctx.textAlign = 'left'; ctx.fillText('TRACK UP', 10, 20); }
     // The Route: a line through the fixes (amber once plotted, with the turn points the helm will steer through; a dim straight preview until then),
     // a cross and name for each waypoint, and a small square for each turn point.

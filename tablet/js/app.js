@@ -427,7 +427,7 @@ async function boot() {
       else if (type === 'cruise-on') play('powerUp');
       else if (type === 'cruise-spooled') play('cruiseEngage');
       else if (type === 'eng-blow') play('ballastBlow');
-      else if (type === 'sonar-sweep') play('sonarPing');
+      else if (type === 'sonar-ping' && Date.now() - (sfxAt.ping || 0) > 5000) { sfxAt.ping = Date.now(); play('sonarPing'); }   // active sonar pings (a full sweep is a quiet mapping sweep now)
       // more of the library wired in (owner, 2026-11-27)
       else if (type === 'cruise-off') play('powerDown');
       else if (type === 'depth-cap') play('depthAlarm');

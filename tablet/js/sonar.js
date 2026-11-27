@@ -99,9 +99,9 @@ export function toggleInvestigate() {
 
 // ---- the sweep and the scan ----
 export function sweeping() { return !!snr().sweep; }
-// A full sweep turns once round (360 / SWEEP_DPS = 36 s, plus a short pause per contact). While it runs the chart is drawn finer round the ship
-// (sim.fineNm, via sweepUntil) and each bearing hears twice as far once the beam has passed it (traffic.snrGain).
-export function startSweep() { const st = snr(), src = source(); if (!src.ok) return false; st.sweep = { src: src.id, az: 0, t: sim.s.clock, pause: 0, seen: new Set(), found: 0 }; sim.s.sonar = true; sim.s.sweepUntil = sim.s.clock + 360 / SWEEP_DPS + 60; sim.emit('sonar-sweep', {}); sim.touch(); return true; }
+// A full sweep (owner, 2026-11-27: a mapping sweep with the ship's survey sensors, not the sonar) turns once round (360 / SWEEP_DPS = 36 s).
+// While it runs it draws a lot of power (sim.js) and the chart is filled in out to 12 nm (sim.fineNm, via sweepUntil). Hearing ships is the sonar's job.
+export function startSweep() { const st = snr(), src = source(); if (!src.ok) return false; st.sweep = { src: src.id, az: 0, t: sim.s.clock, pause: 0, seen: new Set(), found: 0 }; sim.s.sweepUntil = sim.s.clock + 360 / SWEEP_DPS + 60; sim.emit('sonar-sweep', {}); sim.touch(); return true; }
 export function stopSweep() { snr().sweep = null; sim.s.sweepUntil = sim.s.clock; sim.touch(); }
 export function canScan() { const c = selected(); return !!c && !c.lost && !snr().scan; }
 export function startScan() {
@@ -163,12 +163,10 @@ function step() {
   let sw = st.sweep;
   if (sw) {
     let t = now - sw.t; sw.t = now;
-    const mine = contactsFor(sw.src).filter((c) => !c.lost && !c.remote);   // the ones the sweeping listener can place a line on
-    const done = () => { tell('sensors', sw.found ? `Full sweep complete, Captain. ${sw.found} contact${sw.found === 1 ? '' : 's'}.` : 'Full sweep complete, Captain. Nothing out there.'); st.sweep = sw = null; s.sweepUntil = now; };
+    const done = () => { tell('sensors', 'Full sweep complete, Captain. The chart is filled in to twelve miles round us.'); st.sweep = sw = null; s.sweepUntil = now + 5; };
     while (t > 0 && sw) {
       if (sw.pause > 0) { const u = Math.min(t, sw.pause); sw.pause -= u; t -= u; if (sw.pause <= 0 && sw.az >= 360) done(); continue; }
-      const a = Math.min(t, 1); sw.az += a * SWEEP_DPS; t -= a;   // below: anything on a bearing the beam has passed, including one it has just brought up
-      for (const c of mine) if (!sw.seen.has(c.id) && inArc(c.bearing, 0, sw.az)) { sw.seen.add(c.id); sw.found++; sw.pause = SWEEP_PAUSE_S; break; }
+      const a = Math.min(t, 1); sw.az += a * SWEEP_DPS; t -= a;
       if (sw.az >= 360 && sw.pause <= 0) done();
     }
   }

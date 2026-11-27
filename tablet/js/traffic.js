@@ -5,7 +5,7 @@
 //  - Only vessels inside the active bubble (10 nm, at most 12) are looked at each frame. Collision is tested inside 0.05 nm.
 //  - Outside the Area of Operations (no chart) there is no traffic: a vessel is hidden wherever the chart has no data.
 //  - Hostile vessels carry a boldness from 0 (runs) to 1 (fights). Inside 6 nm the bold ones close in and the timid ones run.
-import { sim, toward } from './sim.js';
+import { sim, toward, ACTIVE_GAIN } from './sim.js';
 import { seafloor } from './seafloor.js';
 import { gameState } from './persist.js';
 import { say } from './notify.js';
@@ -128,10 +128,10 @@ export function triangulate(ears) {
 /** Sensitivity multiplier of one listener (the ship, or a WSKR by number) for a contact on true bearing brg: 2 once its full sweep's beam has passed
  *  that bearing (the sweep turns from 000 at 10 degrees a second), and 2 more while a scan is on the contact. */
 export function snrGain(src, scanUntil = 0, brg = null) {
-  const s = sim.s, w = s.snr && s.snr.sweep, passed = w && w.src === src && (brg == null || w.az >= 360 || ((brg % 360) + 360) % 360 <= w.az);
-  return (passed ? 2 : 1) * (scanUntil > s.clock ? 2 : 1);
+  // (the full sweep is a mapping sweep now, owner 2026-11-27: it no longer helps hearing; active sonar does, in step())
+  return scanUntil > sim.s.clock ? 2 : 1;
 }
-/** How far the ship's passive sonar hears a vessel of loudness 1: sonar powered 12 nm, off 1 nm. (A full sweep doubles it bearing by bearing: snrGain.) */
+/** How far the ship's passive sonar hears a vessel of loudness 1: sonar powered 12 nm, off 1 nm. (Active sonar doubles it once its first ripple has passed: step().) */
 export const sonarNm = (s) => (s.sonar ? traffic.cfg.sensing.sonar_nm : 1);
 
 // ---- detection chance and tracks (docs/CONTACT_TRACKING.md) ----
@@ -182,9 +182,9 @@ export function step() {
     if (traffic.sunk.has(v.id)) continue;
     let p = posAt(v, now), d = dist(s, p);
     if (v.dyn) {   // a reacting vessel is moved a step at a time; far away it goes back to its leg
-      if (d > 14) { v.dyn = null; p = posAt(v, now); d = dist(s, p); }
-      else if (dt > 0 && dt < 120) {
-        const toS = Math.atan2((s.lon - p.lon) * SK, s.lat - p.lat), a = v.boldness >= 0.5 ? toS : toS + Math.PI, nm = (v.kt * 1.2 * dt) / 3600;
+      if (d > (v.drawn ? 45 : v.spooked ? 30 : 14)) { v.dyn = null; v.drawn = v.spooked = false; p = posAt(v, now); d = dist(s, p); }
+      else if (dt > 0 && dt < 120) {   // a poacher that heard our ping runs; a hostile that heard it comes for us; otherwise boldness decides
+        const toS = Math.atan2((s.lon - p.lon) * SK, s.lat - p.lat), a = v.spooked ? toS + Math.PI : v.drawn ? toS : v.boldness >= 0.5 ? toS : toS + Math.PI, nm = (v.kt * (v.spooked || v.drawn ? 1.5 : 1.2) * dt) / 3600;
         const np = { lat: p.lat + toLat(Math.cos(a) * nm), lon: p.lon + toLonS(Math.sin(a) * nm) }, wd = seafloor.depthAt(np.lat, np.lon);
         if (wd != null && wd >= 6) v.dyn = { ...np, hdg: ((a * 180) / Math.PI + 360) % 360 }; else v.dyn = { lat: p.lat, lon: p.lon, hdg: ((a * 180) / Math.PI + 360) % 360 };   // a ship does not sail onto land
         p = v.dyn; d = dist(s, p);
@@ -210,7 +210,8 @@ export function step() {
     const bearingFrom = (o, k, src) => { const dy = (p.lat - o.lat) * NM, dx = (p.lon - o.lon) * NM * SK; return { src, from: { lat: o.lat, lon: o.lon }, brg: ((Math.atan2(dx, dy) + noise(k)) * 180 / Math.PI + 360) % 360, nm: Math.hypot(dx, dy) }; };
     const brgOf = (o) => ((Math.atan2((p.lon - o.lon) * SK, p.lat - o.lat) * 180) / Math.PI + 360) % 360;
     const gain = (src, o) => snrGain(src, v.scanUntil, brgOf(o));   // the SNR page: a full sweep (once its beam has passed the bearing) or a scan doubles the sensitivity
-    if (hears(v, 'ship', d, sonarNm(s) * loud * gain('ship', s) * flowFactor(s.speed), now)) ears.push(bearingFrom(s, 0, 'ship'));
+    const act = s.sonar && s.sonarActive && d <= sim.activeReach(s) ? ACTIVE_GAIN : 1;   // active sonar: once the first ripple has passed it
+    if (hears(v, 'ship', d, sonarNm(s) * loud * gain('ship', s) * act * flowFactor(s.speed), now)) ears.push(bearingFrom(s, 0, 'ship'));
     obs.forEach((w, i) => { if (hears(v, w.n, dist(w, p), sn.wskr_sonar_nm * loud * gain(w.n, w) * (w.super ? sn.flow_min : 1), now)) ears.push(bearingFrom(w, i + 1, w.n)); });
     // 3. a fix: two bearings from different places that cross at a good angle
     const fix = ais ? null : triangulate(ears);
@@ -279,4 +280,22 @@ export function replyOf(v) {
   return list[v.reply % list.length].replace('{name}', name);
 }
 sim.afterStep = sim.afterStep || []; sim.afterStep.push(step);
+
+// Everyone hears an active ping (owner, 2026-11-27). Poachers inside PING_SPOOK_NM run from us; other hostiles inside PING_HEARD_NM come to look.
+// Alex says so when he can see it happen (the vessel is on our sonar and identified).
+export const PING_SPOOK_NM = 24, PING_HEARD_NM = 36;
+sim.on((type) => {
+  if (type !== 'sonar-ping' || !traffic.ready) return;
+  const s = sim.s, now = s.clock;
+  for (const v of traffic.cand.concat(traffic.scripted || [], traffic.escorts || [])) {
+    if (v.stance !== 'hostile' || traffic.sunk.has(v.id)) continue;
+    const p = v.dyn || posAt(v, now), d = dist(s, p), poacher = v.kind === 'poacher';
+    if (poacher ? d > PING_SPOOK_NM : d > PING_HEARD_NM) continue;
+    if (!v.dyn) v.dyn = { lat: p.lat, lon: p.lon, hdg: p.hdg };
+    const was = poacher ? v.spooked : v.drawn; if (poacher) v.spooked = true; else v.drawn = true;
+    const a = traffic.active.find((x) => x.v === v);
+    if (!was && a && a.shown && v.ident) { const bb = String(Math.round(a.brg)).padStart(3, '0');
+      say('sensors', poacher ? `The ${v.label.toLowerCase()} bearing ${bb} heard our ping, Captain. She is running.` : `Captain, the ${v.label.toLowerCase()} bearing ${bb} heard our ping. She has turned toward us.`, poacher ? '' : 'mission', { notice: poacher ? 'POACHER RUNNING' : 'HOSTILE CLOSING' }); }
+  }
+});
 sim.traffic = traffic;

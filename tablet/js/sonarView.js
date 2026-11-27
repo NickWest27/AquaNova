@@ -4,7 +4,7 @@
 //   Right half: the contacts by range (or, with no range, by age). A tap on a symbol, a line or a row opens the info box in its place.
 //   The same page is the main page of the Sensors station (mountSnr below).
 //   Centre controls: Source (a list: the ship or a WSKR), Full sweep, and with a contact picked, Scan and Clear.   Right desk: range - and +, DSP.
-import { sim, toward } from './sim.js';
+import { sim, toward, sonarMode } from './sim.js';
 import { el } from './util.js';
 import { scanned, fileScan } from './findings.js';
 import { surveySite, surveying, startSurvey, stopSurvey, SURVEY_KT } from './survey.js';
@@ -76,7 +76,10 @@ export function createSnrView({ bbtn }) {
         if (major) ctx.fillText(b === 0 ? 'N' : pad3(b), cx + Math.sin(a) * (R + 13 * u), cy - Math.cos(a) * (R + 13 * u));
       }
       ctx.textBaseline = 'alphabetic';
-      // the sweep: a line and a fading wedge behind it
+      // active sonar: the ping's ripple spreading out from the ship (owner, 2026-11-27: like a ripple in a pond)
+      const rip = src.id === 'ship' ? sim.rippleNm() : null;
+      if (rip != null && rip < range * 1.6) { const rr = (rip / range) * R; ctx.save(); ctx.globalAlpha = Math.max(0, 1 - rip / (range * 1.6)); ctx.strokeStyle = '#9ff3ff'; ctx.lineWidth = 3 * u; ctx.beginPath(); ctx.arc(cx, cy, rr, 0, 6.2832); ctx.stroke(); ctx.globalAlpha *= 0.35; ctx.lineWidth = 10 * u; ctx.beginPath(); ctx.arc(cx, cy, Math.max(0, rr - 8 * u), 0, 6.2832); ctx.stroke(); ctx.restore(); }
+      // the full sweep (mapping): a line and a fading wedge behind it
       const sw = snr().sweep;
       if (sw && sw.src === src.id) {
         const a = (sw.az * Math.PI) / 180 - hd - Math.PI / 2, g = ctx.createConicGradient ? ctx.createConicGradient(a - 0.6, cx, cy) : null;
@@ -123,9 +126,9 @@ export function createSnrView({ bbtn }) {
     function update() {
       const src = source(), st = snr(), cons = contactsFor(src.id), sel = selected(), sw = st.sweep;
       draw(src, cons);
-      set(head, `PASSIVE SONAR · ${src.name}${src.ok ? '' : ' · NO LINK'}`);
+      set(head, `${{ off: 'SONAR OFF', passive: 'PASSIVE SONAR', active: 'ACTIVE SONAR' }[src.id === 'ship' ? sonarMode() : 'passive']} · ${src.name}${src.ok ? '' : ' · NO LINK'}`);
       const live = cons.filter((c) => !c.lost).length;
-      set(stat, sw ? `FULL SWEEP ${Math.round(sw.az)}°${sw.pause > 0 ? ' · CONTACT' : ''}` : st.scan ? `SCANNING… ${Math.max(0, Math.ceil(st.scan.until - sim.s.clock))} s` : `${live} CONTACT${live === 1 ? '' : 'S'}${cons.length > live ? ` · ${cons.length - live} FADED` : ''}`);
+      set(stat, sw ? `MAPPING SWEEP ${Math.round(sw.az)}°` : st.scan ? `SCANNING… ${Math.max(0, Math.ceil(st.scan.until - sim.s.clock))} s` : `${live} CONTACT${live === 1 ? '' : 'S'}${cons.length > live ? ` · ${cons.length - live} FADED` : ''}`);
       stat.className = 'snr-stat' + (sw || st.scan ? ' act' : '');
       list.hidden = !!sel; info.hidden = !sel;
       if (sel) {
@@ -156,6 +159,7 @@ export function createSnrView({ bbtn }) {
 
   // ---- controls: Source, Full sweep, Scan site, Survey site; for the picked contact Scan, Probe and Clear ----
   const srcB = bbtn('Source', () => { open = !open; side(); });
+  const actB = bbtn('Active', () => { const m = sim.setSonarMode(sonarMode() === 'active' ? 'passive' : 'active'); tell('sensors', m === 'active' ? 'Going active, Captain. We will hear a long way, and everyone out there will hear us.' : 'Active off, Captain. Passive, listening only.'); side(); });   // active sonar (owner, 2026-11-27)
   const sweepB = bbtn('Full sweep', () => { if (sweeping()) stopSweep(); else if (!startSweep()) return; side(); });
   const atSite = () => { const a = sim.s.at; return a && a.type !== 'dock' && !scanned(a) ? a : null; };   // the ship at a site it has not scanned yet
   const siteB = bbtn('Scan site', () => { const a = atSite(); if (a && fileScan(a)) tell('sensors', `Scan filed: ${a.name}`, 'mission'); side(); });
@@ -166,12 +170,13 @@ export function createSnrView({ bbtn }) {
   const clearB = bbtn('Clear', () => { const st = snr(); if (st.sel) select(st.sel); side(); });
   const invB = bbtn('Probe', () => { toggleInvestigate(); side(); sim.touch(); });
   // centre pad: what the sonar does (Source, sweep, site jobs); right pad: what to do with the picked contact (Scan, Investigate, Clear). Five a pad, one row.
-  const r1 = el('div', { class: 'rowN' }, srcB, sweepB, siteB, survB), srcList = el('div', { class: 'snr-srcs' });
+  const r1 = el('div', { class: 'rowN' }, srcB, actB, sweepB, siteB, survB), srcList = el('div', { class: 'snr-srcs' });
   const c = el('div', { class: 'bc' }, r1, srcList);
   let open = false, srcSig = '';
   function side() {
     const st = snr(), sel = selected(), srcs = sources();
     set(rangeTxt, view.range + ' NM');
+    actB.classList.toggle('on', sonarMode() === 'active'); actB.disabled = !sim.s.sonar;
     srcB.classList.toggle('on', open); sweepB.classList.toggle('on', !!st.sweep); sweepB.textContent = st.sweep ? 'Stop sweep' : 'Full sweep'; sweepB.disabled = !source().ok && !st.sweep;
     r1.hidden = open; clearB.disabled = !sel; srcList.hidden = !open; siteB.hidden = !atSite();
     const sv = surveying(); survB.hidden = !sv && !surveySite(); survB.classList.toggle('on', !!sv); survB.textContent = sv ? `Surveying ${Math.max(1, Math.ceil((sv.end - sim.s.clock) / 60))} min` : 'Survey site';
