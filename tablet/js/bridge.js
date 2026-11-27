@@ -42,8 +42,18 @@ export function createBridgeConsole({ top, main, display, center, left, right, o
   // Short crew lines (the reply to a button press) show here as notices; anything longer opens the crew member's dialogue.
   const tPlace = el('div', { class: 'bt-place' }), tPos = el('div', { class: 'bt-pos' });
   top.append(tPlace, tPos);
-  const NOTE_HOLD = 6000; let note = null;
-  document.addEventListener('notice', (e) => { const d = e.detail || {}; if (d.text) note = { text: String(d.text), kind: d.kind || '', at: Date.now() }; });
+  // Notices on the overhead panel (owner, 2026-11-27): one at a time, each held long enough to read (5 s, plus a second for every
+  // 15 characters, at most 12 s); the next waits its turn. A repeat of one already showing or waiting is dropped. At most 6 wait.
+  const readMs = (t) => Math.min(12000, Math.max(5000, 2000 + t.length * 1000 / 15));
+  let note = null; const noteQ = [];
+  const nextNote = () => { note = noteQ.length ? { ...noteQ.shift(), at: Date.now() } : null; };
+  document.addEventListener('notice', (e) => {
+    const d = e.detail || {}; if (!d.text) return;
+    const n = { text: String(d.text), kind: d.kind || '' };
+    if ((note && note.text === n.text) || noteQ.some((q) => q.text === n.text)) return;
+    noteQ.push(n); if (noteQ.length > 6) noteQ.shift();
+    if (!note) nextNote();
+  });
 
   const views = {};
 
@@ -332,10 +342,10 @@ export function createBridgeConsole({ top, main, display, center, left, right, o
   }
   function update() {
     const s = sim.s;
-    if (note && Date.now() - note.at > NOTE_HOLD) note = null;
+    if (note && Date.now() - note.at > readMs(note.text)) nextNote();
     set(tPlace, note ? note.text : s.docked ? 'DOCKED' + (s.at ? ' · ' + s.at.name.toUpperCase() : '') : s.at ? s.at.name.toUpperCase() : s.wpt ? 'EN ROUTE: ' + s.wpt.name.toUpperCase() : 'OPEN WATER');
     const cls = 'bt-place' + (note ? ' note' : '') + (note && note.kind ? ' ' + note.kind : ''); if (tPlace.className !== cls) tPlace.className = cls;   // a notice wraps onto two lines and takes the whole panel
-    set(tPos, `${deg(s.lat, 'N', 'S', 2)}  ${deg(s.lon, 'E', 'W', 3)}  ·  ${gameDateText().slice(0, -3)}  ·  BAT ${Math.round(s.battery)}%`);   // the overhead panel is the bridge's status strip (the screen-edge strip hides here)
+    set(tPos, `${deg(s.lat, 'N', 'S', 2)}  ${deg(s.lon, 'E', 'W', 3)}  ·  ${gameDateText().slice(0, -3)}`);   // the overhead panel is the bridge's status strip (the screen-edge strip hides here)
     big[mainId].update(); if (current !== mainId) small[current].update(); else small[current].update();
     views[current].side();
     const showProf = mainId === 'nav' && !retro; irWrap.hidden = showProf; profBox.hidden = !showProf;
