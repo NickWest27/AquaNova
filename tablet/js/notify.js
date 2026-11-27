@@ -57,7 +57,11 @@ export function say(role, text, kind = '', opts = {}) {
   }
   text = fill(text); if (opts.keep) opts = { ...opts, keep: fill(opts.keep) };
   const now = Date.now(), w = who(role);
-  const keepIt = (kind === 'mission' || kind === 'error') && opts.hold !== false && CREW_ID[role] !== openCrew;   // worth keeping until read, unless they are on the line with us now
+  // Everything a crew member says opens the dialogue with them (owner, 2026-11-27), except the instant reply to a button the Captain just
+  // pressed (tell(), opts.feedback) and routine action ticks (opts.action): those stay a short line at the foot of the screen.
+  // A line marked hold: false (a hint, "Objective complete") is kept only briefly, so it is never shown late.
+  const keepIt = !!CREW_ID[role] && !opts.feedback && !opts.action && CREW_ID[role] !== openCrew;
+  if (keepIt && opts.hold === false && !opts.ttl) opts = { ...opts, ttl: 30 };
   if (CREW_ID[role]) {
     if (!keepIt) logLine(CREW_ID[role], 'crew', text);   // the running notes belong in their communicator too. A kept message is filed when it is read.
   }
@@ -77,4 +81,4 @@ export function say(role, text, kind = '', opts = {}) {
 }
 
 /** A crew member reports on what the Captain just did. Replaces the old pop-up toast. kind 'mission' keeps it until read. */
-export const tell = (role, text, kind = '', opts = {}) => say(role, text, kind === 'mission' ? 'mission' : '', opts);
+export const tell = (role, text, kind = '', opts = {}) => say(role, text, kind === 'mission' ? 'mission' : '', kind === 'mission' ? opts : { feedback: true, ...opts });   // the reply to what the Captain just did: a short line, no dialogue (a 'mission' tell still opens it)

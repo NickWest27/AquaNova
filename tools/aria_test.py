@@ -25,8 +25,13 @@ def main():
         page.goto(base); page.wait_for_function("!document.getElementById('board-btn').disabled", timeout=20000)
         page.tap("#board-btn"); page.wait_for_timeout(900)
         js = lambda code: page.evaluate("(async()=>{const g=(await import('./js/persist.js')).gameState;" + code + "})()")
-        line = lambda: page.inner_text("#console-line")
-        # locked station: ARIA explains in the console line, no toast machinery
+        seen = {"t": ""}
+        def line():   # what the crew said: the line at the foot of the screen (button replies) or what ARIA holds for her dialogue (2026-11-27)
+            held = js("return (await import('./js/notify.js')).takeHeld('executiveOfficer')") or []
+            if held: seen["t"] = "ARIA · Executive Officer: " + " ".join(held)
+            con = page.inner_text("#console-line") or ""
+            return seen["t"] + " | " + con
+        # locked station: ARIA explains (a message that opens her dialogue), no toast machinery
         page.evaluate("window.__aq.open('helm')"); page.wait_for_timeout(400)
         check("ARIA explains a locked station", "ARIA" in line() and "Executive Officer" in line(), line())
         # a hint: the pin is waiting
@@ -39,10 +44,10 @@ def main():
         js("(await import('./js/aria.js')).checkHints(); return 1")
         check("the same hint is not repeated", len(js("return g.getProperty('progress.hintsShown')")) == n)
         # crew report replaces the toast: course plotted is the helm
-        js("const m=await import('./js/notify.js'); m.tell('helm','Course plotted to Mystic Reef.'); return 1"); page.wait_for_timeout(100)
+        seen["t"] = ""; js("const m=await import('./js/notify.js'); m.tell('helm','Course plotted to Mystic Reef.'); return 1"); page.wait_for_timeout(100)
         check("tell() speaks as the crew member", "Marcus Chen" in line() and "Course plotted" in line(), line())
         # a decision
-        js(OFFER); page.wait_for_timeout(300)
+        seen["t"] = ""; js(OFFER); page.wait_for_timeout(300)
         check("decision is pending and ARIA says so", js("return g.getProperty('progress.decisions.pending').length") == 1 and "ARIA" in line() and "Captain" in line() and "{" not in line(), line())
         js("g.updateProperty('progress.got_ped', true); (await import('./js/persist.js')).gameState.updateProperty('tutorial.communicator_opened', true); return 1")
         js("const M=(await import('../game/systems/missionManager.js')).default; M.forceCompleteMission('meetTheCrew'); return 1"); page.wait_for_timeout(300)

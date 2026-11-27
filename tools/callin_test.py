@@ -46,6 +46,13 @@ def main():
         r = js("const H=await import('./js/howto.js'); return ['helm','sensors','engineering','science','executiveOfficer','communications'].map(id=>H.guidesFor(id).some(f=>/Buttons/.test(f.label)||/pages/i.test(f.label)))")
         check("every crew member explains the buttons on their pages (Ask about)", all(r), r)
         check("Marcus lists the NAV page buttons", "Dest:" in js("const H=await import('./js/howto.js'); return H.askGuide('helm','b-nav')"))
+        # an ordinary report (no urgency flag) opens the dialogue too; the reply to a button press does not
+        page.evaluate("document.querySelector('#comm-pop') && !document.querySelector('#comm-pop').hidden && document.querySelector('#comm-pop').click()"); page.wait_for_timeout(300)
+        js("(await import('./js/notify.js')).say('helm', 'We are at Vineyard Ledge, Captain.')"); page.wait_for_timeout(700)
+        check("an ordinary crew report opens the dialogue", page.is_visible("#comm-pop") and "Vineyard Ledge" in page.inner_text("#comm-pop"), page.inner_text("#comm-pop")[:120] if page.is_visible("#comm-pop") else "closed")
+        page.evaluate("document.querySelector('#comm-pop').click()"); page.wait_for_timeout(300)
+        js("(await import('./js/notify.js')).tell('helm', 'Course plotted, Captain.')"); page.wait_for_timeout(700)
+        check("the reply to a button press stays a short line (no dialogue)", not page.is_visible("#comm-pop"))
         check("no page errors", not errors, str(errors[:3]))
         browser.close()
     server.shutdown()
