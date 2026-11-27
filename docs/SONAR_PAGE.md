@@ -1,4 +1,6 @@
-# SNR page: passive sonar (owner spec 2026-11-23, built the same day)
+# SNR page: sonar (owner spec 2026-11-23, built the same day; modes 2026-11-27)
+
+**Sonar modes (owner, 2026-11-27).** OFF (`s.sonar` false: the ship hears about 1 nm, contacts are lost), **PASSIVE** (listening, the normal setting) and **ACTIVE** (`s.sonarActive`): a ping every 20 s, drawn as a ripple spreading out from the ship at 1.5 nm a second (SNR screen and nav charts). Once the first ripple has passed a vessel it is heard twice as far. Everyone hears a ping: poachers inside 24 nm run, other hostiles inside 36 nm turn toward us (traffic.js `PING_SPOOK_NM`, `PING_HEARD_NM`). The **Active** button is on the centre pad; Alex's orders: Go passive, Go active, Sonar off. The **Full sweep** is now a **mapping** sweep with the survey sensors: a big power draw (+30) for about 36 s, the chart filled in to 12 nm; it does not help hearing. Normal mapping is 4 nm whatever the sonar is doing. The notes below are the original spec; where they say the sweep doubles hearing, that is no longer so.
 
 Code: `tablet/js/sonar.js` (model, sweep, scan, investigate), `tablet/js/sonarView.js` (the page, and `mountSnr` for the Sensors station), listening in `traffic.js` (`triangulate`, `snrGain`, `sonarNm`), WSKR trailing in `sim.js` (`sim.trailWskr`). Test: `tools/sonar_test.py`.
 
