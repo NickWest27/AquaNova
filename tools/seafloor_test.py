@@ -53,7 +53,7 @@ def main():
         # nav map with contours at the canyon
         js("const s=sim.s; s.docked=false; s.damage=0; s.lat=39.45; s.lon=-72.25; s.depth=100; s.targetDepth=100; s.speed=0; s.throttle=0; s.heading=0; s.targetHeading=0")
         page.evaluate("window.__aq.scene('bridge')"); page.wait_for_timeout(1500)
-        page.locator('.bc:visible .bbtn:text-is("+")').tap(); page.wait_for_timeout(800)
+        page.locator('.hs[aria-label="RANGE +"]').dispatch_event("click"); page.wait_for_timeout(800)   # the yellow desk key
         page.screenshot(path=os.path.join(ROOT, "tools", "shots", "seafloor_nav.png"))
         check("fine tile loaded near the ship", js("return [...sf.tiles.values()].some(Boolean)"))
         # fog of war: charted areas stay charted

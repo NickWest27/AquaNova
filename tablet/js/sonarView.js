@@ -19,6 +19,8 @@ const view = { range: 8 };   // the master range: shared by the large and the me
 const hooks = [];
 /** Set the range from outside (NAV zoomed). */
 export const setSnrRange = (r) => { view.range = r; };
+/** The SNR range now (nm). */
+export const snrRange = () => view.range;
 /** Call f(range) when the SNR range buttons change the range. */
 export const onSnrRange = (f) => hooks.push(f);
 const ageText = (s) => (s < 90 ? `${Math.round(s)} s` : `${Math.floor(s / 60)} min`);
@@ -152,7 +154,7 @@ export function createSnrView({ bbtn }) {
     copies.push(out); return out;
   }
 
-  // ---- centre controls: Source, Full sweep; with a contact picked, Scan, Investigate and Clear ----
+  // ---- controls: Source, Full sweep, Scan site, Survey site; for the picked contact Scan, Probe and Clear ----
   const srcB = bbtn('Source', () => { open = !open; side(); });
   const sweepB = bbtn('Full sweep', () => { if (sweeping()) stopSweep(); else if (!startSweep()) return; side(); });
   const atSite = () => { const a = sim.s.at; return a && a.type !== 'dock' && !scanned(a) ? a : null; };   // the ship at a site it has not scanned yet
@@ -162,25 +164,27 @@ export function createSnrView({ bbtn }) {
     const x = startSurvey(); tell('sensors', x.ok ? `Surveying ${surveySite().name}, Captain. Thirty minutes. Hold station.` : x.why === 'fast' ? `Slow to ${SURVEY_KT} knots or less to survey` : 'Bring the ship to a site first', x.ok ? 'mission' : 'error'); side(); });
   const scanB = bbtn('Scan', () => { startScan(); side(); });
   const clearB = bbtn('Clear', () => { const st = snr(); if (st.sel) select(st.sel); side(); });
-  const invB = bbtn('Investigate', () => { toggleInvestigate(); side(); sim.touch(); });
-  const r1 = el('div', { class: 'rowN' }, srcB, sweepB, siteB, survB), r2 = el('div', { class: 'rowN' }, scanB, invB, clearB), srcList = el('div', { class: 'snr-srcs' });
-  const c = el('div', { class: 'bc' }, r1, r2, srcList);
+  const invB = bbtn('Probe', () => { toggleInvestigate(); side(); sim.touch(); });
+  // centre pad: what the sonar does (Source, sweep, site jobs); right pad: what to do with the picked contact (Scan, Investigate, Clear). Five a pad, one row.
+  const r1 = el('div', { class: 'rowN' }, srcB, sweepB, siteB, survB), srcList = el('div', { class: 'snr-srcs' });
+  const c = el('div', { class: 'bc' }, r1, srcList);
   let open = false, srcSig = '';
   function side() {
     const st = snr(), sel = selected(), srcs = sources();
     set(rangeTxt, view.range + ' NM');
     srcB.classList.toggle('on', open); sweepB.classList.toggle('on', !!st.sweep); sweepB.textContent = st.sweep ? 'Stop sweep' : 'Full sweep'; sweepB.disabled = !source().ok && !st.sweep;
-    r2.hidden = !sel || open; r1.hidden = open; srcList.hidden = !open; siteB.hidden = !atSite();
+    r1.hidden = open; clearB.disabled = !sel; srcList.hidden = !open; siteB.hidden = !atSite();
     const sv = surveying(); survB.hidden = !sv && !surveySite(); survB.classList.toggle('on', !!sv); survB.textContent = sv ? `Surveying ${Math.max(1, Math.ceil((sv.end - sim.s.clock) / 60))} min` : 'Survey site';
     scanB.disabled = !canScan(); scanB.textContent = st.scan ? 'Scanning' : 'Scan'; scanB.classList.toggle('on', !!st.scan);
-    invB.disabled = !canInvestigate(); invB.classList.toggle('on', !!(sel && sel.inv.length)); invB.textContent = sel && sel.inv.length ? 'Investigating' : 'Investigate';
+    invB.disabled = !canInvestigate(); invB.classList.toggle('on', !!(sel && sel.inv.length)); invB.textContent = sel && sel.inv.length ? 'Probing' : 'Probe';   // Probe = send a WSKR to the contact (short enough for a fifth of a desk pad)
     const sig = open + '|' + st.src + '|' + srcs.map((x) => x.id + x.name + x.ok).join();
     if (open && sig !== srcSig) {
       srcSig = sig; const bs = srcs.map((x) => { const b = bbtn(x.ok ? x.name : x.name + ' · NO LINK', () => { setSource(x.id); open = false; side(); }, x.id === st.src ? 'on' : ''); b.disabled = !x.ok; return b; });
-      srcList.replaceChildren(...[0, 3].map((i) => el('div', { class: 'rowN' }, ...bs.slice(i, i + 3))).filter((r) => r.children.length));
+      srcList.replaceChildren(el('div', { class: 'rowN' }, ...bs.slice(0, 5)));   // the ship and up to four WSKRs: one row
     }
   }
-  return { make, c, v: [bbtn('−', () => zoom(1), 'sym'), el('div', { class: 'rngbox' }, el('small', { text: 'RANGE' }), rangeTxt), bbtn('+', () => zoom(-1), 'sym')], expand: null, side };
+  const rng = [bbtn('−', () => zoom(1), 'sym'), el('div', { class: 'rngbox' }, el('small', { text: 'RANGE' }), rangeTxt), bbtn('+', () => zoom(-1), 'sym')];   // the Sensors station's range buttons (the bridge uses its yellow desk keys)
+  return { make, c, v: [scanB, invB, clearB], rng, expand: null, side };
 }
 
 /** The Sensors station's main page: the SNR display with its controls and range buttons under it, in station buttons. */
@@ -189,7 +193,7 @@ export function mountSnr(body) {
   const v = createSnrView({ bbtn }), page = v.make(false);
   const screen = el('div', { style: 'position:relative;flex:1;min-height:330px' }, page.m);
   const ctl = el('div', { class: 'bc', style: 'position:relative;inset:auto;flex:none;height:120px' }, ...v.c.children);
-  const range = el('div', { class: 'rowN', style: 'flex:none;height:64px' }, ...v.v);
+  const range = el('div', { class: 'rowN', style: 'flex:none;height:64px' }, ...v.rng, ...v.v);
   body.append(screen, el('div', { class: 'msc', style: 'flex:none;display:flex;flex-direction:column;gap:6px' }, ctl, range));
   return { update() { page.update(); v.side(); }, el: [screen, ctl, range] };
 }

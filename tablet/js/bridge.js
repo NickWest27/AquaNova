@@ -127,7 +127,7 @@ export function createBridgeConsole({ top, main, display, center, left, right, o
     const showC = el('div', { class: 'bc shw' }, el('div', { class: 'rowN' }, showSw('ships', 'Ships'), showSw('subs', 'Subs'), showSw('base', 'Base'), showSw('orgs', 'Orgs'), showSw('labels', 'Labels')));
     const c = el('div', { class: 'bc' }, el('div', { class: 'rowN' }, dest, routeB, plot));
     // View settings (right desk): range and PAN here, DSP and SHW added by the console.
-    const v = [bbtn('−', () => zoom(1), 'sym'), el('div', { class: 'rngbox' }, el('small', { text: 'RANGE' }), rangeTxt), bbtn('+', () => zoom(-1), 'sym')];   // the right desk is a bank of six: range first
+    const v = [];   // range is on the yellow desk keys (scene.js); the right desk has PAN and SHW
     function refresh() { set(rangeTxt, nds[0] ? nds[0].range + ' nm' : ''); plot.classList.toggle('on', !!sim.s.wpt); }
     return { make, c, v, extra: showC, expand: 'nav', side: refresh, nds, show, zoom, rangeTxt, panBy, panOff, panStep: () => (nds[0] ? nds[0].range * 0.25 : 1) };
   })();
@@ -300,12 +300,12 @@ export function createBridgeConsole({ top, main, display, center, left, right, o
   const dspBs = [], panBs = [], shwBs = [];
   const mkBtn = (label, list, toggle) => { const b = bbtn(label, toggle); list.push(b); return b; };
   const flip = (which) => { if (which === 'dsp') dspOn = !dspOn; else if (which === 'pan') { panOn = !panOn; shwOn = false; if (!panOn) views.nav.panOff(); } else { shwOn = !shwOn; panOn = false; views.nav.panOff(); } paint(); update(); };
-  const BANK = 6;   // the right desk is a bank of six slots in one row; a page with fewer buttons leaves blank place holders
+  const BANK = 5;   // each desk pad is a bank of five in one row (owner, 2026-11-27); a page with fewer buttons leaves blank place holders
   const blank = () => Object.assign(bbtn('', () => {}, 'blank'), { disabled: true, tabIndex: -1 });
   for (const id of order) {
     const items = [...views[id].v, ...(id === 'nav' ? [mkBtn('PAN', panBs, () => flip('pan')), mkBtn('SHW', shwBs, () => flip('shw'))] : [])];
     while (items.length < BANK) items.push(blank());
-    views[id].vc = el('div', { class: 'bc msc' }, el('div', { class: 'rowN' }, ...items.slice(0, BANK)));   // one row of six: the desk pads are wide and short
+    views[id].vc = el('div', { class: 'bc msc' }, el('div', { class: 'rowN' }, ...items.slice(0, BANK)));   // one row of five: the desk pads are wide and short
     right.append(views[id].vc);
   }
   // Pan arrows replace the controls on the centre desk while PAN is on
