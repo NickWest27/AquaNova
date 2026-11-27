@@ -24,7 +24,7 @@ with sync_playwright() as p:
     import re
     check("readouts follow the ship (speed, depth, heading)", re.search(r"\b[5-9]\.\d", t) and re.search(r"\b1[12]\d", t), t)
     js("const n=await import('../js/notify.js'); n.say('helm','Captain, we have a contact bearing 045.','')"); pg.wait_for_timeout(300)
-    check("a crew message appears in the message line", "contact bearing 045" in pg.inner_text("#console-line"))
+    check("a crew message waits for the Captain (it opens their dialogue since 2026-11-27)", js("const n=await import('../js/notify.js'); return n.unreadFor('helm')") > 0)
     pg.tap(".bleft .bbtn:nth-child(2)"); pg.wait_for_timeout(300)
     check("HLM page shows on the center screen and its buttons on the desk", "HDG" in pg.inner_text(".rdisp") and "Prt" in pg.inner_text(".rctl"))
     pg.tap(".bleft .bbtn:nth-child(1)"); pg.wait_for_timeout(300)

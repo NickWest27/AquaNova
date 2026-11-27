@@ -197,10 +197,11 @@ export function createBridgeConsole({ top, main, display, center, left, right, o
       tell('helm', r.ok ? 'Nap of the earth, Captain. Ten metres off the bottom.' : r.why === 'docked' ? 'We are docked, Captain.' : 'Not enough water here to follow the floor, Captain.');
     });
     const cruiseB = bbtn('Cruise', () => { const r = sim.setCruise(!sim.s.cruise); tell('helm', r.ok ? (sim.s.cruise ? 'Spooling up the drive, Captain.' : 'Out of super cruise. Easing back.') : cruiseWhy(r.why)); });
+    // the bridge desk pads are one row each (bridge frame of 2026-11-27): steering on the centre pad, depth and cruise on the right pad
     const c = el('div', { class: 'bc' },
-      el('div', { class: 'rowN' }, bbtn('Port', () => turn(-10)), bbtn('Stbd', () => turn(10)), bbtn('Stop', () => sim.stop(), 'stop'), bbtn('Slow', () => thr(-0.1)), bbtn('Fast', () => thr(0.1))),
-      el('div', { class: 'rowN' }, bbtn('Up', () => dep(-50)), bbtn('Dn', () => dep(50)), bbtn('Srfc', () => sim.setDepth(0)), noeB, cruiseB));
-    return { make, c, v: [], expand: 'helm', side() { noeB.classList.toggle('on', !!sim.s.hug); cruiseB.classList.toggle('on', !!sim.s.cruise); } };
+      el('div', { class: 'rowN' }, bbtn('Port', () => turn(-10)), bbtn('Stbd', () => turn(10)), bbtn('Stop', () => sim.stop(), 'stop'), bbtn('Slow', () => thr(-0.1)), bbtn('Fast', () => thr(0.1))));
+    const v = [bbtn('Up', () => dep(-50)), bbtn('Dn', () => dep(50)), bbtn('Srfc', () => sim.setDepth(0)), noeB, cruiseB];
+    return { make, c, v, expand: 'helm', side() { noeB.classList.toggle('on', !!sim.s.hug); cruiseB.classList.toggle('on', !!sim.s.cruise); } };
   })();
 
   // ---------- SYS ----------
@@ -298,12 +299,12 @@ export function createBridgeConsole({ top, main, display, center, left, right, o
   const dspBs = [], panBs = [], shwBs = [];
   const mkBtn = (label, list, toggle) => { const b = bbtn(label, toggle); list.push(b); return b; };
   const flip = (which) => { if (which === 'dsp') dspOn = !dspOn; else if (which === 'pan') { panOn = !panOn; shwOn = false; if (!panOn) views.nav.panOff(); } else { shwOn = !shwOn; panOn = false; views.nav.panOff(); } paint(); update(); };
-  const BANK = 6;   // the right desk is a bank of six slots (two rows of three); a page with fewer buttons leaves blank place holders
+  const BANK = 6;   // the right desk is a bank of six slots in one row; a page with fewer buttons leaves blank place holders
   const blank = () => Object.assign(bbtn('', () => {}, 'blank'), { disabled: true, tabIndex: -1 });
   for (const id of order) {
     const items = [...views[id].v, mkBtn('DSP', dspBs, () => flip('dsp')), ...(id === 'nav' ? [mkBtn('PAN', panBs, () => flip('pan')), mkBtn('SHW', shwBs, () => flip('shw'))] : [])];
     while (items.length < BANK) items.push(blank());
-    views[id].vc = el('div', { class: 'bc msc' }, el('div', { class: 'rowN' }, ...items.slice(0, 3)), el('div', { class: 'rowN' }, ...items.slice(3, BANK)));
+    views[id].vc = el('div', { class: 'bc msc' }, el('div', { class: 'rowN' }, ...items.slice(0, BANK)));   // one row of six: the desk pads are wide and short
     right.append(views[id].vc);
   }
   // Pan arrows replace the controls on the centre desk while PAN is on

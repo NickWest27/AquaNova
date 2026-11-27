@@ -80,7 +80,7 @@ def snap(img_rgb, alpha=None):
 def main():
     os.makedirs(SRC, exist_ok=True)
     for r in ROOMS:   # first run: keep the untouched originals (and the owner's bridge pixel frame)
-        for f in [fname(r)] + (['bridge.png'] if r == 'bridge' else []):
+        for f in [fname(r)]:
             if not os.path.exists(os.path.join(SRC, f)): shutil.copy2(os.path.join(OUT, f), os.path.join(SRC, f))
     _, rrgb, ralpha = load(os.path.join(SRC, fname(REF)))
     ref_lab = to_lab(rrgb)[ralpha > 8]; ref_L = np.sort(ref_lab[:, 0])
@@ -92,10 +92,9 @@ def main():
         out = Image.fromarray(res, 'RGB')
         if r == 'bridge':
             o = out.convert('RGBA'); o.putalpha(Image.fromarray(alpha.astype(np.uint8))); o.save(os.path.join(OUT, fname(r)), optimize=True)
-            # the Retro bridge is the owner's own 320x240 pixel frame: the same correction, then back onto the palette
-            _, brgb, balpha = load(os.path.join(SRC, 'bridge.png'))
-            b = Image.fromarray(match(brgb, balpha, ref_lab, ref_L), 'RGB')
-            snap(b, Image.fromarray(balpha.astype(np.uint8))).save(os.path.join(OUT, 'bridge.png'))
+            # the Retro bridge: the matched frame at 320x240 on the palette, its screen holes kept (alpha resized hard, no soft edges)
+            small_a = Image.fromarray(alpha.astype(np.uint8)).resize((320, 240), Image.NEAREST)
+            snap(o.convert('RGB').resize((320, 240), Image.LANCZOS), small_a).save(os.path.join(OUT, 'bridge.png'))
         else:
             if r in REPIXEL:
                 out = repixel(out, Image.open(os.path.join(SRC, fname(REF))).convert('RGB'))

@@ -60,6 +60,8 @@ export function createScene(stage, { onOpen }) {
   const mini = (node, key, html) => { if (cache.get(key) !== html) { cache.set(key, html); node.innerHTML = html; } };
   function updateStations() {
     const s = sim.s, act = activeLink();
+    mini(hmL, 'hmL', `<div><span>HDG</span><b>${String(Math.round(((s.heading % 360) + 360) % 360)).padStart(3, '0')}°</b></div><div><span>SPD</span><b>${s.speed.toFixed(1)}</b></div>`);
+    mini(hmR, 'hmR', `<div><span>DEP</span><b>${Math.round(s.depth)}</b></div><div><span>FLR</span><b>${s.floor != null ? Math.round(s.floor) : '—'}</b></div>`);
     mini(stnL, 'stnL', `<h5>COMMS · LINKS</h5>${LINKS.map((L) => { const st = linkState(L); return `<div class="${st.up ? 'ok' : st.fading ? 'warn' : 'bad'}"><span>${L === act ? '▸' : ' '}${L.n} ${L.label}</span><b>${st.status}</b></div>`; }).join('')}`);
     const near = s.sonar ? s.pois.map((p) => ({ p, ...toward(s, p) })).sort((a, b) => a.nm - b.nm)[0] : null;
     const inRange = s.sonar ? s.pois.filter((p) => toward(s, p).nm <= 4).length : 0, sweeping = s.clock < (s.sweepUntil || 0);
@@ -67,25 +69,32 @@ export function createScene(stage, { onOpen }) {
   }
   topD.classList.add('compact');
   const rect = (x0, y0, x1, y1) => [[x0, y0], [x1, y0], [x1, y1], [x0, y1]];
+  // The bridge frame of 2026-11-27 (the owner's picture, 1024x765, holes cut from its painted checkerboard; art px x 1.875 across, x 1.882 down).
+  // Every screen sits behind its hole; the frame is on top. Measured from the holes: main window, top strip, centre display, the three desk
+  // pads (one row of buttons each), Nicole's and Alex's monitors, and Marcus's two small helm monitors.
+  const hmL = el('div', { class: 'bstn helmmini' }), hmR = el('div', { class: 'bstn helmmini' });
   bridge.append(
     el('div', { class: 'bridge-base' }),
-    box('bmainbox', 240, 216, 1440, 576, [mainD]),                                                       // the big window
-    box('btbox', 606, 90, 708, 90, [topD]),                                                              // Top Strip, in the lit panel
-    slanted('bdispbox', dispD, 560, 190, rect(696, 840, 1224, 1086)),                                    // centre display
-    slanted('', stnL, 200, 74, rect(258, 768, 408, 840)),                                                // left station screen
-    slanted('', stnR, 200, 74, rect(1506, 768, 1656, 840)),                                              // right station screen
-    // the three desk pads: each panel is warped onto its pad's corners (measured from the holes in bridge_original.png, 2026-11-26, grown 4 px
-    // under the frame) and sits BEHIND the frame, so the desk art frames it. TL, TR, BR, BL.
-    slanted('', leftD, 230, 200, [[445, 1132], [623, 1132], [560, 1332], [334, 1332]]),                     // left pad: the page selector
-    slanted('', ctrD, 640, 160, [[657, 1164], [1266, 1164], [1310, 1335], [611, 1335]]),                    // centre pad: the page's own controls
-    slanted('', rightD, 230, 200, [[1298, 1132], [1477, 1132], [1584, 1332], [1353, 1332]]),                // right pad: range and display buttons
+    box('bmainbox', 244, 196, 1430, 524, [mainD]),                                                       // the big window
+    box('btbox', 604, 73, 710, 96, [topD]),                                                              // Top Strip, the panel above the window
+    slanted('bdispbox', dispD, 592, 183, rect(664, 1065, 1256, 1248)),                                   // centre display
+    slanted('', stnL, 200, 92, rect(255, 700, 411, 772)),                                                // Nicole's monitor: comms links
+    slanted('', stnR, 200, 92, rect(1508, 700, 1663, 772)),                                              // Alex's monitor: sensors
+    slanted('', hmL, 150, 96, rect(728, 781, 827, 845)),                                                 // Marcus's left monitor: heading and speed
+    slanted('', hmR, 150, 96, rect(1095, 781, 1194, 845)),                                               // Marcus's right monitor: depth and floor
+    slanted('', leftD, 592, 125, rect(240, 1310, 684, 1404)),                                            // left pad: the page selector
+    slanted('', ctrD, 690, 125, rect(701, 1310, 1219, 1404)),                                            // centre pad: the page's own controls
+    slanted('', rightD, 590, 125, rect(1234, 1310, 1676, 1404)),                                         // right pad: range, display and more
     frame,
-    hs('COMMS', 240, 740, 280, 200, () => onOpen('comms'), 'top'),        // the comms console, left
-    hs('SENSORS', 1420, 740, 260, 200, () => onOpen('sensors'), 'top'),   // the sensors console, right
-    hs('NICOLE', 0, 640, 238, 540, () => onOpen('talk-communications'), 'top'),   // Nicole at comms, head to chair back: tap her to talk
-    hs('ALEX', 1684, 630, 236, 550, () => onOpen('talk-sensors'), 'top'),          // Alex at sensors, head to chair back
-    hs('WALKWAY', 0, 1332, 1920, 108, () => onOpen('walkway'), 'mid'),   // the bottom edge leaves the bridge
+    hs('COMMS', 250, 690, 270, 300, () => onOpen('comms'), 'top'),        // the comms console, left
+    hs('SENSORS', 1400, 690, 270, 300, () => onOpen('sensors'), 'top'),   // the sensors console, right
+    hs('NICOLE', 0, 590, 250, 520, () => onOpen('talk-communications'), 'top'),   // Nicole at comms: tap her to talk
+    hs('ALEX', 1670, 590, 250, 520, () => onOpen('talk-sensors'), 'top'),          // Alex at sensors
+    hs('MARCUS', 860, 700, 200, 330, () => onOpen('talk-helm'), 'top'),           // Marcus at the helm, centre
+    hs('HELM', 700, 760, 150, 110, () => onOpen('helm'), 'top'),                  // his left monitor opens the Helm station
+    hs('◂ WALKWAY', 0, 1130, 230, 310, () => onOpen('walkway'), 'mid'),          // the bottom-left corner leaves the bridge
   );
+
 
   // quarters
   const qimg = artImg('quarters');
@@ -247,6 +256,7 @@ export function createScene(stage, { onOpen }) {
     inQuarters: false, where: 'bridge',
     show(which) {
       api.where = which; api.inQuarters = which === 'quarters';
+      document.body.classList.toggle('on-bridge', which === 'bridge');   // the bridge desk reaches the bottom edge: the status strip moves to the top there
       document.body.classList.toggle('stage-4x3', ['bridge', 'walkway', 'walkway2', 'quarters', 'science', 'launchbay', 'medbay', 'engineering'].includes(which));   // the retro scenes are 4:3, the others are still 16:9
       window.dispatchEvent(new Event('resize'));
       bridge.hidden = which !== 'bridge'; quarters.hidden = which !== 'quarters'; walkway.hidden = which !== 'walkway'; walkway2.hidden = which !== 'walkway2'; science.hidden = which !== 'science'; medbay.hidden = which !== 'medbay'; bay.hidden = which !== 'launchbay'; eng.hidden = which !== 'engineering';

@@ -71,3 +71,9 @@ Old page ids `helm` and `view` are now `hlm` and `vw`. The old per-page right-de
 - **Mission areas** are amber boxes on every chart (`nd.js`): a mission's `"area": { name, lat0, lat1, lon0, lon1 }` (the Trials AO) and patrol areas (dashed until the window opens; the inside test is the same box, `missionGen.js`). An area is never a destination: the player makes a waypoint inside it.
 - The lower display's NAV page is north up (track up is gone from the bridge), with range rings at a quarter, half or the whole range setting carried out to the corners. The WSKR station's chart keeps track up.
 - (2026-11-27, later) The Route editor has **Edit** for the selected waypoint (it opens in degrees and minutes). The waypoint dialog reads every position back in degrees and minutes (39.54 is 39°32.4′, not 39°54′).
+
+## Bridge frame of 2026-11-27
+- The owner's new picture: Marcus at the centre helm below the window, Nicole at comms (left), Alex at sensors (right). Screens behind holes (`scene.js`, stage px): main window 244,196 1430x524; top strip 604,73 710x96; centre display 664-1256 x 1065-1248; Nicole's monitor (comms links), Alex's monitor (sensors), Marcus's two small monitors (HDG/SPD, DEP/FLR); three desk pads at y 1310-1404 (left 240-684, centre 701-1219, right 1234-1676).
+- The pads are wide and short: **one row each**. Left: the six pages. Centre: the page's controls (HLM: Port, Stbd, Stop, Slow, Fast). Right: six slots (NAV: range, DSP, PAN, SHW; HLM: Up, Dn, Srfc, NOE, Cruise, DSP).
+- Tap areas: COMMS and SENSORS on the consoles, NICOLE, ALEX and MARCUS on the crew, HELM on Marcus's left monitor, WALKWAY in the bottom-left corner.
+- On the bridge the status strip (day, position, objective, battery) sits at the top, over the ceiling, so it does not cover the desk.
