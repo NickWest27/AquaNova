@@ -269,7 +269,7 @@ A spread-spectrum signal **below the ocean's own noise**. It works at any depth,
 **Comms → Contacts.** Pick a band (VHF, HF, UHF, LPI), tune to a contact (or **Scan band**), tap **Hail**. VHF needs the mast up. Meridian Habitat answers on VHF 156.825 MHz and LPI 13.3 kHz.
 
 ### Mail and reports
-- **Mail** (Comms → Mail): orders, offers and replies from OERA.
+- **Mail** (Comms → Mail): orders, offers and replies from OERA. Nicole tells you when a message comes in; if you read it first, she has nothing to add.
 - **Transmit report** (or tell Nicole): uploads on the best link. A progress bar shows on the Comms console. If the link drops it holds; after 40 seconds without a link the report fails and you can send it again. Uploads take about 7 s (laser), 18 s (satellite), 45 s (HF).
 
 ---

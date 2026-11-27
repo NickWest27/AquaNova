@@ -315,7 +315,13 @@ function showSystemDialogue(id) {
   if (boarded) run(); else pendingModals.push(run);
 }
 document.addEventListener('show-dialogue', (e) => { if (e.detail.characterId === 'system') showSystemDialogue(e.detail.dialogueId); });
-document.addEventListener('comms-message', (e) => { if (boarded) say('comms', 'Captain, sorry to interrupt, but we have an incoming message.', 'mission', { notice: 'INCOMING MESSAGE', keep: `We have an incoming message from ${e.detail.from}. It is waiting at the Comms station.` }); syncUI(); });
+document.addEventListener('comms-message', (e) => {
+  // Nicole's notice lasts only while that message is unread (owner, 2026-11-27): read it at the Comms station first and she has nothing to say.
+  const inbox = gameState.getProperty('mission.inbox') || [], m = inbox[inbox.length - 1], id = m && m.id;
+  const unread = () => { const x = (gameState.getProperty('mission.inbox') || []).find((q) => q.id === id); return !!x && !x.read; };
+  if (boarded) say('comms', 'Captain, sorry to interrupt, but we have an incoming message.', 'mission', { notice: 'INCOMING MESSAGE', key: 'mail-' + id, valid: id ? unread : undefined, keep: `We have an incoming message from ${e.detail.from}. It is waiting at the Comms station.` });
+  syncUI();
+});
 let lastReportAt = -1e9; document.addEventListener('report-sent', () => { lastReportAt = Date.now(); });
 // A new mission starts quietly (owner, 2026-11-27): it is in the PED under Missions and Tasks, and its orders come by mail.
 document.addEventListener('mission-notify', (e) => {
