@@ -1,5 +1,7 @@
 # Aqua Nova — Development Notes (main document)
 
+**Player manual:** `MANUAL.md` (the Captain's Manual: every system in plain language, kept current with the game).
+
 Last updated: 2026-11-20 (night), with a header note added 2026-11-25. This is the hub: the current state in brief, with a pointer to the topic document for each area. **Topic documents are current; where an older sentence in one of them disagrees with this page, tell the owner and fix it, do not guess.**
 
 **Note, 2026-11-25:**
