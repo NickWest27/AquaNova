@@ -13,6 +13,7 @@ with sync_playwright() as p:
     pg.on("pageerror", lambda e: errs.append(str(e)))
     pg.goto(base + "?intake=0"); pg.wait_for_function("!document.getElementById('board-btn').disabled", timeout=20000)
     pg.tap("#board-btn"); pg.wait_for_timeout(900)
+    pg.evaluate("window.__aq.scene('launchbay')"); pg.wait_for_timeout(300)   # the bay's sounds are heard only in the bay
     r = pg.evaluate("""(async()=>{const sim=(await import('./js/sim.js')).sim, B=await import('./js/bayops.js'); const s=sim.s;
       Object.assign(s,{docked:false,speed:0,throttle:0,depth:50,targetDepth:50}); for(let i=0;i<3;i++){sim.step(1); sim.emit('tick');}
       const BAY=['hatchOpen','hatchClose','airlockFlood','airlockDrain','loop:bayFlood','loop:bayPump'], run=()=>{ const out=[]; for(let i=0;i<80;i++){ window.__sfxLog=[]; sim.step(1); sim.emit('tick'); const op=B.bay().op; for(const x of window.__sfxLog) if(BAY.includes(x)) out.push([x, op?Math.round(op.t):99]); } return out; };
@@ -23,6 +24,20 @@ with sync_playwright() as p:
     check("launch: the flood runs for most of the cycle (hatches near the ends)", r["a"] and r["a"][1][1] <= 8 and r["a"][-1][1] >= 44, r["a"])
     check("launch: the outer hatch closes after the craft is away", "hatchClose" in r["after"], r["after"])
     check("recovery: outer hatch open, close, pump, inner hatch open, close", r["R"] and seq(r["c"]) == ["hatchOpen", "hatchClose", "airlockDrain", "loop:bayPump", "hatchOpen", "hatchClose"], r["c"])
+    # heard only in their rooms (owner, 2026-11-27)
+    pg.evaluate("window.__aq.scene('bridge')"); pg.wait_for_timeout(300)
+    h = pg.evaluate("""(async()=>{const sim=(await import('./js/sim.js')).sim, B=await import('./js/bayops.js'); const res={};
+      const hear=(fn)=>{ window.__sfxLog=[]; fn(); return window.__sfxLog.slice(); };
+      res.bridgeContact=hear(()=>{ sim.s.clock+=10; sim.emit('sonar-contact',{id:'t'}); });
+      res.bridgeHull=hear(()=>sim.emit('bump',{damage:5}));
+      res.bridgeBay=hear(()=>{ B.launchRemora(); for(let i=0;i<70;i++){ sim.step(1); sim.emit('tick'); } });
+      window.__aq.scene('launchbay'); res.bayContact=hear(()=>{ sim.s.clock+=10; sim.emit('sonar-contact',{id:'u'}); });
+      res.bayHull=hear(()=>{ sim.s.clock+=40; sim.emit('bump',{damage:5}); });
+      return res;})()""")
+    check("a new sonar contact is heard on the bridge", "sonarContact" in h["bridgeContact"], h)
+    check("... and not in the launch bay", "sonarContact" not in h["bayContact"], h)
+    check("a hit on the hull is heard everywhere", "impact" in h["bridgeHull"] and "impact" in h["bayHull"], h)
+    check("the launch bay's hatches and flooding are not heard on the bridge", not any(x in h["bridgeBay"] for x in ["hatchOpen", "hatchClose", "airlockFlood", "torpedoLaunch"]), h["bridgeBay"])
     check("no page errors", not errs, errs)
     b.close()
 server.shutdown()

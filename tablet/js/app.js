@@ -202,6 +202,12 @@ function updateChips() {
 // a power-assisted door between rooms (opens, then shuts behind), and the engine room's own noise while the Captain is in it
 const ROOMS = ['bridge', 'walkway', 'walkway2', 'quarters', 'science', 'medbay', 'launchbay', 'engineering'];
 let lastRoom = null, engineLoop = null;
+// Where each sound is heard (owner, 2026-11-27): a room's own sounds only in that room (sonar blips and the depth warning on the bridge,
+// the hatches, flooding and launches in the launch bay); the hull, the alarms, the drive, doors and the communicator everywhere.
+const HEARD_IN = { sonarContact: 'bridge', sonarLost: 'bridge', depthAlarm: 'bridge', teletype: 'bridge',
+  torpedoLaunch: 'launchbay', hatchOpen: 'launchbay', hatchClose: 'launchbay', airlockFlood: 'launchbay', airlockDrain: 'launchbay', bayFlood: 'launchbay', bayPump: 'launchbay' };
+const heardHere = (name, room = HEARD_IN[name]) => !room || lastRoom === room;
+const play = (name, vol = 1, room) => (heardHere(name, room) ? sfx(name, vol) : 0);
 function roomSound(name) {
   if (!ROOMS.includes(name)) return;
   const walk = (r) => r === 'walkway' || r === 'walkway2';   // the two walkways join with no door between them
@@ -398,44 +404,44 @@ async function boot() {
     // sound effects (sfx.js, 2026-11-27): the moments that should be heard
     const sfxAt = {};
     sim.on((type, data) => {
-      if (type === 'general-alarm' && data.on) sfx('generalAlarm');
-      else if (type === 'bump') { if (data && data.damage) sfx(data.damage >= 10 ? 'crash' : 'impact'); }   // only a real hit (not the map-edge stop or the AO warning)
-      else if (type === 'eng-fire') sfx('fireAlarm');
-      else if (type === 'eng-leak') sfx('collisionAlarm');
-      else if (type === 'cruise-on') sfx('powerUp');
-      else if (type === 'cruise-spooled') sfx('cruiseEngage');
-      else if (type === 'eng-blow') sfx('ballastBlow');
-      else if (type === 'sonar-sweep') sfx('sonarPing');
+      if (type === 'general-alarm' && data.on) play('generalAlarm');
+      else if (type === 'bump') { if (data && data.damage) play(data.damage >= 10 ? 'crash' : 'impact'); }   // only a real hit (not the map-edge stop or the AO warning)
+      else if (type === 'eng-fire') play('fireAlarm');
+      else if (type === 'eng-leak') play('collisionAlarm');
+      else if (type === 'cruise-on') play('powerUp');
+      else if (type === 'cruise-spooled') play('cruiseEngage');
+      else if (type === 'eng-blow') play('ballastBlow');
+      else if (type === 'sonar-sweep') play('sonarPing');
       // more of the library wired in (owner, 2026-11-27)
-      else if (type === 'cruise-off') sfx('powerDown');
-      else if (type === 'depth-cap') sfx('depthAlarm');
-      else if (type === 'sonar-contact' && sim.s.clock - (sfxAt.contact ?? -1e9) > 4) { sfxAt.contact = sim.s.clock; sfx('sonarContact', 0.7); }   // at most one blip every 4 game seconds
-      else if (type === 'sonar-lost' && sim.s.clock - (sfxAt.lost ?? -1e9) > 4) { sfxAt.lost = sim.s.clock; sfx('sonarLost', 0.6); }
-      else if (type === 'bay-launched') sfx(data && data.craft === 'wskr' ? 'torpedoLaunch' : 'bubbles', 0.8);   // a WSKR leaves its tube; the Tern or Remora clears the bay
+      else if (type === 'cruise-off') play('powerDown');
+      else if (type === 'depth-cap') play('depthAlarm');
+      else if (type === 'sonar-contact' && sim.s.clock - (sfxAt.contact ?? -1e9) > 4) { sfxAt.contact = sim.s.clock; play('sonarContact', 0.7); }   // at most one blip every 4 game seconds
+      else if (type === 'sonar-lost' && sim.s.clock - (sfxAt.lost ?? -1e9) > 4) { sfxAt.lost = sim.s.clock; play('sonarLost', 0.6); }
+      else if (type === 'bay-launched') play(data && data.craft === 'wskr' ? 'torpedoLaunch' : 'bubbles', 0.8, 'launchbay');   // a WSKR leaves its tube; the Tern or Remora clears the bay
     });
     // diving and surfacing, and the hull at depth
     let wasDeep = null, nextCreak = 0;
     sim.on((type) => {
       if (type !== 'tick') return;
       const s = sim.s, deep = s.depth > 3;
-      if (wasDeep !== null && deep !== wasDeep && !s.docked) sfx(deep ? 'bubbles' : 'splash', 0.7);   // vents open as she goes under; she breaks the surface
+      if (wasDeep !== null && deep !== wasDeep && !s.docked) play(deep ? 'bubbles' : 'splash', 0.7);   // vents open as she goes under; she breaks the surface
       wasDeep = deep;
-      if (s.depth >= 400 && s.clock >= nextCreak) { if (nextCreak) sfx('hullCreak', Math.min(1, 0.4 + (s.depth - 400) / 500)); nextCreak = s.clock + 90 + Math.random() * 150; }   // the hull talks below 400 m, every few minutes
+      if (s.depth >= 400 && s.clock >= nextCreak) { if (nextCreak) play('hullCreak', Math.min(1, 0.4 + (s.depth - 400) / 500)); nextCreak = s.clock + 90 + Math.random() * 150; }   // the hull talks below 400 m, every few minutes
     });
-    document.addEventListener('comms-message', () => sfx('teletype', 0.6));   // a message coming in
+    document.addEventListener('comms-message', () => play('teletype', 0.6));   // a message coming in
     // The launch bay cycle (owner, 2026-11-27): hatches are quick, equalising the pressure takes most of the cycle. Cues are at fractions of the op
     // (game time, so they follow time compression). Launch: inner hatch open, close, flood, outer hatch open, the craft goes, outer hatch closes.
-    // Recovery: outer hatch open, the craft comes in, outer hatch closes, pump out, inner hatch open, close. Full volume in the launch bay, distant elsewhere.
+    // Recovery: outer hatch open, the craft comes in, outer hatch closes, pump out, inner hatch open, close. Heard only in the launch bay.
     const BAY_PLAN = { launch: [[0, 'hatchOpen'], [0.1, 'hatchClose'], [0.15, 'airlockFlood'], [0.15, 'loop:bayFlood'], [0.76, 'stop'], [0.78, 'hatchOpen']],
       recover: [[0, 'hatchOpen'], [0.12, 'hatchClose'], [0.17, 'airlockDrain'], [0.17, 'loop:bayPump'], [0.82, 'stop'], [0.85, 'hatchOpen'], [0.95, 'hatchClose']] };
     let bayCue = null;
-    const bayVol = () => (lastRoom === 'launchbay' ? 1 : 0.3);
+    const bayVol = () => (heardHere('bayFlood') ? 1 : 0);   // only in the launch bay (the loop keeps running, so walking in you hear it)
     sim.on((type) => {
       if (type !== 'tick') return;
       const op = bay().op;
       if (bayCue && bayCue.op !== op) {   // the op ended (or a new one began)
         if (bayCue.loop) bayCue.loop.stop();
-        if (!op && bayCue.op.kind === 'launch' && bayCue.op.t >= bayCue.op.dur) setTimeout(() => sfx('hatchClose', bayVol()), 2500);   // the craft is away: outer hatch shuts
+        if (!op && bayCue.op.kind === 'launch' && bayCue.op.t >= bayCue.op.dur) setTimeout(() => play('hatchClose'), 2500);   // the craft is away: outer hatch shuts
         bayCue = null;
       }
       if (!op || !BAY_PLAN[op.kind]) return;
@@ -450,7 +456,7 @@ async function boot() {
         bayCue.done.add(at + what);
         if (what === 'stop') { if (bayCue.loop) { bayCue.loop.stop(); bayCue.loop = null; } }
         else if (what.startsWith('loop:')) bayCue.loop = sfxLoop(what.slice(5), bayVol());
-        else sfx(what, bayVol());
+        else play(what);
       }
       if (bayCue.loop && bayCue.loop.setVol) bayCue.loop.setVol(bayVol() * (getSound().fx ?? 0.8));   // walking into or out of the bay
     });
