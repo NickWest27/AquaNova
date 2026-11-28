@@ -286,6 +286,9 @@ export function mount(body, ctx, opts = {}) {
   };
   const onLine = (e) => { if (cur && e.detail.id === cur.id && (page === 'reply' || page === 'cat')) render(); };
   document.addEventListener('crew-line', onLine);
+  // ARIA asks for a decision while her line is already open (owner, 2026-11-28: the question came with no yes or no): show it with its choices.
+  const onDecision = () => { if (cur && cur.id === 'executiveOfficer' && page !== 'decision' && page !== 'param' && pendingDecisions().length) { page = 'decision'; render(); } };
+  document.addEventListener('inbox-change', onDecision);
 
   /** What a crew member says, with their portrait beside it when there is one (static portrait + speech box). */
   const sceneOn = () => !!(cur && page !== 'crew' && scenePic(cur.id));   // 90s dialogue screen: their picture fills the box, a text box carries the talk
@@ -349,5 +352,5 @@ export function mount(body, ctx, opts = {}) {
   }
   const want = opts.who && crew.find((c) => c.id === opts.who);
   if (want) pick(want); else render();   // opened on one person: a tap on them on the bridge, or they called in
-  return { who: () => (page === 'crew' || !cur ? null : cur.id), update() {}, destroy() { setOpenCrew(null); document.removeEventListener('crew-line', onLine); } };
+  return { who: () => (page === 'crew' || !cur ? null : cur.id), update() {}, destroy() { setOpenCrew(null); document.removeEventListener('crew-line', onLine); document.removeEventListener('inbox-change', onDecision); } };
 }
