@@ -185,12 +185,12 @@ sim.hooks.push(() => {
 
 // ---------- coming back ----------
 /** Work out what happened while the app was closed. Returns the briefing, or null when there was nothing to report. */
-export function catchUp() {
-  const a = sim.away; if (!a) return null;
-  const s = sim.s, elapsed = Math.min(AWAY_MAX_SIM_S, Math.max(0, (Date.now() - a.real) / 1000));
-  if (elapsed < AWAY_MIN_S) return finish(elapsed);
+// Catch the ship up to now: run the sim for the real time since the last stamp, under the crew's standing orders.
+function runCatchUp() {
+  const a = sim.away, s = sim.s, elapsed = Math.min(AWAY_MAX_SIM_S, Math.max(0, (Date.now() - a.real) / 1000));
+  if (elapsed < AWAY_MIN_S) return;
   s.throttle = a.throttle; s.speed = a.speed; s.cruise = !!a.cruise;   // a reload holds the ship still: put the standing orders back
-  a.last = { lat: s.lat, lon: s.lon }; lastCheck = s.clock; a.endClock = s.clock + elapsed;
+  a.last = a.last || { lat: s.lat, lon: s.lon }; lastCheck = s.clock; a.endClock = s.clock + elapsed;
   sim.muted = true;
   let done = 0;
   try {
@@ -201,12 +201,28 @@ export function catchUp() {
     }
   } finally { sim.muted = false; }
   sim.dirty = true; sim.emit('tick');
-  return finish(Math.min(elapsed, done));
+}
+/** Back after the app was closed: catch up, then end the sleep with the XO's report. */
+export function catchUp() {
+  const a = sim.away; if (!a) return null;
+  runCatchUp();
+  return finish(Math.max(0, sim.s.clock - a.armClock));
+}
+/** Back after the app was closed, but still asleep (owner, 2026-11-28: ask before waking). The ship is caught up to now, saved, and the
+ *  phone gets the new position; the crew keep the con. Returns a report of the passage so far (the sleep is not ended). */
+export function peekAway() {
+  const a = sim.away; if (!a) return null;
+  runCatchUp(); stamp();
+  return report(Math.max(0, sim.s.clock - a.armClock));
+}
+function report(elapsedS) {
+  const a = sim.away, s = sim.s;
+  return { elapsedS, away: a, now: { lat: s.lat, lon: s.lon, name: where(s), battery: Math.round(s.battery), oxygen: Math.round(s.oxygen), hull: Math.round(s.hull), moving: s.speed > 0.5 || s.throttle > 0.02, docked: !!s.docked, clock: clockText() } };
 }
 
 function finish(elapsedS) {
-  const a = sim.away, s = sim.s;
-  const rep = { elapsedS, away: a, now: { lat: s.lat, lon: s.lon, name: where(s), battery: Math.round(s.battery), oxygen: Math.round(s.oxygen), hull: Math.round(s.hull), moving: s.speed > 0.5 || s.throttle > 0.02, docked: !!s.docked, clock: clockText() } };
+  const a = sim.away;
+  const rep = report(elapsedS);
   sim.away = null; lastCheck = 0;
   snapshotSim(); checkpoint(); requestSync(50);
   return elapsedS < AWAY_MIN_S && !(a && a.log && a.log.length) && !(a && a.stop) ? null : rep;
@@ -252,7 +268,7 @@ document.addEventListener('visibilitychange', () => {
   if (document.hidden) { stamp(); return; }
   if (!sim.away.real) return;
   const wasRunning = !!sim.timer; sim.pause();
-  const rep = catchUp();
+  const rep = peekAway();   // still asleep: the Captain is asked (app.js)
   if (sim.wanted || wasRunning) sim.start();
   if (rep) for (const fn of wake) { try { fn(rep); } catch (e) { console.error(e); } }
 });

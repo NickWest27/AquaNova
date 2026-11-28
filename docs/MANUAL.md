@@ -421,7 +421,7 @@ The game runs in **real time** by default. **PED → Settings → Time compressi
 ### Sleep (your quarters)
 Both kinds of sleep work the same way: **the XO has the con**, the crew run the ship under their standing orders, and you wake to the XO's **briefing** of the passage, in time order.
 - **Jump ahead:** *Until arrival* (when a course is set), *Until 06:00*, or 2, 4 or 8 hours. One tap: the time passes at once.
-- **Sleep for real:** tap how long the crew keep going (4, 8, 12 or 24 hours), then **close the app**. When you come back the game works out how much real time has passed and catches the ship up to that point.
+- **Sleep for real:** tap how long the crew keep going (4, 8, 12 or 24 hours), then **close the app**. When you open the app again the game catches the ship up to now (and sends the iPhone PED the new position), then asks **Still asleep, Captain**: where you are, your ETA, and **Take the con** (the XO's briefing) or **Keep sleeping** (close the app again).
 
 **The standing orders:** keep your course and speed; stop on arrival, short of the Area of Operations limit, before shallow water, or when a craft is lost; bring her up and hold if air, scrubbers or battery run low, or hold if the hull is weak; stand down at your limit. **If you arrive while asleep, the science team send Remora down at the site after an hour, if they can**, and an away team may take the Tern for supplies if a port is near.
 

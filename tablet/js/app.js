@@ -23,7 +23,7 @@ import { startSync, syncAtBoot } from './sync.js';
 import { getPlayer, setPlayer, fill } from './player.js';
 import { runIntake } from './intake.js';
 import { startAria } from './aria.js';
-import { armAway, catchUp, wakeNow, briefing, onWake, AWAY_CAPS, skipTime } from './away.js';
+import { armAway, catchUp, wakeNow, briefing, onWake, AWAY_CAPS, skipTime, peekAway } from './away.js';
 import { isCommissioned, excuse } from './unlocks.js';
 import { isOpen, visit, LOCKED } from './rooms.js';
 sim.cruiseGate = sim.cruiseGate || []; sim.cruiseGate.push(() => (isCommissioned('cruise') ? null : 'commission'));   // super cruise is commissioned in the trials area
@@ -283,7 +283,19 @@ function sleepDialog() {
 // "Crew has the con" screen: shown while the app is open and the Captain sleeps. Closing the app is fine.
 let awayClose = null;
 function awayScreen(cap) {
-  awayClose = modal({ title: 'Good night, Captain', body: el('div', {}, el('p', { text: `The crew have the con for up to ${cap} hours. You can close the app now. When you open it again, I will tell you what happened.` })), actions: [{ label: 'Wake up now', primary: true, run: () => { const rep = wakeNow(); syncUI(); scene.update(); showBriefing(rep); } }] });
+  awayClose = modal({ title: 'Good night, Captain', body: el('div', {}, el('p', { text: `The crew have the con for up to ${cap} hours. You can close the app now. When you open it again I will catch the ship up, tell you where we are, and ask whether you want the con.` })), actions: [{ label: 'Wake up now', primary: true, run: () => { const rep = wakeNow(); syncUI(); scene.update(); showBriefing(rep); } }] });
+}
+/** Back while the crew have the con: where we are, then Take the con (the XO's briefing) or Keep sleeping. */
+function stillAsleep(rep) {
+  const s = sim.s, a = rep.away, b = briefing(rep);
+  const kt = Math.max(s.speed, s.throttle * sim.maxKt()), eh = s.wpt && kt > 0.5 ? sim.etaHours() : null;
+  const left = Math.max(0, a.maxH - rep.elapsedS / 3600);
+  const fmt = (h) => { const m = Math.round(h * 60); return m < 60 ? `${m} min` : `${Math.floor(m / 60)} h${m % 60 ? ` ${m % 60} min` : ''}`; };
+  const lines = [b.lines[1], a.stop && a.stop.kind !== 'cap' ? b.lines.find((l) => /^\d\d:\d\d: (we arrived|Helm stopped|the |we lost)/.test(l)) : null,
+    eh != null ? `${s.wpt.name} in about ${fmt(eh)}.` : null, `The crew keep the con for up to ${fmt(left)} more.`].filter(Boolean);
+  awayClose = modal({ title: 'Still asleep, Captain', body: el('div', {}, ...lines.map((t) => el('p', { text: t })), el('p', { class: 'sl-h', text: 'Would you like the con?' })),
+    actions: [{ label: 'Keep sleeping', run: () => { awayClose = null; awayScreen(Math.max(1, Math.round(left))); } },
+      { label: 'Take the con', primary: true, run: () => { awayClose = null; const r = wakeNow(); syncUI(); scene.update(); showBriefing(r); } }] });
 }
 function showBriefing(rep) {
   if (!rep) { modal({ title: 'Good morning, Captain', body: el('p', { text: 'Nothing to report. The ship is as you left her.' }), actions: [{ label: 'OK', primary: true }] }); return; }
@@ -405,9 +417,9 @@ async function boot() {
     const st = buildDock();
     new ResizeObserver(fit).observe($('#scene-wrap')); window.addEventListener('resize', fit); fit();
     boarded = true;
-    const awayRep = catchUp();   // the app was closed while the crew had the con: work out what happened
-    if (awayRep) pendingModals.push(() => showBriefing(awayRep));
-    onWake((rep) => { if (awayClose) { awayClose(); awayClose = null; } showBriefing(rep); });   // or it was only in the background
+    const awayRep = peekAway();   // the app was closed while the crew had the con: catch up, but ask before waking (owner, 2026-11-28)
+    if (awayRep) pendingModals.push(() => stillAsleep(awayRep));
+    onWake((rep) => { if (awayClose) { awayClose(); awayClose = null; } stillAsleep(rep); });   // or it was only in the background
     sim.start(); startExitSave(); startSync();
     gameState.addObserver(syncUI);
     $('#pin').addEventListener('click', toggleComm);

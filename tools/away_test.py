@@ -72,10 +72,14 @@ def main():
         page.tap("#board-btn"); page.wait_for_timeout(1200)
         title = page.inner_text(".modal h3") if page.is_visible(".modal h3") else ""
         body = page.inner_text(".modal") if page.is_visible(".modal") else ""
-        check("after a reload ARIA briefs the Captain", "while you were away" in title.lower() or "we stopped" in title.lower(), title)
-        check("the briefing reports the distance (about 30 nm in 3 hours)", "nautical miles" in body, body[:200])
+        check("after a reload: still asleep, the Captain is asked (owner, 2026-11-28)", "still asleep" in title.lower() and "would you like the con" in body.lower(), title)
         r = js("return {away: !!sim.away, lon: sim.s.lon}")
-        check("the ship has moved on and the plan is gone", r["away"] is False and r["lon"] > -44.6, r)
+        check("the ship has been caught up and the crew still have the con", r["away"] is True and r["lon"] > -44.6, r)
+        page.locator('.modal button:text-is("Take the con")').tap(); page.wait_for_timeout(600)
+        title = page.inner_text(".modal h3") if page.is_visible(".modal h3") else ""; body = page.inner_text(".modal") if page.is_visible(".modal") else ""
+        check("Take the con: ARIA briefs the Captain", "while you were away" in title.lower() or "we stopped" in title.lower(), title)
+        check("the briefing reports the distance (about 30 nm in 3 hours)", "nautical miles" in body, body[:200])
+        check("the plan is gone", js("return !!sim.away") is False)
         if page.is_visible(".modal .btn"): page.tap(".modal .btn"); page.wait_for_timeout(300)
 
         # 7. sleep dialog offers the new choice and the 'Good night' screen
