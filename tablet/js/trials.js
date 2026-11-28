@@ -18,9 +18,10 @@ const ESCORTS = [
 const trialsRunning = () => (gameState.getProperty('mission.objectives') || []).some((o) => o.missionId === 'seaTrials');
 
 export const TRIALS = {
-  deep: { obj: 'seaTrials_deep', who: 'engineering', name: 'Chief Doyle', base: 300, unit: 'm', levels: [450, 600], risk: [0.2, 0.45], hit: ['bulkheads', 'ballast'],
-    ask: (b, t) => `{captain}, Chief Doyle reports she is holding well at ${b} metres. Hull strain is low and the seals are dry. The certificate says 300, but she was built for the trenches, and the data would help the next step. He asks permission to take her down to ${t} metres.`,
-    ok: (t) => `${t} metres, Captain. The hull is groaning a little, which is what hulls do. Nothing is leaking. That is the deepest the Aqua Nova has ever been.`,
+  deep: { obj: 'seaTrials_deep', who: 'helm', name: 'Marcus',   // Chief Doyle watches the hull and asks; Marcus takes her down (owner, 2026-11-28)
+    base: 300, unit: 'm', levels: [450, 600], risk: [0.2, 0.45], hit: ['bulkheads', 'ballast'],
+    ask: (b, t) => `{captain}, Chief Doyle reports she is holding well at ${b} metres. Hull strain is low and the seals are dry. The certificate says 300, but she was built for the trenches, and the data would help the next step. He is happy for Marcus to take her down to ${t} metres, with your permission.`,
+    ok: (t) => `${t} metres, Captain. Chief Doyle says the hull is groaning a little, which is what hulls do, and nothing is leaking. That is the deepest the Aqua Nova has ever been.`,
     record: (t) => `Ship record: test dive to ${t} metres in the Trials AO, ${t - 300} metres past her first certification step. The strain data goes to the classification society.` },
   speed: { obj: 'seaTrials_speed', who: 'helm', name: 'Marcus', base: MAX_KT, unit: 'kt', levels: [15.5, 17], risk: [0.2, 0.45], hit: ['propulsion'],
     ask: (b, t) => `{captain}, Marcus has her at ${b} knots on the hydro-jets and says she has more in her. Chief Doyle can run the jets past their rating. He asks permission to try for ${t} knots.`,
@@ -68,7 +69,7 @@ function check() {
     const hold = (why, text) => { if (said.wait !== pk + why) { said.wait = pk + why; tell(T.who, text, 'mission'); } };
     if (kind === 'deep') {
       const max = sim.deepest();
-      if (max != null && max < target) { if (!saidShallow) { saidShallow = true; say('engineering', `Not enough water under us for ${target} metres, Captain. Head south over deeper water and I will take her down.`); } return; }
+      if (max != null && max < target) { if (!saidShallow) { saidShallow = true; say('helm', `Not enough water under us for ${target} metres, Captain. Head south over deeper water and I will take her down.`); } return; }
       if (s.targetDepth < target) sim.setDepth(target);
     } else {
       s.overdrive = { kind, f: target / T.base };

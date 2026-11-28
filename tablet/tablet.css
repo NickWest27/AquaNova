@@ -1091,3 +1091,10 @@ body.on-bridge .dock-status { background: rgba(3,14,24,.82); border-radius: 0 0 
 .bt.compact .bt-place.note { inset: 4px 40px; }
 
 .comm-reply p { white-space: pre-line; }   /* several held messages: one paragraph each */
+
+/* sleep dialog (owner, 2026-11-28): one tap per choice */
+.sl-status { margin: 0 0 .6rem; color: var(--cyan); font-weight: 700; }
+.sl-h { margin: .8rem 0 .1rem; font: 800 .95rem var(--font); letter-spacing: .12em; text-transform: uppercase; color: #e6f1ff; }
+.sl-note { margin: 0 0 .5rem; color: var(--dim); font-size: .95rem; }
+.sl-row { display: flex; flex-wrap: wrap; gap: .5rem; }
+.sl-btn { min-height: 52px; min-width: 76px; font-size: 1.05rem; }

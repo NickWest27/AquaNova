@@ -236,7 +236,7 @@ function openScene(name) {
   else if (name === 'walkway') { closeStation(); scene.show('walkway'); }
   else if (name === 'walkway2') { closeStation(); scene.show('walkway2'); }
   else if (name === 'sleep') sleepDialog();
-  else if (name === 'sleepAway') sleepDialog('away');
+  else if (name === 'sleepAway') sleepDialog();
   else if (name === 'science') { closeStation(); scene.show('science'); }
   else if (name === 'launchbay') { closeStation(); scene.show('launchbay'); }
   else if (name === 'medbay') { closeStation(); scene.show('medbay'); }
@@ -253,35 +253,31 @@ function openScene(name) {
 }
 
 // ---------- sleep: jump the game clock forward ----------
-function sleepDialog(startMode = 'skip') {
+function sleepDialog() {
+  // One tap per choice (owner, 2026-11-28: better buttons). Both kinds run the passage with the XO in charge and end with the XO's briefing.
   const s = sim.s;
-  // time to the destination at the speed you are set for (so a long transit takes less of your time)
   const kt = Math.max(s.speed, s.throttle * sim.maxKt());
   const eh = s.wpt && kt > 0.5 && !s.docked ? sim.etaHours() : null;
   const eta = eh == null ? null : Math.min(96, Math.ceil(eh * 10) / 10 + 0.1);
-  let hours = eta && eta <= 12 ? eta : 8, untilArrival = !!(eta && eta <= 12);
-  const fmt = (h) => (h >= 1 ? `${Math.round(h * 10) / 10} h` : `${Math.round(h * 60)} min`);
-  const note = el('p', { text: `It is ${clockText()}. The game saves first. The XO has the con and the time passes at once. The crew keep your course and speed under their standing orders (they hold at the Area of Operations limit, on arrival, on a shoal, or if supplies run low), and the science team work a site you arrive at after an hour. You wake to the XO's briefing.${s.docked ? ' Docked: shore power charges the ship.' : ''}` });
-  const chips = el('div', { class: 'row' });
-  const draw = () => chips.replaceChildren(
-    ...[2, 4, 8, 12, 24].map((h) => el('button', { class: `btn chip ${!untilArrival && h === hours ? 'on primary' : ''}`, text: `${h} h`, onclick: () => { hours = h; untilArrival = false; draw(); } })),
-    eta && el('button', { class: `btn chip ${untilArrival ? 'on primary' : ''}`, text: `Until arrival (${fmt(eta)})`, onclick: () => { hours = eta; untilArrival = true; draw(); } }));
-  let mode = startMode, cap = 8;   // skip = jump the clock ahead; away = the crew have the con and the app may be closed
-  const modes = el('div', { class: 'row' });
-  const awayNote = el('p', { text: 'The crew have the con. Close the app whenever you like: when you open it again, ARIA briefs you on what happened. They keep your course and speed, hold at the Area of Operations limit, and stop on arrival, on a shoal, when supplies run low or if a craft is lost. If you are still asleep an hour after a stop, if a port is close by an away team takes the Tern for supplies (food, science equipment, mail, fresh CO2 scrubbers), and five minutes later the science team send Remora down to sample the point of interest you reached. They stand down after the limit you choose. Your iPhone shows where the ship should be.' });
-  const drawAll = () => {
-    modes.replaceChildren(el('button', { class: `btn chip ${mode === 'skip' ? 'on primary' : ''}`, text: 'Skip time', onclick: () => { mode = 'skip'; drawAll(); } }), el('button', { class: `btn chip ${mode === 'away' ? 'on primary' : ''}`, text: 'Crew has the con', onclick: () => { mode = 'away'; drawAll(); } }));
-    if (mode === 'skip') { note.hidden = false; awayNote.hidden = true; draw(); }
-    else { note.hidden = true; awayNote.hidden = false; chips.replaceChildren(el('span', { class: 'note', text: 'Crew stand down after ' }), ...AWAY_CAPS.map((h) => el('button', { class: `btn chip ${h === cap ? 'on primary' : ''}`, text: `${h} h`, onclick: () => { cap = h; drawAll(); } }))); }
-  };
-  draw();
-  modal({ title: 'Sleep', body: el('div', {}, modes, note, awayNote, chips), actions: [{ label: 'Cancel' }, { label: 'Sleep', primary: true, run: () => {
-    if (mode === 'away') { saveBeforeSleep(); armAway(cap); awayScreen(cap); syncUI(); return; }
-    saveBeforeSleep();                         // a save before sleep, as agreed
-    showBriefing(skipTime(hours));             // the XO has the con for the passage, then briefs you (owner, 2026-11-28: both sleeps work the same way)
-    ping(); liveNav(); syncUI(); scene.update();
-  } }] });
-  drawAll();
+  const fmt = (h) => { const m = Math.round(h * 60); return m < 60 ? `${m} min` : `${Math.floor(m / 60)} h${m % 60 ? ` ${m % 60} min` : ''}`; };
+  let morning = ((6 * 3600 - (s.clock % 86400)) + 86400) % 86400 / 3600; if (morning < 1) morning += 24;   // to the next 06:00
+  const big = (text, fn, cls = '') => el('button', { class: `btn sl-btn ${cls}`, text, onclick: fn });
+  let close = () => {};
+  const jump = (h) => { close(); saveBeforeSleep(); showBriefing(skipTime(h)); ping(); liveNav(); syncUI(); scene.update(); };
+  const real = (cap) => { close(); saveBeforeSleep(); armAway(cap); awayScreen(cap); syncUI(); };
+  const status = `${clockText()}${s.docked ? ' · docked: shore power charges the ship' : s.wpt ? ` · ${s.wpt.name}${eta ? ` in ${fmt(eta)}` : ''}` : ' · no course set'}`;
+  const body = el('div', { class: 'sl' },
+    el('p', { class: 'sl-status', text: status }),
+    el('div', { class: 'sl-h', text: 'Jump ahead' }),
+    el('p', { class: 'sl-note', text: 'The time passes at once. The XO runs the ship and briefs you.' }),
+    el('div', { class: 'sl-row' },
+      eta && big(`Until arrival · ${fmt(eta)}`, () => jump(eta), 'primary'),
+      big(`Until 06:00 · ${fmt(morning)}`, () => jump(morning)),
+      ...[2, 4, 8].map((h) => big(`${h} h`, () => jump(h)))),
+    el('div', { class: 'sl-h', text: 'Sleep for real' }),
+    el('p', { class: 'sl-note', text: 'Close the app. When you come back the game catches up the time that passed. The crew keep going for up to:' }),
+    el('div', { class: 'sl-row' }, ...AWAY_CAPS.map((h) => big(`${h} h`, () => real(h)))));
+  close = modal({ title: 'Sleep', body, actions: [{ label: 'Cancel' }] });
 }
 
 // "Crew has the con" screen: shown while the app is open and the Captain sleeps. Closing the app is fine.

@@ -40,7 +40,7 @@ def main():
         tap_hs("SLEEP"); page.wait_for_timeout(400)
         check("sleep dialog opens", page.is_visible('.modal h3:text-is("Sleep")'))
         page.screenshot(path=f"{SHOTS}/d-1sleep.png")
-        page.tap('.modal button:text-is("4 h")'); page.tap('.modal button:text-is("Sleep")'); page.wait_for_timeout(1500)
+        page.locator('.modal .sl-row').first.locator('button:text-is("4 h")').tap();   # Jump ahead 4 h: one tap page.wait_for_timeout(1500)
         c1 = js("return sim.s.clock")
         check("4 hours pass", abs((c1 - c0) - 4 * 3600) < 120, c1 - c0)
         check("shore power charged the ship while docked", js("return [sim.s.battery, sim.s.oxygen]")[0] > 90 and js("return sim.s.oxygen") > 90)
@@ -71,17 +71,17 @@ def main():
         # --- early wake-up: oxygen falls below 30% during a long sleep ---
         js("sim.s.docked = false; sim.s.oxygen = 45; sim.s.scrubbers = 0; sim.s.autoAvoid = false; sim.s.depth = 200; sim.s.targetDepth = 200")
         c0 = js("return sim.s.clock")
-        tap_hs("SLEEP"); page.tap('.modal button:text-is("12 h")'); page.tap('.modal button:text-is("Sleep")'); page.wait_for_timeout(2500)
+        tap_hs("SLEEP"); page.locator('.modal .sl-row').first.locator('button:text-is("8 h")').tap(); page.wait_for_timeout(2500)   # jump ahead 8 h
         slept = (js("return sim.s.clock") - c0) / 3600
         check("low air: the crew brought her up and held, and the briefing says so (owner, 2026-11-28: the XO manages the passage)", page.is_visible("text=air reserves were low") or page.is_visible("text=CO2 scrubbers were nearly used up"), slept)
-        check("the full 12 hours passed, with the crew in charge", 11.5 < slept < 12.5, slept)
+        check("the full 8 hours passed, with the crew in charge", 7.5 < slept < 8.5, slept)
         page.screenshot(path=f"{SHOTS}/d-4early.png")
         page.tap(".modal .btn"); page.wait_for_timeout(200)
 
         # --- the ship keeps travelling while the player sleeps ---
         js("sim.s.oxygen = 100; sim.s.battery = 100; sim.s.docked = false; sim.s.lat = 40.0; sim.s.lon = -73.0; sim.s.at = null; sim.s.wpt = null; sim.s.heading = 90; sim.s.targetHeading = 90; sim.setThrottle(0.5); sim.s.speed = 7;")
         start = js("return [sim.s.lat, sim.s.lon]")
-        tap_hs("SLEEP"); page.tap('.modal button:text-is("2 h")'); page.tap('.modal button:text-is("Sleep")'); page.wait_for_timeout(1500)
+        tap_hs("SLEEP"); page.locator('.modal .sl-row').first.locator('button:text-is("2 h")').tap(); page.wait_for_timeout(1500)
         moved = js("const t=(await import('./js/sim.js')).toward; return t({lat:" + str(start[0]) + ",lon:" + str(start[1]) + "}, sim.s).nm")
         check("ship covered about 14 nm in 2 hours of sleep at 7 knots", 10 < moved < 18, moved)
         page.tap(".modal .btn"); page.wait_for_timeout(200)
@@ -91,7 +91,7 @@ def main():
         tap_hs("SLEEP"); page.wait_for_timeout(300)
         check("sleep dialog offers Until arrival", page.is_visible('.modal button:has-text("Until arrival")'))
         page.screenshot(path=f"{SHOTS}/d-5until-arrival.png")
-        page.tap('.modal button:text-is("Sleep")'); page.wait_for_timeout(1500)
+        page.locator('.modal button:has-text("Until arrival")').tap(); page.wait_for_timeout(1500)
         check("the XO's briefing reports the arrival", page.is_visible("text=we arrived at Mystic Reef"), page.evaluate("document.getElementById('modal-root').innerText")[:500])
         page.screenshot(path=f"{SHOTS}/d-6arrived.png")
         page.tap(".modal .btn"); page.wait_for_timeout(200)

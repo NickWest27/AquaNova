@@ -82,9 +82,8 @@ def main():
         js("const s=sim.s; Object.assign(s,{docked:false,at:null,wpt:null,speed:0,throttle:0}); return 1")
         page.evaluate("window.__aq.scene('sleep')"); page.wait_for_timeout(500)
         txt = page.inner_text(".modal")
-        check("the sleep dialog offers 'Crew has the con'", "crew has the con" in txt.lower(), txt[:120])
-        page.evaluate("[...document.querySelectorAll('.modal .chip')].find(b=>b.textContent==='Crew has the con').click()"); page.wait_for_timeout(300)
-        page.evaluate("[...document.querySelectorAll('.modal .btn')].find(b=>b.textContent==='Sleep').click()"); page.wait_for_timeout(500)
+        check("the sleep dialog offers 'Sleep for real'", "sleep for real" in txt.lower(), txt[:120])
+        page.evaluate("[...document.querySelectorAll('.modal .sl-row')][1].querySelector('button').click()"); page.wait_for_timeout(500)   # Sleep for real, 4 h: one tap
         check("'Good night' screen appears and the plan is armed", "good night" in page.inner_text(".modal").lower() and js("return !!sim.away") is True)
         page.evaluate("[...document.querySelectorAll('.modal .btn')].find(b=>b.textContent==='Wake up now').click()"); page.wait_for_timeout(500)
         check("waking at once clears the plan", js("return !!sim.away") is False)
