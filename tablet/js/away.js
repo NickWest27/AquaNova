@@ -21,7 +21,7 @@ import { eng, setBulkhead, repair, discharge, TEAMS } from './engineering.js';
 
 export const AWAY_CAPS = [4, 8, 12, 24];
 export const AWAY_MIN_S = 90;            // away for less than this: no briefing
-export const AWAY_MAX_SIM_S = 48 * 3600; // never simulate more than this
+export const AWAY_MAX_SIM_S = 96 * 3600; // never simulate more than this (skip time can be until arrival, up to 96 h)
 const KEEL = 8, LOOK_NM = 6, NM_LAT = 60;
 const LOW = { oxygen: 30, battery: 20, hull: 60, scrubbers: 15 };
 const REMORA_DELAY_S = 300, REMORA_S = 1500;   // Remora goes 5 minutes after the away team; a dive, with launch and recovery, takes under 20 minutes
@@ -61,6 +61,13 @@ export function forecast(s = sim.s) {
 }
 
 // ---------- going to sleep ----------
+/** Skip time (owner, 2026-11-28): the same as the crew having the con, but the time passes at once. The XO runs the passage under the
+ *  standing orders (and the science team work an arrival after an hour), then briefs the Captain. Returns the briefing report. */
+export function skipTime(hours) {
+  armAway(hours + 0.05); sim.away.skip = true;   // the crew's stand-down limit just past the skip: a ship still under way when you wake keeps going
+  sim.away.real = Date.now() - hours * 3600 * 1000;   // as if the app had been closed that long
+  return catchUp();
+}
 export function armAway(maxH) {
   const s = sim.s;
   sim.away = { maxH, armClock: s.clock, real: Date.now(), clock: s.clock, throttle: s.throttle, speed: s.speed, cruise: !!s.cruise,
@@ -116,7 +123,7 @@ function rules(a, s) {
     const sh = shuttle(), docks = dockList().filter((d) => !enemyDock(d)).map((d) => ({ d, nm: toward(s, d).nm })).sort((x, y) => x.nm - y.nm), near = docks[0];
     if (near && !s.docked && sh.state === 'bay' && !s.rov && !bay().op && near.nm > 0.5 && near.nm <= TRIP_MAX_NM && shuttleRangeNm() >= near.nm * 2) {
       const secs = (near.nm / SHUTTLE_KT) * 3600 * 2 + TRIP_LOAD_S + 2 * 60;
-      if (a.endClock - s.clock >= secs) { a.trip = { dock: near.d.name, nm: +near.nm.toFixed(1), done: s.clock + secs }; note(`An away team left in ${SHUTTLE_NAME} for ${near.d.name}, ${Math.round(near.nm)} miles away, to fetch supplies: food, science equipment, mail and CO2 scrubbers.`); }
+      if (a.endClock - s.clock >= secs) { a.trip = { dock: near.d.name, nm: +near.nm.toFixed(1), done: s.clock + secs }; note(`An away team left in ${SHUTTLE_NAME} for ${near.d.name}, ${Math.round(near.nm)} mile${Math.round(near.nm) === 1 ? '' : 's'} away, to fetch supplies: food, science equipment, mail and CO2 scrubbers.`); }
     }
   }
   if (!a.did.samples && s.clock - st.c >= WAIT_S + REMORA_DELAY_S) {   // five minutes after the away team: the science team send Remora down at the point of interest we stopped at
@@ -214,22 +221,25 @@ const clk = (c) => clockText(c).replace(/^Day \d+ /, '');
 export function briefing(rep) {
   const a = rep.away, n = rep.now, lines = [];
   const slept = rep.elapsedS || 0;
-  lines.push(`You were away ${dur(Math.max(slept, 60))}. The crew had the con.`);
+  lines.push(a.skip ? `You slept ${dur(Math.max(slept, 60))}. The XO had the con.` : `You were away ${dur(Math.max(slept, 60))}. The crew had the con.`);
   const nm = Math.round(a.nm * 10) / 10;
   if (nm < 0.2) lines.push(`We held position at ${a.from.name}.`);
   else lines.push(`We left ${a.from.name} and are now at ${n.name}. We covered ${nm} nautical miles.`);
-  for (const e of a.log.slice(0, 8)) lines.push(`${clk(e.c)}: ${e.t}`);
-  const st = a.stop, t = st ? clk(st.c) : null;
-  if (st && st.kind === 'arrived') lines.push(`${t}: we arrived at ${st.name || n.name}. Helm brought her to a stop and the crew held there.`);
-  else if (st && st.kind === 'limit') lines.push(`${t}: Helm stopped us short of the Area of Operations limit. We are not cleared to go further, so we held position.`);
-  else if (st && st.kind === 'floor') lines.push(`${t}: Helm stopped the ship. The sea floor ahead was too shallow for us.`);
-  else if (st && st.kind === 'scrubbers') lines.push(`${t}: the CO2 scrubbers were nearly used up, so the crew brought her to the surface and held. Nothing is used up on the surface.`);
-  else if (st && st.kind === 'oxygen') lines.push(`${t}: air reserves were low, so the crew brought her up and held.`);
-  else if (st && st.kind === 'battery') lines.push(`${t}: the battery was low, so the crew brought her up and held.`);
-  else if (st && st.kind === 'hull') lines.push(`${t}: the hull was weakened, so the crew held the ship.`);
-  else if (st && st.kind === 'craft') lines.push(`${t}: we lost ${st.name || 'a craft'}. The crew held the ship and waited for you.`);
-  else if (st && st.kind === 'cap') lines.push(`${t}: your limit of ${a.maxH} hours was reached, so the crew held position.`);
-  else if (n.moving) lines.push('We are still under way on your course.');
+  const st = a.stop, t = st ? clk(st.c) : null, events = [];   // the stop goes in its place in the timeline (owner, 2026-11-28)
+  for (const e of a.log.slice(0, 8)) events.push({ c: e.c, t: `${clk(e.c)}: ${e.t}` });
+  let stopLine = null;
+  if (st && st.kind === 'arrived') stopLine = (`${t}: we arrived at ${st.name || n.name}. Helm brought her to a stop and the crew held there.`);
+  else if (st && st.kind === 'limit') stopLine = (`${t}: Helm stopped us short of the Area of Operations limit. We are not cleared to go further, so we held position.`);
+  else if (st && st.kind === 'floor') stopLine = (`${t}: Helm stopped the ship. The sea floor ahead was too shallow for us.`);
+  else if (st && st.kind === 'scrubbers') stopLine = (`${t}: the CO2 scrubbers were nearly used up, so the crew brought her to the surface and held. Nothing is used up on the surface.`);
+  else if (st && st.kind === 'oxygen') stopLine = (`${t}: air reserves were low, so the crew brought her up and held.`);
+  else if (st && st.kind === 'battery') stopLine = (`${t}: the battery was low, so the crew brought her up and held.`);
+  else if (st && st.kind === 'hull') stopLine = (`${t}: the hull was weakened, so the crew held the ship.`);
+  else if (st && st.kind === 'craft') stopLine = (`${t}: we lost ${st.name || 'a craft'}. The crew held the ship and waited for you.`);
+  else if (st && st.kind === 'cap') stopLine = (`${t}: your limit of ${a.maxH} hours was reached, so the crew held position.`);
+  if (stopLine) events.push({ c: st.c, t: stopLine });
+  events.sort((x, y) => x.c - y.c); for (const e of events) lines.push(e.t);
+  if (!st && n.moving) lines.push('We are still under way on your course.');
   const bits = [`battery ${n.battery}%`, `oxygen ${n.oxygen}%`, `hull ${n.hull}%`];
   lines.push(`Status: ${bits.join(', ')}.${n.hull < a.fromHull ? ` Hull is down ${a.fromHull - n.hull} points.` : ''}`);
   lines.push(st ? 'Your orders, Captain?' : n.moving ? 'The ship is yours again, Captain.' : 'Quiet watch, Captain. The ship is yours again.');

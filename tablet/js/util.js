@@ -57,8 +57,9 @@ export function toast(text, kind = '') {
 
 /** A pop-up ignores taps for this long after it appears (owner, 2026-11-28: one jumped up as he tapped something else and was dismissed). */
 export const TAP_GUARD_MS = 700;
+let lastTap = 0; document.addEventListener('pointerdown', () => { lastTap = Date.now(); }, true);
 export function modal({ title, body, actions }) {
-  const root = document.getElementById('modal-root'), opened = Date.now();
+  const root = document.getElementById('modal-root'), opened = Date.now() - (Date.now() - lastTap < 1500 ? TAP_GUARD_MS : 0);   // opened by the Captain's own tap: no guard
   const close = () => back.remove();
   const bar = el('div', { class: 'actions' }, (actions || [{ label: 'OK', primary: true }]).map((a) =>
     el('button', { class: `btn ${a.primary ? 'primary' : ''} ${a.kind || ''}`, text: a.label, onclick: () => { if (Date.now() - opened < TAP_GUARD_MS) return; close(); a.run && a.run(); } })));   // a tap meant for what was underneath does not dismiss it

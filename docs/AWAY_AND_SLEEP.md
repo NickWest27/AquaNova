@@ -8,6 +8,7 @@ Status: **built 2026-11-20** (owner request: keep the sub moving while the iPad 
 The app cannot run while it is closed. So the ship does not really move while the Captain is away: **on return the game runs the same simulation forward for the real time that passed, with standing orders for the crew, then ARIA briefs the Captain.** The Captain goes to sleep first ("before I close the iPad I need to go to sleep").
 
 ## Two kinds of sleep (Sleep hotspot in the Quarters)
+- **2026-11-28 (owner): both run the same crew logic.** Skip time = `skipTime(hours)`: the plan is armed and caught up at once, with the XO's briefing. The old `sim.warp` jump is no longer used by the dialog.
 - **Skip time** (the old Sleep): jump the clock 2, 4, 8, 12 or 24 hours, or until arrival (`sim.warp`). Unchanged.
 - **Crew has the con**: pick the crew's time limit (4, 8, 12 or 24 h), tap Sleep, a "Good night, Captain" screen appears. **Close the app whenever you like.** "Wake up now" ends it at once with a briefing of anything that happened.
 

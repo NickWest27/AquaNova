@@ -23,7 +23,7 @@ import { startSync, syncAtBoot } from './sync.js';
 import { getPlayer, setPlayer, fill } from './player.js';
 import { runIntake } from './intake.js';
 import { startAria } from './aria.js';
-import { armAway, catchUp, wakeNow, briefing, onWake, AWAY_CAPS } from './away.js';
+import { armAway, catchUp, wakeNow, briefing, onWake, AWAY_CAPS, skipTime } from './away.js';
 import { isCommissioned, excuse } from './unlocks.js';
 import { isOpen, visit, LOCKED } from './rooms.js';
 sim.cruiseGate = sim.cruiseGate || []; sim.cruiseGate.push(() => (isCommissioned('cruise') ? null : 'commission'));   // super cruise is commissioned in the trials area
@@ -261,7 +261,7 @@ function sleepDialog(startMode = 'skip') {
   const eta = eh == null ? null : Math.min(96, Math.ceil(eh * 10) / 10 + 0.1);
   let hours = eta && eta <= 12 ? eta : 8, untilArrival = !!(eta && eta <= 12);
   const fmt = (h) => (h >= 1 ? `${Math.round(h * 10) / 10} h` : `${Math.round(h * 60)} min`);
-  const note = el('p', { text: `It is ${clockText()}. The game saves first. The ship keeps its course and speed while you sleep, so a long trip passes quickly. The crew wake you if you arrive at your destination, or in an emergency.${s.docked ? ' Docked: shore power charges the ship.' : ''}` });
+  const note = el('p', { text: `It is ${clockText()}. The game saves first. The XO has the con and the time passes at once. The crew keep your course and speed under their standing orders (they hold at the Area of Operations limit, on arrival, on a shoal, or if supplies run low), and the science team work a site you arrive at after an hour. You wake to the XO's briefing.${s.docked ? ' Docked: shore power charges the ship.' : ''}` });
   const chips = el('div', { class: 'row' });
   const draw = () => chips.replaceChildren(
     ...[2, 4, 8, 12, 24].map((h) => el('button', { class: `btn chip ${!untilArrival && h === hours ? 'on primary' : ''}`, text: `${h} h`, onclick: () => { hours = h; untilArrival = false; draw(); } })),
@@ -278,11 +278,7 @@ function sleepDialog(startMode = 'skip') {
   modal({ title: 'Sleep', body: el('div', {}, modes, note, awayNote, chips), actions: [{ label: 'Cancel' }, { label: 'Sleep', primary: true, run: () => {
     if (mode === 'away') { saveBeforeSleep(); armAway(cap); awayScreen(cap); syncUI(); return; }
     saveBeforeSleep();                         // a save before sleep, as agreed
-    const r = sim.warp(hours);
-    const h = fmt(r.hours);
-    const text = r.arrived ? `Captain, we have arrived at ${r.arrived}. You slept ${h}. It is ${clockText()}.`
-      : r.reason ? `Captain, ${r.reason}. I woke you early. You slept ${h}. It is ${clockText()}.` : `You slept ${h}. It is ${clockText()}.`;
-    modal({ title: r.arrived ? 'We have arrived' : r.reason ? 'ARIA woke you' : 'Good morning, Captain', body: el('p', { text }), actions: [{ label: 'OK', primary: true }] });
+    showBriefing(skipTime(hours));             // the XO has the con for the passage, then briefs you (owner, 2026-11-28: both sleeps work the same way)
     ping(); liveNav(); syncUI(); scene.update();
   } }] });
   drawAll();

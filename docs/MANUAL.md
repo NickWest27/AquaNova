@@ -419,8 +419,11 @@ What you do changes your **standing** with each (Logbook → Standings).
 The game runs in **real time** by default. **PED → Settings → Time compression:** 5x to 120x. Handling (turns, dives) stays in real seconds at any setting.
 
 ### Sleep (your quarters)
-- **Skip time:** 2, 4, 8, 12 or 24 hours, or until arrival. The crew wake you for an emergency.
-- **Crew has the con:** choose a limit (4 to 24 hours), sleep, and **close the app**. When you come back the game catches up the real time that passed, and ARIA briefs you. The crew keep your course and speed, stop at the area limit, on arrival, on a shoal, or when air, battery or hull run low, and may send an away team for supplies or Remora for samples.
+Both kinds of sleep work the same way: **the XO has the con**, the crew run the ship under their standing orders, and you wake to the XO's **briefing** of the passage, in time order.
+- **Skip time:** 2, 4, 8, 12 or 24 hours, or **until arrival**. The time passes at once.
+- **Crew has the con:** choose a limit (4 to 24 hours), sleep, and **close the app**. When you come back the game works out how much real time has passed and catches the ship up to that point.
+
+**The standing orders:** keep your course and speed; stop on arrival, short of the Area of Operations limit, before shallow water, or when a craft is lost; bring her up and hold if air, scrubbers or battery run low, or hold if the hull is weak; stand down at your limit. **If you arrive while asleep, the science team send Remora down at the site after an hour, if they can**, and an away team may take the Tern for supplies if a port is near.
 
 ### Saving
 - The game saves when you leave, and at every logbook entry.

@@ -44,7 +44,7 @@ def main():
         c1 = js("return sim.s.clock")
         check("4 hours pass", abs((c1 - c0) - 4 * 3600) < 120, c1 - c0)
         check("shore power charged the ship while docked", js("return [sim.s.battery, sim.s.oxygen]")[0] > 90 and js("return sim.s.oxygen") > 90)
-        check("wake-up message shows the new time", page.is_visible("text=You slept 4 h"))
+        check("the XO's briefing says how long you slept", page.is_visible("text=You slept 4 hours"))
         has = page.evaluate("import('./js/persist.js').then(m => !!m.saveManager.getActiveLogbook().checkpoint)")
         check("a save was written before sleeping", has)
         page.screenshot(path=f"{SHOTS}/d-2woke.png")
@@ -73,8 +73,8 @@ def main():
         c0 = js("return sim.s.clock")
         tap_hs("SLEEP"); page.tap('.modal button:text-is("12 h")'); page.tap('.modal button:text-is("Sleep")'); page.wait_for_timeout(2500)
         slept = (js("return sim.s.clock") - c0) / 3600
-        check("crew woke the player early for low oxygen", page.is_visible("text=I woke you early") and page.is_visible("text=oxygen reserves"), slept)
-        check("woke well before 12 hours", 1 < slept < 10, slept)
+        check("low air: the crew brought her up and held, and the briefing says so (owner, 2026-11-28: the XO manages the passage)", page.is_visible("text=air reserves were low") or page.is_visible("text=CO2 scrubbers were nearly used up"), slept)
+        check("the full 12 hours passed, with the crew in charge", 11.5 < slept < 12.5, slept)
         page.screenshot(path=f"{SHOTS}/d-4early.png")
         page.tap(".modal .btn"); page.wait_for_timeout(200)
 
@@ -87,12 +87,12 @@ def main():
         page.tap(".modal .btn"); page.wait_for_timeout(200)
 
         # --- arrival wakes the player; the dialog offers "Until arrival" ---
-        js("sim.s.docked = false; const d = sim.dockPoi(); const r = sim.s.pois.find(p => p.name === 'Mystic Reef'); r.lat = 40.9; r.lon = -71.4; sim.s.lat = r.lat - 0.6; sim.s.lon = r.lon; sim.s.at = null; sim.setWpt(r); sim.setThrottle(1); sim.s.speed = 14;")
+        js("sim.s.docked = false; const d = sim.dockPoi(); const r = sim.s.pois.find(p => p.name === 'Mystic Reef'); r.lat = 40.9; r.lon = -71.4; sim.s.lat = r.lat - 0.6; sim.s.lon = r.lon; sim.s.at = null; sim.setWpt(r); sim.setThrottle(1); sim.s.speed = 14; sim.s.depth = 100; sim.s.targetDepth = 100; sim.s.scrubbers = 100;")   # submerged (the low-air step left her on the surface, 7 kt)
         tap_hs("SLEEP"); page.wait_for_timeout(300)
         check("sleep dialog offers Until arrival", page.is_visible('.modal button:has-text("Until arrival")'))
         page.screenshot(path=f"{SHOTS}/d-5until-arrival.png")
         page.tap('.modal button:text-is("Sleep")'); page.wait_for_timeout(1500)
-        check("crew woke the player on arrival", page.is_visible("text=we have arrived at Mystic Reef"))
+        check("the XO's briefing reports the arrival", page.is_visible("text=we arrived at Mystic Reef"), page.evaluate("document.getElementById('modal-root').innerText")[:500])
         page.screenshot(path=f"{SHOTS}/d-6arrived.png")
         page.tap(".modal .btn"); page.wait_for_timeout(200)
 
