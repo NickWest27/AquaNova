@@ -260,6 +260,9 @@ export function mount(body, ctx, opts = {}) {
   const first = (c) => (c.id === 'executiveOfficer' ? 'ARIA' : c.name.replace(/^(Captain|Commander|Dr\.|Specialist|Engineer|Lieutenant) /, '').split(' ')[0]);
   const initial = (c) => c.name.replace(/^(Captain|Commander|Dr\.|Specialist|Engineer|Lieutenant) /, '')[0];
 
+  // Say that again (owner, 2026-11-28: a pop-up can appear just as he taps, and is gone): the crew member's last message, shown again without logging it twice
+  const lastLine = (id) => { const l = transcript(id).filter((x) => x.from === 'crew'); return l.length ? l[l.length - 1] : null; };
+  const sayAgain = () => { const l = lastLine(cur.id); if (!l) return; reply = { said: 'Say that again.', text: l.text }; page = 'reply'; render(); };
   function say(text, done, you = true) {
     if (you && text) logLine(cur.id, 'you', text);
     if (done) logLine(cur.id, 'crew', done);
@@ -311,11 +314,14 @@ export function mount(body, ctx, opts = {}) {
     else if (page === 'crew') {
       kids = [el('div', { class: 'comm-head', text: 'Who do you want to reach?' }),
         unreadCount() > 0 && el('div', { class: 'comm-waiting', text: 'You have messages waiting.' }),
+        (() => { const last = crew.map((c) => ({ c, l: lastLine(c.id) })).filter((x) => x.l).sort((a, b) => b.l.at - a.l.at)[0];   // the latest message from anyone
+          return last && line(`Repeat the last message (${first(last.c)})`, () => { cur = last.c; cat = null; readTo = 0; sayAgain(); }, 'back'); })(),
         ...crew.map((c) => el('button', { class: 'comm-line comm-who', onclick: () => pick(c) }, el('span', { class: `avatar ${c.id === 'executiveOfficer' ? 'aria' : ''}${portrait(c.id) ? ' face' : ''}` }, portrait(c.id, 'avatar-face') || crewIcon(c.id) || initial(c)), el('span', {}, el('b', { text: c.name }), el('small', { text: c.role })), unreadFor(c.id) > 0 && el('span', { class: 'comm-badge', text: String(unreadFor(c.id)) })))];
     } else if (page === 'cat') {
       kids = [logView(5), withFace(el('div', {}, el('div', { class: 'comm-head', text: GREET[cur.id] || 'Yes, Captain?' }), el('div', { class: 'comm-who-label', text: `${cur.name} · ${cur.role}` }))),
         nextLine(),
         ...cats().map((f) => line(sub(f.label), () => { trail = [f.label]; page = 'lines'; render(); }, f.cls || '')),
+        lastLine(cur.id) && line('Say that again', sayAgain, 'back'),
         line('Call another station', () => { page = 'crew'; render(); }, 'back'), line("That's all", () => ctx.closeComm(), 'back')];
     } else if (page === 'lines') {
       const f = openFolder();

@@ -17,7 +17,7 @@ import { SHUTTLE_NAME, BAY_SAFE_KT, bay } from './bayops.js';
 import './tern.js';
 import './commsModel.js';
 import { tickLab, SAMPLE_KINDS, awardSurveyBonus } from './science.js';
-import { el, $, toast, pad, modal, frameThrottle, viewProbe } from './util.js';
+import { el, $, toast, pad, modal, frameThrottle, viewProbe, TAP_GUARD_MS } from './util.js';
 import { ICONS } from './ui.js';
 import { startSync, syncAtBoot } from './sync.js';
 import { getPlayer, setPlayer, fill } from './player.js';
@@ -145,6 +145,8 @@ function closePed() {
 
 // ---------- Communicator: a voice channel, shown as a blurred overlay over the current screen ----------
 let comm = null;
+// When the communicator opens by itself (a crew member calls), it ignores taps for TAP_GUARD_MS, so one meant for what was underneath does not close it or pick a line.
+document.getElementById('comm-pop').addEventListener('click', (e) => { const t = +(e.currentTarget.dataset.opened || 0); if (Date.now() - t < TAP_GUARD_MS) { e.stopPropagation(); e.preventDefault(); } }, true);
 async function toggleComm(who = null) {
   if (comm) { if (!who) return closeComm(); closeComm(); }   // opened on someone: start again on them
   if (commsLocked()) return;
@@ -420,7 +422,7 @@ async function boot() {
     // A crew member with something to say opens the line to them (owner, 2026-11-27), unless the Captain is already talking to someone.
     // Automated tests keep the old behaviour (the pin glows) unless they ask with ?callin=1.
     const callIn = !navigator.webdriver || /[?&]callin=1/.test(location.search);
-    document.addEventListener('crew-call', (e) => { if (callIn && !comm && !commsLocked()) toggleComm(e.detail.id); });
+    document.addEventListener('crew-call', (e) => { if (callIn && !comm && !commsLocked()) { $('#comm-pop').dataset.opened = String(Date.now()); toggleComm(e.detail.id); } });   // it opened by itself: the tap guard applies
     document.addEventListener('inbox-change', () => $('#pin').classList.toggle('unread', unreadCount() > 0));
     $('#ped-btn').hidden = !hasPed(); $('#ped-btn').addEventListener('click', togglePed);
     // sound effects (sfx.js, 2026-11-27): the moments that should be heard
