@@ -658,10 +658,15 @@ sim.step = (dt) => { const n = Math.max(1, Math.ceil((dt * TIMESCALE) / 8)); for
 sim.warp = (hours) => {
   const s = sim.s, total = hours * 3600, stepGame = s.cruise ? 6 : 15;   // 15 game seconds per step
   const startWpt = s.wpt;
-  let done = 0, reason = null, arrived = null, sinceCheck = 0;
+  let done = 0, reason = null, arrived = null, sinceCheck = 0, hit = null;
+  const off = sim.on((type, d) => { if (type === 'arrived') hit = 'arrived'; else if (type === 'bump' && !hit) hit = d && d.kind; });   // why the course ended
   while (done < total) {
     sim.step(stepGame / TIMESCALE); done += stepGame; sinceCheck += stepGame;
-    if (startWpt && !s.wpt) { arrived = startWpt.name; break; }
+    if (startWpt && !s.wpt) {   // the course has ended: a real arrival, or the ship was stopped (ran aground, the chart edge)
+      if (hit === 'arrived') arrived = startWpt.name;
+      else reason = hit === 'edge' ? 'we reached the edge of the chart and stopped' : hit ? 'we touched bottom and stopped short of the destination' : 'the course ended before the destination';
+      break;
+    }
     if (sinceCheck >= 60) {
       sinceCheck = 0;
       if (s.oxygen < 30 && !s.docked) reason = `oxygen reserves are down to ${Math.round(s.oxygen)}%`;
@@ -670,7 +675,7 @@ sim.warp = (hours) => {
       if (reason) break;
     }
   }
-  sim.dirty = true; sim.emit('tick');
+  off(); sim.dirty = true; sim.emit('tick');
   return { hours: done / 3600, reason, arrived };
 };
 
