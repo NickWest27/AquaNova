@@ -81,7 +81,8 @@ export function toward(a, b) {
 
 sim.speedCaps = [];   // functions (s) => fastest allowed speed (kt) or null (the bay doors while open, unless the Captain overrides)
 sim.depthCaps = [];   // functions (s) => deepest allowed depth or null (the Tern's limit while she is out)
-sim.maxKt = () => { const od = sim.s.overdrive; return sim.s.cruise ? SUPER_KT * (od && od.kind === 'cruise' ? od.f : 1) : MAX_KT * (od && od.kind === 'speed' ? od.f : 1); };   // overdrive: a trials push past the rating (trials.js)
+sim.jetTop = sim.jetTop || (() => MAX_KT);   // the jets' top speed found in the Sea Trials (trials.js replaces this)
+sim.maxKt = () => { const od = sim.s.overdrive; return sim.s.cruise ? SUPER_KT : od && od.kind === 'speed' ? MAX_KT * od.f : sim.jetTop(); };   // overdrive: a trials push past the top speed (trials.js)
 /** Engage or drop super cruise. Needs deep water under and ahead of the ship, and not docked. */
 /** Why super cruise was refused, as the helm says it. */
 export const cruiseWhy = (why) => ({ docked: 'We are docked, Captain.', power: 'We have no power for super cruise, Captain.', fusion: 'The fusion drive is down, Captain. Engineering can bring it back.', commission: 'Super cruise has not been commissioned yet, Captain. OERA wants it tested in the trials area first.' })[why] || 'Not enough deep water ahead, Captain. Super cruise needs 120 m under us for the next 9 miles.';

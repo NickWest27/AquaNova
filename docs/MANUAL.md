@@ -103,7 +103,7 @@ You can reach a crew member only after you have met them in their room. Until th
 - **Nicole:** mail, reports, the surface link lost and back, the Tern by radio.
 - **Alex:** contacts (hostiles too), WSKRs, the sonar.
 - **Dr. Patel:** Remora launches and recoveries, samples, analysis.
-- **Chief Doyle:** engineering, damage, the trials' depth pushes.
+- **Chief Doyle:** engineering, damage reports (including a jets push that goes wrong).
 - **Lt. Washington:** the Tern's launches and recoveries, a parted Remora tether.
 
 ---
@@ -155,7 +155,7 @@ Three ways: **Place** (pick a charted place), **Lat / Long** (degrees and minute
 **Route** lists the waypoints. Tap a row, then **+** adds one after it, **−** deletes it, **▲ ▼** move it, **Edit** changes it. **Done** keeps it, **Cancel** drops it. **Plot** has the helm plan a path round the land.
 
 ### Speed orders
-Tell Marcus **Make your speed**: All stop, 5, 8 (bay safe), 10, or Full (14 knots). Once the Sea Trials have run the jets past their rating, a **Max tested** option appears (15.5 or 17 knots): the jets run past their rating until your next speed order.
+Tell Marcus **Make your speed**: All stop, 5, 8 (bay safe), 10, or Full. Full is the jets' top speed: 14 knots at first, or the top speed found in the Sea Trials. The throttle lever's FULL is the same speed.
 
 ### Depth
 - **Dive rate depends on speed**, like a plane: about 0.5 m/s stopped, 2.6 m/s at 14 kt, up to 3 m/s (10 m/s in super cruise).
@@ -390,7 +390,7 @@ Sound it (ARIA's emergencies, or the button on the engineering computer) and the
 ### Commissioning (the opening missions)
 1. **First Contact:** find the pin, call ARIA.
 2. **Know Your Ship:** the logbook, the PED, the walkways, the bridge.
-3. **Sea Trials:** sail to the Trials AO (about 100 nm south) under 15 kt and above 300 m. Then test depth (300 m), full speed, super cruise, and report. Chief Doyle (depth, watching the hull) and Marcus (speed) may ask to **push** each test further (450 then 600 m; 15.5 then 17 kt; 110 then 120 kt) for a ship record, with a risk of light damage. Whoever does it tells you when he starts, what he is waiting for (for example, out of super cruise for the jets-only run), and when he has made it.
+3. **Sea Trials:** sail to the Trials AO (about 100 nm south) under 15 kt and above 300 m. Then test depth (300 m), full speed, super cruise, and report. The depth test is only a 300 m tick (she can go much deeper). After the full-speed run Marcus asks, through ARIA, to **push the jets** one knot more (15, 16, 17 kt ...). He asks again after each safe step, and each step is riskier. Each speed reached without damage becomes her new **top speed** (Full). If a push damages the propulsion, Chief Doyle reports it, the last safe speed stays her top speed, and the pushing ends. Say **That will do** to stop and keep the speed you have. Marcus tells you when he starts, what he waits for (out of super cruise: this is the jets alone) and when he has made it.
 4. **Charting a Course:** on the way home: plot to Vineyard Ledge, launch a WSKR, run a sweep, scan the ledge.
 5. **First Survey:** Remora samples, analysis, report.
 
