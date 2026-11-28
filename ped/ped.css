@@ -60,3 +60,10 @@ textarea.field { min-height:6rem; resize:none; }
 .nav button { font-size:.48rem; padding:0; letter-spacing:-.02em; overflow:hidden; }
 .nav button:not(.on) { font-size:0; gap:0; }
 .nav button:not(.on) svg { margin:0; }
+
+/* alerts on the Status page (2026-11-28) */
+.card.alerts { border-color: #ff5c5c; }
+.alert { margin: .25rem 0; padding: .35rem .6rem; border-radius: .4rem; font-weight: 700; }
+.alert.bad { background: rgba(255, 70, 70, .22); color: #ffb3b3; }
+.alert.warn { background: rgba(255, 176, 32, .18); color: #ffd98a; }
+h3.msn { margin: .8rem 0 .3rem; font-size: 1rem; color: #64ffda; }

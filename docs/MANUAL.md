@@ -440,6 +440,9 @@ Your personal tablet (top corner button):
 
 ---
 
+### The iPhone PED
+A companion app for your phone (the same PED, portrait). It shows what the iPad last reported: status, an **Alerts** card (alarms, fire, flooding, damage, no surface link, active sonar), a nav chart, missions, findings, and your tasks and journal (these two sync both ways). Connect it in its Settings with the same GitHub token and passphrase as the iPad (PED → Settings → Sync with the iPhone PED). While the crew have the con and the iPad is closed, the phone estimates where the ship is; anything that happens aboard shows when the iPad is opened again.
+
 ## 16. Sound
 
 All sounds are made by the game, in a 16-bit style. Sliders in **PED → Settings → Sound**: Master, Ship, Ambient, Communicator, Notices, Interface, Effects.

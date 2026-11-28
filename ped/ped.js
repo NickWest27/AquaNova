@@ -180,7 +180,10 @@ const views = {
         el('p', { class: 'note', text: `Estimated position ${away.pos[0].toFixed(2)}°N ${Math.abs(away.pos[1]).toFixed(2)}°${away.pos[1] < 0 ? 'W' : 'E'} · ${away.kt} kt` }),
         el('p', { class: 'note', text: away.etaH != null ? `${Math.round(away.toGo)} nm to go, about ${hm(away.etaH)}${away.dest ? ' to ' + away.dest : ''}.` : away.held ? 'The ship is holding.' : `${Math.round(away.toGo)} nm to go.`}),
         el('p', { class: 'note', text: `The iPad has been closed ${hm(away.elapsedH)}. This is an estimate. When you open the iPad, the crew's real run is worked out and ARIA briefs you.` })] : el('p', { class: 'note', text: 'The crew have the con. No forecast was sent.' }));
+    const al = s.alerts || [];   // alarms, fire, flooding, damage, no surface link, active sonar (owner, 2026-11-28)
+    const alertCard = al.length ? el('div', { class: 'card alerts' }, el('div', { class: 'lbl', text: 'Alerts' }), ...al.map((x) => el('p', { class: `alert ${x.k}`, text: x.t }))) : null;
     return [
+      alertCard,
       awayCard,
       el('div', { class: 'card' }, el('div', { class: 'lbl', text: 'Location' }), el('div', { class: 'num', style: 'font-size:1.3rem', text: s.location }),
         s.clock && el('p', { class: 'note', text: `${s.clock}${s.docked ? ' · docked' : ''}` }),
@@ -192,9 +195,13 @@ const views = {
         num('Hull', `${s.hull}%`, cls(s.hull, 80, 40)), num('Destination', s.destination ? s.destination : '—')),
     ];
   },
-  missions() {
-    const o = (store.status && store.status.objectives) || [];
-    return o.length ? o.map((x) => el('div', { class: `card task ${x.done ? 'done' : ''}` }, el('span', { class: 'box' }), el('span', { class: 'txt', text: x.text }))) : [el('div', { class: 'empty', text: 'No active missions.' })];
+  missions() {   // as the iPad's PED: per mission, the steps done and the current one, then how many are to come
+    const st = store.status || {}, o = st.objectives || [], names = st.missions || {};
+    if (!o.length) return [el('div', { class: 'empty', text: 'No active missions.' })];
+    const groups = [...new Set(o.map((x) => x.m))];
+    return [...groups.flatMap((m) => [el('h3', { class: 'msn', text: names[m] || 'Mission' }),
+      ...o.filter((x) => x.m === m).map((x) => el('div', { class: `card task ${x.done ? 'done' : ''}` }, el('span', { class: 'box' }), el('span', { class: 'txt', text: x.text })))]),
+      st.upcoming ? el('p', { class: 'note', text: `${st.upcoming} more step${st.upcoming === 1 ? '' : 's'} to come.` }) : null].filter(Boolean);
   },
   findings() {
     const f = (store.status && store.status.discoveries) || [];

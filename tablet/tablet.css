@@ -1080,3 +1080,12 @@ body.on-bridge .dock-status { background: rgba(3,14,24,.82); border-radius: 0 0 
 .bt.compact .bt-place.note.error { color: #fff; background: rgba(190, 28, 28, 0.6); border-radius: 6px; box-shadow: 0 0 18px rgba(255, 60, 60, 0.55); animation: bt-alert 1s ease-in-out 3; }
 .bt.compact .bt-place.note.warn { color: #1a1204; background: rgba(255, 176, 32, 0.85); border-radius: 6px; }
 @keyframes bt-alert { 50% { background: rgba(255, 50, 50, 0.85); } }
+
+/* overhead panel (owner, 2026-11-28: the text was very small; use the space). Place and position larger; a notice fills the whole panel,
+   its size picked by length in bridge.js (--nfs): one big line when short, two lines when long. */
+.bt.compact .bt-place { font-size: 32px; line-height: 36px; }
+.bt.compact .bt-pos { font-size: 22px; line-height: 26px; }
+.bt.compact .bt-place.note { position: absolute; inset: 4px 12px; display: flex; align-items: center; justify-content: center; -webkit-line-clamp: unset; width: auto;
+  white-space: normal; overflow: hidden; font-size: var(--nfs, 30px); line-height: 1.12; letter-spacing: .02em; text-align: center; border-radius: 6px; }
+.bt.compact { padding: 0 44px; box-sizing: border-box; }   /* the panel's hole has slanted corners: keep text clear of them */
+.bt.compact .bt-place.note { inset: 4px 40px; }

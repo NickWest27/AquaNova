@@ -4,6 +4,12 @@ A portrait web app in the PDA frame. **It has no simulation.** It shows what the
 
 Tabs: **Status, Nav, Missions, Findings, Tasks, Journal, Settings**. Notes and tasks sync both ways. Code: `ped/ped.js`; the iPad builds the status in `tablet/js/sync.js` (`buildStatus`).
 
+## Alerts and missions (2026-11-28)
+- **Status** starts with an **Alerts** card when there is something to know: general alarm, fire, flooding, a damaged or offline system, no surface link, active sonar (red for danger, amber for caution). The iPad builds them in `sync.js` (`alerts()`).
+- **Missions** shows each active mission by name with its done steps and the current one, then "N more steps to come", the same as the iPad's PED (waiting steps are not sent).
+- WSKRs are labelled Sc, La, Dr, Sp on the phone chart, as on the iPad.
+- The phone still has no simulation: alerts are as of the iPad's last report. While the crew have the con, the ship's position is estimated, but a fire or a leak that starts while the iPad is closed only shows once the iPad is opened again.
+
 ## Nav tab (2026-11-20)
 - A plan view (north up) centred on the ship: heading arrow, one-hour vector at the current speed, range rings, the destination point and a dashed line to it, the sites (yellow, docks blue, names shown when zoomed in), and the craft out (Remora, Tern, WSKRs) in pink.
 - **Zoom in / Zoom out** buttons (4, 10, 25, 60, 150, 400 nm top to bottom), **drag** to pan, **Centre on ship**.

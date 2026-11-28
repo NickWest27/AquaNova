@@ -2,7 +2,10 @@
 // Nothing here is a save. Saves are logbook entries and the exit save only.
 import { getConfig, syncLogbook, publishActive, pushStatus, flush, autoSyncAllowed, resetPace } from '../../utils/ledgerSync.js';
 import { saveManager, gameState, restoreSim } from './persist.js';
-import { sim, clockText } from './sim.js';
+import { sim, clockText, WSKR_CODES } from './sim.js';
+import { eng, SYSTEMS } from './engineering.js';
+import { LINKS, linkState } from './commsModel.js';
+import missionManager from '../../game/systems/missionManager.js';
 import { dlog } from '../../utils/log.js';
 
 export const syncState = { status: getConfig() ? 'idle' : 'off', at: null, error: null };
@@ -10,6 +13,20 @@ const listeners = new Set();
 export const onSyncChange = (fn) => { listeners.add(fn); return () => listeners.delete(fn); };
 const set = (status, error = null) => { syncState.status = status; syncState.error = error; if (status === 'ok') syncState.at = new Date(); listeners.forEach((fn) => fn(syncState)); };
 
+// What the phone should flag (owner, 2026-11-28): the things you would want to know while the iPad sleeps.
+function alerts(s) {
+  const out = [];
+  try {
+    const e = eng();
+    if (e.general) out.push({ k: 'bad', t: 'General alarm' });
+    if (e.fire) out.push({ k: 'bad', t: `Fire, ${e.fire.comp === 'fwd' ? 'forward' : 'aft'} compartment` });
+    for (const c of ['fwd', 'aft']) if (e.leak && e.leak[c]) out.push({ k: 'bad', t: `Flooding, ${c === 'fwd' ? 'forward' : 'aft'} compartment` });
+    for (const x of SYSTEMS) { const h = e.health[x.id]; if (h < 50) out.push({ k: h <= 0 ? 'bad' : 'warn', t: `${x.name} ${h <= 0 ? 'offline' : 'damaged'} (${Math.round(h)}%)` }); }
+  } catch (err) { /* engineering not loaded yet */ }
+  if (!s.docked && !LINKS.some((L) => L.tx && linkState(L).up)) out.push({ k: 'warn', t: 'No surface link' });
+  if (s.sonar && s.sonarActive) out.push({ k: 'warn', t: 'Active sonar: we can be heard' });
+  return out;
+}
 export function buildStatus() {
   const s = sim.s, lb = saveManager.getActiveLogbook();
   return {
@@ -24,9 +41,12 @@ export function buildStatus() {
     craft: [
       ...(s.rov ? [{ k: 'Remora', lat: +s.rov.lat.toFixed(4), lon: +s.rov.lon.toFixed(4) }] : []),
       ...(s.shuttle && s.shuttle.state === 'out' ? [{ k: 'Tern', lat: +s.shuttle.lat.toFixed(4), lon: +s.shuttle.lon.toFixed(4) }] : []),
-      ...(s.wskrs || []).filter((w) => !w.dead).map((w) => ({ k: 'W' + w.n, lat: +w.lat.toFixed(4), lon: +w.lon.toFixed(4) })),
+      ...(s.wskrs || []).filter((w) => !w.dead).map((w) => ({ k: WSKR_CODES[w.n - 1] || 'W' + w.n, lat: +w.lat.toFixed(4), lon: +w.lon.toFixed(4) })),
     ],
-    objectives: (gameState.getProperty('mission.objectives') || []).map((o) => ({ text: o.description, done: o.status === 'completed' })),
+    objectives: (gameState.getProperty('mission.objectives') || []).filter((o) => o.status !== 'waiting').map((o) => ({ text: o.description, done: o.status === 'completed', m: o.missionId })),   // as the iPad PED shows them: done and current steps
+    upcoming: (gameState.getProperty('mission.objectives') || []).filter((o) => o.status === 'waiting').length,
+    missions: Object.fromEntries([...new Set((gameState.getProperty('mission.objectives') || []).map((o) => o.missionId))].map((id) => [id, (missionManager.missions.get(id) || {}).name || id])),
+    alerts: alerts(s), sonar: !s.sonar ? 'off' : s.sonarActive ? 'active' : 'passive',
     discoveries: gameState.getProperty('mission.discoveries') || [],
     away: sim.away ? { t: new Date(sim.away.real || Date.now()).toISOString(), maxH: sim.away.maxH, armClock: sim.away.armClock, clock: sim.away.clock, from: sim.away.from, plan: sim.away.plan, stop: sim.away.stop ? sim.away.stop.kind : null, nm: +sim.away.nm.toFixed(1) } : null,   // "crew has the con": the phone works out where the ship should be from this
   };

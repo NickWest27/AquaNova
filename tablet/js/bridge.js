@@ -344,7 +344,7 @@ export function createBridgeConsole({ top, main, display, center, left, right, o
     const s = sim.s;
     if (note && Date.now() - note.at > readMs(note.text)) nextNote();
     set(tPlace, note ? note.text : s.docked ? 'DOCKED' + (s.at ? ' · ' + s.at.name.toUpperCase() : '') : s.at ? s.at.name.toUpperCase() : s.wpt ? 'EN ROUTE: ' + s.wpt.name.toUpperCase() : 'OPEN WATER');
-    const cls = 'bt-place' + (note ? ' note' : '') + (note && note.kind ? ' ' + note.kind : ''); if (tPlace.className !== cls) tPlace.className = cls;   // a notice wraps onto two lines and takes the whole panel
+    const cls = 'bt-place' + (note ? ' note' : '') + (note && note.kind ? ' ' + note.kind : ''); if (tPlace.className !== cls) tPlace.className = cls; { const n = note ? note.text.length : 0, fs = !note ? '' : n <= 22 ? '38px' : n <= 30 ? '34px' : n <= 52 ? '30px' : '25px'; if (tPlace.style.getPropertyValue('--nfs') !== fs) tPlace.style.setProperty('--nfs', fs); }   // a notice is sized to fill the panel (owner, 2026-11-28)   // a notice wraps onto two lines and takes the whole panel
     set(tPos, `${deg(s.lat, 'N', 'S', 2)}  ${deg(s.lon, 'E', 'W', 3)}  ·  ${gameDateText().slice(0, -3)}`);   // the overhead panel is the bridge's status strip (the screen-edge strip hides here)
     big[mainId].update(); if (current !== mainId) small[current].update(); else small[current].update();
     views[current].side();
