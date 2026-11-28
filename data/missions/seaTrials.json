@@ -65,7 +65,7 @@
         },
         {
           "type": "crew_say",
-          "role": "engineering",
+          "role": "aria",
           "text": "We are in the AO, Captain. The engineering computer and super cruise are signed off. Have a look at the fusion drive in Engineering before we open her up. OERA's trials orders are in your mail."
         },
         {

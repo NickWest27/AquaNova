@@ -298,7 +298,7 @@ export function mount(body, ctx, opts = {}) {
     if (c.id === 'executiveOfficer' && pendingDecisions().length) { gameState.updateProperty('progress.met.' + c.id, true); greeted = true; page = 'decision'; markRead(); render(); return; }   // ARIA is waiting for an answer
     if (INTRO[c.id] && !met) { gameState.updateProperty('progress.met.' + c.id, true); greeted = true; logLine(c.id, 'crew', fill(INTRO[c.id])); reply = { said: null, text: fill(INTRO[c.id]) }; page = 'reply'; markRead(); render(); return; }   // first meeting comes before anything they were holding back
     const held = takeHeld(c.id);   // what they tried to tell the Captain while he was elsewhere
-    if (held.length) { greeted = true; reply = { said: null, text: held.map((h) => (/\bCaptain\b/.test(h) ? h : `Captain, ${h.charAt(0).toLowerCase()}${h.slice(1)}`))   /* no "Captain," in front of a line that already says Captain */.join(' '), held: true }; page = 'reply'; } else page = 'cat';
+    if (held.length) { greeted = true; reply = { said: null, text: held.map((h, i) => (i || /\bCaptain\b/.test(h) ? h : `Captain, ${h.charAt(0).toLowerCase()}${h.slice(1)}`)).join('\n\n'), held: true }; page = 'reply'; } else page = 'cat';
     markRead(); render();
   }
   function render() {

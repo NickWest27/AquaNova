@@ -1089,3 +1089,5 @@ body.on-bridge .dock-status { background: rgba(3,14,24,.82); border-radius: 0 0 
   white-space: normal; overflow: hidden; font-size: var(--nfs, 30px); line-height: 1.12; letter-spacing: .02em; text-align: center; border-radius: 6px; }
 .bt.compact { padding: 0 44px; box-sizing: border-box; }   /* the panel's hole has slanted corners: keep text clear of them */
 .bt.compact .bt-place.note { inset: 4px 40px; }
+
+.comm-reply p { white-space: pre-line; }   /* several held messages: one paragraph each */
