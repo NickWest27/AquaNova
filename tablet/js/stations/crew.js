@@ -46,7 +46,7 @@ function dive(want, lead) {
   const max = sim.deepest();
   if (max == null) { sim.setDepth(want); return `${lead} Making my depth ${want} metres.`; }
   if (max < 5) return `${lead} There is not enough water under us to dive here, Captain. The floor is only ${Math.round(sim.s.floor)} metres.`;
-  if (want > max) { sim.setDepth(max); return `${lead} The floor is ${Math.round(sim.s.floor)} metres here, so ${max} metres is as deep as is safe. Making ${max}.`; }
+  if (want > max) { sim.setDepth(want); return `${lead} The floor is ${Math.round(sim.s.floor)} metres here, so I will hold ${max} metres for now and go on down to ${want} when the floor drops away.`; }   // the order stays: terrain protection holds us off the floor (owner, 2026-11-28: he forgot the 300 m order)
   sim.setDepth(want); return `${lead} Making my depth ${want} metres.`;
 }
 const HEADINGS = [['North 000', 0], ['045', 45], ['East 090', 90], ['135', 135], ['South 180', 180], ['225', 225], ['West 270', 270], ['315', 315]];

@@ -160,7 +160,7 @@ Tell Marcus **Make your speed**: All stop, 5, 8 (bay safe), 10, or Full (14 knot
 - **Dive rate depends on speed**, like a plane: about 0.5 m/s stopped, 2.6 m/s at 14 kt, up to 3 m/s (10 m/s in super cruise).
 - **Periscope depth:** 10 m.
 - **Surface:** you are limited to 7 kt.
-- **Terrain protection:** if a depth order would take the ship into the sea floor within about a minute of travel, Marcus holds 10 m above it, and says so.
+- **Terrain protection:** if a depth order would take the ship into the sea floor within about a minute of travel, Marcus holds 10 m above it, and says so. **Your order stands:** when the floor drops away he carries on down to the depth you asked for.
 - **Hug the floor (NOE):** the helm keeps the ship 10 m above the bottom, looking ahead. Needs 30 m of water. Any depth order ends it.
 
 ### Super cruise
